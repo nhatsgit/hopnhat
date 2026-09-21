@@ -257,6 +257,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <button class="tab on" data-tab="tongQuan">Tổng quan</button>
     <button class="tab" data-tab="sanLuong">Sản lượng chi tiết</button>
     <button class="tab" data-tab="phieu">Phiếu nội trạm</button>
+    <button class="tab" data-tab="chamCong">Chấm công</button>
+    <button class="tab" data-tab="doiChieu">Đối chiếu</button>
     <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
   </div>
 
@@ -295,6 +297,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div id="khungLocTrangThai">
         <label class="nhan" for="fTrangThai">Trạng thái</label>
         <select class="o" id="fTrangThai"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocKyHieu" style="display:none">
+        <label class="nhan" for="fKyHieu">Ký hiệu công</label>
+        <select class="o" id="fKyHieu"><option value="">Tất cả</option></select>
       </div>
       <div id="khungLocCn">
         <label class="nhan" for="fMaCn">Công nhân</label>
@@ -349,6 +355,47 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutCsvPhieu">Xuất CSV</button>
         </div>
         <div class="cuon"><table id="bangPhieu"></table></div>
+      </div>
+    </section>
+
+    <!-- Tab: Chấm công -->
+    <section id="pChamCong" style="display:none">
+      <div class="kpis" id="kpisCC"></div>
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Cơ cấu theo ký hiệu công</h3>
+          <div id="bdKyHieu"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Số công theo tổ</h3>
+          <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
+        </div>
+      </div>
+      <div class="the">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatCC">—</h3>
+          <button class="btn chinh nho" id="nutThemCC">+ Chấm công</button>
+          <button class="btn nho" id="nutCsvCC">Xuất CSV</button>
+        </div>
+        <div class="cuon"><table id="bangCC"></table></div>
+        <div class="phan-trang" id="phanTrangCC"></div>
+      </div>
+    </section>
+
+    <!-- Tab: Đối chiếu -->
+    <section id="pDoiChieu" style="display:none">
+      <div class="the" style="margin-bottom:20px">
+        <h3 class="tieude-muc" style="padding:16px 16px 0" id="tomTatDC">Công đối chiếu sản lượng</h3>
+        <p class="goi-y" style="padding:0 16px">Sản lượng ghi lũy kế vài ngày một lần, nên
+          ngày có công mà chưa có sản lượng là bình thường. Chiều ngược lại mới đáng ngờ:
+          có sản lượng mà không ai được chấm công.</p>
+        <div class="cuon"><table id="bangDC"></table></div>
+      </div>
+      <div class="the">
+        <h3 class="tieude-muc" style="padding:16px 16px 0" id="tomTatPC">Phần cạo kế hoạch so thực hiện</h3>
+        <p class="goi-y" style="padding:0 16px">Mỗi ngày tổ cạo một phiên chính; người cạo đúp
+          cạo thêm phiên kế tiếp. Tỷ lệ tính trên phiên chính, phần đúp để riêng.</p>
+        <div class="cuon"><table id="bangPC"></table></div>
       </div>
     </section>
 
@@ -1034,6 +1081,263 @@ function taiXepHang() {
 }
 
 /* =====================================================================
+   Chấm công
+   ===================================================================== */
+function layBoLocCC() {
+  var b = layBoLoc();
+  b.kyHieu = $('fKyHieu').value;
+  return b;
+}
+
+var COT_CC = [
+  { k: 'ngay', t: 'Ngày' }, { k: 'maCn', t: 'Mã công nhân' }, { k: 'to', t: 'Tổ' },
+  { k: 'kyHieu', t: 'Ký hiệu' }, { k: 'soCong', t: 'Số công', p: true },
+  { k: 'phien', t: 'Phiên cạo' }, { k: 'phanCao', t: 'Phần cạo' },
+  { k: 'trangThai', t: 'Trạng thái' }, { k: '_sua', t: '' }
+];
+
+function taiChamCong() {
+  $('bangCC').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  var bl = layBoLocCC();
+  bl.trang = S.trang; bl.moiTrang = 100;
+
+  goiCache('chamCong', bl).then(function (d) {
+    var k = d.kpi;
+    $('kpisCC').innerHTML =
+      the_kpi('Tổng số công', soVN(k.tongCong, 1), 'công', k.soDong + ' dòng chấm công') +
+      the_kpi('Công nhân', soVN(k.soCongNhan, 0), 'người', k.soNgay + ' ngày trong kỳ') +
+      the_kpi('Bình quân', soVN(k.soCongNhan ? k.tongCong / k.soCongNhan : 0, 2), 'công/người', 'Trên toàn bộ kỳ đã lọc') +
+      the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt');
+
+    // Cơ cấu ký hiệu
+    var tongD = 0;
+    for (var i = 0; i < d.theoKyHieu.length; i++) tongD += d.theoKyHieu[i].soDong;
+    var hk = '';
+    for (var j = 0; j < d.theoKyHieu.length; j++) {
+      var x = d.theoKyHieu[j];
+      var tl = tongD ? (x.soDong / tongD * 100) : 0;
+      hk += '<div style="margin-bottom:10px">' +
+        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">' +
+          '<span><b>' + thoat(x.ma) + '</b> · ' + thoat(x.ten) + '</span>' +
+          '<span class="num">' + soVN(x.soDong, 0) + ' · ' + soVN(tl, 1) + '%</span></div>' +
+        '<div style="height:8px;background:var(--line);border-radius:2px;overflow:hidden">' +
+          '<div style="height:100%;width:' + tl + '%;background:' +
+            (x.soCong > 0 ? 'var(--leaf)' : 'var(--clay)') + '"></div></div></div>';
+    }
+    $('bdKyHieu').innerHTML = hk || '<div class="rong">Không có dữ liệu.</div>';
+
+    // Theo tổ
+    var ht = '<thead><tr><th>Tổ</th><th class="p">Số công</th><th class="p">Người</th>' +
+             '<th class="p">BQ/người</th><th class="p">Dòng nghỉ</th></tr></thead><tbody>';
+    if (!d.theoTo.length) ht += '<tr><td colspan="5"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    for (var m = 0; m < d.theoTo.length; m++) {
+      var t = d.theoTo[m];
+      ht += '<tr><td><b>' + thoat(t.to) + '</b></td>' +
+        '<td class="p num">' + soVN(t.soCong, 1) + '</td>' +
+        '<td class="p num">' + soVN(t.soCn, 0) + '</td>' +
+        '<td class="p num">' + soVN(t.congBqNguoi, 2) + '</td>' +
+        '<td class="p num">' + soVN(t.soNghi, 0) + '</td></tr>';
+    }
+    $('bangToCC').innerHTML = ht + '</tbody>';
+
+    // Bảng chi tiết
+    $('tomTatCC').textContent = soVN(d.tong, 0) + ' dòng · ' + soVN(k.tongCong, 1) + ' công';
+    var hb = '<thead><tr>';
+    for (var c = 0; c < COT_CC.length; c++) {
+      hb += '<th' + (COT_CC[c].p ? ' class="p"' : '') + '>' + thoat(COT_CC[c].t) + '</th>';
+    }
+    hb += '</tr></thead><tbody>';
+    if (!d.rows.length) hb += '<tr><td colspan="' + COT_CC.length + '"><div class="rong">Không có dòng nào khớp bộ lọc.</div></td></tr>';
+    for (var r = 0; r < d.rows.length; r++) {
+      var w = d.rows[r];
+      hb += '<tr>' +
+        '<td>' + ngayVN(w.ngay) + '</td>' +
+        '<td><b>' + thoat(w.maCn) + '</b></td>' +
+        '<td>' + thoat(w.to) + '</td>' +
+        '<td><span class="vi ' + (w.soCong > 0 ? 'ok' : 'canh') + '">' + thoat(w.kyHieu) + '</span></td>' +
+        '<td class="p num">' + soVN(w.soCong, 1) + '</td>' +
+        '<td>' + (w.phien ? thoat(w.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="nhan-mo">' + (w.phanCao ? thoat(w.phanCao) : '—') + '</td>' +
+        '<td>' + viTrangThai(w.trangThai) + '</td>' +
+        '<td>' + (w.trangThai === 'CHO_DUYET'
+            ? '<button class="btn nho" data-suacc="' + thoat(w.ma) + '">Sửa</button>'
+            : '<span class="nhan-mo">—</span>') + '</td></tr>';
+    }
+    $('bangCC').innerHTML = hb + '</tbody>';
+
+    var nut = $('bangCC').querySelectorAll('button[data-suacc]');
+    for (var z = 0; z < nut.length; z++) {
+      nut[z].onclick = function () {
+        var ma = this.getAttribute('data-suacc');
+        for (var y = 0; y < d.rows.length; y++) {
+          if (d.rows[y].ma === ma) { moSuaChamCong(d.rows[y]); break; }
+        }
+      };
+    }
+
+    var pt = '';
+    if (d.soTrang > 1) {
+      pt = '<button class="btn nho" id="ccTruoc"' + (d.trang <= 1 ? ' disabled' : '') + '>← Trước</button>' +
+           '<span>Trang ' + d.trang + ' / ' + d.soTrang + '</span>' +
+           '<button class="btn nho" id="ccSau"' + (d.trang >= d.soTrang ? ' disabled' : '') + '>Sau →</button>';
+    }
+    $('phanTrangCC').innerHTML = pt;
+    if ($('ccTruoc')) $('ccTruoc').onclick = function () { S.trang--; taiChamCong(); window.scrollTo(0, 0); };
+    if ($('ccSau')) $('ccSau').onclick = function () { S.trang++; taiChamCong(); window.scrollTo(0, 0); };
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangCC').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+function taiDoiChieu() {
+  $('bangDC').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangPC').innerHTML = '';
+
+  goiCache('doiChieuCong', layBoLoc()).then(function (d) {
+    $('tomTatDC').textContent = 'Công đối chiếu sản lượng — ' + soVN(d.tong, 0) + ' lượt (ngày × tổ)' +
+      (d.soCanhBao ? ' · ' + d.soCanhBao + ' lượt có sản lượng mà không có công' : '');
+    var h2 = '<thead><tr><th>Ngày</th><th>Tổ</th><th class="p">Số công</th>' +
+             '<th class="p">Người làm</th><th class="p">Sản lượng (kg)</th>' +
+             '<th class="p">Dòng SL</th><th class="p">kg/công</th><th>Ghi nhận</th></tr></thead><tbody>';
+    if (!d.rows.length) h2 += '<tr><td colspan="8"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    for (var i = 0; i < d.rows.length; i++) {
+      var r = d.rows[i];
+      h2 += '<tr><td>' + ngayVN(r.ngay) + '</td><td><b>' + thoat(r.to) + '</b></td>' +
+        '<td class="p num">' + soVN(r.soCong, 1) + '</td>' +
+        '<td class="p num">' + soVN(r.soNguoiLam, 0) + '</td>' +
+        '<td class="p num">' + (r.kg ? soVN(r.kg, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + soVN(r.soDongSl, 0) + '</td>' +
+        '<td class="p num">' + (r.kgMoiCong ? soVN(r.kgMoiCong, 2) : '—') + '</td>' +
+        '<td>' + (r.coSanLuongKhongCong
+            ? '<span class="vi canh">Có sản lượng, không có công</span>'
+            : '<span class="nhan-mo">Bình thường</span>') + '</td></tr>';
+    }
+    $('bangDC').innerHTML = h2 + '</tbody>';
+    return goiCache('phanCao', layBoLoc());
+  }).then(function (d2) {
+    $('tomTatPC').textContent = 'Phần cạo kế hoạch so thực hiện — ' + soVN(d2.tong, 0) + ' lượt' +
+      (d2.soDuoi90 ? ' · ' + d2.soDuoi90 + ' lượt dưới 90%' : '');
+    var h3 = '<thead><tr><th>Ngày</th><th>Tổ</th><th>Phiên chính</th>' +
+             '<th class="p">Thực hiện</th><th class="p">Kế hoạch</th>' +
+             '<th class="p">Tỷ lệ</th><th class="p">Đúp thêm</th></tr></thead><tbody>';
+    if (!d2.rows.length) h3 += '<tr><td colspan="7"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    for (var j = 0; j < d2.rows.length; j++) {
+      var p2 = d2.rows[j];
+      h3 += '<tr><td>' + ngayVN(p2.ngay) + '</td><td><b>' + thoat(p2.to) + '</b></td>' +
+        '<td>' + thoat(p2.phienChinh || '—') + '</td>' +
+        '<td class="p num">' + soVN(p2.thChinh, 0) + '</td>' +
+        '<td class="p num">' + soVN(p2.kh, 0) + '</td>' +
+        '<td class="p"><span class="vi ' + (p2.tyLe >= 90 ? 'ok' : 'canh') + '">' +
+          soVN(p2.tyLe, 1) + '%</span></td>' +
+        '<td class="p num">' + (p2.dupThem ? '+' + soVN(p2.dupThem, 0) : '<span class="nhan-mo">—</span>') + '</td></tr>';
+    }
+    $('bangPC').innerHTML = h3 + '</tbody>';
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/* ---- Nhập / sửa chấm công ---- */
+function formChamCong(r) {
+  var dsLC = (S.meta && S.meta.loaiCong) || [];
+  var optKH = '';
+  for (var i = 0; i < dsLC.length; i++) {
+    optKH += '<option value="' + thoat(dsLC[i].ma) + '"' +
+      (r && dsLC[i].ma === r.kyHieu ? ' selected' : '') + '>' +
+      thoat(dsLC[i].ma + ' — ' + dsLC[i].ten + ' (' + dsLC[i].soCong + ' công)') + '</option>';
+  }
+  return '<div><label class="nhan" for="cKyHieu">Ký hiệu công</label>' +
+           '<select class="o" id="cKyHieu">' + optKH + '</select></div>' +
+         '<div><label class="nhan" for="cPhien">Phiên cạo</label>' +
+           '<input class="o" id="cPhien" value="' + thoat((r && r.phien) || '') + '" placeholder="A hoặc A,B nếu cạo đúp"></div>' +
+         '<div style="grid-column:1/-1"><label class="nhan" for="cGhiChu">Ghi chú</label>' +
+           '<input class="o" id="cGhiChu" value="' + thoat((r && r.ghiChu) || '') + '"></div>';
+}
+
+function moSuaChamCong(r) {
+  _dangSua = r;
+  $('tieuDePhieu').textContent = 'Sửa chấm công ' + r.ma;
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+  $('thanPhieu').innerHTML =
+    '<div class="dong-tt">' +
+      '<div><span>Ngày</span><b>' + ngayVN(r.ngay) + '</b></div>' +
+      '<div><span>Công nhân</span><b>' + thoat(r.maCn) + '</b></div>' +
+      '<div><span>Tổ</span><b>' + thoat(r.to) + '</b></div>' +
+    '</div>' +
+    '<div class="bo-loc the" style="margin-bottom:16px">' + formChamCong(r) + '</div>' +
+    '<div id="loiCC"></div>' +
+    '<p class="goi-y">Số công tự lấy theo ký hiệu. Phần cạo tự suy từ giao khoán theo phiên đã chọn.</p>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn" id="nutHuyCC">Huỷ</button>' +
+      '<button class="btn chinh" id="nutLuuCC">Lưu thay đổi</button></div>';
+  $('nutHuyCC').onclick = dongSuaSanLuong;
+  $('nutLuuCC').onclick = function () { luuChamCong('suaChamCong', { ma: r.ma }); };
+}
+
+function moThemChamCong() {
+  if (!S.dsCn.length) { baoLoi('thongBao', 'Không có công nhân nào trong phạm vi.'); return; }
+  _dangSua = null;
+  $('tieuDePhieu').textContent = 'Chấm công mới';
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+
+  var dsCn = [], doiChon = $('fDoi').value, toChon = $('fTo').value;
+  for (var i = 0; i < S.dsCn.length; i++) {
+    var cn = S.dsCn[i], toCua = cn.substring(0, cn.lastIndexOf('-'));
+    if (toChon) { if (toCua !== toChon) continue; }
+    else if (doiChon && doiCuaTo(toCua) !== doiChon) continue;
+    dsCn.push({ ma: cn, ten: cn });
+  }
+  if (!dsCn.length) for (var j = 0; j < S.dsCn.length; j++) dsCn.push({ ma: S.dsCn[j], ten: S.dsCn[j] });
+
+  $('thanPhieu').innerHTML =
+    '<div class="bo-loc the" style="margin-bottom:16px">' +
+      '<div><label class="nhan" for="cNgay">Ngày</label>' +
+        '<input class="o" id="cNgay" type="date" value="' + thoat($('fDenNgay').value || '') + '"></div>' +
+      '<div><label class="nhan" for="cCn">Công nhân</label>' +
+        '<select class="o" id="cCn">' + optTu(dsCn) + '</select></div>' +
+      formChamCong(null) +
+    '</div>' +
+    '<div id="loiCC"></div>' +
+    '<p class="goi-y">Dòng mới vào trạng thái <b>Chờ duyệt</b>. Mỗi công nhân chỉ được một dòng chấm công một ngày.</p>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn" id="nutHuyCC">Huỷ</button>' +
+      '<button class="btn chinh" id="nutLuuCC">Lưu</button></div>';
+  $('nutHuyCC').onclick = dongSuaSanLuong;
+  $('nutLuuCC').onclick = function () {
+    luuChamCong('themChamCong', { ngay: $('cNgay').value, maCn: $('cCn').value });
+  };
+}
+
+function luuChamCong(action, them) {
+  var nut = $('nutLuuCC');
+  nut.disabled = true; nut.textContent = 'Đang lưu…';
+  baoLoi('loiCC', '');
+
+  var ts = { vaiTro: S.vaiTro, maDonVi: S.maDonVi,
+             kyHieu: $('cKyHieu').value, phien: $('cPhien').value, ghiChu: $('cGhiChu').value };
+  for (var k in them) ts[k] = them[k];
+
+  goiAPI(action, ts).then(function (d) {
+    _cacheFE = {};
+    dongSuaSanLuong();
+    $('thongBao').innerHTML =
+      '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+      'Đã lưu ' + thoat(d.ma) + ' — ' + thoat(d.maCn) + ', ngày ' + ngayVN(d.ngay) +
+      ', ký hiệu <b>' + thoat(d.kyHieu) + '</b> = ' + soVN(d.soCong, 1) + ' công' +
+      (d.phanCao ? ', phần cạo ' + thoat(d.phanCao) : '') + '.</div>';
+    taiTab();
+  }).catch(function (e) {
+    nut.disabled = false; nut.textContent = 'Lưu';
+    baoLoi('loiCC', e.message);
+  });
+}
+
+/* =====================================================================
    Xuất CSV
    ===================================================================== */
 function taiVeCSV(ten, tieuDe, dong) {
@@ -1087,6 +1391,19 @@ function csvPhieu() {
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
+function csvChamCong() {
+  baoLoi('thongBao', '');
+  var bl = layBoLocCC(); bl.moiTrang = 800; bl.trang = 1;
+  goiCache('chamCong', bl).then(function (d) {
+    var dong = d.rows.map(function (r) {
+      return [r.ma, r.ngay, r.maCn, r.to, r.kyHieu, r.soCong, r.phien, r.phanCao, r.trangThai, r.ghiChu];
+    });
+    taiVeCSV('cham_cong_' + S.maDonVi + '.csv',
+      ['MA_CHAM_CONG', 'NGAY', 'MA_CN', 'TO', 'KY_HIEU', 'SO_CONG',
+       'PHIEN_CAO', 'MA_PHAN_CAO', 'TRANG_THAI', 'GHI_CHU'], dong);
+  }).catch(function (e) { baoLoi('thongBao', e.message); });
+}
+
 function csvXepHang() {
   baoLoi('thongBao', '');
   var bl = layBoLoc(); bl.theo = $('fTheo').value;
@@ -1108,7 +1425,8 @@ function luuChoDangXem() {
     tuNgay: $('fTuNgay').value, denNgay: $('fDenNgay').value,
     doi: $('fDoi').value, to: $('fTo').value, maCn: $('fMaCn').value,
     loaiMu: $('fLoaiMu').value, phien: $('fPhien').value,
-    chatLuong: $('fChatLuong').value, trangThai: $('fTrangThai').value
+    chatLuong: $('fChatLuong').value, trangThai: $('fTrangThai').value,
+    kyHieu: $('fKyHieu').value
   }));
 }
 
@@ -1132,6 +1450,7 @@ function khoiPhucChoDangXem() {
   if (j.phien) $('fPhien').value = j.phien;
   if (j.chatLuong) $('fChatLuong').value = j.chatLuong;
   if (j.trangThai) $('fTrangThai').value = j.trangThai;
+  if (j.kyHieu) $('fKyHieu').value = j.kyHieu;
   if (j.tab && LOC_THEO_TAB[j.tab]) S.tab = j.tab;
 
   dongBoChip();
@@ -1259,13 +1578,15 @@ var LOC_THEO_TAB = {
   tongQuan: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai', 'cn'],
   sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai', 'cn'],
   phieu:    ['doi', 'to', 'trangThai'],
-  xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai']
+  xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai'],
+  chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien', 'trangThai'],
+  doiChieu: ['doi', 'to']
 };
 
 var KHUNG_LOC = {
   doi: 'khungLocDoi', to: 'khungLocTo', loaiMu: 'khungLocLoaiMu',
   phien: 'khungLocPhien', chatLuong: 'khungLocChatLuong',
-  trangThai: 'khungLocTrangThai', cn: 'khungLocCn'
+  trangThai: 'khungLocTrangThai', cn: 'khungLocCn', kyHieu: 'khungLocKyHieu'
 };
 
 function capNhatHienBoLoc() {
@@ -1389,6 +1710,8 @@ function taiTab() {
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
+  else if (S.tab === 'chamCong') taiChamCong();
+  else if (S.tab === 'doiChieu') taiDoiChieu();
   else if (S.tab === 'xepHang') taiXepHang();
 }
 
@@ -1401,6 +1724,8 @@ function chuyenTab(ten) {
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
   $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
   $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
+  $('pChamCong').style.display = (ten === 'chamCong') ? '' : 'none';
+  $('pDoiChieu').style.display = (ten === 'doiChieu') ? '' : 'none';
   $('pXepHang').style.display = (ten === 'xepHang') ? '' : 'none';
   capNhatHienBoLoc();
   luuChoDangXem();
@@ -1650,6 +1975,14 @@ function vaoApp(d) {
       st.innerHTML += '<option value="' + thoat(dsTT[q].ma) + '">' + thoat(dsTT[q].ten) + '</option>';
     }
 
+    var sk = $('fKyHieu');
+    sk.innerHTML = '<option value="">Tất cả</option>';
+    var dsKH = m.loaiCong || [];
+    for (var kk = 0; kk < dsKH.length; kk++) {
+      sk.innerHTML += '<option value="' + thoat(dsKH[kk].ma) + '">' +
+        thoat(dsKH[kk].ma + ' — ' + dsKH[kk].ten) + '</option>';
+    }
+
     $('fTuNgay').value = m.ngayMin;
     $('fDenNgay').value = m.ngayMax;
     dongBoChip();
@@ -1735,6 +2068,7 @@ $('nutLoc').onclick = function () {
 $('nutXoaLoc').onclick = function () {
   $('fDoi').value = ''; $('fLoaiMu').value = ''; $('fPhien').value = '';
   $('fChatLuong').value = ''; $('fTrangThai').value = ''; $('fMaCn').value = '';
+  $('fKyHieu').value = '';
   $('fTo').value = '';
   dungLocTo();
   if (S.meta) { $('fTuNgay').value = S.meta.ngayMin; $('fDenNgay').value = S.meta.ngayMax; }
@@ -1757,6 +2091,9 @@ $('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 $('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 
 $('fTheo').onchange = function () { taiXepHang(); };
+$('fKyHieu').onchange = function () { S.trang = 1; taiTab(); };
+$('nutThemCC').onclick = moThemChamCong;
+$('nutCsvCC').onclick = csvChamCong;
 
 $('nutThemSL').onclick = moThemSanLuong;
 $('nutCsvSL').onclick = csvSanLuong;
