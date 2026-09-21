@@ -1,0 +1,10 @@
+# Chỉ đưa trang web lên repo này.
+# Tuyệt đối không commit dữ liệu công ty hay thông tin đăng nhập.
+*.xlsx
+*.xls
+*.pdf
+*.docx
+*.json
+Code.gs
+.clasp*
+appsscript.json

@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theo dõi sản lượng — CRCK2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   Bảng màu dùng chung với dashboard-crck2-v2.html của dự án
+   ===================================================================== */
+:root{
+  --ink:#15231C; --ink-2:#41564C; --ink-3:#7C8C84;
+  --paper:#FAF8F3; --card:#FFFFFF; --line:#E2DED3; --line-2:#CFC9BA;
+  --leaf:#2D6A4A; --leaf-soft:#E6EFE9;
+  --latex:#B8860B; --latex-soft:#F6EFDD;
+  --clay:#A6432A; --clay-soft:#F7E9E4;
+  --sky:#2B5C7E; --sky-soft:#E5EDF3;
+  --shadow:0 1px 2px rgba(21,35,28,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E8EDEA; --ink-2:#AFC0B8; --ink-3:#7E918A;
+    --paper:#111815; --card:#182220; --line:#2A3833; --line-2:#3A4B44;
+    --leaf:#6FBF93; --leaf-soft:#1B2E25;
+    --latex:#D9AF4A; --latex-soft:#2C2616;
+    --clay:#D98570; --clay-soft:#2E1C18;
+    --sky:#7FB2D6; --sky-soft:#152630;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E8EDEA; --ink-2:#AFC0B8; --ink-3:#7E918A;
+  --paper:#111815; --card:#182220; --line:#2A3833; --line-2:#3A4B44;
+  --leaf:#6FBF93; --leaf-soft:#1B2E25;
+  --latex:#D9AF4A; --latex-soft:#2C2616;
+  --clay:#D98570; --clay-soft:#2E1C18;
+  --sky:#7FB2D6; --sky-soft:#152630;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);
+  font-family:'Archivo',system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.55;font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+input,select{font-family:inherit;font-size:inherit}
+a{color:var(--leaf)}
+
+/* ---------- Thành phần chung ---------- */
+.btn{padding:8px 14px;border:1px solid var(--line-2);background:var(--card);
+  color:var(--ink);border-radius:2px;white-space:nowrap}
+.btn:hover{border-color:var(--leaf);background:var(--leaf-soft)}
+.btn.chinh{background:var(--leaf);border-color:var(--leaf);color:#fff;font-weight:600}
+.btn.chinh:hover{opacity:.9;background:var(--leaf)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.nho{padding:5px 10px;font-size:13px}
+
+label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.04em}
+.o{width:100%;padding:8px 10px;border:1px solid var(--line-2);background:var(--card);
+  color:var(--ink);border-radius:2px;outline:none}
+.o:focus{border-color:var(--leaf);box-shadow:0 0 0 3px var(--leaf-soft)}
+
+.the{background:var(--card);border:1px solid var(--line);border-radius:2px;box-shadow:var(--shadow)}
+.tieude-muc{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-3);margin:0 0 12px}
+
+.bao-loi{background:var(--clay-soft);border:1px solid var(--clay);color:var(--clay);
+  padding:10px 14px;border-radius:2px;margin:12px 0;font-size:14px}
+.rong{text-align:center;color:var(--ink-3);padding:36px 16px;font-size:14px}
+
+/* ---------- Màn hình mở đầu (cấu hình / đăng nhập) ---------- */
+.man-hinh{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.hop{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);
+  border-radius:2px;padding:28px;box-shadow:var(--shadow)}
+.hop h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+.hop .phu{color:var(--ink-3);font-size:13.5px;margin:0 0 22px}
+.hop .truong{margin-bottom:16px}
+.goi-y{font-size:12.5px;color:var(--ink-3);margin-top:6px;line-height:1.45}
+
+/* ---------- Khung ứng dụng ---------- */
+.thanh-tren{border-bottom:1px solid var(--line);background:var(--card);
+  position:sticky;top:0;z-index:40}
+.thanh-tren-in{max-width:1320px;margin:0 auto;padding:12px 24px;
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.hieu{display:flex;flex-direction:column;line-height:1.2;margin-right:auto}
+.hieu b{font-weight:600;font-size:16px;letter-spacing:-.01em}
+.hieu span{color:var(--ink-3);font-size:12.5px}
+.the-vaitro{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  background:var(--leaf-soft);color:var(--leaf);border-radius:2px;
+  font-size:12.5px;font-weight:600}
+
+.tabs{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;gap:2px;
+  border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{padding:11px 16px;border:none;background:none;color:var(--ink-3);
+  border-bottom:2px solid transparent;font-weight:500;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--leaf);border-bottom-color:var(--leaf);font-weight:600}
+
+.wrap{max-width:1320px;margin:0 auto;padding:20px 24px 80px}
+
+/* ---------- Bộ lọc ---------- */
+.bo-loc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;padding:16px;margin-bottom:20px}
+.bo-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
+.nhanh{display:flex;gap:6px;flex-wrap:wrap;margin-right:auto}
+.chip{padding:5px 11px;border:1px solid var(--line-2);background:var(--card);
+  color:var(--ink-2);border-radius:99px;font-size:12.5px}
+.chip:hover{border-color:var(--leaf);color:var(--leaf)}
+.chip.on{background:var(--leaf);border-color:var(--leaf);color:#fff}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:12px;margin-bottom:20px}
+.kpi{padding:16px}
+.kpi .ten{font-size:12px;color:var(--ink-3);text-transform:uppercase;
+  letter-spacing:.04em;margin-bottom:6px}
+.kpi .so{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.kpi .dv{font-size:13px;color:var(--ink-3);font-weight:400;margin-left:4px}
+.kpi .phu2{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+
+/* ---------- Bố cục biểu đồ ---------- */
+.luoi-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
+@media (max-width:900px){.luoi-2{grid-template-columns:1fr}}
+.o-bieu-do{padding:16px}
+.chu-thich{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:13px}
+.chu-thich i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}
+
+/* ---------- Bảng ---------- */
+.cuon{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--paper);font-weight:600;font-size:12px;color:var(--ink-2);
+  text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0;z-index:1}
+th.sx{cursor:pointer;user-select:none}
+th.sx:hover{color:var(--leaf)}
+th.sx::after{content:'';opacity:.35;margin-left:5px}
+th.sx.tang::after{content:'▲';opacity:.9}
+th.sx.giam::after{content:'▼';opacity:.9}
+td.p{text-align:right}
+th.p{text-align:right}
+tbody tr:hover{background:var(--leaf-soft)}
+tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line-2)}
+.nhan-mo{color:var(--ink-3)}
+
+.vi{display:inline-block;padding:2px 7px;border-radius:2px;font-size:11.5px;font-weight:600}
+.vi.dong{background:var(--latex-soft);color:var(--latex)}
+.vi.day{background:var(--leaf-soft);color:var(--leaf)}
+.vi.dat{background:var(--clay-soft);color:var(--clay)}
+.vi.nuoc{background:var(--sky-soft);color:var(--sky)}
+.vi.tap{background:var(--line);color:var(--ink-2)}
+.vi.ok{background:var(--leaf-soft);color:var(--leaf)}
+.vi.canh{background:var(--clay-soft);color:var(--clay)}
+
+.phan-trang{display:flex;gap:10px;align-items:center;justify-content:flex-end;
+  padding:12px 16px;font-size:13.5px;color:var(--ink-2);flex-wrap:wrap}
+
+/* ---------- Hộp thoại chi tiết phiếu ---------- */
+.nen-mo{position:fixed;inset:0;background:rgba(21,35,28,.45);z-index:100;
+  display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto}
+.nen-mo.hien{display:flex}
+.hop-thoai{background:var(--card);border-radius:2px;max-width:820px;width:100%;
+  box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.dau-hop{display:flex;align-items:center;gap:12px;padding:16px 20px;
+  border-bottom:1px solid var(--line)}
+.dau-hop h2{font-size:17px;margin:0;margin-right:auto;letter-spacing:-.01em}
+.than-hop{padding:20px}
+.dong-tt{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:18px;font-size:14px}
+.dong-tt div span{display:block;font-size:12px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.04em}
+.dong-tt div b{font-size:16px;font-weight:600}
+
+/* ---------- In ---------- */
+@media print{
+  body{background:#fff}
+  .thanh-tren,.tabs,.bo-loc,.dau-hop .btn,.khong-in{display:none !important}
+  .nen-mo{position:static;background:none;padding:0;display:block}
+  .hop-thoai{box-shadow:none;max-width:none}
+  .wrap{padding:0}
+  table{font-size:12px}
+  th{background:#f2f2f2 !important;color:#000}
+}
+
+@media (max-width:640px){
+  .thanh-tren-in,.tabs,.wrap{padding-left:14px;padding-right:14px}
+  .kpi .so{font-size:22px}
+  .hieu b{font-size:15px}
+  .dong-tt{gap:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== MÀN HÌNH CẤU HÌNH ===================== -->
+<div class="man-hinh" id="manCauHinh" style="display:none">
+  <div class="hop">
+    <h1>Kết nối backend</h1>
+    <p class="phu">Dán địa chỉ Web App của Apps Script. Địa chỉ được lưu trong trình duyệt này, chỉ cần nhập một lần.</p>
+    <div class="truong">
+      <label class="nhan" for="oApi">Địa chỉ Web App</label>
+      <input class="o" id="oApi" type="url" placeholder="https://script.google.com/macros/s/..../exec">
+      <p class="goi-y">Lấy ở Apps Script: <b>Deploy → New deployment → Web app</b>, chọn <i>Execute as: Me</i> và <i>Who has access: Anyone</i>, rồi copy URL kết thúc bằng <b>/exec</b>.</p>
+    </div>
+    <div id="loiCauHinh"></div>
+    <button class="btn chinh" id="nutLuuApi" style="width:100%">Kiểm tra &amp; lưu</button>
+  </div>
+</div>
+
+<!-- ===================== MÀN HÌNH ĐĂNG NHẬP ===================== -->
+<div class="man-hinh" id="manDangNhap" style="display:none">
+  <div class="hop">
+    <h1>Theo dõi sản lượng</h1>
+    <p class="phu">Cao su Chư Sê – Kampong Thom (CRCK2)</p>
+    <div class="truong">
+      <label class="nhan" for="oVaiTro">Bạn là</label>
+      <select class="o" id="oVaiTro">
+        <option value="TO_TRUONG">Tổ trưởng</option>
+        <option value="DOI_TRUONG">Đội trưởng</option>
+        <option value="BAN_LANH_DAO">Ban lãnh đạo</option>
+      </select>
+    </div>
+    <div class="truong">
+      <label class="nhan" for="oMaDonVi">Mã đơn vị</label>
+      <input class="o" id="oMaDonVi" placeholder="Đ1-KV1" autocomplete="off" spellcheck="false">
+      <p class="goi-y" id="goiYMa">Tổ trưởng nhập mã tổ, ví dụ <b>Đ1-KV1</b>.</p>
+    </div>
+    <div id="loiDangNhap"></div>
+    <button class="btn chinh" id="nutVao" style="width:100%">Xem sản lượng</button>
+    <p class="goi-y" style="margin-top:14px;text-align:center">
+      <a href="#" id="doiApi">Đổi địa chỉ backend</a>
+    </p>
+  </div>
+</div>
+
+<!-- ===================== ỨNG DỤNG ===================== -->
+<div id="app" style="display:none">
+
+  <div class="thanh-tren">
+    <div class="thanh-tren-in">
+      <div class="hieu">
+        <b>Theo dõi sản lượng &amp; phiếu nội trạm</b>
+        <span id="dongDonVi">—</span>
+      </div>
+      <span class="the-vaitro" id="theVaiTro">—</span>
+      <button class="btn nho" id="nutTai">Tải lại</button>
+      <button class="btn nho" id="nutThoat">Đổi người dùng</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="tongQuan">Tổng quan</button>
+    <button class="tab" data-tab="sanLuong">Sản lượng chi tiết</button>
+    <button class="tab" data-tab="phieu">Phiếu nội trạm</button>
+    <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
+  </div>
+
+  <div class="wrap">
+
+    <!-- Bộ lọc -->
+    <div class="the bo-loc">
+      <div>
+        <label class="nhan" for="fTuNgay">Từ ngày</label>
+        <input class="o" type="date" id="fTuNgay">
+      </div>
+      <div>
+        <label class="nhan" for="fDenNgay">Đến ngày</label>
+        <input class="o" type="date" id="fDenNgay">
+      </div>
+      <div id="khungLocDoi" style="display:none">
+        <label class="nhan" for="fDoi">Đội</label>
+        <select class="o" id="fDoi"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocTo">
+        <label class="nhan" for="fTo">Tổ</label>
+        <select class="o" id="fTo"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocLoaiMu">
+        <label class="nhan" for="fLoaiMu">Loại mủ</label>
+        <select class="o" id="fLoaiMu"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocPhien">
+        <label class="nhan" for="fPhien">Phiên cạo</label>
+        <select class="o" id="fPhien"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocChatLuong">
+        <label class="nhan" for="fChatLuong">Chất lượng</label>
+        <select class="o" id="fChatLuong"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocTrangThai">
+        <label class="nhan" for="fTrangThai">Trạng thái</label>
+        <select class="o" id="fTrangThai"><option value="">Tất cả</option></select>
+      </div>
+      <div id="khungLocCn">
+        <label class="nhan" for="fMaCn">Công nhân</label>
+        <select class="o" id="fMaCn"><option value="">Tất cả</option></select>
+      </div>
+      <div class="hanh-dong">
+        <div class="nhanh" id="locNhanh"></div>
+        <button class="btn" id="nutXoaLoc">Xoá lọc</button>
+        <button class="btn chinh" id="nutLoc">Áp dụng</button>
+      </div>
+    </div>
+
+    <div id="thongBao"></div>
+
+    <!-- Tab: Tổng quan -->
+    <section id="pTongQuan">
+      <div class="kpis" id="kpis"></div>
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Sản lượng theo ngày</h3>
+          <div id="bdNgay"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
+          <div id="bdLoai"></div>
+        </div>
+      </div>
+      <div class="the">
+        <h3 class="tieude-muc" style="padding:16px 16px 0" id="tieuDeSoSanh">So sánh theo tổ</h3>
+        <div class="cuon"><table id="bangTo"></table></div>
+      </div>
+    </section>
+
+    <!-- Tab: Sản lượng chi tiết -->
+    <section id="pSanLuong" style="display:none">
+      <div class="the">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSL">—</h3>
+          <button class="btn chinh nho" id="nutThemSL">+ Nhập sản lượng</button>
+          <button class="btn nho" id="nutCsvSL">Xuất CSV</button>
+        </div>
+        <div class="cuon"><table id="bangSL"></table></div>
+        <div class="phan-trang" id="phanTrangSL"></div>
+      </div>
+    </section>
+
+    <!-- Tab: Phiếu nội trạm -->
+    <section id="pPhieu" style="display:none">
+      <div class="the">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatPhieu">—</h3>
+          <button class="btn nho" id="nutCsvPhieu">Xuất CSV</button>
+        </div>
+        <div class="cuon"><table id="bangPhieu"></table></div>
+      </div>
+    </section>
+
+    <!-- Tab: Xếp hạng -->
+    <section id="pXepHang" style="display:none">
+      <div class="the">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto">Xếp hạng công nhân</h3>
+          <select class="o" id="fTheo" style="width:auto">
+            <option value="kg">Theo tổng kg tươi</option>
+            <option value="quyKho">Theo quy khô</option>
+            <option value="nsbq">Theo NSBQ kg/nhát</option>
+            <option value="binhQuanNgay">Theo bình quân ngày</option>
+          </select>
+          <button class="btn nho" id="nutCsvXH">Xuất CSV</button>
+        </div>
+        <div class="cuon"><table id="bangXH"></table></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ===================== HỘP THOẠI PHIẾU ===================== -->
+<div class="nen-mo" id="nenPhieu">
+  <div class="hop-thoai">
+    <div class="dau-hop">
+      <h2 id="tieuDePhieu">Phiếu nội trạm</h2>
+      <button class="btn nho" id="nutInPhieu">In phiếu</button>
+      <button class="btn nho" id="nutDongPhieu">Đóng</button>
+    </div>
+    <div class="than-hop" id="thanPhieu"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   Bộ nhớ trình duyệt — có thể bị chặn (chế độ ẩn danh, mở file trực tiếp,
+   chính sách của tổ chức). Luôn bọc try/catch để trang vẫn chạy được.
+   ===================================================================== */
+function docLS(khoa) {
+  try { return localStorage.getItem(khoa); } catch (e) { return null; }
+}
+function ghiLS(khoa, giaTri) {
+  try { localStorage.setItem(khoa, giaTri); } catch (e) { /* bỏ qua, không chặn luồng */ }
+}
+function xoaLS(khoa) {
+  try { localStorage.removeItem(khoa); } catch (e) { /* bỏ qua */ }
+}
+
+/* Địa chỉ Web App mặc định — dùng ngay khi mở trang, không cần nhập tay.
+   Muốn đổi: bấm "Đổi địa chỉ backend" ở màn hình đăng nhập. */
+var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7WIzfMllW1sYvX5QNq82tmhzb6PfA49zmK2QszMUu61RV3C7j/exec';
+
+/* =====================================================================
+   Trạng thái
+   ===================================================================== */
+var S = {
+  api: docLS('crck2_api') || API_MAC_DINH,
+  vaiTro: '', maDonVi: '', tenDonVi: '', dsTo: [], dsCn: [], toanCongTy: false,
+  meta: null,
+  tab: 'tongQuan',
+  sapXep: 'ngay', chieu: 'giam', trang: 1,
+  locNhanhDangChon: '',
+  thamSoURL: null
+};
+
+/* =====================================================================
+   Gọi backend bằng JSONP (tránh vướng CORS khi mở file HTML trực tiếp)
+   ===================================================================== */
+var _demCb = 0;
+
+function goiAPI(action, thamSo) {
+  return new Promise(function (resolve, reject) {
+    if (!S.api) { reject(new Error('Chưa cấu hình địa chỉ backend.')); return; }
+
+    var cb = '__crck2cb' + (++_demCb) + '_' + Date.now();
+    var q = ['action=' + encodeURIComponent(action), 'callback=' + cb];
+    thamSo = thamSo || {};
+    for (var k in thamSo) {
+      if (thamSo[k] !== '' && thamSo[k] !== null && thamSo[k] !== undefined) {
+        q.push(encodeURIComponent(k) + '=' + encodeURIComponent(thamSo[k]));
+      }
+    }
+
+    var s = document.createElement('script');
+    var xong = false;
+    var hen = setTimeout(function () {
+      if (xong) return;
+      xong = true; don();
+      reject(new Error('Hết thời gian chờ backend (30 giây). Kiểm tra lại địa chỉ Web App và quyền truy cập.'));
+    }, 30000);
+
+    function don() {
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+      clearTimeout(hen);
+      if (s.parentNode) s.parentNode.removeChild(s);
+    }
+
+    window[cb] = function (kq) {
+      if (xong) return;
+      xong = true; don();
+      if (kq && kq.ok) resolve(kq.data);
+      else reject(new Error((kq && kq.loi) || 'Backend trả về lỗi không rõ.'));
+    };
+
+    s.onerror = function () {
+      if (xong) return;
+      xong = true; don();
+      reject(new Error('Không gọi được backend. Kiểm tra địa chỉ /exec và deploy ở chế độ "Anyone".'));
+    };
+
+    s.src = S.api + (S.api.indexOf('?') === -1 ? '?' : '&') + q.join('&');
+    document.body.appendChild(s);
+  });
+}
+
+/* =====================================================================
+   Tiện ích
+   ===================================================================== */
+function $(id) { return document.getElementById(id); }
+
+function soVN(n, le) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  le = (le === undefined) ? 0 : le;
+  return Number(n).toLocaleString('vi-VN', { minimumFractionDigits: le, maximumFractionDigits: le });
+}
+
+function ngayVN(s) {
+  if (!s) return '—';
+  var p = String(s).split('-');
+  return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : s;
+}
+
+function thoat(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** 'Đ1-KV1' -> 'Đ1' */
+function doiCuaTo(maTo) {
+  var s = String(maTo || '');
+  var i = s.indexOf('-');
+  return i > 0 ? s.substring(0, i) : s;
+}
+
+/**
+ * Dựng lại ô lọc Tổ theo Đội đang chọn — chọn đội nào thì chỉ hiện tổ của
+ * đội đó. Giữ nguyên tổ đang chọn nếu nó vẫn thuộc đội vừa chọn.
+ */
+function dungLocTo() {
+  var doiChon = $('fDoi').value;
+  var dangChon = $('fTo').value;
+
+  var ds = [];
+  for (var i = 0; i < S.dsTo.length; i++) {
+    if (!doiChon || doiCuaTo(S.dsTo[i].ma) === doiChon) ds.push(S.dsTo[i]);
+  }
+
+  var h = '<option value="">Tất cả (' + ds.length + ' tổ)</option>';
+  var conHopLe = false;
+  for (var j = 0; j < ds.length; j++) {
+    h += '<option value="' + thoat(ds[j].ma) + '">' + thoat(ds[j].ma) + '</option>';
+    if (ds[j].ma === dangChon) conHopLe = true;
+  }
+  $('fTo').innerHTML = h;
+  $('fTo').value = conHopLe ? dangChon : '';
+  S.coNhieuTo = (ds.length > 1);
+  capNhatHienBoLoc();
+
+  dungLocCn();
+}
+
+/**
+ * Ô lọc Công nhân bám theo Đội/Tổ đang chọn — mã công nhân đã chứa mã tổ
+ * ('Đ1-KV1-01') nên lọc được ngay tại trang, không phải gọi lại backend.
+ */
+function dungLocCn() {
+  var doiChon = $('fDoi').value;
+  var toChon = $('fTo').value;
+  var dangChon = $('fMaCn').value;
+
+  var ds = [];
+  for (var i = 0; i < S.dsCn.length; i++) {
+    var maCn = S.dsCn[i];
+    var toCua = maCn.substring(0, maCn.lastIndexOf('-'));
+    if (toChon) { if (toCua !== toChon) continue; }
+    else if (doiChon && doiCuaTo(toCua) !== doiChon) continue;
+    ds.push(maCn);
+  }
+
+  var h = '<option value="">Tất cả (' + ds.length + ' người)</option>';
+  var conHopLe = false;
+  for (var j = 0; j < ds.length; j++) {
+    h += '<option value="' + thoat(ds[j]) + '">' + thoat(ds[j]) + '</option>';
+    if (ds[j] === dangChon) conHopLe = true;
+  }
+  $('fMaCn').innerHTML = h;
+  $('fMaCn').value = conHopLe ? dangChon : '';
+}
+
+function lopLoaiMu(ma) {
+  var m = { MU_DONG: 'dong', MU_DAY: 'day', MU_DAT: 'dat', MU_NUOC: 'nuoc', MU_TAP: 'tap' };
+  return m[ma] || 'tap';
+}
+
+function tenLoaiMu(ma) {
+  if (!S.meta) return ma;
+  for (var i = 0; i < S.meta.loaiMu.length; i++) {
+    if (S.meta.loaiMu[i].ma === ma) return S.meta.loaiMu[i].ten;
+  }
+  return ma || '—';
+}
+
+function mauLoaiMu(ma) {
+  var m = {
+    MU_DONG: 'var(--latex)', MU_DAY: 'var(--leaf)', MU_DAT: 'var(--clay)',
+    MU_NUOC: 'var(--sky)', MU_TAP: 'var(--ink-3)'
+  };
+  return m[ma] || 'var(--ink-3)';
+}
+
+function baoLoi(nut, thong) {
+  $(nut).innerHTML = thong ? '<div class="bao-loi">' + thoat(thong) + '</div>' : '';
+}
+
+function dangTai(el, co) {
+  if (co) el.innerHTML = '<div class="rong">Đang tải dữ liệu…</div>';
+}
+
+/* =====================================================================
+   Biểu đồ SVG tự vẽ (không phụ thuộc thư viện ngoài)
+   ===================================================================== */
+function veCot(el, dl) {
+  if (!dl.length) { el.innerHTML = '<div class="rong">Không có dữ liệu trong khoảng đã chọn.</div>'; return; }
+
+  var W = 100, H = 210, tren = 14, duoi = 30;
+  var maxV = 0;
+  for (var i = 0; i < dl.length; i++) maxV = Math.max(maxV, dl[i].kg);
+  if (maxV <= 0) maxV = 1;
+
+  var rongCot = 100 / dl.length;
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+            'style="width:100%;height:210px;overflow:visible" role="img" aria-label="Sản lượng theo ngày">';
+
+  // Lưới ngang + nhãn trục
+  for (var g = 0; g <= 3; g++) {
+    var y = tren + (H - tren - duoi) * g / 3;
+    svg += '<line x1="0" y1="' + y + '" x2="100" y2="' + y + '" stroke="var(--line)" stroke-width=".4" vector-effect="non-scaling-stroke"/>';
+  }
+
+  for (var j = 0; j < dl.length; j++) {
+    var h = (dl[j].kg / maxV) * (H - tren - duoi);
+    var x = j * rongCot;
+    var yc = H - duoi - h;
+    svg += '<rect x="' + (x + rongCot * 0.15) + '" y="' + yc +
+           '" width="' + (rongCot * 0.7) + '" height="' + Math.max(h, 0.5) +
+           '" fill="var(--leaf)" opacity=".85"><title>' +
+           thoat(ngayVN(dl[j].ngay)) + ': ' + soVN(dl[j].kg, 2) + ' kg tươi / ' +
+           soVN(dl[j].quyKho, 2) + ' kg khô</title></rect>';
+  }
+  svg += '</svg>';
+
+  // Nhãn ngày: chỉ hiện đầu / giữa / cuối để không chen chúc
+  var nhan = '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-top:4px">' +
+    '<span>' + ngayVN(dl[0].ngay) + '</span>' +
+    (dl.length > 2 ? '<span>' + ngayVN(dl[Math.floor(dl.length / 2)].ngay) + '</span>' : '') +
+    (dl.length > 1 ? '<span>' + ngayVN(dl[dl.length - 1].ngay) + '</span>' : '') +
+    '</div>';
+
+  var dinh = '<div style="font-size:12px;color:var(--ink-3);margin-bottom:6px">' +
+    'Cao nhất: <b style="color:var(--ink)">' + soVN(maxV, 2) + ' kg</b> · ' +
+    dl.length + ' ngày có sản lượng</div>';
+
+  el.innerHTML = dinh + svg + nhan;
+}
+
+function veDonut(el, dl) {
+  var tong = 0, i;
+  for (i = 0; i < dl.length; i++) tong += dl[i].kg;
+  if (tong <= 0) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
+
+  var R = 42, r = 26, cx = 50, cy = 50, goc = -Math.PI / 2;
+  var svg = '<svg viewBox="0 0 100 100" style="width:100%;max-width:210px;height:auto;display:block;margin:0 auto" role="img" aria-label="Cơ cấu loại mủ">';
+
+  for (i = 0; i < dl.length; i++) {
+    var tl = dl[i].kg / tong;
+    var g2 = goc + tl * Math.PI * 2;
+    var lon = tl > 0.5 ? 1 : 0;
+    var x1 = cx + R * Math.cos(goc), y1 = cy + R * Math.sin(goc);
+    var x2 = cx + R * Math.cos(g2), y2 = cy + R * Math.sin(g2);
+    var x3 = cx + r * Math.cos(g2), y3 = cy + r * Math.sin(g2);
+    var x4 = cx + r * Math.cos(goc), y4 = cy + r * Math.sin(goc);
+
+    // Một lát chiếm trọn 100% thì vẽ 2 vòng tròn thay vì cung (tránh lỗi arc 360°)
+    if (tl > 0.999) {
+      svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ((R + r) / 2) + '" fill="none" stroke="' +
+             mauLoaiMu(dl[i].ma) + '" stroke-width="' + (R - r) + '"><title>' +
+             thoat(dl[i].ten) + ': 100%</title></circle>';
+    } else {
+      svg += '<path d="M' + x1 + ',' + y1 + ' A' + R + ',' + R + ' 0 ' + lon + ',1 ' + x2 + ',' + y2 +
+             ' L' + x3 + ',' + y3 + ' A' + r + ',' + r + ' 0 ' + lon + ',0 ' + x4 + ',' + y4 + ' Z" fill="' +
+             mauLoaiMu(dl[i].ma) + '"><title>' + thoat(dl[i].ten) + ': ' + soVN(dl[i].kg, 2) +
+             ' kg (' + soVN(tl * 100, 1) + '%)</title></path>';
+    }
+    goc = g2;
+  }
+  svg += '</svg>';
+
+  var ct = '<div class="chu-thich">';
+  for (i = 0; i < dl.length; i++) {
+    ct += '<span><i style="background:' + mauLoaiMu(dl[i].ma) + '"></i>' +
+          thoat(dl[i].ten) + ' · <b>' + soVN(dl[i].kg / tong * 100, 1) + '%</b></span>';
+  }
+  ct += '</div>';
+
+  el.innerHTML = svg + ct;
+}
+
+/* =====================================================================
+   Thu thập bộ lọc hiện hành
+   ===================================================================== */
+function layBoLoc() {
+  return {
+    vaiTro: S.vaiTro,
+    maDonVi: S.maDonVi,
+    tuNgay: $('fTuNgay').value,
+    denNgay: $('fDenNgay').value,
+    doi: $('fDoi').value,
+    to: $('fTo').value,
+    loaiMu: $('fLoaiMu').value,
+    phien: $('fPhien').value,
+    chatLuong: $('fChatLuong').value,
+    trangThai: $('fTrangThai').value,
+    maCn: $('fMaCn').value
+  };
+}
+
+/* =====================================================================
+   Cache phía trình duyệt — đổi qua đổi lại giữa các tab với cùng bộ lọc
+   thì không gọi lại backend. Nút "Tải lại" xoá sạch cache này.
+   ===================================================================== */
+var CACHE_FE_MS = 5 * 60 * 1000;
+var _cacheFE = {};
+
+function goiCache(action, thamSo) {
+  var khoa = action + '|' + JSON.stringify(thamSo);
+  var c = _cacheFE[khoa];
+  if (c && (Date.now() - c.luc) < CACHE_FE_MS) return Promise.resolve(c.data);
+  return goiAPI(action, thamSo).then(function (d) {
+    _cacheFE[khoa] = { luc: Date.now(), data: d };
+    return d;
+  });
+}
+
+/* =====================================================================
+   Tab: Tổng quan
+   ===================================================================== */
+function taiTongQuan() {
+  dangTai($('kpis'), true);
+  $('bdNgay').innerHTML = ''; $('bdLoai').innerHTML = ''; $('bangTo').innerHTML = '';
+
+  goiCache('tongQuan', layBoLoc()).then(function (d) {
+    var k = d.kpi;
+    $('kpis').innerHTML =
+      the_kpi('Tổng sản lượng tươi', soVN(k.tongKg, 2), 'kg', k.soDong + ' dòng ghi nhận') +
+      the_kpi('Quy khô', soVN(k.tongQuyKho, 2), 'kg', 'DRC bình quân ' + soVN(k.drcBinhQuan * 100, 1) + '%') +
+      the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', 'Trên toàn bộ dòng đã lọc') +
+      the_kpi('Phạm vi', soVN(k.soCongNhan, 0), 'công nhân', k.soNgay + ' ngày có sản lượng') +
+      the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
+              soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt');
+
+    veCot($('bdNgay'), d.theoNgay);
+    veDonut($('bdLoai'), d.theoLoaiMu);
+
+    // Ban lãnh đạo xem gom theo đội; đội trưởng / tổ trưởng xem theo tổ
+    var gomDoi = S.toanCongTy && d.theoDoi && d.theoDoi.length;
+    var ds = gomDoi ? d.theoDoi : d.theoTo;
+    var tongKg = 0;
+    for (var z = 0; z < ds.length; z++) tongKg += ds[z].kg;
+
+    var h = '<thead><tr><th>' + (gomDoi ? 'Đội' : 'Tổ') + '</th>' +
+            (gomDoi ? '<th class="p">Số tổ</th>' : '') +
+            '<th class="p">Sản lượng tươi (kg)</th><th class="p">Tỷ trọng</th>' +
+            '<th class="p">Quy khô (kg)</th><th class="p">Số nhát</th>' +
+            '<th class="p">NSBQ kg/nhát</th><th class="p">Công nhân</th></tr></thead><tbody>';
+    var soCot = gomDoi ? 8 : 7;
+    if (!ds.length) {
+      h += '<tr><td colspan="' + soCot + '"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    }
+    for (var i = 0; i < ds.length; i++) {
+      var t = ds[i];
+      h += '<tr><td><b>' + thoat(gomDoi ? t.doi : t.to) + '</b></td>' +
+           (gomDoi ? '<td class="p num">' + soVN(t.soTo, 0) + '</td>' : '') +
+           '<td class="p num">' + soVN(t.kg, 2) + '</td>' +
+           '<td class="p num">' + (tongKg ? soVN(t.kg / tongKg * 100, 1) + '%' : '—') + '</td>' +
+           '<td class="p num">' + soVN(t.quyKho, 2) + '</td>' +
+           '<td class="p num">' + soVN(t.nhat, 0) + '</td>' +
+           '<td class="p num">' + soVN(t.nsbq, 3) + '</td>' +
+           '<td class="p num">' + soVN(t.soCn, 0) + '</td></tr>';
+    }
+    h += '</tbody>';
+    $('bangTo').innerHTML = h;
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('kpis').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+function the_kpi(ten, so, dv, phu) {
+  return '<div class="the kpi"><div class="ten">' + thoat(ten) + '</div>' +
+    '<div class="so num">' + so + '<span class="dv">' + thoat(dv) + '</span></div>' +
+    '<div class="phu2">' + thoat(phu) + '</div></div>';
+}
+
+/* =====================================================================
+   Tab: Sản lượng chi tiết
+   ===================================================================== */
+var COT_SL = [
+  { k: 'ngay', t: 'Ngày', sx: true },
+  { k: 'maCn', t: 'Mã công nhân', sx: true },
+  { k: 'to', t: 'Tổ', sx: true },
+  { k: 'phanCao', t: 'Phần cạo', sx: false },
+  { k: 'phien', t: 'Phiên', sx: true },
+  { k: 'loaiMu', t: 'Loại mủ', sx: true },
+  { k: 'chatLuong', t: 'Chất lượng', sx: false },
+  { k: 'kg', t: 'Sản lượng (kg)', sx: true, p: true },
+  { k: 'nhat', t: 'Nhát cạo', sx: true, p: true },
+  { k: 'drc', t: 'DRC', sx: false, p: true },
+  { k: 'quyKho', t: 'Quy khô (kg)', sx: true, p: true },
+  { k: 'nsbq', t: 'kg/nhát', sx: true, p: true },
+  { k: 'trangThai', t: 'Trạng thái', sx: true },
+  { k: '_sua', t: '', sx: false }
+];
+
+function viTrangThai(tt) {
+  if (tt === 'CHO_DUYET') return '<span class="vi canh">Chờ duyệt</span>';
+  if (tt === 'DA_DUYET') return '<span class="vi ok">Đã duyệt</span>';
+  return '<span class="nhan-mo">' + thoat(tt || '—') + '</span>';
+}
+
+function taiSanLuong() {
+  $('bangSL').innerHTML = '<tbody><tr><td><div class="rong">Đang tải dữ liệu…</div></td></tr></tbody>';
+
+  var bl = layBoLoc();
+  bl.sapXep = S.sapXep; bl.chieu = S.chieu; bl.trang = S.trang; bl.moiTrang = 100;
+
+  goiCache('sanLuong', bl).then(function (d) {
+    $('tomTatSL').textContent = soVN(d.tong, 0) + ' dòng · ' + soVN(d.tongKg, 2) +
+      ' kg tươi · ' + soVN(d.tongQuyKho, 2) + ' kg khô';
+
+    var h = '<thead><tr>';
+    for (var c = 0; c < COT_SL.length; c++) {
+      var col = COT_SL[c];
+      var lop = (col.p ? 'p ' : '') + (col.sx ? 'sx ' : '');
+      if (col.sx && S.sapXep === col.k) lop += (S.chieu === 'tang' ? 'tang' : 'giam');
+      h += '<th class="' + lop.trim() + '"' + (col.sx ? ' data-sx="' + col.k + '"' : '') +
+           '>' + thoat(col.t) + '</th>';
+    }
+    h += '</tr></thead><tbody>';
+
+    if (!d.rows.length) {
+      h += '<tr><td colspan="' + COT_SL.length + '"><div class="rong">Không có dòng nào khớp bộ lọc.</div></td></tr>';
+    }
+    for (var i = 0; i < d.rows.length; i++) {
+      var r = d.rows[i];
+      h += '<tr>' +
+        '<td>' + ngayVN(r.ngay) + '</td>' +
+        '<td><b>' + thoat(r.maCn) + '</b></td>' +
+        '<td>' + thoat(r.to) + '</td>' +
+        '<td class="nhan-mo">' + (r.phanCao ? thoat(r.phanCao) : '—') + '</td>' +
+        '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>' +
+        '<td class="nhan-mo">' + thoat(r.chatLuong || '—') + '</td>' +
+        '<td class="p num">' + soVN(r.kg, 2) + '</td>' +
+        '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>' +
+        '<td class="p num">' + (r.drc ? soVN(r.drc * 100, 1) + '%' : '—') + '</td>' +
+        '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
+        '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
+        '<td>' + viTrangThai(r.trangThai) + '</td>' +
+        '<td>' + (r.trangThai === 'CHO_DUYET'
+            ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button>'
+            : '<span class="nhan-mo" title="Đã duyệt thì khoá">—</span>') + '</td>' +
+        '</tr>';
+    }
+    h += '</tbody>';
+    $('bangSL').innerHTML = h;
+
+    // Gắn sắp xếp
+    var ths = $('bangSL').querySelectorAll('th[data-sx]');
+    for (var t = 0; t < ths.length; t++) {
+      ths[t].onclick = function () {
+        var k = this.getAttribute('data-sx');
+        if (S.sapXep === k) S.chieu = (S.chieu === 'tang' ? 'giam' : 'tang');
+        else { S.sapXep = k; S.chieu = 'giam'; }
+        S.trang = 1;
+        taiSanLuong();
+      };
+    }
+
+    // Nút sửa — chỉ hiện ở dòng chờ duyệt
+    var nutSua = $('bangSL').querySelectorAll('button[data-sua]');
+    for (var q = 0; q < nutSua.length; q++) {
+      nutSua[q].onclick = function () {
+        var ma = this.getAttribute('data-sua');
+        for (var z = 0; z < d.rows.length; z++) {
+          if (d.rows[z].ma === ma) { moSuaSanLuong(d.rows[z]); break; }
+        }
+      };
+    }
+
+    // Phân trang
+    var pt = '';
+    if (d.soTrang > 1) {
+      pt = '<button class="btn nho" id="ptTruoc"' + (d.trang <= 1 ? ' disabled' : '') + '>← Trước</button>' +
+           '<span>Trang ' + d.trang + ' / ' + d.soTrang + '</span>' +
+           '<button class="btn nho" id="ptSau"' + (d.trang >= d.soTrang ? ' disabled' : '') + '>Sau →</button>';
+    } else if (d.tong) {
+      pt = '<span>Hiển thị toàn bộ ' + soVN(d.tong, 0) + ' dòng</span>';
+    }
+    $('phanTrangSL').innerHTML = pt;
+    if ($('ptTruoc')) $('ptTruoc').onclick = function () { S.trang--; taiSanLuong(); window.scrollTo(0, 0); };
+    if ($('ptSau')) $('ptSau').onclick = function () { S.trang++; taiSanLuong(); window.scrollTo(0, 0); };
+
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangSL').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/* =====================================================================
+   Tab: Phiếu nội trạm
+   ===================================================================== */
+function taiPhieu() {
+  $('bangPhieu').innerHTML = '<tbody><tr><td><div class="rong">Đang tải dữ liệu…</div></td></tr></tbody>';
+
+  goiCache('phieu', layBoLoc()).then(function (d) {
+    $('tomTatPhieu').textContent = soVN(d.tong, 0) + ' phiếu · ' + soVN(d.tongKg, 2) + ' kg' +
+      (d.soLech ? ' · ' + d.soLech + ' phiếu lệch chi tiết' : '');
+
+    var h = '<thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Tổ</th>' +
+            '<th class="p">Tổng (kg)</th><th>Chi tiết theo loại mủ</th>' +
+            '<th>Trạng thái</th><th class="p">Đối chiếu</th><th></th></tr></thead><tbody>';
+
+    if (!d.rows.length) {
+      h += '<tr><td colspan="8"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';
+    }
+    for (var i = 0; i < d.rows.length; i++) {
+      var p = d.rows[i];
+      var ct = '';
+      for (var j = 0; j < p.chiTiet.length; j++) {
+        ct += '<span class="vi ' + lopLoaiMu(p.chiTiet[j].loaiMu) + '" style="margin-right:4px">' +
+              thoat(p.chiTiet[j].tenLoai) + ' ' + soVN(p.chiTiet[j].kg, 1) + '</span>';
+      }
+      if (!ct) ct = '<span class="nhan-mo">Chưa có dòng chi tiết</span>';
+
+      h += '<tr>' +
+        '<td><b>' + thoat(p.ma) + '</b></td>' +
+        '<td>' + ngayVN(p.ngay) + '</td>' +
+        '<td>' + thoat(p.to) + '</td>' +
+        '<td class="p num">' + soVN(p.kg, 2) + '</td>' +
+        '<td style="white-space:normal;min-width:240px">' + ct + '</td>' +
+        '<td>' + viTrangThai(p.trangThai) +
+          (p.soDongChoDuyet ? ' <span class="nhan-mo">' + p.soDongChoDuyet + '/' +
+             p.soDongSanLuong + ' dòng</span>' : '') + '</td>' +
+        '<td class="p">' + (p.khop
+            ? '<span class="vi ok">Khớp</span>'
+            : '<span class="vi canh">Lệch ' + soVN(Math.abs(p.tongChiTiet - p.kg), 2) + '</span>') + '</td>' +
+        '<td><button class="btn nho" data-phieu="' + thoat(p.ma) + '">Xem</button></td>' +
+        '</tr>';
+    }
+    h += '</tbody>';
+    $('bangPhieu').innerHTML = h;
+
+    var nuts = $('bangPhieu').querySelectorAll('button[data-phieu]');
+    for (var n = 0; n < nuts.length; n++) {
+      nuts[n].onclick = function () { moPhieu(this.getAttribute('data-phieu')); };
+    }
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangPhieu').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+function moPhieu(ma) {
+  $('nenPhieu').classList.add('hien');
+  $('tieuDePhieu').textContent = 'Phiếu ' + ma;
+  $('thanPhieu').innerHTML = '<div class="rong">Đang tải…</div>';
+
+  goiCache('phieuChiTiet', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, maPhieu: ma }).then(function (d) {
+    var p = d.phieu;
+    var h = '<div class="dong-tt">' +
+      '<div><span>Mã phiếu</span><b>' + thoat(p.ma) + '</b></div>' +
+      '<div><span>Ngày</span><b>' + ngayVN(p.ngay) + '</b></div>' +
+      '<div><span>Tổ</span><b>' + thoat(p.to) + '</b></div>' +
+      '<div><span>Tổng khối lượng</span><b>' + soVN(p.kg, 2) + ' kg</b></div>' +
+      '</div>';
+
+    h += '<h3 class="tieude-muc">Chi tiết theo loại mủ</h3><div class="cuon"><table>' +
+         '<thead><tr><th>Loại mủ</th><th class="p">Khối lượng (kg)</th><th class="p">Tỷ trọng</th></tr></thead><tbody>';
+    for (var i = 0; i < p.chiTiet.length; i++) {
+      var c = p.chiTiet[i];
+      h += '<tr><td><span class="vi ' + lopLoaiMu(c.loaiMu) + '">' + thoat(c.tenLoai) + '</span></td>' +
+           '<td class="p num">' + soVN(c.kg, 2) + '</td>' +
+           '<td class="p num">' + (p.kg ? soVN(c.kg / p.kg * 100, 1) + '%' : '—') + '</td></tr>';
+    }
+    if (!p.chiTiet.length) h += '<tr><td colspan="3"><div class="rong">Phiếu chưa có dòng chi tiết.</div></td></tr>';
+    h += '</tbody><tfoot><tr><td>Tổng chi tiết</td><td class="p num">' + soVN(p.tongChiTiet, 2) +
+         '</td><td class="p">' + (p.khop ? '<span class="vi ok">Khớp phiếu</span>'
+            : '<span class="vi canh">Lệch ' + soVN(Math.abs(p.tongChiTiet - p.kg), 2) + ' kg</span>') +
+         '</td></tr></tfoot></table></div>';
+
+    h += '<h3 class="tieude-muc" style="margin-top:22px">Các dòng sản lượng cấu thành (' + d.dong.length + ')</h3>' +
+         '<div class="cuon"><table><thead><tr><th>Mã công nhân</th><th>Phần cạo</th><th>Phiên</th>' +
+         '<th>Loại mủ</th><th class="p">kg</th><th class="p">Nhát</th><th class="p">Quy khô</th>' +
+         '</tr></thead><tbody>';
+    var tKg = 0, tKho = 0;
+    for (var j = 0; j < d.dong.length; j++) {
+      var r = d.dong[j];
+      tKg += r.kg; tKho += r.quyKho;
+      h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
+           '<td class="nhan-mo">' + (r.phanCao ? thoat(r.phanCao) : '—') + '</td>' +
+           '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
+           '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>' +
+           '<td class="p num">' + soVN(r.kg, 2) + '</td>' +
+           '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>' +
+           '<td class="p num">' + soVN(r.quyKho, 2) + '</td></tr>';
+    }
+    if (!d.dong.length) h += '<tr><td colspan="7"><div class="rong">Không có dòng sản lượng.</div></td></tr>';
+    h += '</tbody><tfoot><tr><td colspan="4">Cộng</td><td class="p num">' + soVN(tKg, 2) +
+         '</td><td></td><td class="p num">' + soVN(tKho, 2) + '</td></tr></tfoot></table></div>';
+
+    h += '<p class="goi-y" style="margin-top:18px">Phiếu và chi tiết do Bot AppSheet tự tổng hợp từ sản lượng ngày — không nhập tay.</p>';
+
+    $('thanPhieu').innerHTML = h;
+  }).catch(function (e) {
+    $('thanPhieu').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>';
+  });
+}
+
+/* =====================================================================
+   Tab: Xếp hạng
+   ===================================================================== */
+function taiXepHang() {
+  $('bangXH').innerHTML = '<tbody><tr><td><div class="rong">Đang tải dữ liệu…</div></td></tr></tbody>';
+
+  var bl = layBoLoc();
+  bl.theo = $('fTheo').value;
+
+  goiCache('xepHang', bl).then(function (d) {
+    var h = '<thead><tr><th>#</th><th>Mã công nhân</th><th>Tổ</th><th>Chức danh</th>' +
+            '<th class="p">Tổng kg tươi</th><th class="p">Quy khô</th><th class="p">Số nhát</th>' +
+            '<th class="p">kg/nhát</th><th class="p">Ngày có SL</th><th class="p">BQ ngày</th>' +
+            '</tr></thead><tbody>';
+    if (!d.rows.length) {
+      h += '<tr><td colspan="10"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    }
+    for (var i = 0; i < d.rows.length; i++) {
+      var r = d.rows[i];
+      h += '<tr><td class="nhan-mo">' + (i + 1) + '</td>' +
+        '<td><b>' + thoat(r.maCn) + '</b></td>' +
+        '<td>' + thoat(r.to) + '</td>' +
+        '<td class="nhan-mo">' + thoat(r.chucDanh || '—') + '</td>' +
+        '<td class="p num">' + soVN(r.kg, 2) + '</td>' +
+        '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
+        '<td class="p num">' + soVN(r.nhat, 0) + '</td>' +
+        '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
+        '<td class="p num">' + soVN(r.soNgay, 0) + '</td>' +
+        '<td class="p num">' + soVN(r.binhQuanNgay, 2) + '</td></tr>';
+    }
+    h += '</tbody>';
+    $('bangXH').innerHTML = h;
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangXH').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/* =====================================================================
+   Xuất CSV
+   ===================================================================== */
+function taiVeCSV(ten, tieuDe, dong) {
+  var d = [tieuDe].concat(dong).map(function (r) {
+    return r.map(function (o) {
+      var s = (o === null || o === undefined) ? '' : String(o);
+      return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(';');
+  }).join('\r\n');
+
+  // BOM để Excel mở đúng tiếng Việt
+  var blob = new Blob(['﻿' + d], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = ten;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function csvSanLuong() {
+  baoLoi('thongBao', '');
+  goiAPI('xuatTatCa', layBoLoc()).then(function (d) {
+    var dong = d.rows.map(function (r) {
+      return [r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
+              r.kg, r.nhat, r.drc, r.quyKho, r.nsbq, r.nguon, r.trangThai, r.ghiChu];
+    });
+    taiVeCSV('san_luong_' + S.maDonVi + '.csv',
+      ['MA_BAN_GHI', 'NGAY', 'MA_CN', 'TO', 'MA_PHAN_CAO', 'PHIEN_CAO', 'MA_LOAI_MU',
+       'CHAT_LUONG', 'SAN_LUONG_KG', 'SO_NHAT_CAO', 'DRC_AP_DUNG', 'QUY_KHO_KG',
+       'NSBQ_KG_NHAT', 'NGUON_GHI', 'TRANG_THAI', 'GHI_CHU'], dong);
+  }).catch(function (e) { baoLoi('thongBao', e.message); });
+}
+
+function csvPhieu() {
+  baoLoi('thongBao', '');
+  goiCache('phieu', layBoLoc()).then(function (d) {
+    var dong = [];
+    d.rows.forEach(function (p) {
+      if (!p.chiTiet.length) {
+        dong.push([p.ma, p.ngay, p.to, p.kg, '', '', p.khop ? 'KHOP' : 'LECH']);
+      }
+      p.chiTiet.forEach(function (c) {
+        dong.push([p.ma, p.ngay, p.to, p.kg, c.loaiMu, c.kg, p.khop ? 'KHOP' : 'LECH']);
+      });
+    });
+    taiVeCSV('phieu_noi_tram_' + S.maDonVi + '.csv',
+      ['MA_PHIEU_NT', 'NGAY', 'MA_DON_VI', 'TONG_KHOI_LUONG_KG', 'MA_LOAI_MU',
+       'KHOI_LUONG_LOAI_MU_KG', 'DOI_CHIEU'], dong);
+  }).catch(function (e) { baoLoi('thongBao', e.message); });
+}
+
+function csvXepHang() {
+  baoLoi('thongBao', '');
+  var bl = layBoLoc(); bl.theo = $('fTheo').value;
+  goiCache('xepHang', bl).then(function (d) {
+    var dong = d.rows.map(function (r, i) {
+      return [i + 1, r.maCn, r.to, r.chucDanh, r.kg, r.quyKho, r.nhat, r.nsbq, r.soNgay, r.binhQuanNgay];
+    });
+    taiVeCSV('xep_hang_' + S.maDonVi + '.csv',
+      ['HANG', 'MA_CN', 'TO', 'CHUC_DANH', 'TONG_KG', 'QUY_KHO_KG', 'SO_NHAT',
+       'NSBQ_KG_NHAT', 'SO_NGAY', 'BINH_QUAN_NGAY'], dong);
+  }).catch(function (e) { baoLoi('thongBao', e.message); });
+}
+
+/* Ghi nhớ tab và bộ lọc đang xem, để reload quay lại đúng chỗ cũ. */
+function luuChoDangXem() {
+  if (!S.vaiTro) return;
+  ghiLS('crck2_dangxem', JSON.stringify({
+    tab: S.tab,
+    tuNgay: $('fTuNgay').value, denNgay: $('fDenNgay').value,
+    doi: $('fDoi').value, to: $('fTo').value, maCn: $('fMaCn').value,
+    loaiMu: $('fLoaiMu').value, phien: $('fPhien').value,
+    chatLuong: $('fChatLuong').value, trangThai: $('fTrangThai').value
+  }));
+}
+
+/* Khôi phục tab và bộ lọc của lần xem trước. Tham số trên URL ưu tiên hơn. */
+function khoiPhucChoDangXem() {
+  var raw = docLS('crck2_dangxem');
+  if (!raw) return false;
+  var j;
+  try { j = JSON.parse(raw); } catch (e) { return false; }
+  if (!j) return false;
+
+  if (j.tuNgay) $('fTuNgay').value = j.tuNgay;
+  if (j.denNgay) $('fDenNgay').value = j.denNgay;
+
+  // Thứ tự quan trọng: đội dựng lại danh sách tổ, tổ dựng lại danh sách công nhân
+  if (j.doi) { $('fDoi').value = j.doi; dungLocTo(); }
+  if (j.to) { $('fTo').value = j.to; dungLocCn(); }
+  if (j.maCn) $('fMaCn').value = j.maCn;
+
+  if (j.loaiMu) $('fLoaiMu').value = j.loaiMu;
+  if (j.phien) $('fPhien').value = j.phien;
+  if (j.chatLuong) $('fChatLuong').value = j.chatLuong;
+  if (j.trangThai) $('fTrangThai').value = j.trangThai;
+  if (j.tab && LOC_THEO_TAB[j.tab]) S.tab = j.tab;
+
+  dongBoChip();
+  return true;
+}
+
+/* =====================================================================
+   Nhập sản lượng mới
+   ---------------------------------------------------------------------
+   Dòng nhập từ đây luôn vào trạng thái CHO_DUYET để còn qua bước duyệt
+   của đội trưởng. Mã bản ghi, phần cạo, DRC, quy khô do backend tự sinh.
+   ===================================================================== */
+function optTu(ds, chon, khoaMa, khoaTen) {
+  var o = '';
+  for (var i = 0; i < (ds || []).length; i++) {
+    var ma = ds[i][khoaMa || 'ma'];
+    o += '<option value="' + thoat(ma) + '"' + (ma === chon ? ' selected' : '') + '>' +
+         thoat(ds[i][khoaTen || 'ten']) + '</option>';
+  }
+  return o;
+}
+
+function moThemSanLuong() {
+  if (!S.dsCn.length) {
+    baoLoi('thongBao', 'Không có công nhân nào trong phạm vi để nhập.');
+    return;
+  }
+  _dangSua = null;
+  $('tieuDePhieu').textContent = 'Nhập sản lượng mới';
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+
+  // Danh sách công nhân bám theo ô lọc Đội/Tổ đang chọn
+  var dsCn = [];
+  var doiChon = $('fDoi').value, toChon = $('fTo').value;
+  for (var i = 0; i < S.dsCn.length; i++) {
+    var cn = S.dsCn[i];
+    var toCua = cn.substring(0, cn.lastIndexOf('-'));
+    if (toChon) { if (toCua !== toChon) continue; }
+    else if (doiChon && doiCuaTo(toCua) !== doiChon) continue;
+    dsCn.push({ ma: cn, ten: cn });
+  }
+  if (!dsCn.length) for (var j = 0; j < S.dsCn.length; j++) dsCn.push({ ma: S.dsCn[j], ten: S.dsCn[j] });
+
+  var ngayMD = $('fDenNgay').value || (S.meta && S.meta.ngayMax) || '';
+
+  $('thanPhieu').innerHTML =
+    '<div class="bo-loc the" style="margin-bottom:16px">' +
+      '<div><label class="nhan" for="tNgay">Ngày</label>' +
+        '<input class="o" id="tNgay" type="date" value="' + thoat(ngayMD) + '"></div>' +
+      '<div><label class="nhan" for="tCn">Công nhân</label>' +
+        '<select class="o" id="tCn">' + optTu(dsCn) + '</select></div>' +
+      '<div><label class="nhan" for="tPhien">Phiên cạo</label>' +
+        '<select class="o" id="tPhien">' + optTu(S.meta && S.meta.phien) + '</select></div>' +
+      '<div><label class="nhan" for="tLoai">Loại mủ</label>' +
+        '<select class="o" id="tLoai">' + optTu(S.meta && S.meta.loaiMu) + '</select></div>' +
+      '<div><label class="nhan" for="tCl">Chất lượng</label>' +
+        '<select class="o" id="tCl">' + optTu(S.meta && S.meta.chatLuong) + '</select></div>' +
+      '<div><label class="nhan" for="tKg">Sản lượng (kg)</label>' +
+        '<input class="o" id="tKg" type="number" step="0.01" min="0" placeholder="0.00"></div>' +
+      '<div><label class="nhan" for="tNhat">Số nhát cạo</label>' +
+        '<input class="o" id="tNhat" type="number" step="1" min="0" value="2"></div>' +
+      '<div style="grid-column:1/-1"><label class="nhan" for="tGhiChu">Ghi chú</label>' +
+        '<input class="o" id="tGhiChu" placeholder="Không bắt buộc"></div>' +
+    '</div>' +
+    '<div id="loiThem"></div>' +
+    '<p class="goi-y">Dòng mới vào trạng thái <b>Chờ duyệt</b>. Mã bản ghi, phần cạo, DRC và quy khô do hệ thống tự điền. ' +
+      'Phiếu nội trạm của ngày và tổ tương ứng sẽ được tạo hoặc cập nhật ngay.</p>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn" id="nutHuyThem">Huỷ</button>' +
+      '<button class="btn chinh" id="nutLuuThem">Lưu</button>' +
+    '</div>';
+
+  $('nutHuyThem').onclick = dongSuaSanLuong;
+  $('nutLuuThem').onclick = luuThemSanLuong;
+  $('tKg').focus();
+}
+
+function luuThemSanLuong() {
+  var nut = $('nutLuuThem');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu…';
+  baoLoi('loiThem', '');
+
+  goiAPI('themSanLuong', {
+    vaiTro: S.vaiTro, maDonVi: S.maDonVi,
+    ngay: $('tNgay').value,
+    maCn: $('tCn').value,
+    phien: $('tPhien').value,
+    loaiMu: $('tLoai').value,
+    chatLuong: $('tCl').value,
+    kg: $('tKg').value,
+    nhat: $('tNhat').value,
+    ghiChu: $('tGhiChu').value
+  }).then(function (d) {
+    _cacheFE = {};
+    dongSuaSanLuong();
+    var ct = d.phieu.chiTiet.map(function (c) {
+      return tenLoaiMu(c.loaiMu) + ' ' + soVN(c.kg, 2);
+    }).join(' · ');
+    $('thongBao').innerHTML =
+      '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+      'Đã thêm ' + thoat(d.ma) + ' — ' + thoat(d.maCn) + ', ' + soVN(d.kg, 2) + ' kg ' +
+      thoat(tenLoaiMu(d.loaiMu)) + ', phiên ' + thoat(d.phien) +
+      (d.phanCao ? ', phần cạo ' + thoat(d.phanCao) : '') + '. ' +
+      'Phiếu ' + thoat(d.phieu.maPhieu) + ' nay là ' + soVN(d.phieu.tongKg, 2) +
+      ' kg (' + thoat(ct) + ').</div>';
+    taiTab();
+  }).catch(function (e) {
+    nut.disabled = false;
+    nut.textContent = 'Lưu';
+    baoLoi('loiThem', e.message);
+  });
+}
+
+/**
+ * Bật/tắt ô lọc theo tab đang mở.
+ *
+ * Phiếu nội trạm là số liệu GỘP theo (ngày, tổ) nên lọc theo công nhân,
+ * phiên cạo, loại mủ hay chất lượng đều vô nghĩa — trước đây các ô này vẫn
+ * hiện nhưng backend bỏ qua, chọn xong không có gì đổi. Nay ẩn hẳn.
+ * Xếp hạng thì ẩn ô Công nhân: lọc còn một người thì ai cũng hạng 1.
+ */
+var LOC_THEO_TAB = {
+  tongQuan: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai', 'cn'],
+  sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai', 'cn'],
+  phieu:    ['doi', 'to', 'trangThai'],
+  xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai']
+};
+
+var KHUNG_LOC = {
+  doi: 'khungLocDoi', to: 'khungLocTo', loaiMu: 'khungLocLoaiMu',
+  phien: 'khungLocPhien', chatLuong: 'khungLocChatLuong',
+  trangThai: 'khungLocTrangThai', cn: 'khungLocCn'
+};
+
+function capNhatHienBoLoc() {
+  var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
+  for (var k in KHUNG_LOC) {
+    var el = $(KHUNG_LOC[k]);
+    if (!el) continue;
+    var hopLe = duoc.indexOf(k) > -1;
+    // Ô Đội / Tổ còn phụ thuộc phạm vi: chỉ quản một tổ thì ẩn luôn
+    if (k === 'doi' && !S.coNhieuDoi) hopLe = false;
+    if (k === 'to' && !S.coNhieuTo) hopLe = false;
+    el.style.display = hopLe ? '' : 'none';
+  }
+}
+
+/* =====================================================================
+   Sửa sản lượng chưa duyệt
+   ---------------------------------------------------------------------
+   Chỉ mở được với dòng CHO_DUYET. Backend kiểm lại phạm vi tổ và trạng
+   thái một lần nữa, nên dù có nghịch giao diện cũng không ghi bậy được.
+   ===================================================================== */
+var _dangSua = null;
+
+function moSuaSanLuong(r) {
+  _dangSua = r;
+  $('tieuDePhieu').textContent = 'Sửa sản lượng ' + r.ma;
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+
+  var optLoai = '';
+  var dsLoai = (S.meta && S.meta.loaiMu) || [];
+  for (var i = 0; i < dsLoai.length; i++) {
+    optLoai += '<option value="' + thoat(dsLoai[i].ma) + '"' +
+               (dsLoai[i].ma === r.loaiMu ? ' selected' : '') + '>' +
+               thoat(dsLoai[i].ten) + '</option>';
+  }
+  var optCl = '';
+  var dsCl = (S.meta && S.meta.chatLuong) || [];
+  for (var j = 0; j < dsCl.length; j++) {
+    optCl += '<option value="' + thoat(dsCl[j].ma) + '"' +
+             (dsCl[j].ma === r.chatLuong ? ' selected' : '') + '>' +
+             thoat(dsCl[j].ten) + '</option>';
+  }
+
+  $('thanPhieu').innerHTML =
+    '<div class="dong-tt">' +
+      '<div><span>Ngày</span><b>' + ngayVN(r.ngay) + '</b></div>' +
+      '<div><span>Công nhân</span><b>' + thoat(r.maCn) + '</b></div>' +
+      '<div><span>Tổ</span><b>' + thoat(r.to) + '</b></div>' +
+      '<div><span>Phiên</span><b>' + thoat(r.phien || '—') + '</b></div>' +
+    '</div>' +
+    '<div class="bo-loc the" style="margin-bottom:16px">' +
+      '<div><label class="nhan" for="sKg">Sản lượng (kg)</label>' +
+        '<input class="o" id="sKg" type="number" step="0.01" min="0" value="' + r.kg + '"></div>' +
+      '<div><label class="nhan" for="sNhat">Số nhát cạo</label>' +
+        '<input class="o" id="sNhat" type="number" step="1" min="0" value="' + (r.nhat || '') + '"></div>' +
+      '<div><label class="nhan" for="sLoai">Loại mủ</label>' +
+        '<select class="o" id="sLoai">' + optLoai + '</select></div>' +
+      '<div><label class="nhan" for="sCl">Chất lượng</label>' +
+        '<select class="o" id="sCl">' + optCl + '</select></div>' +
+      '<div style="grid-column:1/-1"><label class="nhan" for="sGhiChu">Ghi chú</label>' +
+        '<input class="o" id="sGhiChu" value="' + thoat(r.ghiChu || '') + '"></div>' +
+    '</div>' +
+    '<div id="loiSua"></div>' +
+    '<p class="goi-y">Sửa xong, phiếu nội trạm và chi tiết theo loại mủ của ngày ' +
+      ngayVN(r.ngay) + ' tổ ' + thoat(r.to) + ' sẽ được tính lại ngay.</p>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn" id="nutHuySua">Huỷ</button>' +
+      '<button class="btn chinh" id="nutLuuSua">Lưu thay đổi</button>' +
+    '</div>';
+
+  $('nutHuySua').onclick = dongSuaSanLuong;
+  $('nutLuuSua').onclick = luuSuaSanLuong;
+}
+
+function dongSuaSanLuong() {
+  _dangSua = null;
+  $('nenPhieu').classList.remove('hien');
+  $('nutInPhieu').style.display = '';
+}
+
+function luuSuaSanLuong() {
+  if (!_dangSua) return;
+  var nut = $('nutLuuSua');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu…';
+  baoLoi('loiSua', '');
+
+  goiAPI('suaSanLuong', {
+    vaiTro: S.vaiTro, maDonVi: S.maDonVi,
+    ma: _dangSua.ma,
+    kg: $('sKg').value,
+    nhat: $('sNhat').value,
+    loaiMu: $('sLoai').value,
+    chatLuong: $('sCl').value,
+    ghiChu: $('sGhiChu').value
+  }).then(function (d) {
+    _cacheFE = {};                    // số đã đổi, bỏ hết cache cũ
+    dongSuaSanLuong();
+    var ct = d.phieu.chiTiet.map(function (c) {
+      return tenLoaiMu(c.loaiMu) + ' ' + soVN(c.kg, 2);
+    }).join(' · ');
+    baoLoi('thongBao', '');
+    $('thongBao').innerHTML =
+      '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+      'Đã lưu ' + thoat(d.ma) + ' = ' + soVN(d.kg, 2) + ' kg. Phiếu ' + thoat(d.phieu.maPhieu) +
+      ' nay là ' + soVN(d.phieu.tongKg, 2) + ' kg (' + thoat(ct) + ').</div>';
+    taiTab();
+  }).catch(function (e) {
+    nut.disabled = false;
+    nut.textContent = 'Lưu thay đổi';
+    baoLoi('loiSua', e.message);
+  });
+}
+
+/* =====================================================================
+   Điều phối tab
+   ===================================================================== */
+function taiTab() {
+  luuChoDangXem();
+  if (S.tab === 'tongQuan') taiTongQuan();
+  else if (S.tab === 'sanLuong') taiSanLuong();
+  else if (S.tab === 'phieu') taiPhieu();
+  else if (S.tab === 'xepHang') taiXepHang();
+}
+
+function chuyenTab(ten) {
+  S.tab = ten;
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab') === ten);
+  }
+  $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
+  $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
+  $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
+  $('pXepHang').style.display = (ten === 'xepHang') ? '' : 'none';
+  capNhatHienBoLoc();
+  luuChoDangXem();
+  taiTab();
+}
+
+/* =====================================================================
+   Lọc nhanh theo mốc ngày (dựa trên ngày mới nhất có dữ liệu)
+   ===================================================================== */
+var MOC_NHANH = [
+  { id: 'hom_nay', ten: 'Hôm nay', ngay: 1 },
+  { id: '7', ten: '7 ngày gần nhất', ngay: 7 },
+  { id: '30', ten: '30 ngày gần nhất', ngay: 30 },
+  { id: '90', ten: '90 ngày gần nhất', ngay: 90 },
+  { id: 'all', ten: 'Toàn bộ', ngay: 0 }
+];
+
+/** Khoảng ngày tương ứng một mốc lọc nhanh. */
+function khoangCuaMoc(id) {
+  if (id === 'all') {
+    if (!S.meta) return null;
+    return { tu: S.meta.ngayMin, den: S.meta.ngayMax };
+  }
+  var m = null;
+  for (var i = 0; i < MOC_NHANH.length; i++) if (MOC_NHANH[i].id === id) m = MOC_NHANH[i];
+  if (!m) return null;
+  var den = new Date();
+  den.setHours(0, 0, 0, 0);
+  var tu = new Date(den.getTime() - (m.ngay - 1) * 86400000);
+  return { tu: dinhDangISO(tu), den: dinhDangISO(den) };
+}
+
+/**
+ * Đồng bộ hai chiều giữa chip lọc nhanh và ô Từ ngày / Đến ngày:
+ * sửa tay ngày mà trùng đúng một mốc thì chip đó sáng, không trùng mốc nào
+ * thì không chip nào sáng.
+ */
+function dongBoChip() {
+  var tu = $('fTuNgay').value, den = $('fDenNgay').value;
+  S.locNhanhDangChon = '';
+  for (var i = 0; i < MOC_NHANH.length; i++) {
+    var k = khoangCuaMoc(MOC_NHANH[i].id);
+    if (k && k.tu === tu && k.den === den) { S.locNhanhDangChon = MOC_NHANH[i].id; break; }
+  }
+  veChipNhanh();
+}
+
+function veChipNhanh() {
+  var h = '';
+  for (var i = 0; i < MOC_NHANH.length; i++) {
+    h += '<button class="chip' + (S.locNhanhDangChon === MOC_NHANH[i].id ? ' on' : '') +
+         '" data-nhanh="' + MOC_NHANH[i].id + '">' + MOC_NHANH[i].ten + '</button>';
+  }
+  $('locNhanh').innerHTML = h;
+
+  var nuts = $('locNhanh').querySelectorAll('button[data-nhanh]');
+  for (var j = 0; j < nuts.length; j++) {
+    nuts[j].onclick = function () {
+      var k = khoangCuaMoc(this.getAttribute('data-nhanh'));
+      if (!k) return;
+      $('fTuNgay').value = k.tu;
+      $('fDenNgay').value = k.den;
+      dongBoChip();
+      S.trang = 1;
+      taiTab();
+    };
+  }
+}
+
+function dinhDangISO(d) {
+  function p(x) { return (x < 10 ? '0' : '') + x; }
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+/* =====================================================================
+   Khởi động
+   ===================================================================== */
+function hien(id) {
+  $('manCauHinh').style.display = 'none';
+  $('manDangNhap').style.display = 'none';
+  $('app').style.display = 'none';
+  $(id).style.display = (id === 'app') ? '' : 'flex';
+}
+
+/**
+ * Đọc tham số trên URL để mở sẵn đúng phiếu cần xem. Dùng cho liên kết gắn
+ * trong biểu mẫu Base, ví dụ:
+ *   index.html?vaiTro=DOI_TRUONG&maDonVi=Đ1&ngay=2026-09-20&to=Đ1-KV1
+ * Đội trưởng bấm một phát là vào thẳng, đã lọc đúng ngày và tổ đang duyệt.
+ */
+function layThamSoURL() {
+  var q = {};
+  var s = location.search || '';
+  if (!s && location.hash.indexOf('?') > -1) s = location.hash.substring(location.hash.indexOf('?'));
+  s = s.replace(/^\?/, '');
+  if (!s) return q;
+  var doi = s.split('&');
+  for (var i = 0; i < doi.length; i++) {
+    var c = doi[i].split('=');
+    if (!c[0]) continue;
+    try { q[decodeURIComponent(c[0])] = decodeURIComponent((c[1] || '').replace(/\+/g, ' ')); }
+    catch (e) { /* tham số hỏng thì bỏ qua */ }
+  }
+  return q;
+}
+
+/** Áp tham số URL vào các ô lọc, sau khi danh mục đã nạp xong. */
+function apThamSoURL() {
+  var q = S.thamSoURL || {};
+  var coApDung = false;
+
+  if (q.doi) { $('fDoi').value = q.doi; dungLocTo(); coApDung = true; }
+  if (q.to) { $('fDoi').value = doiCuaTo(q.to); dungLocTo(); $('fTo').value = q.to; dungLocCn(); coApDung = true; }
+  if (q.maCn) { $('fMaCn').value = q.maCn; coApDung = true; }
+  if (q.loaiMu) { $('fLoaiMu').value = q.loaiMu; coApDung = true; }
+  if (q.trangThai) { $('fTrangThai').value = q.trangThai; coApDung = true; }
+
+  if (q.ngay) {
+    $('fTuNgay').value = q.ngay; $('fDenNgay').value = q.ngay; coApDung = true;
+  } else {
+    if (q.tuNgay) { $('fTuNgay').value = q.tuNgay; coApDung = true; }
+    if (q.denNgay) { $('fDenNgay').value = q.denNgay; coApDung = true; }
+  }
+
+  if (coApDung) dongBoChip();
+  if (q.tab) S.tab = q.tab;
+  return coApDung;
+}
+
+function batDau() {
+  if (!S.api) { hien('manCauHinh'); return; }
+  hien('manDangNhap');
+
+  // Có đủ vai trò + mã đơn vị trên URL thì vào thẳng, khỏi bắt gõ lại
+  var q = S.thamSoURL || {};
+  if (q.vaiTro && q.maDonVi) {
+    $('oVaiTro').value = q.vaiTro;
+    $('oMaDonVi').value = q.maDonVi;
+    capNhatGoiY();
+    $('nutVao').click();
+    return;
+  }
+
+  // Reload mà phiên trước còn hiệu lực thì vào thẳng bảng điều khiển,
+  // không bắt gõ lại mã đơn vị. Bấm "Đổi người dùng" mới quay về đây.
+  var phien = docLS('crck2_dangnhap');
+  if (phien) {
+    try {
+      var j0 = JSON.parse(phien);
+      if (j0.vaiTro && j0.maDonVi) {
+        $('oVaiTro').value = j0.vaiTro;
+        $('oMaDonVi').value = j0.maDonVi;
+        capNhatGoiY();
+        $('nutVao').click();
+        return;
+      }
+    } catch (e) { /* phiên hỏng thì hiện màn đăng nhập như thường */ }
+  }
+
+  // Nhớ lần đăng nhập trước cho tiện
+  var luu = docLS('crck2_dangnhap');
+  if (luu) {
+    try {
+      var j = JSON.parse(luu);
+      $('oVaiTro').value = j.vaiTro || 'TO_TRUONG';
+      $('oMaDonVi').value = j.maDonVi || '';
+    } catch (e) { /* bỏ qua */ }
+  }
+  capNhatGoiY();
+}
+
+function capNhatGoiY() {
+  var vt = $('oVaiTro').value;
+  if (vt === 'TO_TRUONG') {
+    $('goiYMa').innerHTML = 'Tổ trưởng nhập <b>mã tổ</b>, ví dụ <b>Đ1-KV1</b>.';
+    $('oMaDonVi').placeholder = 'Đ1-KV1';
+  } else if (vt === 'DOI_TRUONG') {
+    $('goiYMa').innerHTML = 'Đội trưởng nhập <b>mã đội</b>: <b>Đ1</b>, <b>Đ2</b>, <b>Đ3</b> hoặc <b>Đ6</b>.';
+    $('oMaDonVi').placeholder = 'Đ1';
+  } else {
+    $('goiYMa').innerHTML = 'Ban lãnh đạo nhập <b>CRCK</b> để xem toàn công ty, tổng hợp theo đội.';
+    $('oMaDonVi').placeholder = 'CRCK';
+  }
+}
+
+function tenVaiTro(vt) {
+  if (vt === 'TO_TRUONG') return 'Tổ trưởng';
+  if (vt === 'DOI_TRUONG') return 'Đội trưởng';
+  return 'Ban lãnh đạo';
+}
+
+function vaoApp(d) {
+  S.vaiTro = d.vaiTro; S.maDonVi = d.maDonVi; S.tenDonVi = d.ten;
+  S.dsTo = d.dsTo; S.toanCongTy = d.toanCongTy;
+  S.dsCn = d.dsCn || [];
+
+  ghiLS('crck2_dangnhap', JSON.stringify({ vaiTro: d.vaiTro, maDonVi: d.maDonVi }));
+
+  $('dongDonVi').textContent = d.ten + ' · ' + d.dsTo.length + ' tổ trong phạm vi';
+  $('theVaiTro').textContent = tenVaiTro(d.vaiTro) + ' · ' + d.maDonVi;
+
+  // Toàn công ty có tới 33 tổ — thêm ô lọc theo đội cho đỡ rối
+  var dsDoi = [];
+  for (var v = 0; v < d.dsTo.length; v++) {
+    var md = doiCuaTo(d.dsTo[v].ma);
+    if (dsDoi.indexOf(md) === -1) dsDoi.push(md);
+  }
+  dsDoi.sort();
+  var selDoi = $('fDoi');
+  selDoi.innerHTML = '<option value="">Tất cả (' + dsDoi.length + ' đội)</option>';
+  for (var w = 0; w < dsDoi.length; w++) {
+    selDoi.innerHTML += '<option value="' + thoat(dsDoi[w]) + '">' + thoat(dsDoi[w]) + '</option>';
+  }
+  S.coNhieuDoi = (dsDoi.length > 1);
+
+  dungLocTo();
+  $('tieuDeSoSanh').textContent = d.toanCongTy ? 'So sánh theo đội' : 'So sánh theo tổ';
+
+  hien('app');
+
+  // Nạp danh mục rồi vẽ tab đầu
+  goiAPI('meta', {}).then(function (m) {
+    S.meta = m;
+
+    var sl = $('fLoaiMu');
+    sl.innerHTML = '<option value="">Tất cả</option>';
+    for (var j = 0; j < m.loaiMu.length; j++) {
+      sl.innerHTML += '<option value="' + thoat(m.loaiMu[j].ma) + '">' + thoat(m.loaiMu[j].ten) + '</option>';
+    }
+
+    var sp = $('fPhien');
+    sp.innerHTML = '<option value="">Tất cả</option>';
+    for (var k = 0; k < m.phien.length; k++) {
+      sp.innerHTML += '<option value="' + thoat(m.phien[k].ma) + '">' + thoat(m.phien[k].ten) + '</option>';
+    }
+
+    var sc = $('fChatLuong');
+    sc.innerHTML = '<option value="">Tất cả</option>';
+    for (var l = 0; l < m.chatLuong.length; l++) {
+      sc.innerHTML += '<option value="' + thoat(m.chatLuong[l].ma) + '">' + thoat(m.chatLuong[l].ten) + '</option>';
+    }
+
+    var st = $('fTrangThai');
+    st.innerHTML = '<option value="">Tất cả</option>';
+    var dsTT = m.trangThai || [{ ma: 'CHO_DUYET', ten: 'Chờ duyệt' }, { ma: 'DA_DUYET', ten: 'Đã duyệt' }];
+    for (var q = 0; q < dsTT.length; q++) {
+      st.innerHTML += '<option value="' + thoat(dsTT[q].ma) + '">' + thoat(dsTT[q].ten) + '</option>';
+    }
+
+    $('fTuNgay').value = m.ngayMin;
+    $('fDenNgay').value = m.ngayMax;
+    dongBoChip();
+
+    // URL có tham số thì ưu tiên, không thì lấy lại chỗ xem lần trước
+    if (!apThamSoURL()) khoiPhucChoDangXem();
+    chuyenTab(S.tab || 'tongQuan');
+  }).catch(function (e) {
+    baoLoi('thongBao', 'Không nạp được danh mục: ' + e.message);
+  });
+}
+
+/* =====================================================================
+   Gắn sự kiện
+   ===================================================================== */
+$('nutLuuApi').onclick = function () {
+  var url = $('oApi').value.trim();
+  baoLoi('loiCauHinh', '');
+  if (!/^https:\/\/script\.google\.com\/.*\/exec/.test(url)) {
+    baoLoi('loiCauHinh', 'Địa chỉ phải có dạng https://script.google.com/macros/s/..../exec');
+    return;
+  }
+  this.disabled = true; this.textContent = 'Đang kiểm tra…';
+  var nut = this;
+  S.api = url;
+  goiAPI('meta', {}).then(function () {
+    ghiLS('crck2_api', url);
+    nut.disabled = false; nut.textContent = 'Kiểm tra & lưu';
+    batDau();
+  }).catch(function (e) {
+    S.api = '';
+    nut.disabled = false; nut.textContent = 'Kiểm tra & lưu';
+    baoLoi('loiCauHinh', e.message);
+  });
+};
+
+$('doiApi').onclick = function (ev) {
+  ev.preventDefault();
+  $('oApi').value = S.api;
+  hien('manCauHinh');
+};
+
+$('oVaiTro').onchange = capNhatGoiY;
+
+$('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').click(); };
+
+$('nutVao').onclick = function () {
+  baoLoi('loiDangNhap', '');
+  var vt = $('oVaiTro').value;
+  var ma = $('oMaDonVi').value.trim();
+  if (!ma) { baoLoi('loiDangNhap', 'Chưa nhập mã đơn vị.'); return; }
+
+  var nut = this;
+  nut.disabled = true; nut.textContent = 'Đang kiểm tra…';
+  goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }).then(function (d) {
+    nut.disabled = false; nut.textContent = 'Xem sản lượng';
+    vaoApp(d);
+  }).catch(function (e) {
+    nut.disabled = false; nut.textContent = 'Xem sản lượng';
+    baoLoi('loiDangNhap', e.message);
+  });
+};
+
+$('nutThoat').onclick = function () {
+  S.vaiTro = ''; S.maDonVi = '';
+  xoaLS('crck2_dangnhap');
+  xoaLS('crck2_dangxem');
+  _cacheFE = {};
+  hien('manDangNhap');
+  $('oMaDonVi').value = '';
+  capNhatGoiY();
+};
+
+// Tải lại = bỏ cache trình duyệt, lấy lại từ backend
+$('nutTai').onclick = function () { _cacheFE = {}; taiTab(); };
+
+$('nutLoc').onclick = function () {
+  S.trang = 1;
+  dongBoChip();
+  taiTab();
+};
+
+$('nutXoaLoc').onclick = function () {
+  $('fDoi').value = ''; $('fLoaiMu').value = ''; $('fPhien').value = '';
+  $('fChatLuong').value = ''; $('fTrangThai').value = ''; $('fMaCn').value = '';
+  $('fTo').value = '';
+  dungLocTo();
+  if (S.meta) { $('fTuNgay').value = S.meta.ngayMin; $('fDenNgay').value = S.meta.ngayMax; }
+  S.trang = 1;
+  dongBoChip();
+  taiTab();
+};
+
+// Đổi đội thì dựng lại danh sách tổ rồi tải lại ngay — các ô lọc khác cũng
+// áp dụng ngay khi chọn, cho nhất quán với chip lọc nhanh.
+// Đội -> dựng lại Tổ -> dựng lại Công nhân; Tổ -> dựng lại Công nhân
+$('fDoi').onchange = function () { dungLocTo(); S.trang = 1; taiTab(); };
+$('fTo').onchange = function () { dungLocCn(); S.trang = 1; taiTab(); };
+$('fMaCn').onchange = function () { S.trang = 1; taiTab(); };
+$('fLoaiMu').onchange = function () { S.trang = 1; taiTab(); };
+$('fPhien').onchange = function () { S.trang = 1; taiTab(); };
+$('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
+$('fTrangThai').onchange = function () { S.trang = 1; taiTab(); };
+$('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
+$('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
+
+$('fTheo').onchange = function () { taiXepHang(); };
+
+$('nutThemSL').onclick = moThemSanLuong;
+$('nutCsvSL').onclick = csvSanLuong;
+$('nutCsvPhieu').onclick = csvPhieu;
+$('nutCsvXH').onclick = csvXepHang;
+
+$('nutDongPhieu').onclick = function () { dongSuaSanLuong(); };
+$('nutInPhieu').onclick = function () { window.print(); };
+$('nenPhieu').onclick = function (ev) {
+  if (ev.target === this) this.classList.remove('hien');
+};
+document.addEventListener('keydown', function (ev) {
+  if (ev.key === 'Escape') $('nenPhieu').classList.remove('hien');
+});
+
+var cacTab = document.querySelectorAll('.tab');
+for (var t = 0; t < cacTab.length; t++) {
+  cacTab[t].onclick = function () {
+    S.trang = 1;
+    chuyenTab(this.getAttribute('data-tab'));
+  };
+}
+
+S.thamSoURL = layThamSoURL();
+batDau();
+</script>
+</body>
+</html>
