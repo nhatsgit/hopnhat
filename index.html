@@ -348,7 +348,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div id="bdLoai"></div>
         </div>
       </div>
-      <div class="the">
+      <!-- Ẩn với tổ trưởng: phạm vi của họ chỉ có 1 tổ, "so sánh" vô nghĩa. -->
+      <div class="the" id="theSoSanh">
         <h3 class="tieude-muc" style="padding:16px 16px 0" id="tieuDeSoSanh">So sánh theo tổ</h3>
         <div class="cuon"><table id="bangTo"></table></div>
       </div>
@@ -407,12 +408,13 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab: Chấm công -->
     <section id="pChamCong" style="display:none">
       <div class="kpis" id="kpisCC"></div>
-      <div class="luoi-2">
-        <div class="the o-bieu-do">
+      <div class="luoi-2" id="luoiChamCong">
+        <div class="the o-bieu-do" id="theKyHieu">
           <h3 class="tieude-muc">Cơ cấu theo ký hiệu công</h3>
           <div id="bdKyHieu"></div>
         </div>
-        <div class="the o-bieu-do">
+        <!-- Ẩn với tổ trưởng: phạm vi chỉ có 1 tổ, "theo tổ" vô nghĩa. -->
+        <div class="the o-bieu-do" id="theSoCongTheoTo">
           <h3 class="tieude-muc">Số công theo tổ</h3>
           <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
         </div>
@@ -919,34 +921,42 @@ function taiTongQuan() {
     veCot($('bdNgay'), d.theoNgay);
     veDonut($('bdLoai'), d.theoLoaiMu);
 
-    // Ban lãnh đạo xem gom theo đội; đội trưởng / tổ trưởng xem theo tổ
-    var gomDoi = S.toanCongTy && d.theoDoi && d.theoDoi.length;
-    var ds = gomDoi ? d.theoDoi : d.theoTo;
-    var tongKg = 0;
-    for (var z = 0; z < ds.length; z++) tongKg += ds[z].kg;
+    // Tổ trưởng chỉ quản 1 tổ — không có gì để "so sánh", ẩn hẳn khối này
+    // thay vì hiện một bảng chỉ có đúng 1 dòng (chính họ).
+    if (!S.toanCongTy && !S.coNhieuTo) {
+      $('theSoSanh').style.display = 'none';
+    } else {
+      $('theSoSanh').style.display = '';
 
-    var h = '<thead><tr><th>' + (gomDoi ? 'Đội' : 'Tổ') + '</th>' +
-            (gomDoi ? '<th class="p">Số tổ</th>' : '') +
-            '<th class="p">Sản lượng tươi (kg)</th><th class="p">Tỷ trọng</th>' +
-            '<th class="p">Quy khô (kg)</th><th class="p">Số nhát</th>' +
-            '<th class="p">NSBQ kg/nhát</th><th class="p">Công nhân</th></tr></thead><tbody>';
-    var soCot = gomDoi ? 8 : 7;
-    if (!ds.length) {
-      h += '<tr><td colspan="' + soCot + '"><div class="rong">Không có dữ liệu.</div></td></tr>';
+      // Ban lãnh đạo xem gom theo đội; đội trưởng xem theo tổ
+      var gomDoi = S.toanCongTy && d.theoDoi && d.theoDoi.length;
+      var ds = gomDoi ? d.theoDoi : d.theoTo;
+      var tongKg = 0;
+      for (var z = 0; z < ds.length; z++) tongKg += ds[z].kg;
+
+      var h = '<thead><tr><th>' + (gomDoi ? 'Đội' : 'Tổ') + '</th>' +
+              (gomDoi ? '<th class="p">Số tổ</th>' : '') +
+              '<th class="p">Sản lượng tươi (kg)</th><th class="p">Tỷ trọng</th>' +
+              '<th class="p">Quy khô (kg)</th><th class="p">Số nhát</th>' +
+              '<th class="p">NSBQ kg/nhát</th><th class="p">Công nhân</th></tr></thead><tbody>';
+      var soCot = gomDoi ? 8 : 7;
+      if (!ds.length) {
+        h += '<tr><td colspan="' + soCot + '"><div class="rong">Không có dữ liệu.</div></td></tr>';
+      }
+      for (var i = 0; i < ds.length; i++) {
+        var t = ds[i];
+        h += '<tr><td><b>' + thoat(gomDoi ? t.doi : t.to) + '</b></td>' +
+             (gomDoi ? '<td class="p num">' + soVN(t.soTo, 0) + '</td>' : '') +
+             '<td class="p num">' + soVN(t.kg, 2) + '</td>' +
+             '<td class="p num">' + (tongKg ? soVN(t.kg / tongKg * 100, 1) + '%' : '—') + '</td>' +
+             '<td class="p num">' + soVN(t.quyKho, 2) + '</td>' +
+             '<td class="p num">' + soVN(t.nhat, 0) + '</td>' +
+             '<td class="p num">' + soVN(t.nsbq, 3) + '</td>' +
+             '<td class="p num">' + soVN(t.soCn, 0) + '</td></tr>';
+      }
+      h += '</tbody>';
+      $('bangTo').innerHTML = h;
     }
-    for (var i = 0; i < ds.length; i++) {
-      var t = ds[i];
-      h += '<tr><td><b>' + thoat(gomDoi ? t.doi : t.to) + '</b></td>' +
-           (gomDoi ? '<td class="p num">' + soVN(t.soTo, 0) + '</td>' : '') +
-           '<td class="p num">' + soVN(t.kg, 2) + '</td>' +
-           '<td class="p num">' + (tongKg ? soVN(t.kg / tongKg * 100, 1) + '%' : '—') + '</td>' +
-           '<td class="p num">' + soVN(t.quyKho, 2) + '</td>' +
-           '<td class="p num">' + soVN(t.nhat, 0) + '</td>' +
-           '<td class="p num">' + soVN(t.nsbq, 3) + '</td>' +
-           '<td class="p num">' + soVN(t.soCn, 0) + '</td></tr>';
-    }
-    h += '</tbody>';
-    $('bangTo').innerHTML = h;
 
     // Khối riêng cho ban lãnh đạo: tình trạng duyệt, chất lượng, xếp hạng đội,
     // năng suất theo đội, tổ dẫn đầu/cần chú ý. Đội trưởng/tổ trưởng không
@@ -1295,19 +1305,28 @@ function taiChamCong() {
     }
     $('bdKyHieu').innerHTML = hk || '<div class="rong">Không có dữ liệu.</div>';
 
-    // Theo tổ
-    var ht = '<thead><tr><th>Tổ</th><th class="p">Số công</th><th class="p">Người</th>' +
-             '<th class="p">BQ/người</th><th class="p">Dòng nghỉ</th></tr></thead><tbody>';
-    if (!d.theoTo.length) ht += '<tr><td colspan="5"><div class="rong">Không có dữ liệu.</div></td></tr>';
-    for (var m = 0; m < d.theoTo.length; m++) {
-      var t = d.theoTo[m];
-      ht += '<tr><td><b>' + thoat(t.to) + '</b></td>' +
-        '<td class="p num">' + soVN(t.soCong, 1) + '</td>' +
-        '<td class="p num">' + soVN(t.soCn, 0) + '</td>' +
-        '<td class="p num">' + soVN(t.congBqNguoi, 2) + '</td>' +
-        '<td class="p num">' + soVN(t.soNghi, 0) + '</td></tr>';
+    // Theo tổ — tổ trưởng chỉ quản 1 tổ nên ẩn hẳn, không có gì để so sánh.
+    // Cơ cấu ký hiệu công thì chiếm trọn hàng cho đỡ trống.
+    if (!S.toanCongTy && !S.coNhieuTo) {
+      $('theSoCongTheoTo').style.display = 'none';
+      $('theKyHieu').style.gridColumn = '1 / -1';
+    } else {
+      $('theSoCongTheoTo').style.display = '';
+      $('theKyHieu').style.gridColumn = '';
+
+      var ht = '<thead><tr><th>Tổ</th><th class="p">Số công</th><th class="p">Người</th>' +
+               '<th class="p">BQ/người</th><th class="p">Dòng nghỉ</th></tr></thead><tbody>';
+      if (!d.theoTo.length) ht += '<tr><td colspan="5"><div class="rong">Không có dữ liệu.</div></td></tr>';
+      for (var m = 0; m < d.theoTo.length; m++) {
+        var t = d.theoTo[m];
+        ht += '<tr><td><b>' + thoat(t.to) + '</b></td>' +
+          '<td class="p num">' + soVN(t.soCong, 1) + '</td>' +
+          '<td class="p num">' + soVN(t.soCn, 0) + '</td>' +
+          '<td class="p num">' + soVN(t.congBqNguoi, 2) + '</td>' +
+          '<td class="p num">' + soVN(t.soNghi, 0) + '</td></tr>';
+      }
+      $('bangToCC').innerHTML = ht + '</tbody>';
     }
-    $('bangToCC').innerHTML = ht + '</tbody>';
 
     // Bảng chi tiết
     $('tomTatCC').textContent = soVN(d.tong, 0) + ' dòng · ' + soVN(k.tongCong, 1) + ' công';
