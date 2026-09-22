@@ -7,6 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Đọc/ghi file Excel (.xlsx) ngay trên trình duyệt — dùng cho Nhập hàng
+     loạt và Tải mẫu Excel, không cần gửi file thô lên server. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+  integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
+  crossorigin="anonymous"></script>
 <style>
 /* =====================================================================
    Bảng màu dùng chung với dashboard-crck2-v2.html của dự án
@@ -398,6 +403,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSL">—</h3>
           <button class="btn chinh nho" id="nutThemSL">+ Nhập sản lượng</button>
+          <button class="btn nho" id="nutMauSL" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
+          <button class="btn nho" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutCsvSL">Xuất CSV</button>
         </div>
         <div class="cuon"><table id="bangSL"></table></div>
@@ -434,6 +441,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatCC">—</h3>
           <button class="btn chinh nho" id="nutThemCC">+ Chấm công</button>
+          <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
+          <button class="btn nho" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutCsvCC">Xuất CSV</button>
         </div>
         <div class="cuon"><table id="bangCC"></table></div>
@@ -1811,6 +1820,262 @@ function luuThemSanLuong() {
   });
 }
 
+/* =====================================================================
+   Nhập hàng loạt từ Excel — sản lượng & chấm công
+   ---------------------------------------------------------------------
+   Đọc/ghi file .xlsx NGAY TRÊN TRÌNH DUYỆT bằng SheetJS, không gửi file
+   thô lên server. Đọc xong mới gửi TỪNG LÔ nhỏ (chia theo độ dài chuỗi,
+   không theo số dòng cố định — dòng ghi chú dài vẫn an toàn) qua đúng
+   API ghi hiện có (nhapHangLoatSanLuong / nhapHangLoatChamCong), mỗi lô
+   một lệnh gọi JSONP như mọi lệnh ghi khác — không đổi kiến trúc.
+   Lỗi một dòng không huỷ cả lô: server trả kết quả riêng từng dòng.
+   ===================================================================== */
+
+/** Ngày đọc từ Excel: có thể là Date, "yyyy-mm-dd", hoặc "dd/mm/yyyy". */
+function chuanNgayTuExcel(v) {
+  if (v instanceof Date) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return v.getFullYear() + '-' + p(v.getMonth() + 1) + '-' + p(v.getDate());
+  }
+  var s = String(v == null ? '' : v).trim();
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]) + '-' + (m[3].length < 2 ? '0' + m[3] : m[3]);
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return m[3] + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]) + '-' + (m[1].length < 2 ? '0' + m[1] : m[1]);
+  return s;
+}
+
+function mapDongHangLoat(loai, r) {
+  if (loai === 'sanLuong') {
+    return {
+      ngay: chuanNgayTuExcel(r['Ngày (yyyy-mm-dd)']),
+      maCn: String(r['Mã công nhân'] || '').trim(),
+      loaiMu: String(r['Loại mủ'] || '').trim(),
+      phien: String(r['Phiên cạo'] || '').trim(),
+      kg: r['Sản lượng kg'],
+      chatLuong: String(r['Chất lượng'] || '').trim(),
+      nhat: r['Số nhát cạo'],
+      ghiChu: String(r['Ghi chú'] || '')
+    };
+  }
+  return {
+    ngay: chuanNgayTuExcel(r['Ngày (yyyy-mm-dd)']),
+    maCn: String(r['Mã công nhân'] || '').trim(),
+    kyHieu: String(r['Ký hiệu công'] || '').trim(),
+    phien: String(r['Phiên cạo'] || '').trim(),
+    ghiChu: String(r['Ghi chú'] || '')
+  };
+}
+
+/** Đọc file .xlsx trên trình duyệt, trả mảng object (1 object/dòng, khoá = tiêu đề cột). */
+function docFileExcel(file) {
+  return new Promise(function (resolve, reject) {
+    var rd = new FileReader();
+    rd.onerror = function () { reject(new Error('Không đọc được file.')); };
+    rd.onload = function () {
+      try {
+        var wb = XLSX.read(rd.result, { type: 'array', cellDates: true });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        resolve(XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' }));
+      } catch (e) {
+        reject(new Error('File không đúng định dạng Excel (.xlsx): ' + e.message));
+      }
+    };
+    rd.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Chia mảng dòng thành các lô theo ĐỘ DÀI CHUỖI sau khi mã hoá cho URL,
+ * không theo số dòng cố định — nhờ vậy dòng có ghi chú dài vẫn an toàn,
+ * không vượt giới hạn độ dài URL của lệnh gọi JSONP.
+ */
+function chiaLoTheoDoDai(ds, gioiHanKyTu) {
+  var lo = [], loHienTai = [], doDai = 2;   // 2 = độ dài "[]" rỗng
+  for (var i = 0; i < ds.length; i++) {
+    var doDaiDong = encodeURIComponent(JSON.stringify(ds[i])).length + 1;
+    if (loHienTai.length && doDai + doDaiDong > gioiHanKyTu) {
+      lo.push(loHienTai);
+      loHienTai = []; doDai = 2;
+    }
+    loHienTai.push(ds[i]);
+    doDai += doDaiDong;
+  }
+  if (loHienTai.length) lo.push(loHienTai);
+  return lo;
+}
+
+function moNhapHangLoat(loai) {
+  _dangSua = null;
+  var ten = loai === 'sanLuong' ? 'sản lượng' : 'chấm công';
+  $('tieuDePhieu').textContent = 'Nhập hàng loạt ' + ten + ' từ Excel';
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+
+  $('thanPhieu').innerHTML =
+    '<p class="goi-y">Tải file mẫu, điền dữ liệu theo đúng <b>tên cột</b> ở dòng tiêu đề (đổi thứ tự cột thì được, ' +
+    'đổi tên cột thì hệ thống không nhận ra) — có sẵn 1 dòng ví dụ và 1 sheet tra cứu mã trong file mẫu. ' +
+    'Sau đó chọn lại đúng file đó để nhập lên.</p>' +
+    '<div style="margin:14px 0"><button class="btn" id="nutTaiMauHangLoat">⭳ Tải file mẫu Excel</button></div>' +
+    '<div class="truong">' +
+      '<label class="nhan" for="oFileHangLoat">Chọn file đã điền (.xlsx)</label>' +
+      '<input class="o" id="oFileHangLoat" type="file" accept=".xlsx,.xls">' +
+    '</div>' +
+    '<div id="ketQuaHangLoat"></div>' +
+    '<p class="goi-y">Dòng mới vào trạng thái <b>Chờ duyệt</b>, giống hệt nhập tay từng dòng. Dòng lỗi (thiếu công nhân, ' +
+    'sai phạm vi, trùng dữ liệu...) không làm hỏng các dòng khác — chỉ dòng đó bị bỏ qua, có báo rõ lý do.</p>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn" id="nutHuyHangLoat">Đóng</button>' +
+      '<button class="btn chinh" id="nutBatDauHangLoat" disabled>Bắt đầu nhập</button>' +
+    '</div>';
+
+  $('nutTaiMauHangLoat').onclick = function () { taiMauExcel(loai); };
+  $('nutHuyHangLoat').onclick = dongSuaSanLuong;
+
+  var fileDangChon = null;
+  $('oFileHangLoat').onchange = function (e) {
+    fileDangChon = e.target.files && e.target.files[0];
+    $('nutBatDauHangLoat').disabled = !fileDangChon;
+    $('ketQuaHangLoat').innerHTML = '';
+  };
+  $('nutBatDauHangLoat').onclick = function () {
+    if (fileDangChon) xuLyNhapHangLoat(loai, fileDangChon);
+  };
+}
+
+async function xuLyNhapHangLoat(loai, file) {
+  var nutBatDau = $('nutBatDauHangLoat');
+  var oFile = $('oFileHangLoat');
+  var khuKQ = $('ketQuaHangLoat');
+  nutBatDau.disabled = true;
+  oFile.disabled = true;
+  khuKQ.innerHTML = '<div class="rong">Đang đọc file…</div>';
+
+  var dsTho;
+  try {
+    dsTho = await docFileExcel(file);
+  } catch (e) {
+    khuKQ.innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>';
+    nutBatDau.disabled = false; oFile.disabled = false;
+    return;
+  }
+
+  var dsDong = [];
+  for (var i = 0; i < dsTho.length; i++) {
+    var d = mapDongHangLoat(loai, dsTho[i]);
+    if (!d.maCn && !d.ngay) continue;   // dòng trống (thường ở cuối file) — bỏ qua, không tính là lỗi
+    dsDong.push(d);
+  }
+
+  if (!dsDong.length) {
+    khuKQ.innerHTML = '<div class="bao-loi">File không có dòng dữ liệu nào (đã bỏ qua các dòng trống). ' +
+      'Kiểm tra lại tên cột ở dòng tiêu đề có đúng như file mẫu không.</div>';
+    nutBatDau.disabled = false; oFile.disabled = false;
+    return;
+  }
+  if (dsDong.length > 2000) {
+    khuKQ.innerHTML = '<div class="bao-loi">File có ' + dsDong.length + ' dòng — mỗi lần nhập tối đa 2000 dòng, tách bớt file.</div>';
+    nutBatDau.disabled = false; oFile.disabled = false;
+    return;
+  }
+
+  var loArr = chiaLoTheoDoDai(dsDong, 5000);
+  var action = loai === 'sanLuong' ? 'nhapHangLoatSanLuong' : 'nhapHangLoatChamCong';
+  var tongOK = 0, tongLoi = [];
+
+  for (var lo = 0; lo < loArr.length; lo++) {
+    khuKQ.innerHTML = '<div class="rong">Đọc được ' + dsDong.length + ' dòng · đang gửi đợt ' +
+      (lo + 1) + '/' + loArr.length + ' (' + loArr[lo].length + ' dòng)…</div>';
+    try {
+      var kq = await goiAPI(action, {
+        vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(loArr[lo])
+      }, 60000);
+      tongOK += kq.thanhCong;
+      for (var j = 0; j < kq.ketQua.length; j++) {
+        if (!kq.ketQua[j].ok) tongLoi.push(kq.ketQua[j]);
+      }
+    } catch (e) {
+      for (var k = 0; k < loArr[lo].length; k++) {
+        tongLoi.push({ dong: '?', loi: 'Đợt gửi bị lỗi: ' + e.message });
+      }
+    }
+  }
+
+  _cacheFE = {};
+  var mauNen = tongLoi.length ? 'var(--clay-soft)' : 'var(--leaf-soft)';
+  var mauChu = tongLoi.length ? 'var(--clay)' : 'var(--leaf)';
+  var h = '<div class="bao-loi" style="background:' + mauNen + ';border-color:' + mauChu + ';color:' + mauChu + '">' +
+    'Đã nhập <b>' + tongOK + '</b>/' + dsDong.length + ' dòng.' +
+    (tongLoi.length ? ' <b>' + tongLoi.length + ' dòng lỗi</b>, xem chi tiết bên dưới.' : ' Không có lỗi.') +
+    '</div>';
+  if (tongLoi.length) {
+    h += '<div class="cuon" style="max-height:240px;margin-top:10px"><table><thead><tr>' +
+         '<th>Dòng trong file</th><th>Lý do</th></tr></thead><tbody>';
+    for (var m = 0; m < tongLoi.length; m++) {
+      h += '<tr><td class="p num">' + thoat(String(tongLoi[m].dong)) + '</td><td>' + thoat(tongLoi[m].loi) + '</td></tr>';
+    }
+    h += '</tbody></table></div>';
+  }
+  khuKQ.innerHTML = h;
+  nutBatDau.disabled = false;
+  oFile.disabled = false;
+  oFile.value = '';
+  if (tongOK > 0) taiTab();
+}
+
+/** Sinh file Excel mẫu — có 1 dòng ví dụ + 1 sheet tra cứu mã trong phạm vi hiện tại. */
+function taiMauExcel(loai) {
+  var wb = XLSX.utils.book_new();
+  var ngayMau = (S.meta && S.meta.ngayMax) || chuanNgayTuExcel(new Date());
+  var maCnMau = (S.dsCn && S.dsCn[0]) || 'Đ1-KV1-01';
+  var cotTieuDe, dongViDu, tenSheet;
+
+  if (loai === 'sanLuong') {
+    tenSheet = 'San luong';
+    var loaiMuMau = (S.meta && S.meta.loaiMu && S.meta.loaiMu[0] && S.meta.loaiMu[0].ma) || 'MU_DONG';
+    cotTieuDe = ['Ngày (yyyy-mm-dd)', 'Mã công nhân', 'Loại mủ', 'Phiên cạo', 'Sản lượng kg', 'Chất lượng', 'Số nhát cạo', 'Ghi chú'];
+    dongViDu = [[ngayMau, maCnMau, loaiMuMau, 'A', 12.5, '', 96, '']];
+  } else {
+    tenSheet = 'Cham cong';
+    var khMau = (S.meta && S.meta.loaiCong && S.meta.loaiCong[0] && S.meta.loaiCong[0].ma) || '+';
+    cotTieuDe = ['Ngày (yyyy-mm-dd)', 'Mã công nhân', 'Ký hiệu công', 'Phiên cạo', 'Ghi chú'];
+    dongViDu = [[ngayMau, maCnMau, khMau, 'A', '']];
+  }
+
+  var wsData = XLSX.utils.aoa_to_sheet([cotTieuDe].concat(dongViDu));
+  wsData['!cols'] = cotTieuDe.map(function (t) { return { wch: Math.max(14, t.length + 2) }; });
+  XLSX.utils.book_append_sheet(wb, wsData, tenSheet);
+
+  // Sheet tra cứu — chỉ để xem, KHÔNG đọc lại khi nhập lên.
+  var dm = [];
+  if (loai === 'sanLuong') {
+    dm.push(['Mã loại mủ', 'Tên loại mủ']);
+    (S.meta && S.meta.loaiMu || []).forEach(function (x) { dm.push([x.ma, x.ten]); });
+    dm.push([]);
+    dm.push(['Mã chất lượng', 'Tên']);
+    (S.meta && S.meta.chatLuong || []).forEach(function (x) { dm.push([x.ma, x.ten]); });
+    dm.push([]);
+    dm.push(['Phiên cạo hợp lệ', '']);
+    (S.meta && S.meta.phien || []).forEach(function (x) { dm.push([x.ma, x.ten]); });
+  } else {
+    dm.push(['Ký hiệu công', 'Tên', 'Số công']);
+    (S.meta && S.meta.loaiCong || []).forEach(function (x) { dm.push([x.ma, x.ten, x.soCong]); });
+    dm.push([]);
+    dm.push(['Phiên cạo hợp lệ', '']);
+    (S.meta && S.meta.phien || []).forEach(function (x) { dm.push([x.ma, x.ten]); });
+  }
+  dm.push([]);
+  dm.push(['Mã công nhân trong phạm vi của bạn (' + (S.dsCn ? S.dsCn.length : 0) + ' người)']);
+  (S.dsCn || []).forEach(function (ma) { dm.push([ma]); });
+
+  var wsDM = XLSX.utils.aoa_to_sheet(dm);
+  wsDM['!cols'] = [{ wch: 32 }, { wch: 26 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, wsDM, 'Danh muc tra cuu');
+
+  XLSX.writeFile(wb, 'mau_' + (loai === 'sanLuong' ? 'san_luong' : 'cham_cong') + '_' +
+    S.maDonVi.replace(/[^\w-]/g, '_') + '.xlsx');
+}
+
 /**
  * Bật/tắt ô lọc theo tab đang mở.
  *
@@ -2237,6 +2502,9 @@ function vaoApp(d) {
   // (vốn để lọc chờ duyệt/đã duyệt) không còn ý nghĩa gì với họ.
   $('nutThemSL').style.display = d.toanCongTy ? 'none' : '';
   $('nutThemCC').style.display = d.toanCongTy ? 'none' : '';
+  $('nutHangLoatSL').style.display = d.toanCongTy ? 'none' : '';
+  $('nutHangLoatCC').style.display = d.toanCongTy ? 'none' : '';
+  // Tải mẫu thì không ghi gì — không cần ẩn, ban lãnh đạo tải xem cũng vô hại.
   $('gatTrangThai').style.display = d.toanCongTy ? 'none' : '';
   S.trangThai = '';
   veGatTrangThai();
@@ -2426,9 +2694,13 @@ $('fTheo').onchange = function () { taiXepHang(); };
 $('fKyHieu').onchange = function () { S.trang = 1; taiTab(); };
 $('nutThemCC').onclick = moThemChamCong;
 $('nutCsvCC').onclick = csvChamCong;
+$('nutMauCC').onclick = function () { taiMauExcel('chamCong'); };
+$('nutHangLoatCC').onclick = function () { moNhapHangLoat('chamCong'); };
 
 $('nutThemSL').onclick = moThemSanLuong;
 $('nutCsvSL').onclick = csvSanLuong;
+$('nutMauSL').onclick = function () { taiMauExcel('sanLuong'); };
+$('nutHangLoatSL').onclick = function () { moNhapHangLoat('sanLuong'); };
 $('nutCsvPhieu').onclick = csvPhieu;
 $('nutCsvXH').onclick = csvXepHang;
 
