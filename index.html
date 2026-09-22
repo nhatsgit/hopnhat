@@ -353,21 +353,19 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div class="cuon"><table id="bangTo"></table></div>
       </div>
 
-      <!-- Chỉ ban lãnh đạo (xem toàn công ty) thấy khối này -->
+      <!-- Chỉ ban lãnh đạo (xem toàn công ty) thấy khối này. Dữ liệu của họ
+           đọc thẳng từ BigQuery — vốn CHỈ có dòng đã duyệt — nên không còn
+           donut "tình trạng duyệt" nữa (sẽ luôn là 100%, không nói lên gì). -->
       <div id="khoiLanhDao" style="display:none">
         <div class="luoi-2">
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Tình trạng duyệt (theo kg)</h3>
-            <div id="bdDuyet"></div>
-          </div>
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Cơ cấu chất lượng mủ</h3>
             <div id="bdChatLuong"></div>
           </div>
-        </div>
-        <div class="the o-bieu-do" style="margin-bottom:20px">
-          <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
-          <div id="bdXepDoi"></div>
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
+            <div id="bdXepDoi"></div>
+          </div>
         </div>
         <div class="luoi-2">
           <div class="the o-bieu-do">
@@ -708,10 +706,6 @@ function mauLoaiMu(ma) {
   return m[ma] || 'var(--ink-3)';
 }
 
-function mauTrangThai(ma) {
-  return ma === 'DA_DUYET' ? 'var(--leaf)' : 'var(--clay)';
-}
-
 function mauChatLuong(ma) {
   var m = { LOAI_I: 'var(--leaf)', LOAI_II: 'var(--latex)', KHONG_PHAN_LOAI: 'var(--ink-3)' };
   return m[ma] || 'var(--ink-3)';
@@ -914,8 +908,12 @@ function taiTongQuan() {
       the_kpi('Quy khô', soVN(k.tongQuyKho, 2), 'kg', 'DRC bình quân ' + soVN(k.drcBinhQuan * 100, 1) + '%') +
       the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', 'Trên toàn bộ dòng đã lọc') +
       the_kpi('Phạm vi', soVN(k.soCongNhan, 0), 'công nhân', k.soNgay + ' ngày có sản lượng') +
-      the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
-              soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt');
+      // Ban lãnh đạo đọc thẳng BigQuery — vốn chỉ có dòng đã duyệt — nên
+      // không còn khái niệm "chờ duyệt" để hiện (số này với họ luôn là 0,
+      // dễ hiểu lầm là "không có gì đang chờ" trong khi thực ra có, chỉ là
+      // họ không xem qua nguồn này).
+      (S.toanCongTy ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
+              soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt'));
 
     veCot($('bdNgay'), d.theoNgay);
     veDonut($('bdLoai'), d.theoLoaiMu);
@@ -954,12 +952,6 @@ function taiTongQuan() {
     // cần vì phạm vi của họ đã nhỏ (1 đội/1 tổ), so sánh không có nhiều ý nghĩa.
     if (S.toanCongTy) {
       $('khoiLanhDao').style.display = '';
-
-      var kgDaDuyet = Math.max(0, k.tongKg - (k.kgChoDuyet || 0));
-      veDonut($('bdDuyet'), [
-        { ma: 'DA_DUYET', ten: 'Đã duyệt', kg: kgDaDuyet },
-        { ma: 'CHO_DUYET', ten: 'Chờ duyệt', kg: k.kgChoDuyet || 0 }
-      ], mauTrangThai);
 
       veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
 
@@ -1774,6 +1766,8 @@ function capNhatHienBoLoc() {
     // Ô Đội / Tổ còn phụ thuộc phạm vi: chỉ quản một tổ thì ẩn luôn
     if (k === 'doi' && !S.coNhieuDoi) hopLe = false;
     if (k === 'to' && !S.coNhieuTo) hopLe = false;
+    // Ban lãnh đạo đọc BigQuery (chỉ đã duyệt) — lọc trạng thái vô nghĩa
+    if (k === 'trangThai' && S.toanCongTy) hopLe = false;
     el.style.display = hopLe ? '' : 'none';
   }
 }
@@ -2130,10 +2124,18 @@ function vaoApp(d) {
   $('nutDongBoDM').style.display = d.toanCongTy ? '' : 'none';
   $('nutDongBoPS').style.display = d.toanCongTy ? '' : 'none';
 
+  // Ban lãnh đạo chỉ xem — dashboard của họ đọc thẳng BigQuery (chỉ đã
+  // duyệt), không đọc/ghi Sheet, nên nút thêm mới không còn ý nghĩa gì với
+  // họ. (Bộ lọc Trạng thái được capNhatHienBoLoc() ẩn theo S.toanCongTy.)
+  $('nutThemSL').style.display = d.toanCongTy ? 'none' : '';
+  $('nutThemCC').style.display = d.toanCongTy ? 'none' : '';
+
   hien('app');
 
-  // Nạp danh mục rồi vẽ tab đầu
-  goiAPI('meta', {}).then(function (m) {
+  // Nạp danh mục rồi vẽ tab đầu — truyền vaiTro/maDonVi để backend biết
+  // đọc khoảng ngày (ngayMin/ngayMax) từ Sheet hay từ BigQuery cho đúng
+  // nguồn ban lãnh đạo đang xem.
+  goiAPI('meta', { vaiTro: d.vaiTro, maDonVi: d.maDonVi }).then(function (m) {
     S.meta = m;
 
     var sl = $('fLoaiMu');
