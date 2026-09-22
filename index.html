@@ -134,6 +134,24 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 
 /* ---------- Bảng ---------- */
 .cuon{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dong-cot-ngang{display:grid;grid-template-columns:76px 1fr auto;gap:10px;
+  align-items:center;margin-bottom:9px;font-size:13px}
+.dong-cot-ngang:last-child{margin-bottom:0}
+.nhan-cot-ngang{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thanh-cot-ngang{background:var(--line);border-radius:3px;height:14px;overflow:hidden}
+.thanh-cot-ngang .lap{height:100%;border-radius:3px}
+.gt-cot-ngang{font-variant-numeric:tabular-nums;font-weight:600;min-width:64px;text-align:right;
+  color:var(--ink-2)}
+.top-to{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+@media (max-width:640px){.top-to{grid-template-columns:1fr}}
+.top-to h4{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;
+  margin:0 0 8px}
+.top-to ol{list-style:none;margin:0;padding:0}
+.top-to li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;
+  border-bottom:1px solid var(--line);font-size:13.5px}
+.top-to li:last-child{border-bottom:none}
+.top-to .ma{font-weight:600}
+.top-to .gt{font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 th{background:var(--paper);font-weight:600;font-size:12px;color:var(--ink-2);
@@ -333,6 +351,34 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="the">
         <h3 class="tieude-muc" style="padding:16px 16px 0" id="tieuDeSoSanh">So sánh theo tổ</h3>
         <div class="cuon"><table id="bangTo"></table></div>
+      </div>
+
+      <!-- Chỉ ban lãnh đạo (xem toàn công ty) thấy khối này -->
+      <div id="khoiLanhDao" style="display:none">
+        <div class="luoi-2">
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Tình trạng duyệt (theo kg)</h3>
+            <div id="bdDuyet"></div>
+          </div>
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Cơ cấu chất lượng mủ</h3>
+            <div id="bdChatLuong"></div>
+          </div>
+        </div>
+        <div class="the o-bieu-do" style="margin-bottom:20px">
+          <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
+          <div id="bdXepDoi"></div>
+        </div>
+        <div class="luoi-2">
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Năng suất bình quân theo đội (kg/nhát)</h3>
+            <div id="bdNsbqDoi"></div>
+          </div>
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Tổ dẫn đầu &amp; tổ cần chú ý</h3>
+            <div id="bangTopTo"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -662,6 +708,64 @@ function mauLoaiMu(ma) {
   return m[ma] || 'var(--ink-3)';
 }
 
+function mauTrangThai(ma) {
+  return ma === 'DA_DUYET' ? 'var(--leaf)' : 'var(--clay)';
+}
+
+function mauChatLuong(ma) {
+  var m = { LOAI_I: 'var(--leaf)', LOAI_II: 'var(--latex)', KHONG_PHAN_LOAI: 'var(--ink-3)' };
+  return m[ma] || 'var(--ink-3)';
+}
+
+/**
+ * Biểu đồ cột ngang dùng chung cho xếp hạng đội và so sánh năng suất.
+ *   ds            mảng đối tượng đã sắp xếp sẵn theo thứ tự muốn hiển thị
+ *   layNhan(x)     -> nhãn bên trái (mã đội, mã tổ...)
+ *   layGiaTri(x)   -> số dùng để so độ dài thanh
+ *   dinhDang(v)    -> chuỗi hiển thị bên phải (đã gồm đơn vị)
+ *   mau            màu thanh, mặc định xanh lá
+ */
+function veCotNgang(el, ds, layNhan, layGiaTri, dinhDang, mau) {
+  if (!ds.length) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
+  mau = mau || 'var(--leaf)';
+  var max = 0;
+  for (var i = 0; i < ds.length; i++) max = Math.max(max, layGiaTri(ds[i]));
+  if (max <= 0) max = 1;
+
+  var h = '';
+  for (var j = 0; j < ds.length; j++) {
+    var v = layGiaTri(ds[j]);
+    var pct = Math.max(2, v / max * 100);
+    h += '<div class="dong-cot-ngang">' +
+         '<div class="nhan-cot-ngang">' + thoat(layNhan(ds[j])) + '</div>' +
+         '<div class="thanh-cot-ngang"><div class="lap" style="width:' + pct + '%;background:' + mau + '"></div></div>' +
+         '<div class="gt-cot-ngang">' + thoat(dinhDang(v)) + '</div></div>';
+  }
+  el.innerHTML = h;
+}
+
+/** Top 5 tổ dẫn đầu và 5 tổ thấp nhất theo sản lượng — dsTo đã sắp xếp giảm dần từ backend. */
+function veTopTo(el, dsTo) {
+  if (!dsTo.length) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
+  var top = dsTo.slice(0, 5);
+  var cuoi = dsTo.slice(-5).reverse();
+  // Ít hơn 10 tổ thì hai danh sách sẽ trùng nhau — bớt phần cuối cho khỏi lặp.
+  if (dsTo.length < 10) cuoi = cuoi.filter(function (x) { return top.indexOf(x) === -1; });
+
+  function dsHtml(ds) {
+    if (!ds.length) return '<div class="rong" style="padding:12px 0">—</div>';
+    var s = '<ol>';
+    for (var i = 0; i < ds.length; i++) {
+      s += '<li><span class="ma">' + (i + 1) + '. ' + thoat(ds[i].to) + '</span>' +
+           '<span class="gt">' + soVN(ds[i].kg, 0) + ' kg</span></li>';
+    }
+    return s + '</ol>';
+  }
+  el.innerHTML = '<div class="top-to">' +
+    '<div><h4>Dẫn đầu</h4>' + dsHtml(top) + '</div>' +
+    '<div><h4>Thấp nhất</h4>' + dsHtml(cuoi) + '</div></div>';
+}
+
 function baoLoi(nut, thong) {
   $(nut).innerHTML = thong ? '<div class="bao-loi">' + thoat(thong) + '</div>' : '';
 }
@@ -717,7 +821,8 @@ function veCot(el, dl) {
   el.innerHTML = dinh + svg + nhan;
 }
 
-function veDonut(el, dl) {
+function veDonut(el, dl, layMau) {
+  layMau = layMau || mauLoaiMu;
   var tong = 0, i;
   for (i = 0; i < dl.length; i++) tong += dl[i].kg;
   if (tong <= 0) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
@@ -737,12 +842,12 @@ function veDonut(el, dl) {
     // Một lát chiếm trọn 100% thì vẽ 2 vòng tròn thay vì cung (tránh lỗi arc 360°)
     if (tl > 0.999) {
       svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ((R + r) / 2) + '" fill="none" stroke="' +
-             mauLoaiMu(dl[i].ma) + '" stroke-width="' + (R - r) + '"><title>' +
+             layMau(dl[i].ma) + '" stroke-width="' + (R - r) + '"><title>' +
              thoat(dl[i].ten) + ': 100%</title></circle>';
     } else {
       svg += '<path d="M' + x1 + ',' + y1 + ' A' + R + ',' + R + ' 0 ' + lon + ',1 ' + x2 + ',' + y2 +
              ' L' + x3 + ',' + y3 + ' A' + r + ',' + r + ' 0 ' + lon + ',0 ' + x4 + ',' + y4 + ' Z" fill="' +
-             mauLoaiMu(dl[i].ma) + '"><title>' + thoat(dl[i].ten) + ': ' + soVN(dl[i].kg, 2) +
+             layMau(dl[i].ma) + '"><title>' + thoat(dl[i].ten) + ': ' + soVN(dl[i].kg, 2) +
              ' kg (' + soVN(tl * 100, 1) + '%)</title></path>';
     }
     goc = g2;
@@ -751,7 +856,7 @@ function veDonut(el, dl) {
 
   var ct = '<div class="chu-thich">';
   for (i = 0; i < dl.length; i++) {
-    ct += '<span><i style="background:' + mauLoaiMu(dl[i].ma) + '"></i>' +
+    ct += '<span><i style="background:' + layMau(dl[i].ma) + '"></i>' +
           thoat(dl[i].ten) + ' · <b>' + soVN(dl[i].kg / tong * 100, 1) + '%</b></span>';
   }
   ct += '</div>';
@@ -843,6 +948,35 @@ function taiTongQuan() {
     }
     h += '</tbody>';
     $('bangTo').innerHTML = h;
+
+    // Khối riêng cho ban lãnh đạo: tình trạng duyệt, chất lượng, xếp hạng đội,
+    // năng suất theo đội, tổ dẫn đầu/cần chú ý. Đội trưởng/tổ trưởng không
+    // cần vì phạm vi của họ đã nhỏ (1 đội/1 tổ), so sánh không có nhiều ý nghĩa.
+    if (S.toanCongTy) {
+      $('khoiLanhDao').style.display = '';
+
+      var kgDaDuyet = Math.max(0, k.tongKg - (k.kgChoDuyet || 0));
+      veDonut($('bdDuyet'), [
+        { ma: 'DA_DUYET', ten: 'Đã duyệt', kg: kgDaDuyet },
+        { ma: 'CHO_DUYET', ten: 'Chờ duyệt', kg: k.kgChoDuyet || 0 }
+      ], mauTrangThai);
+
+      veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
+
+      veCotNgang($('bdXepDoi'), d.theoDoi,
+        function (x) { return x.doi; }, function (x) { return x.kg; },
+        function (v) { return soVN(v, 0) + ' kg'; });
+
+      var theoNsbq = d.theoDoi.slice().sort(function (a, b) { return b.nsbq - a.nsbq; });
+      veCotNgang($('bdNsbqDoi'), theoNsbq,
+        function (x) { return x.doi; }, function (x) { return x.nsbq; },
+        function (v) { return soVN(v, 3); }, 'var(--sky)');
+
+      veTopTo($('bangTopTo'), d.theoTo);
+    } else {
+      $('khoiLanhDao').style.display = 'none';
+    }
+
     baoLoi('thongBao', '');
   }).catch(function (e) {
     $('kpis').innerHTML = '';
