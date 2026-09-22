@@ -154,6 +154,21 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
    là khung hiển thị, cuộn để xem hết trong cùng một trang. */
 .cuon-doc{overflow:auto;-webkit-overflow-scrolling:touch;max-height:460px}
 .cuon-doc thead th{position:sticky;top:0;z-index:1}
+
+/* Sổ chấm công tháng: bảng ma trận công nhân × ngày. Cột đầu (mã công
+   nhân) và cột cuối (tổng công) dính lại khi cuộn ngang, tiêu đề dính khi
+   cuộn dọc — giống "freeze panes" trong Excel — vì bảng có tới 31+ cột. */
+.bang-cc-thang{overflow:auto;-webkit-overflow-scrolling:touch;max-height:460px}
+.bang-cc-thang table{border-collapse:separate;border-spacing:0}
+.bang-cc-thang th,.bang-cc-thang td{text-align:center;padding:6px 9px}
+.bang-cc-thang thead th{position:sticky;top:0;background:var(--paper);z-index:2}
+.bang-cc-thang th:first-child,.bang-cc-thang td:first-child{
+  position:sticky;left:0;text-align:left;font-weight:600;background:var(--card);z-index:1}
+.bang-cc-thang thead th:first-child{background:var(--paper);z-index:3}
+.bang-cc-thang th:last-child,.bang-cc-thang td:last-child{
+  position:sticky;right:0;font-weight:700;background:var(--card);z-index:1}
+.bang-cc-thang thead th:last-child{background:var(--paper);z-index:3}
+.bang-cc-thang .cn{color:var(--clay)}
 .dong-cot-ngang{display:grid;grid-template-columns:76px 1fr auto;gap:10px;
   align-items:center;margin-bottom:9px;font-size:13px}
 .dong-cot-ngang:last-child{margin-bottom:0}
@@ -443,7 +458,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
         </div>
       </div>
-      <div class="the">
+      <div class="gat" id="gatXemCC" style="margin-bottom:14px"></div>
+
+      <div class="the" id="theDanhSachCC">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatCC">—</h3>
           <button class="btn chinh nho" id="nutThemCC">+ Chấm công</button>
@@ -453,6 +470,18 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         </div>
         <div class="cuon cuon-doc"><table id="bangCC"></table></div>
         <div class="phan-trang" id="phanTrangCC"></div>
+      </div>
+
+      <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
+           trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". -->
+      <div class="the" id="theBangCC" style="display:none">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatBangCC">—</h3>
+          <label class="nhan" for="ccThang" style="margin:0">Tháng</label>
+          <input class="o" id="ccThang" type="month" style="width:auto">
+        </div>
+        <div class="bang-cc-thang" id="khungBangCC"><table id="bangCCThang"></table></div>
+        <div id="chuThichCC" class="goi-y" style="padding:10px 16px"></div>
       </div>
     </section>
 
@@ -592,6 +621,7 @@ var S = {
   sapXep: 'ngay', chieu: 'giam', trang: 1,
   locNhanhDangChon: '',
   trangThai: '',          // '' = Tất cả. Nút gạt đầu trang, chỉ tổ trưởng/đội trưởng thấy.
+  xemCC: 'ds',            // 'ds' = danh sách, 'thang' = sổ chấm công theo tháng.
   thamSoURL: null
 };
 
@@ -1447,6 +1477,128 @@ function taiChamCong() {
     baoLoi('thongBao', '');
   }).catch(function (e) {
     $('bangCC').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+
+  if (S.xemCC === 'thang') taiBangChamCongThang();
+}
+
+/* =====================================================================
+   Sổ chấm công tháng — ma trận công nhân × ngày, giống mẫu Excel "Sổ
+   chấm công của Đội sản xuất": mỗi hàng 1 công nhân, mỗi cột 1 ngày
+   trong tháng, ô là ký hiệu công, cột cuối là tổng công cả tháng.
+   ===================================================================== */
+var THU_VIET_TAT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+function veGatXemCC() {
+  var ds = [{ id: 'ds', ten: 'Danh sách' }, { id: 'thang', ten: 'Bảng chấm công tháng' }];
+  var h = '';
+  for (var i = 0; i < ds.length; i++) {
+    h += '<button class="chip' + (S.xemCC === ds[i].id ? ' on' : '') + '" data-xemcc="' + ds[i].id + '">' +
+         ds[i].ten + '</button>';
+  }
+  $('gatXemCC').innerHTML = h;
+  var nuts = $('gatXemCC').querySelectorAll('button[data-xemcc]');
+  for (var j = 0; j < nuts.length; j++) {
+    nuts[j].onclick = function () { chuyenXemCC(this.getAttribute('data-xemcc')); };
+  }
+}
+
+function chuyenXemCC(che) {
+  S.xemCC = che;
+  veGatXemCC();
+  $('theDanhSachCC').style.display = (che === 'ds') ? '' : 'none';
+  $('theBangCC').style.display = (che === 'thang') ? '' : 'none';
+  if (che === 'thang') taiBangChamCongThang();
+}
+
+/** 'yyyy-mm' -> { dau:'yyyy-mm-01', cuoi:'yyyy-mm-cuoicung', soNgay } */
+function ngayTrongThang(thang) {
+  var p = String(thang || '').split('-');
+  var nam = parseInt(p[0], 10), thg = parseInt(p[1], 10);
+  var soNgay = new Date(nam, thg, 0).getDate();
+  var d2 = function (n) { return (n < 10 ? '0' : '') + n; };
+  return { dau: thang + '-01', cuoi: thang + '-' + d2(soNgay), soNgay: soNgay };
+}
+
+function thangMacDinhCC() {
+  var goc = $('fDenNgay').value || (S.meta && S.meta.ngayMax) || '';
+  return goc ? goc.substring(0, 7) : new Date().toISOString().substring(0, 7);
+}
+
+function taiBangChamCongThang() {
+  if (!$('ccThang').value) $('ccThang').value = thangMacDinhCC();
+  var thang = $('ccThang').value;
+  var kt = ngayTrongThang(thang);
+
+  $('bangCCThang').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('tomTatBangCC').textContent = 'Đang tải…';
+
+  var bl = layBoLoc();
+  bl.tuNgay = kt.dau; bl.denNgay = kt.cuoi; bl.moiTrang = 800; bl.trang = 1;
+
+  // Nhiều nhất 800 dòng/lần gọi (giới hạn backend) — 1 tổ ~50 người × 31
+  // ngày có thể vượt mốc này, nên gọi thêm trang tiếp theo nếu còn thiếu.
+  function goiTiep(trang, gomRoi) {
+    var b2 = {}; for (var k in bl) b2[k] = bl[k]; b2.trang = trang;
+    return goiCache('chamCong', b2).then(function (d) {
+      var moi = gomRoi.concat(d.rows);
+      if (trang < d.soTrang) return goiTiep(trang + 1, moi);
+      return moi;
+    });
+  }
+
+  goiTiep(1, []).then(function (rows) {
+    // Công nhân hiện trong bảng: đúng phạm vi Đội/Tổ đang lọc, không chỉ
+    // người có dòng chấm công — để thấy rõ ai CHƯA được chấm công ngày nào.
+    var doiChon = $('fDoi').value, toChon = $('fTo').value;
+    var dsCn = [];
+    for (var i = 0; i < S.dsCn.length; i++) {
+      var cn = S.dsCn[i], toCua = cn.substring(0, cn.lastIndexOf('-'));
+      if (toChon) { if (toCua !== toChon) continue; }
+      else if (doiChon && doiCuaTo(toCua) !== doiChon) continue;
+      dsCn.push(cn);
+    }
+    if (!dsCn.length) dsCn = S.dsCn.slice();
+    dsCn.sort();
+
+    var o = {};   // "maCn|ngay" -> { kyHieu, soCong }
+    for (var r = 0; r < rows.length; r++) {
+      var w = rows[r];
+      o[w.maCn + '|' + w.ngay] = { kyHieu: w.kyHieu, soCong: w.soCong };
+    }
+
+    var h = '<thead><tr><th rowspan="2">Mã số</th>' +
+            '<th colspan="' + kt.soNgay + '">Ngày</th><th rowspan="2">Tổng công<br>tháng</th></tr><tr>';
+    for (var n = 1; n <= kt.soNgay; n++) {
+      var d2 = (n < 10 ? '0' : '') + n;
+      var thu = new Date(thang + '-' + d2).getDay();
+      h += '<th' + (thu === 0 ? ' class="cn"' : '') + '>' + THU_VIET_TAT[thu] + '<br>' + n + '</th>';
+    }
+    h += '</tr></thead><tbody>';
+
+    if (!dsCn.length) {
+      h += '<tr><td colspan="' + (kt.soNgay + 2) + '"><div class="rong">Không có công nhân nào trong phạm vi.</div></td></tr>';
+    }
+    for (var c = 0; c < dsCn.length; c++) {
+      var maCn = dsCn[c], tong = 0;
+      h += '<tr><td>' + thoat(maCn) + '</td>';
+      for (var n2 = 1; n2 <= kt.soNgay; n2++) {
+        var d3 = (n2 < 10 ? '0' : '') + n2;
+        var x = o[maCn + '|' + thang + '-' + d3];
+        tong += x ? (Number(x.soCong) || 0) : 0;
+        h += '<td>' + (x ? thoat(x.kyHieu) : '<span class="nhan-mo">·</span>') + '</td>';
+      }
+      h += '<td>' + soVN(tong, 1) + '</td></tr>';
+    }
+    $('bangCCThang').innerHTML = h + '</tbody>';
+    $('tomTatBangCC').textContent = 'Sổ chấm công tháng ' + thang + ' — ' + dsCn.length + ' công nhân';
+
+    var dsLC = (S.meta && S.meta.loaiCong) || [];
+    var hct = dsLC.map(function (x) { return '<b>' + thoat(x.ma) + '</b> = ' + thoat(x.ten) + ' (' + soVN(x.soCong, 1) + ' công)'; }).join(' · ');
+    $('chuThichCC').innerHTML = hct ? 'Ký hiệu: ' + hct : '';
+  }).catch(function (e) {
+    $('bangCCThang').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
 }
@@ -2570,6 +2722,8 @@ function vaoApp(d) {
   $('gatTrangThai').style.display = d.toanCongTy ? 'none' : '';
   S.trangThai = '';
   veGatTrangThai();
+  S.xemCC = 'ds';
+  veGatXemCC();
 
   hien('app');
 
@@ -2758,6 +2912,7 @@ $('nutThemCC').onclick = moThemChamCong;
 $('nutCsvCC').onclick = csvChamCong;
 $('nutMauCC').onclick = function () { taiMauExcel('chamCong'); };
 $('nutHangLoatCC').onclick = function () { moNhapHangLoat('chamCong'); };
+$('ccThang').onchange = taiBangChamCongThang;
 
 $('nutThemSL').onclick = moThemSanLuong;
 $('nutCsvSL').onclick = csvSanLuong;
