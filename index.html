@@ -1124,7 +1124,7 @@ function taiSanLuong() {
         '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
         '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
         '<td>' + viTrangThai(r.trangThai) + '</td>' +
-        '<td>' + (r.trangThai === 'CHO_DUYET'
+        '<td>' + (r.trangThai === 'CHO_DUYET' && S.vaiTro === 'TO_TRUONG'
             ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button>'
             : '<span class="nhan-mo" title="Đã duyệt thì khoá">—</span>') + '</td>' +
         '</tr>';
@@ -1413,7 +1413,7 @@ function taiChamCong() {
         '<td>' + (w.phien ? thoat(w.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="nhan-mo">' + (w.phanCao ? thoat(w.phanCao) : '—') + '</td>' +
         '<td>' + viTrangThai(w.trangThai) + '</td>' +
-        '<td>' + (w.trangThai === 'CHO_DUYET'
+        '<td>' + (w.trangThai === 'CHO_DUYET' && S.vaiTro === 'TO_TRUONG'
             ? '<button class="btn nho" data-suacc="' + thoat(w.ma) + '">Sửa</button>'
             : '<span class="nhan-mo">—</span>') + '</td></tr>';
     }
@@ -2497,13 +2497,14 @@ function vaoApp(d) {
   $('nutDongBoDM').style.display = d.toanCongTy ? '' : 'none';
   $('nutDongBoPS').style.display = d.toanCongTy ? '' : 'none';
 
-  // Ban lãnh đạo chỉ xem — dashboard của họ đọc thẳng BigQuery (chỉ đã
-  // duyệt), không đọc/ghi Sheet, nên nút thêm mới và nút gạt trạng thái
-  // (vốn để lọc chờ duyệt/đã duyệt) không còn ý nghĩa gì với họ.
-  $('nutThemSL').style.display = d.toanCongTy ? 'none' : '';
-  $('nutThemCC').style.display = d.toanCongTy ? 'none' : '';
-  $('nutHangLoatSL').style.display = d.toanCongTy ? 'none' : '';
-  $('nutHangLoatCC').style.display = d.toanCongTy ? 'none' : '';
+  // Chỉ tổ trưởng được nhập/sửa số liệu. Ban lãnh đạo chỉ xem — dashboard
+  // của họ đọc thẳng BigQuery (chỉ đã duyệt), không đọc/ghi Sheet. Đội
+  // trưởng cũng chỉ xem — quản lý nhiều tổ nên không trực tiếp nhập liệu.
+  var chiXem = d.vaiTro !== 'TO_TRUONG';
+  $('nutThemSL').style.display = chiXem ? 'none' : '';
+  $('nutThemCC').style.display = chiXem ? 'none' : '';
+  $('nutHangLoatSL').style.display = chiXem ? 'none' : '';
+  $('nutHangLoatCC').style.display = chiXem ? 'none' : '';
   // Tải mẫu thì không ghi gì — không cần ẩn, ban lãnh đạo tải xem cũng vô hại.
   $('gatTrangThai').style.display = d.toanCongTy ? 'none' : '';
   S.trangThai = '';
