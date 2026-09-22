@@ -1495,6 +1495,20 @@ function taiDoiChieu() {
 }
 
 /* ---- Nhập / sửa chấm công ---- */
+/** Chip A/B/C/D lấy từ S.meta.phien (đúng danh mục dùng chung với sản lượng);
+ *  cho chọn NHIỀU chip vì một công nhân có thể cạo đúp (VD "A,B" trong một ngày). */
+function veChipPhien(phienDaChon) {
+  var dsP = (S.meta && S.meta.phien) || [];
+  var daChon = String(phienDaChon || '').toUpperCase();
+  var h = '';
+  for (var i = 0; i < dsP.length; i++) {
+    var on = daChon.indexOf(String(dsP[i].ma).toUpperCase()) > -1;
+    h += '<button type="button" class="chip' + (on ? ' on' : '') + '" data-p="' + thoat(dsP[i].ma) + '">' +
+         thoat(dsP[i].ma) + '</button>';
+  }
+  return h;
+}
+
 function formChamCong(r) {
   var dsLC = (S.meta && S.meta.loaiCong) || [];
   var optKH = '';
@@ -1503,12 +1517,42 @@ function formChamCong(r) {
       (r && dsLC[i].ma === r.kyHieu ? ' selected' : '') + '>' +
       thoat(dsLC[i].ma + ' — ' + dsLC[i].ten + ' (' + dsLC[i].soCong + ' công)') + '</option>';
   }
+  var phienHienTai = (r && r.phien) || '';
   return '<div><label class="nhan" for="cKyHieu">Ký hiệu công</label>' +
            '<select class="o" id="cKyHieu">' + optKH + '</select></div>' +
-         '<div><label class="nhan" for="cPhien">Phiên cạo</label>' +
-           '<input class="o" id="cPhien" value="' + thoat((r && r.phien) || '') + '" placeholder="A hoặc A,B nếu cạo đúp"></div>' +
+         '<div><label class="nhan">Phiên cạo <span class="nhan-mo">(chọn nhiều nếu cạo đúp)</span></label>' +
+           '<div class="gat" id="cPhienChips">' + veChipPhien(phienHienTai) + '</div>' +
+           '<input type="hidden" id="cPhien" value="' + thoat(phienHienTai) + '"></div>' +
+         '<div style="grid-column:1/-1" class="nhan-mo" id="cPhanCaoXem">Phần cạo: ' +
+           thoat((r && r.phanCao) || '—') + '</div>' +
          '<div style="grid-column:1/-1"><label class="nhan" for="cGhiChu">Ghi chú</label>' +
            '<input class="o" id="cGhiChu" value="' + thoat((r && r.ghiChu) || '') + '"></div>';
+}
+
+/** Gắn sự kiện chọn chip phiên: bấm để bật/tắt (đa chọn), gộp lại vào ô ẩn
+ *  #cPhien, rồi gọi API xem trước phần cạo ngay (không cần lưu mới thấy). */
+function ganChipPhien(layMaCn) {
+  var box = $('cPhienChips');
+  var nuts = box.querySelectorAll('button[data-p]');
+  for (var i = 0; i < nuts.length; i++) {
+    nuts[i].onclick = function () {
+      this.classList.toggle('on');
+      var chon = [], daOn = box.querySelectorAll('button.on');
+      for (var j = 0; j < daOn.length; j++) chon.push(daOn[j].getAttribute('data-p'));
+      $('cPhien').value = chon.join(',');
+      capNhatPhanCaoXem(layMaCn());
+    };
+  }
+}
+
+function capNhatPhanCaoXem(maCn) {
+  var el = $('cPhanCaoXem');
+  var phien = $('cPhien').value;
+  if (!maCn || !phien) { el.textContent = 'Phần cạo: —'; return; }
+  el.textContent = 'Phần cạo: đang tính…';
+  goiAPI('phanCaoTheoCN', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, maCn: maCn, phien: phien }).then(function (d) {
+    el.textContent = 'Phần cạo: ' + (d.phanCao || '—');
+  }).catch(function () { el.textContent = 'Phần cạo: —'; });
 }
 
 function moSuaChamCong(r) {
@@ -1528,6 +1572,7 @@ function moSuaChamCong(r) {
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
       '<button class="btn" id="nutHuyCC">Huỷ</button>' +
       '<button class="btn chinh" id="nutLuuCC">Lưu thay đổi</button></div>';
+  ganChipPhien(function () { return r.maCn; });
   $('nutHuyCC').onclick = dongSuaSanLuong;
   $('nutLuuCC').onclick = function () { luuChamCong('suaChamCong', { ma: r.ma }); };
 }
@@ -1561,6 +1606,8 @@ function moThemChamCong() {
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
       '<button class="btn" id="nutHuyCC">Huỷ</button>' +
       '<button class="btn chinh" id="nutLuuCC">Lưu</button></div>';
+  ganChipPhien(function () { return $('cCn').value; });
+  $('cCn').onchange = function () { capNhatPhanCaoXem($('cCn').value); };
   $('nutHuyCC').onclick = dongSuaSanLuong;
   $('nutLuuCC').onclick = function () {
     luuChamCong('themChamCong', { ngay: $('cNgay').value, maCn: $('cCn').value });
