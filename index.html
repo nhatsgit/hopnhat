@@ -61,6 +61,14 @@ a{color:var(--leaf)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.nho{padding:5px 10px;font-size:13px}
 
+/* Nút gạt sáng/tối — cố định góc trên phải, nổi trên cả màn hình đăng
+   nhập lẫn ứng dụng chính, không phụ thuộc màn nào đang hiện. */
+.nut-theme{position:fixed;top:14px;right:14px;z-index:100;width:36px;height:36px;
+  border:1px solid var(--line-2);background:var(--card);color:var(--ink);
+  border-radius:50%;font-size:16px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.nut-theme:hover{border-color:var(--leaf)}
+
 label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   text-transform:uppercase;letter-spacing:.04em}
 .o{width:100%;padding:8px 10px;border:1px solid var(--line-2);background:var(--card);
@@ -215,6 +223,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 </style>
 </head>
 <body>
+
+<!-- Nổi trên mọi màn hình (cấu hình / đăng nhập / ứng dụng) -->
+<button class="nut-theme" id="nutTheme" type="button" aria-label="Đổi giao diện sáng/tối"></button>
 
 <!-- ===================== MÀN HÌNH CẤU HÌNH ===================== -->
 <div class="man-hinh" id="manCauHinh" style="display:none">
@@ -494,6 +505,52 @@ function ghiLS(khoa, giaTri) {
 }
 function xoaLS(khoa) {
   try { localStorage.removeItem(khoa); } catch (e) { /* bỏ qua */ }
+}
+
+/* =====================================================================
+   Sáng / tối — biến CSS đã có sẵn (:root, @media prefers-color-scheme,
+   :root[data-theme]), ở đây chỉ cần điều khiển thuộc tính data-theme.
+   Mặc định LUÔN theo hệ thống (không đặt data-theme gì cả) — đổi theo
+   ngay khi máy đổi theme, kể cả đang mở trang. Bấm nút mới ghi đè tường
+   minh và nhớ lại cho lần sau, qua đúng khoá crck2_theme.
+   Áp NGAY Ở ĐÂY (trước khi vẽ gì) để khỏi nháy sai màu một nhịp lúc tải.
+   ===================================================================== */
+(function () {
+  var luu = docLS('crck2_theme');
+  if (luu === 'light' || luu === 'dark') document.documentElement.setAttribute('data-theme', luu);
+})();
+
+function dangToiThuc() {
+  var dat = document.documentElement.getAttribute('data-theme');
+  if (dat === 'light') return false;
+  if (dat === 'dark') return true;
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+function veNutTheme() {
+  var el = $('nutTheme');
+  if (!el) return;
+  var toi = dangToiThuc();
+  el.textContent = toi ? '☀️' : '🌙';
+  el.title = toi ? 'Đang dùng giao diện tối — bấm để chuyển sang sáng'
+                 : 'Đang dùng giao diện sáng — bấm để chuyển sang tối';
+}
+
+$('nutTheme').onclick = function () {
+  var toiMoi = !dangToiThuc();
+  document.documentElement.setAttribute('data-theme', toiMoi ? 'dark' : 'light');
+  ghiLS('crck2_theme', toiMoi ? 'dark' : 'light');
+  veNutTheme();
+};
+veNutTheme();
+
+// Chưa bấm gạt lần nào (chưa lưu lựa chọn riêng) thì vẫn bám theo hệ
+// thống — máy đổi sáng/tối lúc đang mở trang thì icon cập nhật theo luôn.
+if (window.matchMedia) {
+  var _mmToi = window.matchMedia('(prefers-color-scheme: dark)');
+  var _theoHeThong = function () { if (!docLS('crck2_theme')) veNutTheme(); };
+  if (_mmToi.addEventListener) _mmToi.addEventListener('change', _theoHeThong);
+  else if (_mmToi.addListener) _mmToi.addListener(_theoHeThong);   // trình duyệt cũ
 }
 
 /* Địa chỉ Web App mặc định — dùng ngay khi mở trang, không cần nhập tay.
