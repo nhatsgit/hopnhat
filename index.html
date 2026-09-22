@@ -1540,14 +1540,16 @@ function ganChipPhien(layMaCn) {
       var chon = [], daOn = box.querySelectorAll('button.on');
       for (var j = 0; j < daOn.length; j++) chon.push(daOn[j].getAttribute('data-p'));
       $('cPhien').value = chon.join(',');
-      capNhatPhanCaoXem(layMaCn());
+      capNhatPhanCaoXem('cPhanCaoXem', layMaCn(), $('cPhien').value);
     };
   }
 }
 
-function capNhatPhanCaoXem(maCn) {
-  var el = $('cPhanCaoXem');
-  var phien = $('cPhien').value;
+/** Dùng chung cho cả form chấm công (phiên đa chọn qua chip) và sản lượng
+ *  (phiên đơn qua dropdown) — chỉ khác id ô hiện kết quả và cách lấy phien. */
+function capNhatPhanCaoXem(elId, maCn, phien) {
+  var el = $(elId);
+  if (!el) return;
   if (!maCn || !phien) { el.textContent = 'Phần cạo: —'; return; }
   el.textContent = 'Phần cạo: đang tính…';
   goiAPI('phanCaoTheoCN', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, maCn: maCn, phien: phien }).then(function (d) {
@@ -1607,7 +1609,7 @@ function moThemChamCong() {
       '<button class="btn" id="nutHuyCC">Huỷ</button>' +
       '<button class="btn chinh" id="nutLuuCC">Lưu</button></div>';
   ganChipPhien(function () { return $('cCn').value; });
-  $('cCn').onchange = function () { capNhatPhanCaoXem($('cCn').value); };
+  $('cCn').onchange = function () { capNhatPhanCaoXem('cPhanCaoXem', $('cCn').value, $('cPhien').value); };
   $('nutHuyCC').onclick = dongSuaSanLuong;
   $('nutLuuCC').onclick = function () {
     luuChamCong('themChamCong', { ngay: $('cNgay').value, maCn: $('cCn').value });
@@ -1806,6 +1808,7 @@ function moThemSanLuong() {
         '<select class="o" id="tCn">' + optTu(dsCn) + '</select></div>' +
       '<div><label class="nhan" for="tPhien">Phiên cạo</label>' +
         '<select class="o" id="tPhien">' + optTu(S.meta && S.meta.phien) + '</select></div>' +
+      '<div style="grid-column:1/-1" class="nhan-mo" id="tPhanCaoXem">Phần cạo: —</div>' +
       '<div><label class="nhan" for="tLoai">Loại mủ</label>' +
         '<select class="o" id="tLoai">' + optTu(S.meta && S.meta.loaiMu) + '</select></div>' +
       '<div><label class="nhan" for="tCl">Chất lượng</label>' +
@@ -1824,6 +1827,11 @@ function moThemSanLuong() {
       '<button class="btn" id="nutHuyThem">Huỷ</button>' +
       '<button class="btn chinh" id="nutLuuThem">Lưu</button>' +
     '</div>';
+
+  function capNhatPhanCaoSL() { capNhatPhanCaoXem('tPhanCaoXem', $('tCn').value, $('tPhien').value); }
+  $('tCn').onchange = capNhatPhanCaoSL;
+  $('tPhien').onchange = capNhatPhanCaoSL;
+  capNhatPhanCaoSL();
 
   $('nutHuyThem').onclick = dongSuaSanLuong;
   $('nutLuuThem').onclick = luuThemSanLuong;
