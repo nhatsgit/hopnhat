@@ -110,6 +110,7 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   gap:12px;padding:16px;margin-bottom:20px}
 .bo-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
 .nhanh{display:flex;gap:6px;flex-wrap:wrap;margin-right:auto}
+.gat{display:flex;gap:6px;flex-wrap:wrap}
 .chip{padding:5px 11px;border:1px solid var(--line-2);background:var(--card);
   color:var(--ink-2);border-radius:99px;font-size:12.5px}
 .chip:hover{border-color:var(--leaf);color:var(--leaf)}
@@ -266,6 +267,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <span id="dongDonVi">—</span>
       </div>
       <span class="the-vaitro" id="theVaiTro">—</span>
+      <!-- Chỉ tổ trưởng/đội trưởng thấy — ban lãnh đạo khoá cứng xem đã duyệt,
+           không cần gạt gì (xem BigQuery, không có khái niệm chờ duyệt). -->
+      <div class="gat" id="gatTrangThai" style="display:none"></div>
       <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
       <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
       <button class="btn nho" id="nutTai">Tải lại</button>
@@ -313,10 +317,6 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div id="khungLocChatLuong">
         <label class="nhan" for="fChatLuong">Chất lượng</label>
         <select class="o" id="fChatLuong"><option value="">Tất cả</option></select>
-      </div>
-      <div id="khungLocTrangThai">
-        <label class="nhan" for="fTrangThai">Trạng thái</label>
-        <select class="o" id="fTrangThai"><option value="">Tất cả</option></select>
       </div>
       <div id="khungLocKyHieu" style="display:none">
         <label class="nhan" for="fKyHieu">Ký hiệu công</label>
@@ -517,6 +517,7 @@ var S = {
   tab: 'tongQuan',
   sapXep: 'ngay', chieu: 'giam', trang: 1,
   locNhanhDangChon: '',
+  trangThai: '',          // '' = Tất cả. Nút gạt đầu trang, chỉ tổ trưởng/đội trưởng thấy.
   thamSoURL: null
 };
 
@@ -872,7 +873,7 @@ function layBoLoc() {
     loaiMu: $('fLoaiMu').value,
     phien: $('fPhien').value,
     chatLuong: $('fChatLuong').value,
-    trangThai: $('fTrangThai').value,
+    trangThai: S.trangThai,
     maCn: $('fMaCn').value
   };
 }
@@ -1593,7 +1594,7 @@ function luuChoDangXem() {
     tuNgay: $('fTuNgay').value, denNgay: $('fDenNgay').value,
     doi: $('fDoi').value, to: $('fTo').value, maCn: $('fMaCn').value,
     loaiMu: $('fLoaiMu').value, phien: $('fPhien').value,
-    chatLuong: $('fChatLuong').value, trangThai: $('fTrangThai').value,
+    chatLuong: $('fChatLuong').value, trangThai: S.trangThai,
     kyHieu: $('fKyHieu').value
   }));
 }
@@ -1617,7 +1618,7 @@ function khoiPhucChoDangXem() {
   if (j.loaiMu) $('fLoaiMu').value = j.loaiMu;
   if (j.phien) $('fPhien').value = j.phien;
   if (j.chatLuong) $('fChatLuong').value = j.chatLuong;
-  if (j.trangThai) $('fTrangThai').value = j.trangThai;
+  if (j.trangThai) { S.trangThai = j.trangThai; veGatTrangThai(); }
   if (j.kyHieu) $('fKyHieu').value = j.kyHieu;
   if (j.tab && LOC_THEO_TAB[j.tab]) S.tab = j.tab;
 
@@ -1743,18 +1744,20 @@ function luuThemSanLuong() {
  * Xếp hạng thì ẩn ô Công nhân: lọc còn một người thì ai cũng hạng 1.
  */
 var LOC_THEO_TAB = {
-  tongQuan: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai', 'cn'],
-  sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai', 'cn'],
-  phieu:    ['doi', 'to', 'trangThai'],
-  xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'trangThai'],
-  chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien', 'trangThai'],
+  tongQuan: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
+  sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
+  phieu:    ['doi', 'to'],
+  xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong'],
+  chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien'],
   doiChieu: ['doi', 'to']
 };
 
+// Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
+// đầu trang (#gatTrangThai), luôn hiện cho tổ trưởng/đội trưởng bất kể tab.
 var KHUNG_LOC = {
   doi: 'khungLocDoi', to: 'khungLocTo', loaiMu: 'khungLocLoaiMu',
   phien: 'khungLocPhien', chatLuong: 'khungLocChatLuong',
-  trangThai: 'khungLocTrangThai', cn: 'khungLocCn', kyHieu: 'khungLocKyHieu'
+  cn: 'khungLocCn', kyHieu: 'khungLocKyHieu'
 };
 
 function capNhatHienBoLoc() {
@@ -1766,9 +1769,38 @@ function capNhatHienBoLoc() {
     // Ô Đội / Tổ còn phụ thuộc phạm vi: chỉ quản một tổ thì ẩn luôn
     if (k === 'doi' && !S.coNhieuDoi) hopLe = false;
     if (k === 'to' && !S.coNhieuTo) hopLe = false;
-    // Ban lãnh đạo đọc BigQuery (chỉ đã duyệt) — lọc trạng thái vô nghĩa
-    if (k === 'trangThai' && S.toanCongTy) hopLe = false;
     el.style.display = hopLe ? '' : 'none';
+  }
+}
+
+/**
+ * Nút gạt trạng thái đầu trang — thay cho ô dropdown "Trạng thái" cũ.
+ * Chỉ tổ trưởng/đội trưởng thấy: ban lãnh đạo đọc BigQuery, vốn chỉ có
+ * dòng đã duyệt nên gạt không có ý nghĩa gì.
+ */
+var TRANG_THAI_GAT = [
+  { id: '', ten: 'Tất cả' },
+  { id: 'CHO_DUYET', ten: 'Chưa duyệt' },
+  { id: 'DA_DUYET', ten: 'Đã duyệt' }
+];
+
+function veGatTrangThai() {
+  var el = $('gatTrangThai');
+  var h = '';
+  for (var i = 0; i < TRANG_THAI_GAT.length; i++) {
+    h += '<button class="chip' + (S.trangThai === TRANG_THAI_GAT[i].id ? ' on' : '') +
+         '" data-tt="' + TRANG_THAI_GAT[i].id + '">' + TRANG_THAI_GAT[i].ten + '</button>';
+  }
+  el.innerHTML = h;
+
+  var nuts = el.querySelectorAll('button[data-tt]');
+  for (var j = 0; j < nuts.length; j++) {
+    nuts[j].onclick = function () {
+      S.trangThai = this.getAttribute('data-tt');
+      S.trang = 1;
+      veGatTrangThai();
+      taiTab();
+    };
   }
 }
 
@@ -2018,7 +2050,7 @@ function apThamSoURL() {
   if (q.to) { $('fDoi').value = doiCuaTo(q.to); dungLocTo(); $('fTo').value = q.to; dungLocCn(); coApDung = true; }
   if (q.maCn) { $('fMaCn').value = q.maCn; coApDung = true; }
   if (q.loaiMu) { $('fLoaiMu').value = q.loaiMu; coApDung = true; }
-  if (q.trangThai) { $('fTrangThai').value = q.trangThai; coApDung = true; }
+  if (q.trangThai) { S.trangThai = q.trangThai; veGatTrangThai(); coApDung = true; }
 
   if (q.ngay) {
     $('fTuNgay').value = q.ngay; $('fDenNgay').value = q.ngay; coApDung = true;
@@ -2125,10 +2157,13 @@ function vaoApp(d) {
   $('nutDongBoPS').style.display = d.toanCongTy ? '' : 'none';
 
   // Ban lãnh đạo chỉ xem — dashboard của họ đọc thẳng BigQuery (chỉ đã
-  // duyệt), không đọc/ghi Sheet, nên nút thêm mới không còn ý nghĩa gì với
-  // họ. (Bộ lọc Trạng thái được capNhatHienBoLoc() ẩn theo S.toanCongTy.)
+  // duyệt), không đọc/ghi Sheet, nên nút thêm mới và nút gạt trạng thái
+  // (vốn để lọc chờ duyệt/đã duyệt) không còn ý nghĩa gì với họ.
   $('nutThemSL').style.display = d.toanCongTy ? 'none' : '';
   $('nutThemCC').style.display = d.toanCongTy ? 'none' : '';
+  $('gatTrangThai').style.display = d.toanCongTy ? 'none' : '';
+  S.trangThai = '';
+  veGatTrangThai();
 
   hien('app');
 
@@ -2154,13 +2189,6 @@ function vaoApp(d) {
     sc.innerHTML = '<option value="">Tất cả</option>';
     for (var l = 0; l < m.chatLuong.length; l++) {
       sc.innerHTML += '<option value="' + thoat(m.chatLuong[l].ma) + '">' + thoat(m.chatLuong[l].ten) + '</option>';
-    }
-
-    var st = $('fTrangThai');
-    st.innerHTML = '<option value="">Tất cả</option>';
-    var dsTT = m.trangThai || [{ ma: 'CHO_DUYET', ten: 'Chờ duyệt' }, { ma: 'DA_DUYET', ten: 'Đã duyệt' }];
-    for (var q = 0; q < dsTT.length; q++) {
-      st.innerHTML += '<option value="' + thoat(dsTT[q].ma) + '">' + thoat(dsTT[q].ten) + '</option>';
     }
 
     var sk = $('fKyHieu');
@@ -2294,11 +2322,13 @@ $('nutLoc').onclick = function () {
 
 $('nutXoaLoc').onclick = function () {
   $('fDoi').value = ''; $('fLoaiMu').value = ''; $('fPhien').value = '';
-  $('fChatLuong').value = ''; $('fTrangThai').value = ''; $('fMaCn').value = '';
+  $('fChatLuong').value = ''; $('fMaCn').value = '';
   $('fKyHieu').value = '';
   $('fTo').value = '';
   dungLocTo();
   if (S.meta) { $('fTuNgay').value = S.meta.ngayMin; $('fDenNgay').value = S.meta.ngayMax; }
+  S.trangThai = '';
+  veGatTrangThai();
   S.trang = 1;
   dongBoChip();
   taiTab();
@@ -2313,7 +2343,6 @@ $('fMaCn').onchange = function () { S.trang = 1; taiTab(); };
 $('fLoaiMu').onchange = function () { S.trang = 1; taiTab(); };
 $('fPhien').onchange = function () { S.trang = 1; taiTab(); };
 $('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
-$('fTrangThai').onchange = function () { S.trang = 1; taiTab(); };
 $('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 $('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 
