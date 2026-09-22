@@ -248,6 +248,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <span id="dongDonVi">—</span>
       </div>
       <span class="the-vaitro" id="theVaiTro">—</span>
+      <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
+      <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
       <button class="btn nho" id="nutTai">Tải lại</button>
       <button class="btn nho" id="nutThoat">Đổi người dùng</button>
     </div>
@@ -452,11 +454,20 @@ function xoaLS(khoa) {
    Muốn đổi: bấm "Đổi địa chỉ backend" ở màn hình đăng nhập. */
 var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7WIzfMllW1sYvX5QNq82tmhzb6PfA49zmK2QszMUu61RV3C7j/exec';
 
+/* Backend ĐỌC trên Cloud Run (.../api/exec). Để trống thì mọi lệnh đi Apps
+   Script như cũ. Lệnh GHI luôn đi Apps Script. */
+var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
+var LENH_DOC = {
+  meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1
+};
+
 /* =====================================================================
    Trạng thái
    ===================================================================== */
 var S = {
   api: docLS('crck2_api') || API_MAC_DINH,
+  apiDoc: docLS('crck2_api_doc') || API_DOC_MAC_DINH,
   vaiTro: '', maDonVi: '', tenDonVi: '', dsTo: [], dsCn: [], toanCongTy: false,
   meta: null,
   tab: 'tongQuan',
@@ -470,9 +481,29 @@ var S = {
    ===================================================================== */
 var _demCb = 0;
 
-function goiAPI(action, thamSo) {
+/* Lệnh đọc gửi Cloud Run. Cloud Run không trả lời được (sập, quá tải, hết
+   giờ) thì gửi lại cho Apps Script, trang vẫn chạy. Lỗi NGHIỆP VỤ (sai mã
+   đơn vị...) thì không gửi lại — Apps Script cũng sẽ báo đúng lỗi đó. */
+function goiAPI(action, thamSo, msCho) {
+  if (LENH_DOC[action] && S.apiDoc) {
+    return goiQua(S.apiDoc, action, thamSo, Math.min(msCho || 30000, 20000))
+      .catch(function (e) {
+        if (!e.vanChuyen || !S.api) throw e;
+        try { console.warn('Cloud Run lỗi, chuyển sang Apps Script:', e.message); } catch (x) {}
+        return goiQua(S.api, action, thamSo, msCho);
+      });
+  }
+  return goiQua(S.api, action, thamSo, msCho);
+}
+
+function goiQua(goc, action, thamSo, msCho) {
   return new Promise(function (resolve, reject) {
-    if (!S.api) { reject(new Error('Chưa cấu hình địa chỉ backend.')); return; }
+    if (!goc) { reject(new Error('Chưa cấu hình địa chỉ backend.')); return; }
+    function loiVanChuyen(thongBao) {
+      var e = new Error(thongBao);
+      e.vanChuyen = true;
+      return e;
+    }
 
     var cb = '__crck2cb' + (++_demCb) + '_' + Date.now();
     var q = ['action=' + encodeURIComponent(action), 'callback=' + cb];
@@ -485,11 +516,13 @@ function goiAPI(action, thamSo) {
 
     var s = document.createElement('script');
     var xong = false;
+    var gio = msCho || 30000;
     var hen = setTimeout(function () {
       if (xong) return;
       xong = true; don();
-      reject(new Error('Hết thời gian chờ backend (30 giây). Kiểm tra lại địa chỉ Web App và quyền truy cập.'));
-    }, 30000);
+      reject(loiVanChuyen('Hết thời gian chờ backend (' + Math.round(gio / 1000) +
+                          ' giây). Kiểm tra lại địa chỉ Web App và quyền truy cập.'));
+    }, gio);
 
     function don() {
       try { delete window[cb]; } catch (e) { window[cb] = undefined; }
@@ -504,13 +537,22 @@ function goiAPI(action, thamSo) {
       else reject(new Error((kq && kq.loi) || 'Backend trả về lỗi không rõ.'));
     };
 
+    // Trả lời đúng thì callback đã chạy XONG trước khi onload bắn. onload mà
+    // callback chưa chạy = backend trả thứ không phải dữ liệu (vd trang tạm
+    // "Placeholder" lúc Cloud Run đang build) -> báo hỏng ngay, khỏi chờ hết giờ.
+    s.onload = function () {
+      if (xong) return;
+      xong = true; don();
+      reject(loiVanChuyen('Backend trả về nội dung không phải dữ liệu.'));
+    };
+
     s.onerror = function () {
       if (xong) return;
       xong = true; don();
-      reject(new Error('Không gọi được backend. Kiểm tra địa chỉ /exec và deploy ở chế độ "Anyone".'));
+      reject(loiVanChuyen('Không gọi được backend. Kiểm tra địa chỉ /exec và deploy ở chế độ "Anyone".'));
     };
 
-    s.src = S.api + (S.api.indexOf('?') === -1 ? '?' : '&') + q.join('&');
+    s.src = goc + (goc.indexOf('?') === -1 ? '?' : '&') + q.join('&');
     document.body.appendChild(s);
   });
 }
@@ -1943,6 +1985,9 @@ function vaoApp(d) {
 
   dungLocTo();
   $('tieuDeSoSanh').textContent = d.toanCongTy ? 'So sánh theo đội' : 'So sánh theo tổ';
+  // Đẩy danh mục là việc quản trị, chỉ ban lãnh đạo thấy nút
+  $('nutDongBoDM').style.display = d.toanCongTy ? '' : 'none';
+  $('nutDongBoPS').style.display = d.toanCongTy ? '' : 'none';
 
   hien('app');
 
@@ -2058,6 +2103,41 @@ $('nutThoat').onclick = function () {
 
 // Tải lại = bỏ cache trình duyệt, lấy lại từ backend
 $('nutTai').onclick = function () { _cacheFE = {}; taiTab(); };
+
+/* Nút đẩy sang BigQuery. Bảng/ngày nào nội dung không đổi thì backend bỏ
+   qua, nên bấm nhiều lần cũng không tốn gì. */
+function ganNutDongBo(id, nhom, nhan) {
+  $(id).onclick = function () {
+    var nut = this;
+    nut.disabled = true;
+    nut.textContent = 'Đang đẩy…';
+    baoLoi('thongBao', '');
+
+    // Lần đầu phải nạp nhiều nên lâu, cho chờ 3 phút
+    goiAPI('dongBoBigQuery', { nhom: nhom }, 180000).then(function (d) {
+      nut.disabled = false;
+      nut.textContent = nhan;
+      var loi = (d.chiTiet || []).filter(function (x) { return !x.ok; });
+      var mo = nhan + ': đã đẩy <b>' + d.daDay + '</b> bảng, bỏ qua <b>' + d.boQua +
+               '</b> bảng không đổi, tổng ' + soVN(d.tongDong, 0) + ' dòng.';
+      if (loi.length) {
+        mo += ' <b>' + loi.length + ' bảng lỗi:</b> ' +
+              thoat(loi.slice(0, 3).map(function (x) { return x.bang; }).join(', '));
+      }
+      $('thongBao').innerHTML =
+        '<div class="bao-loi" style="background:' +
+        (loi.length ? 'var(--clay-soft);border-color:var(--clay);color:var(--clay)'
+                    : 'var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)') +
+        '">' + mo + '</div>';
+    }).catch(function (e) {
+      nut.disabled = false;
+      nut.textContent = nhan;
+      baoLoi('thongBao', nhan + ' không thành: ' + e.message);
+    });
+  };
+}
+ganNutDongBo('nutDongBoDM', 'danhMuc', 'Đồng bộ danh mục');
+ganNutDongBo('nutDongBoPS', 'phatSinh', 'Đồng bộ chấm công');
 
 $('nutLoc').onclick = function () {
   S.trang = 1;
