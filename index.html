@@ -1913,6 +1913,7 @@ function chuyenTab(ten) {
    ===================================================================== */
 var MOC_NHANH = [
   { id: 'hom_nay', ten: 'Hôm nay', ngay: 1 },
+  { id: 'thang_nay', ten: 'Tháng này', ngay: 0 },
   { id: '7', ten: '7 ngày gần nhất', ngay: 7 },
   { id: '30', ten: '30 ngày gần nhất', ngay: 30 },
   { id: '90', ten: '90 ngày gần nhất', ngay: 90 },
@@ -1924,6 +1925,12 @@ function khoangCuaMoc(id) {
   if (id === 'all') {
     if (!S.meta) return null;
     return { tu: S.meta.ngayMin, den: S.meta.ngayMax };
+  }
+  if (id === 'thang_nay') {
+    var hn = new Date();
+    hn.setHours(0, 0, 0, 0);
+    var dauThang = new Date(hn.getFullYear(), hn.getMonth(), 1);
+    return { tu: dinhDangISO(dauThang), den: dinhDangISO(hn) };
   }
   var m = null;
   for (var i = 0; i < MOC_NHANH.length; i++) if (MOC_NHANH[i].id === id) m = MOC_NHANH[i];
@@ -2162,11 +2169,15 @@ function vaoApp(d) {
         thoat(dsKH[kk].ma + ' — ' + dsKH[kk].ten) + '</option>';
     }
 
-    $('fTuNgay').value = m.ngayMin;
-    $('fDenNgay').value = m.ngayMax;
+    // Mặc định mở lên là THÁNG HIỆN TẠI, không phải toàn bộ dữ liệu —
+    // đỡ phải bấm lọc mỗi lần vào, và tránh tải cả năm dữ liệu không cần.
+    var khoangMacDinh = khoangCuaMoc('thang_nay');
+    $('fTuNgay').value = khoangMacDinh ? khoangMacDinh.tu : m.ngayMin;
+    $('fDenNgay').value = khoangMacDinh ? khoangMacDinh.den : m.ngayMax;
     dongBoChip();
 
-    // URL có tham số thì ưu tiên, không thì lấy lại chỗ xem lần trước
+    // URL có tham số thì ưu tiên, không thì lấy lại chỗ xem lần trước —
+    // cả hai đều GHI ĐÈ mặc định tháng hiện tại ở trên nếu có giá trị riêng
     if (!apThamSoURL()) khoiPhucChoDangXem();
     chuyenTab(S.tab || 'tongQuan');
   }).catch(function (e) {
