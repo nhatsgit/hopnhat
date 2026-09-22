@@ -148,6 +148,12 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 
 /* ---------- Bảng ---------- */
 .cuon{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* Danh sách dữ liệu dài (sản lượng, chấm công...): khung cao cố định cỡ
+   10 dòng, cuộn dọc riêng bên trong thay vì kéo dài cả trang. Backend vẫn
+   trả về cả trang dữ liệu như cũ (không đổi số lượng phân trang) — đây chỉ
+   là khung hiển thị, cuộn để xem hết trong cùng một trang. */
+.cuon-doc{overflow:auto;-webkit-overflow-scrolling:touch;max-height:460px}
+.cuon-doc thead th{position:sticky;top:0;z-index:1}
 .dong-cot-ngang{display:grid;grid-template-columns:76px 1fr auto;gap:10px;
   align-items:center;margin-bottom:9px;font-size:13px}
 .dong-cot-ngang:last-child{margin-bottom:0}
@@ -407,7 +413,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutCsvSL">Xuất CSV</button>
         </div>
-        <div class="cuon"><table id="bangSL"></table></div>
+        <div class="cuon cuon-doc"><table id="bangSL"></table></div>
         <div class="phan-trang" id="phanTrangSL"></div>
       </div>
     </section>
@@ -419,7 +425,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatPhieu">—</h3>
           <button class="btn nho" id="nutCsvPhieu">Xuất CSV</button>
         </div>
-        <div class="cuon"><table id="bangPhieu"></table></div>
+        <div class="cuon cuon-doc"><table id="bangPhieu"></table></div>
       </div>
     </section>
 
@@ -445,7 +451,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutCsvCC">Xuất CSV</button>
         </div>
-        <div class="cuon"><table id="bangCC"></table></div>
+        <div class="cuon cuon-doc"><table id="bangCC"></table></div>
         <div class="phan-trang" id="phanTrangCC"></div>
       </div>
     </section>
@@ -457,13 +463,13 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <p class="goi-y" style="padding:0 16px">Sản lượng ghi lũy kế vài ngày một lần, nên
           ngày có công mà chưa có sản lượng là bình thường. Chiều ngược lại mới đáng ngờ:
           có sản lượng mà không ai được chấm công.</p>
-        <div class="cuon"><table id="bangDC"></table></div>
+        <div class="cuon cuon-doc"><table id="bangDC"></table></div>
       </div>
       <div class="the">
         <h3 class="tieude-muc" style="padding:16px 16px 0" id="tomTatPC">Phần cạo kế hoạch so thực hiện</h3>
         <p class="goi-y" style="padding:0 16px">Mỗi ngày tổ cạo một phiên chính; người cạo đúp
           cạo thêm phiên kế tiếp. Tỷ lệ tính trên phiên chính, phần đúp để riêng.</p>
-        <div class="cuon"><table id="bangPC"></table></div>
+        <div class="cuon cuon-doc"><table id="bangPC"></table></div>
       </div>
     </section>
 
@@ -480,7 +486,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           </select>
           <button class="btn nho" id="nutCsvXH">Xuất CSV</button>
         </div>
-        <div class="cuon"><table id="bangXH"></table></div>
+        <div class="cuon cuon-doc"><table id="bangXH"></table></div>
       </div>
     </section>
 
