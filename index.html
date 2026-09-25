@@ -611,7 +611,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="tat_ca">Tất cả</option>
           </select>
         </div>
-        <p class="goi-y" style="padding:0 16px">Cảnh báo sinh ra khi đối chiếu danh sách công nhân với sổ sách. Hệ thống <b>không tự đổi người giữ mã</b> — Phòng TC-HC xác nhận rồi xử lý bằng nút bên phải (cần mã PIN).</p>
+        <p class="goi-y" style="padding:0 16px">Cảnh báo sinh ra khi đối chiếu danh sách công nhân với sổ sách. Hệ thống <b>không tự đổi người giữ mã</b> — Phòng TC-HC xác nhận rồi đánh dấu xử lý bằng nút bên phải; muốn đổi người giữ mã thì gửi đề xuất biến động (duyệt trên Base).</p>
         <div class="cuon cuon-doc"><table id="bangCanhBaoNS"></table></div>
       </div>
     </section>
@@ -708,7 +708,7 @@ var LENH_DOC = {
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
 var LENH_DOC_NHAN_SU = { nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1 };
-var LENH_GHI_NHAN_SU = { deXuatBienDong: 1, duyetBienDongNS: 1, xuLyCanhBaoNS: 1, capNhatNguoiNS: 1 };
+var LENH_GHI_NHAN_SU = { deXuatBienDong: 1, xuLyCanhBaoNS: 1, capNhatNguoiNS: 1 };
 // BigQuery cần ~30-60 giây sau khi ghi mới có số mới: trong 2 phút sau một lần ghi nhân sự thì đọc thẳng
 // Apps Script (Sheet) để người vừa gửi đề xuất thấy ngay.
 var _nsGhiLuc = 0;
@@ -2871,7 +2871,7 @@ function vaoApp(d) {
    ---------------------------------------------------------------------
    Web CHỈ nhận tên, đơn vị, số căn cước đã che, tuổi — backend không gửi
    ngày sinh / NSSF / số căn cước đầy đủ. Đề xuất biến động: chỉ tổ trưởng
-   và đội trưởng. Duyệt / từ chối / xử lý cảnh báo: cần mã PIN Phòng TC-HC.
+   và đội trưởng. Duyệt / từ chối: trên Base.vn, webhook bắn về. Xử lý cảnh báo: đánh dấu trên web.
    ===================================================================== */
 var NS = {
   view: 'nguoi',
@@ -2983,7 +2983,7 @@ function taiNhanSu(giuBao) {
       the_kpi('Đã có mã CN', soVN(k.daGanMa, 0), 'người', 'Đang giữ một mã vị trí') +
       the_kpi('Chưa có mã CN', soVN(k.chuaGanMa, 0), 'người', 'Chờ danh sách có mã CN của đội') +
       the_kpi('Vị trí trống', soVN(k.viTriTrong, 0), 'mã', k.viTriChuaRo ? soVN(k.viTriChuaRo, 0) + ' mã chưa rõ người giữ' : 'Sẵn sàng giao') +
-      the_kpi('Đề xuất chờ duyệt', soVN(k.choDuyet, 0), 'đề xuất', 'Phòng TC-HC duyệt') +
+      the_kpi('Đề xuất chờ duyệt', soVN(k.choDuyet, 0), 'đề xuất', 'Đang chờ duyệt trên Base') +
       the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo, 0), 'cảnh báo', 'Lệch danh sách / căn cước') +
       the_kpi('Chưa có NSSF', soVN(k.thieuNssf, 0), 'người', 'Cần làm thẻ NSSF') +
       the_kpi('Dưới 18 · Từ 60 tuổi', soVN(k.duoi18, 0) + ' · ' + soVN(k.tren60, 0), 'người', 'Cần rà soát pháp lý / hưu');
@@ -3121,7 +3121,7 @@ function nsMoThaoTac(ref) {
   if (nsGhiDuoc()) h += nsNut('tt_cn', 'Cập nhật NSSF / quê quán', false);
   h += '</div>';
   if (nsGhiDuoc() && r.deXuat) h += '<p class="goi-y">Đang có đề xuất ' + thoat(r.deXuat) + ' chờ duyệt — duyệt hoặc từ chối trước khi đề xuất tiếp.</p>';
-  if (!nsGhiDuoc()) h += '<p class="goi-y">Ban lãnh đạo chỉ xem. Đề xuất biến động do tổ trưởng / đội trưởng gửi, Phòng TC-HC duyệt.</p>';
+  if (!nsGhiDuoc()) h += '<p class="goi-y">Ban lãnh đạo chỉ xem. Đề xuất biến động do tổ trưởng / đội trưởng gửi, duyệt trên Base.</p>';
   nsMoModal('Người lao động', h);
   $('tt_ls').onclick = function () { nsMoLichSu({ ref: ref }, r.ten); };
   if ($('tt_giao')) $('tt_giao').onclick = function () { nsMoDeXuat('GIAO_MA', r); };
@@ -3187,7 +3187,7 @@ function nsMoDeXuat(loai, r) {
       (can ? '<div style="grid-column:1/-1"><label class="nhan" for="dxMa">Mã vị trí trống' + (loai === 'CHUYEN_TO' ? ' (tổ khác, cùng đội)' : '') + '</label><select class="o" id="dxMa">' +
         nsOptViTri(dsViTri, loai === 'CHUYEN_TO' ? r.to : '') + '</select></div>' : '') +
       nsKhungChung(loai === 'NGHI_VIEC' ? 'Lý do nghỉ việc' : 'Ghi chú') + '</div>' +
-      '<div id="dxLoi"></div><p class="goi-y">Đề xuất vào trạng thái <b>Chờ duyệt</b>. Mã CN và trạng thái người chỉ đổi khi Phòng TC-HC duyệt.</p>' +
+      '<div id="dxLoi"></div><p class="goi-y">Đề xuất vào trạng thái <b>Chờ duyệt</b>. Mã CN và trạng thái người chỉ đổi sau khi duyệt xong trên Base.</p>' +
       '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">' + nsNut('dxHuy', 'Huỷ', false) + nsNut('dxGui', 'Gửi đề xuất', true) + '</div>';
     nsMoModal(NS_TIEU_DE[loai] + ' — ' + r.ten, h);
     $('dxHuy').onclick = dongSuaSanLuong;
@@ -3209,7 +3209,11 @@ function nsGuiDeXuat(t) {
   baoLoi('dxLoi', '');
   nsGoi('deXuatBienDong', t).then(function (d) {
     dongSuaSanLuong();
-    nsBaoOk('Đã gửi đề xuất ' + d.ma + ' (' + nsTenLoai(d.loai) + (d.maCn ? ' · ' + d.maCn : '') + ') — chờ Phòng TC-HC duyệt.');
+    var b = d.base || {};
+    nsBaoOk('Đã gửi đề xuất ' + d.ma + ' (' + nsTenLoai(d.loai) + (d.maCn ? ' · ' + d.maCn : '') + ') — ' +
+      (b.ok ? 'đã tạo phiếu duyệt trên Base (#' + b.ticketId + ').'
+            : (b.chuaCauHinh ? 'CHƯA tạo được phiếu Base vì chưa cấu hình dịch vụ Base duyệt nhân sự (báo quản trị).'
+                             : 'ĐÃ ghi nhưng tạo phiếu Base lỗi: ' + (b.loi || '') + ' — báo quản trị.')));
     taiNhanSu(true);
   }).catch(function (e) {
     nut.disabled = false; nut.textContent = 'Gửi đề xuất';
@@ -3233,7 +3237,7 @@ function nsMoTuyenMoi() {
         '<option value="CHAM_SOC">— Công nhân chăm sóc (không giữ mã) —</option></select></div>' +
       '<div id="tmKhungTo" style="display:none"><label class="nhan" for="tmTo">Tổ làm việc</label><select class="o" id="tmTo">' + dsTo + '</select></div>' +
       nsKhungChung('Ghi chú') + '</div>' +
-      '<div id="dxLoi"></div><p class="goi-y">Người mới được tạo ở trạng thái <b>Chờ xác nhận</b> cho tới khi Phòng TC-HC duyệt.</p>' +
+      '<div id="dxLoi"></div><p class="goi-y">Người mới được tạo ở trạng thái <b>Chờ xác nhận</b> cho tới khi duyệt xong trên Base.</p>' +
       '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">' + nsNut('dxHuy', 'Huỷ', false) + nsNut('dxGui', 'Gửi đề xuất', true) + '</div>';
     nsMoModal('Tuyển mới', h);
     $('dxMa').onchange = function () { $('tmKhungTo').style.display = this.value === 'CHAM_SOC' ? '' : 'none'; };
@@ -3284,47 +3288,18 @@ function nsTaiBienDong() {
         '<td><b>' + thoat(r.maCn || '—') + '</b></td><td>' + thoat(r.to || '—') + '</td><td>' + nsTtBd(r.trangThai) + '</td>' +
         '<td class="nhan-mo">' + thoat(r.deXuat) + '</td><td class="nhan-mo">' + thoat(r.nguoiDuyet ? r.nguoiDuyet + (r.ngayDuyet ? ' · ' + ngayVN(r.ngayDuyet) : '') : '—') + '</td>' +
         '<td class="nhan-mo">' + thoat(r.ghiChu || '') + '</td>' +
-        '<td>' + (r.trangThai === 'CHO_DUYET' ? '<button class="btn nho" data-nsd="' + thoat(r.ma) + '">Duyệt / từ chối</button>' : '') + '</td></tr>';
+        '<td>' + (r.trangThai === 'CHO_DUYET' ? '<span class="nhan-mo">Đang chờ duyệt trên Base</span>' : '') + '</td></tr>';
     }
     $('bangBienDongNS').innerHTML = h + '</tbody>';
-    var nut = $('bangBienDongNS').querySelectorAll('button[data-nsd]');
-    for (var j = 0; j < nut.length; j++) nut[j].onclick = function () { nsMoDuyet(this.getAttribute('data-nsd')); };
     nsPhanTrang('phanTrangBienDongNS', d, nsTaiBienDong, 'bienDong');
   }).catch(function (e) { $('bangBienDongNS').innerHTML = ''; baoLoi('thongBao', e.message); });
 }
 
-function nsKhungPin(idLuu) {
+function nsKhungXuLy() {
   return '<div class="bo-loc the" style="margin-bottom:12px">' +
     '<div><label class="nhan" for="pinTen">Họ tên người xử lý</label><input class="o" id="pinTen" maxlength="60" value="' + thoat(docLS('crck2_ns_nguoi') || '') + '"></div>' +
-    '<div><label class="nhan" for="pinMa">Mã PIN Phòng TC-HC</label><input class="o" id="pinMa" type="password" maxlength="20" autocomplete="off"></div>' +
-    '<div style="grid-column:1/-1"><label class="nhan" for="pinGhi">Ghi chú / lý do</label><input class="o" id="pinGhi" maxlength="200"></div></div>' +
+    '<div style="grid-column:1/-1"><label class="nhan" for="pinGhi">Ghi chú / cách đã xử lý</label><input class="o" id="pinGhi" maxlength="200"></div></div>' +
     '<div id="pinLoi"></div>';
-}
-
-function nsMoDuyet(ma) {
-  var r = null;
-  for (var i = 0; i < NS.dsBienDong.length; i++) if (NS.dsBienDong[i].ma === ma) r = NS.dsBienDong[i];
-  if (!r) return;
-  var h = '<div class="dong-tt"><div><span>Mã BĐ</span><b>' + thoat(r.ma) + '</b></div><div><span>Người</span><b>' + thoat(r.ten) + '</b></div>' +
-    '<div><span>Loại</span><b>' + thoat(r.tenLoai) + '</b></div><div><span>Mã CN</span><b>' + thoat(r.maCn || '—') + '</b></div>' +
-    '<div><span>Hiệu lực</span><b>' + (r.hieuLuc ? ngayVN(r.hieuLuc) : '—') + '</b></div></div>' +
-    (r.ghiChu ? '<p class="goi-y">Ghi chú đề xuất: ' + thoat(r.ghiChu) + '</p>' : '') + nsKhungPin() +
-    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">' + nsNut('pinHuy', 'Đóng', false) +
-    nsNut('pinTu', 'Từ chối', false) + nsNut('pinDuyet', 'Duyệt', true) + '</div>';
-  nsMoModal('Duyệt biến động ' + ma, h);
-  $('pinHuy').onclick = dongSuaSanLuong;
-  var gui = function (kq) {
-    ghiLS('crck2_ns_nguoi', $('pinTen').value);
-    $('pinDuyet').disabled = true; $('pinTu').disabled = true;
-    baoLoi('pinLoi', '');
-    nsGoi('duyetBienDongNS', { ma: ma, kq: kq, nguoi: $('pinTen').value, pin: $('pinMa').value, ghiChu: $('pinGhi').value }).then(function (d) {
-      dongSuaSanLuong();
-      nsBaoOk((kq === 'DUYET' ? 'Đã duyệt ' : 'Đã từ chối ') + d.ma + '.');
-      taiNhanSu(true);
-    }).catch(function (e) { $('pinDuyet').disabled = false; $('pinTu').disabled = false; baoLoi('pinLoi', e.message); });
-  };
-  $('pinDuyet').onclick = function () { gui('DUYET'); };
-  $('pinTu').onclick = function () { gui('TU_CHOI'); };
 }
 
 /* ---- Vị trí ---- */
@@ -3382,7 +3357,7 @@ function nsMoXuLyCb(ma) {
   for (var i = 0; i < NS.dsCanhBao.length; i++) if (NS.dsCanhBao[i].ma === ma) r = NS.dsCanhBao[i];
   if (!r) return;
   var h = '<div class="dong-tt"><div><span>Mã</span><b>' + thoat(r.ma) + '</b></div><div><span>Loại</span><b>' + thoat(r.tenLoai) + '</b></div></div>' +
-    '<p style="margin:0 0 12px">' + thoat(r.moTa) + '</p>' + nsKhungPin() +
+    '<p style="margin:0 0 12px">' + thoat(r.moTa) + '</p>' + nsKhungXuLy() +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">' + nsNut('cbDong', 'Đóng', false) +
     (r.trangThai !== 'MO' ? nsNut('cbMo', 'Mở lại', false) : '') + nsNut('cbBo', 'Bỏ qua', false) + nsNut('cbXong', 'Đã xử lý', true) + '</div>';
   nsMoModal('Xử lý cảnh báo ' + ma, h);
@@ -3390,7 +3365,7 @@ function nsMoXuLyCb(ma) {
   var gui = function (tt) {
     ghiLS('crck2_ns_nguoi', $('pinTen').value);
     baoLoi('pinLoi', '');
-    nsGoi('xuLyCanhBaoNS', { ma: ma, trangThai: tt, nguoi: $('pinTen').value, pin: $('pinMa').value, ghiChu: $('pinGhi').value }).then(function () {
+    nsGoi('xuLyCanhBaoNS', { ma: ma, trangThai: tt, nguoi: $('pinTen').value, ghiChu: $('pinGhi').value }).then(function () {
       dongSuaSanLuong(); nsBaoOk('Đã cập nhật cảnh báo ' + ma + '.'); taiNhanSu(true);
     }).catch(function (e) { baoLoi('pinLoi', e.message); });
   };
