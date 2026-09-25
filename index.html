@@ -2223,6 +2223,8 @@ function moNhapCaTo() {
     '<p class="goi-y">Chỉ người có <b>kg &gt; 0</b> mới được gửi. Bảng tự lưu tạm khi gõ; đóng cửa sổ hay tải lại trang vẫn còn trong ' + (NT_HAN_MS / 3600000) + ' giờ. ' +
     'Ngày / phiên / loại mủ áp cho cả bảng — người cạo đúp hoặc có thêm loại mủ khác thì nhập thêm một lượt riêng.</p>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
+      nsNut('ntMau', 'Tải file mẫu', false) + '<button class="btn" id="ntChonFile">Nhập từ file</button>' +
+      '<input type="file" id="ntFile" accept=".xlsx,.xls,.csv" style="display:none">' +
       nsNut('ntXoaTam', 'Xoá bản tạm', false) + nsNut('ntLuu', 'Lưu tạm', false) + nsNut('ntDong', 'Đóng', false) + nsNut('ntGui', 'Gửi xử lý', true) + '</div>';
   nsMoModal('Nhập sản lượng cả tổ — ' + S.maDonVi, h);
   ntTongKet();
@@ -2258,7 +2260,76 @@ function moNhapCaTo() {
     ntTongKet(); $('ntTrangThaiLuu').textContent = 'Đã xoá bản tạm';
   };
   $('ntGui').onclick = ntGui;
+  $('ntMau').onclick = ntTaiMau;
+  $('ntChonFile').onclick = function () { $('ntFile').click(); };
+  $('ntFile').onchange = function () { if (this.files && this.files[0]) ntNhapFile(this.files[0], thayDoi); this.value = ''; };
   if (kgs[0]) kgs[0].focus();
+}
+
+/** File mẫu = đúng danh sách công nhân của tổ, điền sẵn số đang gõ trong bảng (dùng luôn để xuất bảng ra Excel). */
+function ntTaiMau() {
+  var d = ntThuThap();
+  var dong = [['Mã công nhân', 'Sản lượng kg', 'Số nhát cạo', 'Ghi chú']];
+  var ds = S.dsCn.slice().sort();
+  for (var i = 0; i < ds.length; i++) {
+    var x = d.dong[ds[i]] || {};
+    dong.push([ds[i], x.kg === undefined || x.kg === '' ? '' : Number(x.kg), x.nhat === undefined || x.nhat === '' ? '' : Number(x.nhat), x.gc || '']);
+  }
+  var ws = XLSX.utils.aoa_to_sheet(dong);
+  ws['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 36 }];
+  var hd = XLSX.utils.aoa_to_sheet([
+    ['Chỉ điền cột "Sản lượng kg" (và số nhát / ghi chú nếu cần) ở sheet "Nhap ca to". Đừng sửa cột Mã công nhân, đừng đổi tên cột.'],
+    ['Ngày, phiên cạo, loại mủ, chất lượng KHÔNG nằm trong file: chọn ở đầu bảng nhập trên web.'],
+    ['Hiện đang chọn: ngày ' + (d.ngay || '—') + ' · phiên ' + d.phien + ' · loại mủ ' + d.loai + ' · chất lượng ' + d.cl + ' · số nhát mặc định ' + d.nhat],
+    ['Dòng kg để trống hoặc bằng 0 sẽ bị bỏ qua.']
+  ]);
+  hd['!cols'] = [{ wch: 110 }];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Nhap ca to');
+  XLSX.utils.book_append_sheet(wb, hd, 'Huong dan');
+  XLSX.writeFile(wb, 'nhap_ca_to_' + S.maDonVi.replace(/[^\w-]/g, '_') + '.xlsx');
+}
+
+/** Đọc file → điền vào bảng theo Mã công nhân. Chỉ ghi đè người có kg trong file; người khác giữ nguyên. */
+async function ntNhapFile(file, thayDoi) {
+  baoLoi('ntLoi', '');
+  var rows;
+  try { rows = await docFileExcel(file); } catch (e) { baoLoi('ntLoi', e.message); return; }
+  var chuan = function (t) { return String(t).toLowerCase().replace(/\s+/g, ' ').trim(); };
+  var tim = function (r, ...mau) {
+    for (var k in r) { var c = chuan(k); for (var i = 0; i < mau.length; i++) if (c.indexOf(mau[i]) >= 0) return r[k]; }
+    return undefined;
+  };
+  var bang = {}, tr = $('bangNhapTo').querySelectorAll('tr[data-cn]');
+  for (var i = 0; i < tr.length; i++) bang[tr[i].getAttribute('data-cn').toUpperCase()] = tr[i];
+  var dien = 0, la = [], sai = [], gapMa = false;
+  for (var j = 0; j < rows.length; j++) {
+    var ma = tim(rows[j], 'mã công nhân', 'ma cong nhan', 'mã cn', 'mã');
+    if (ma === undefined) continue;
+    gapMa = true;
+    ma = String(ma).trim().toUpperCase();
+    if (!ma) continue;
+    var kgTxt = String(tim(rows[j], 'sản lượng', 'san luong', 'kg') === undefined ? '' : tim(rows[j], 'sản lượng', 'san luong', 'kg')).replace(',', '.').trim();
+    if (kgTxt === '') continue;
+    var t = bang[ma];
+    if (!t) { la.push(ma); continue; }
+    var kg = parseFloat(kgTxt);
+    if (!(kg > 0) || kg > 100000) { if (kg !== 0) sai.push(ma); continue; }
+    t.querySelector('.nt-kg').value = String(kg);
+    var nh = String(tim(rows[j], 'nhát', 'nhat') === undefined ? '' : tim(rows[j], 'nhát', 'nhat')).trim();
+    if (nh !== '' && !isNaN(Number(nh))) t.querySelector('.nt-nhat').value = String(Number(nh));
+    var gc = tim(rows[j], 'ghi chú', 'ghi chu');
+    if (gc !== undefined && String(gc).trim() !== '') t.querySelector('.nt-gc').value = String(gc).trim();
+    dien++;
+  }
+  if (!gapMa) { baoLoi('ntLoi', 'Không thấy cột "Mã công nhân" trong file — hãy dùng file mẫu tải từ nút bên cạnh.'); return; }
+  thayDoi();
+  var h = '<div class="bao-loi" style="' + (la.length || sai.length ? '' : 'background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)') + '">' +
+    'Đã điền <b>' + dien + '</b> người từ file.' +
+    (la.length ? ' <b>' + la.length + ' mã không thuộc tổ này</b> (bỏ qua): ' + thoat(la.slice(0, 8).join(', ')) + (la.length > 8 ? '…' : '') + '.' : '') +
+    (sai.length ? ' Sản lượng không hợp lệ (bỏ qua): ' + thoat(sai.slice(0, 8).join(', ')) + '.' : '') +
+    ' Kiểm tra lại rồi bấm Gửi xử lý.</div>';
+  $('ntLoi').innerHTML = h;
 }
 
 async function ntGui() {
