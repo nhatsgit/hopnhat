@@ -155,6 +155,10 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .cuon-doc{overflow:auto;-webkit-overflow-scrolling:touch;max-height:460px}
 .cuon-doc thead th{position:sticky;top:0;z-index:1}
 .ns-thanh{padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.nt-bang input.o{padding:5px 8px;min-width:0}
+.nt-bang td{padding:4px 6px}
+.nt-bang tr.nt-loi td{background:var(--clay-soft)}
+.nt-bang tr.nt-co td{background:var(--leaf-soft)}
 .the-nho{display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:2px;font-size:11px;
   background:var(--line);color:var(--ink-2);white-space:nowrap}
 .the-nho.canh{background:var(--clay-soft);color:var(--clay)}
@@ -428,7 +432,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="the">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSL">—</h3>
-          <button class="btn chinh nho" id="nutThemSL">+ Nhập sản lượng</button>
+          <button class="btn chinh nho" id="nutNhapTo" title="Nhập sản lượng cho cả tổ trong một bảng, có lưu tạm">Nhập cả tổ</button>
+          <button class="btn nho" id="nutThemSL">+ Nhập 1 người</button>
           <button class="btn nho" id="nutMauSL" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
           <button class="btn nho" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutCsvSL">Xuất CSV</button>
@@ -2119,6 +2124,205 @@ function luuThemSanLuong() {
 }
 
 /* =====================================================================
+   Nhập sản lượng CẢ TỔ trong một bảng
+   ---------------------------------------------------------------------
+   Hiện sẵn mọi công nhân của tổ; ngày / phiên / loại mủ / chất lượng chọn
+   MỘT LẦN ở đầu bảng, mỗi người chỉ điền kg (+ số nhát, ghi chú). Tự lưu
+   tạm trong trình duyệt (NT_HAN_MS) để tắt tab / mất mạng không mất số đã
+   gõ; "Gửi xử lý" đẩy qua đúng API nhập hàng loạt đã có (lỗi từng dòng
+   không huỷ cả lô), người nào gửi thành công thì được gỡ khỏi bản tạm.
+   ===================================================================== */
+var NT_HAN_MS = 6 * 60 * 60 * 1000;      // bản lưu tạm giữ 6 giờ
+
+function ntKhoa() { return 'crck2_nhapto_' + S.maDonVi; }
+
+function ntDocTam() {
+  var raw = docLS(ntKhoa());
+  if (!raw) return null;
+  try {
+    var j = JSON.parse(raw);
+    if (!j || !j.luc || Date.now() - j.luc > NT_HAN_MS) { xoaLS(ntKhoa()); return null; }
+    return j;
+  } catch (e) { return null; }
+}
+
+function ntGio(ms) {
+  var d = new Date(ms);
+  return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+}
+
+/** Đọc toàn bộ bảng đang gõ → object lưu tạm. */
+function ntThuThap() {
+  var dong = {}, tr = $('bangNhapTo').querySelectorAll('tr[data-cn]');
+  for (var i = 0; i < tr.length; i++) {
+    var kg = tr[i].querySelector('.nt-kg').value, nh = tr[i].querySelector('.nt-nhat').value, gc = tr[i].querySelector('.nt-gc').value;
+    if (kg !== '' || nh !== '' || gc !== '') dong[tr[i].getAttribute('data-cn')] = { kg: kg, nhat: nh, gc: gc };
+  }
+  return { ngay: $('ntNgay').value, phien: $('ntPhien').value, loai: $('ntLoai').value, cl: $('ntCl').value,
+           nhat: $('ntNhat').value, dong: dong };
+}
+
+function ntLuuTam(thongBao) {
+  var d = ntThuThap();
+  d.luc = Date.now();
+  var coDL = Object.keys(d.dong).length > 0;
+  if (coDL) ghiLS(ntKhoa(), JSON.stringify(d)); else xoaLS(ntKhoa());
+  $('ntTrangThaiLuu').textContent = coDL ? 'Đã lưu tạm lúc ' + ntGio(d.luc) + ' (giữ ' + (NT_HAN_MS / 3600000) + ' giờ trong trình duyệt này)' : 'Chưa có gì để lưu tạm';
+  if (thongBao) nsBaoOkChung(coDL ? 'Đã lưu tạm ' + Object.keys(d.dong).length + ' người.' : 'Bảng đang trống.');
+}
+
+function nsBaoOkChung(txt) {
+  $('thongBao').innerHTML = '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' + thoat(txt) + '</div>';
+}
+
+function ntTongKet() {
+  var tr = $('bangNhapTo').querySelectorAll('tr[data-cn]'), n = 0, kg = 0;
+  for (var i = 0; i < tr.length; i++) {
+    var v = parseFloat(tr[i].querySelector('.nt-kg').value);
+    if (v > 0) { n++; kg += v; }
+  }
+  $('ntTongKet').innerHTML = 'Đã nhập <b>' + n + '</b>/' + tr.length + ' người · tổng <b>' + soVN(kg, 2) + '</b> kg';
+  $('ntGui').textContent = 'Gửi xử lý (' + n + ' người)';
+  $('ntGui').disabled = n === 0;
+}
+
+function moNhapCaTo() {
+  if (S.vaiTro !== 'TO_TRUONG') { baoLoi('thongBao', 'Chỉ tổ trưởng nhập sản lượng.'); return; }
+  if (!S.dsCn.length || !S.meta) { baoLoi('thongBao', 'Chưa có danh sách công nhân của tổ.'); return; }
+  var tam = ntDocTam();
+  var ds = S.dsCn.slice().sort();
+  var m = S.meta;
+  var chon = function (giaTri, dsMa, macDinh) {
+    for (var i = 0; i < dsMa.length; i++) if (dsMa[i].ma === giaTri) return giaTri;
+    return macDinh;
+  };
+  var phien = chon(tam && tam.phien, m.phien, m.phien[0] ? m.phien[0].ma : '');
+  var loai = chon(tam && tam.loai, m.loaiMu, chon('MU_DONG', m.loaiMu, m.loaiMu[0] ? m.loaiMu[0].ma : ''));
+  var cl = chon(tam && tam.cl, m.chatLuong, m.chatLuong[0] ? m.chatLuong[0].ma : '');
+  var ngay = (tam && tam.ngay) || nsHomNay();
+  var nhatMd = (tam && tam.nhat) || '2';
+
+  var h = '<div class="bo-loc the" style="margin-bottom:10px">' +
+    '<div><label class="nhan" for="ntNgay">Ngày</label><input class="o" id="ntNgay" type="date" value="' + thoat(ngay) + '"></div>' +
+    '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
+    '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
+    '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
+    '<div><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
+      '<span id="ntTongKet" style="margin-right:auto"></span><span class="nhan-mo" id="ntTrangThaiLuu"></span></div>' +
+    '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangNhapTo"><thead><tr><th>#</th><th>Mã công nhân</th>' +
+    '<th>Sản lượng (kg)</th><th>Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
+  for (var i = 0; i < ds.length; i++) {
+    var d = tam && tam.dong && tam.dong[ds[i]];
+    h += '<tr data-cn="' + thoat(ds[i]) + '"><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(ds[i]) + '</b></td>' +
+      '<td><input class="o nt-kg" type="number" step="0.01" min="0" inputmode="decimal" value="' + thoat(d ? d.kg : '') + '"></td>' +
+      '<td><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
+      '<td><input class="o nt-gc" maxlength="200" value="' + thoat(d ? d.gc : '') + '"></td></tr>';
+  }
+  h += '</tbody></table></div><div id="ntLoi"></div>' +
+    '<p class="goi-y">Chỉ người có <b>kg &gt; 0</b> mới được gửi. Bảng tự lưu tạm khi gõ; đóng cửa sổ hay tải lại trang vẫn còn trong ' + (NT_HAN_MS / 3600000) + ' giờ. ' +
+    'Ngày / phiên / loại mủ áp cho cả bảng — người cạo đúp hoặc có thêm loại mủ khác thì nhập thêm một lượt riêng.</p>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
+      nsNut('ntXoaTam', 'Xoá bản tạm', false) + nsNut('ntLuu', 'Lưu tạm', false) + nsNut('ntDong', 'Đóng', false) + nsNut('ntGui', 'Gửi xử lý', true) + '</div>';
+  nsMoModal('Nhập sản lượng cả tổ — ' + S.maDonVi, h);
+  ntTongKet();
+  $('ntTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
+
+  var hen = null;
+  var thayDoi = function () { ntTongKet(); clearTimeout(hen); hen = setTimeout(function () { ntLuuTam(false); }, 600); };
+  var oNhap = $('bangNhapTo').querySelectorAll('input');
+  for (var k = 0; k < oNhap.length; k++) oNhap[k].oninput = thayDoi;
+  ['ntNgay', 'ntPhien', 'ntLoai', 'ntCl', 'ntNhat'].forEach(function (id) {
+    $(id).onchange = function () {
+      var np = $('bangNhapTo').querySelectorAll('.nt-nhat');
+      for (var q = 0; q < np.length; q++) np[q].placeholder = $('ntNhat').value;
+      thayDoi();
+    };
+  });
+  // Enter ở ô kg → xuống ô kg của người kế tiếp (gõ liền tay như bảng tính)
+  var kgs = $('bangNhapTo').querySelectorAll('.nt-kg');
+  for (var z = 0; z < kgs.length; z++) {
+    kgs[z].onkeydown = (function (i) {
+      return function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); if (kgs[i + 1]) { kgs[i + 1].focus(); kgs[i + 1].select(); } }
+      };
+    })(z);
+  }
+  $('ntDong').onclick = function () { ntLuuTam(false); dongSuaSanLuong(); };
+  $('ntLuu').onclick = function () { ntLuuTam(true); };
+  $('ntXoaTam').onclick = function () {
+    if (!confirm('Xoá toàn bộ số đã gõ trong bảng và bản lưu tạm?')) return;
+    xoaLS(ntKhoa());
+    var vs = $('bangNhapTo').querySelectorAll('input');
+    for (var v = 0; v < vs.length; v++) vs[v].value = '';
+    ntTongKet(); $('ntTrangThaiLuu').textContent = 'Đã xoá bản tạm';
+  };
+  $('ntGui').onclick = ntGui;
+  if (kgs[0]) kgs[0].focus();
+}
+
+async function ntGui() {
+  var d = ntThuThap();
+  if (!d.ngay) { baoLoi('ntLoi', 'Chưa chọn ngày.'); return; }
+  var tr = $('bangNhapTo').querySelectorAll('tr[data-cn]'), dsDong = [], sai = [];
+  for (var i = 0; i < tr.length; i++) {
+    tr[i].classList.remove('nt-loi', 'nt-co');
+    var kgTxt = tr[i].querySelector('.nt-kg').value;
+    if (kgTxt === '') continue;
+    var kg = parseFloat(kgTxt);
+    if (!(kg > 0) || kg > 100000) { tr[i].classList.add('nt-loi'); sai.push(tr[i].getAttribute('data-cn')); continue; }
+    var nh = tr[i].querySelector('.nt-nhat').value;
+    dsDong.push({ ngay: d.ngay, maCn: tr[i].getAttribute('data-cn'), loaiMu: d.loai, phien: d.phien, kg: String(kg),
+                  chatLuong: d.cl, nhat: nh !== '' ? nh : d.nhat, ghiChu: tr[i].querySelector('.nt-gc').value });
+  }
+  if (sai.length) { baoLoi('ntLoi', 'Sản lượng không hợp lệ ở: ' + sai.join(', ') + ' (phải > 0 và < 100.000 kg).'); return; }
+  if (!dsDong.length) { baoLoi('ntLoi', 'Chưa có ai có sản lượng > 0.'); return; }
+  var tongKg = dsDong.reduce(function (t, x) { return t + Number(x.kg); }, 0);
+  if (!confirm('Gửi ' + dsDong.length + ' người, tổng ' + soVN(tongKg, 2) + ' kg, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '?')) return;
+
+  baoLoi('ntLoi', '');
+  $('ntGui').disabled = true;
+  var lo = chiaLoTheoDoDai(dsDong, 5000), tongOK = 0, loi = [], xong = {};
+  for (var b = 0; b < lo.length; b++) {
+    $('ntTongKet').innerHTML = 'Đang gửi đợt ' + (b + 1) + '/' + lo.length + '…';
+    try {
+      var kq = await goiAPI('nhapHangLoatSanLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(lo[b]) }, 60000);
+      tongOK += kq.thanhCong;
+      for (var j = 0; j < kq.ketQua.length; j++) {
+        var it = kq.ketQua[j], cn = lo[b][it.dong - 2] ? lo[b][it.dong - 2].maCn : '?';
+        if (it.ok) xong[cn] = true; else loi.push({ cn: cn, loi: it.loi });
+      }
+    } catch (e) {
+      for (var k = 0; k < lo[b].length; k++) loi.push({ cn: lo[b][k].maCn, loi: 'Đợt gửi bị lỗi: ' + e.message });
+    }
+  }
+  _cacheFE = {};
+  // Người đã gửi thành công: gỡ khỏi bảng + bản tạm; người lỗi: giữ nguyên để sửa rồi gửi lại
+  var bao = {}, i2;
+  for (i2 = 0; i2 < loi.length; i2++) bao[loi[i2].cn] = loi[i2].loi;
+  for (i2 = 0; i2 < tr.length; i2++) {
+    var cnI = tr[i2].getAttribute('data-cn');
+    if (xong[cnI]) {
+      tr[i2].querySelector('.nt-kg').value = ''; tr[i2].querySelector('.nt-nhat').value = ''; tr[i2].querySelector('.nt-gc').value = '';
+      tr[i2].classList.add('nt-co');
+    } else if (bao[cnI] !== undefined) tr[i2].classList.add('nt-loi');
+  }
+  ntLuuTam(false);
+  ntTongKet();
+  if (!loi.length) {
+    dongSuaSanLuong();
+    nsBaoOkChung('Đã gửi xử lý ' + tongOK + ' người, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '.');
+    taiTab();
+    return;
+  }
+  var h = '<div class="bao-loi">Đã gửi <b>' + tongOK + '</b> người; <b>' + loi.length + ' lỗi</b> (tô đỏ trong bảng, đã giữ lại để sửa):' +
+    '<ul style="margin:6px 0 0 18px">';
+  for (var q = 0; q < loi.length; q++) h += '<li><b>' + thoat(loi[q].cn) + '</b>: ' + thoat(loi[q].loi) + '</li>';
+  $('ntLoi').innerHTML = h + '</ul></div>';
+  if (tongOK > 0) taiTab();
+}
+
+/* =====================================================================
    Nhập hàng loạt từ Excel — sản lượng & chấm công
    ---------------------------------------------------------------------
    Đọc/ghi file .xlsx NGAY TRÊN TRÌNH DUYỆT bằng SheetJS, không gửi file
@@ -2808,6 +3012,7 @@ function vaoApp(d) {
   // trưởng cũng chỉ xem — quản lý nhiều tổ nên không trực tiếp nhập liệu.
   var chiXem = d.vaiTro !== 'TO_TRUONG';
   $('nutThemSL').style.display = chiXem ? 'none' : '';
+  $('nutNhapTo').style.display = chiXem ? 'none' : '';
   $('nutThemCC').style.display = chiXem ? 'none' : '';
   $('nutHangLoatSL').style.display = chiXem ? 'none' : '';
   $('nutHangLoatCC').style.display = chiXem ? 'none' : '';
@@ -3535,6 +3740,7 @@ $('nutThemSL').onclick = moThemSanLuong;
 $('nutCsvSL').onclick = csvSanLuong;
 $('nutMauSL').onclick = function () { taiMauExcel('sanLuong'); };
 $('nutHangLoatSL').onclick = function () { moNhapHangLoat('sanLuong'); };
+$('nutNhapTo').onclick = moNhapCaTo;
 $('nutCsvPhieu').onclick = csvPhieu;
 $('nutCsvXH').onclick = csvXepHang;
 
