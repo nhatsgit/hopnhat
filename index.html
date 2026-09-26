@@ -728,7 +728,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -1508,7 +1508,7 @@ function taiGiaoKhoan() {
       the_kpi('Phần cạo đã giao', soVN(k.soGiaoKhoan, 0), 'dòng', 'Mùa vụ ' + d.muaVu + ' · ' + soVN(k.tongCay, 0) + ' cây') +
       the_kpi('Phần cạo chưa giao', soVN(k.soChuaGiao, 0), 'phần', 'Đang khai thác nhưng chưa có người nhận') +
       the_kpi('Kế hoạch mùa vụ', soVN(k.tongKh / 1000, 1), 'tấn', 'Cộng kế hoạch mủ chén + mủ dây') +
-      the_kpi('Thực hiện lũy kế', soVN(k.tongTh / 1000, 1), 'tấn', 'Đạt ' + soVN(k.tyLe, 1) + '% kế hoạch · thời gian đã qua ' + soVN(d.tyLeThoiGian, 1) + '%') +
+      the_kpi('Thực hiện lũy kế (đã duyệt)', soVN(k.tongTh / 1000, 1), 'tấn', 'Đạt ' + soVN(k.tyLe, 1) + '% kế hoạch · thời gian đã qua ' + soVN(d.tyLeThoiGian, 1) + '%') +
       the_kpi('Chậm kế hoạch', soVN(k.soCham, 0), 'dòng', 'Đạt thấp hơn tỷ lệ thời gian trên 10 điểm %');
     $('tomTatGK').textContent = (chua ? 'Phần cạo chưa giao: ' : 'Giao khoán: ') + soVN(d.tong, 0) + ' dòng';
 
