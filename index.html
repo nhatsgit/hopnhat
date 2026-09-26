@@ -330,6 +330,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <button class="tab" data-tab="doiChieu">Đối chiếu</button>
     <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
     <button class="tab" data-tab="nhanSu">Nhân sự</button>
+    <button class="tab" data-tab="giaoKhoan">Giao khoán</button>
   </div>
 
   <div class="wrap">
@@ -524,6 +525,25 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutCsvXH">Xuất CSV</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangXH"></table></div>
+      </div>
+    </section>
+
+    <!-- Tab: Giao khoán — phần cạo giao cho ai, kế hoạch mùa vụ, thực hiện lũy kế -->
+    <section id="pGiaoKhoan" style="display:none">
+      <div class="kpis" id="kpisGK"></div>
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatGK">Giao khoán</h3>
+          <input class="o" id="gkQ" placeholder="Tìm mã CN / phần cạo" style="width:180px">
+          <select class="o" id="gkLoc" style="width:auto">
+            <option value="">Tất cả người nhận</option>
+            <option value="thieu">Chậm kế hoạch</option>
+            <option value="chuaGiao">Phần cạo chưa giao</option>
+          </select>
+          <button class="btn nho" id="nutCsvGK">Xuất CSV</button>
+        </div>
+        <div class="cuon cuon-doc"><table id="bangGK"></table></div>
+        <div class="phan-trang" id="phanTrangGK"></div>
       </div>
     </section>
 
@@ -1468,6 +1488,76 @@ function taiXepHang() {
     baoLoi('thongBao', '');
   }).catch(function (e) {
     $('bangXH').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/* =====================================================================
+   Giao khoán (chỉ xem): ai nhận phần cạo nào, kế hoạch mùa vụ, thực hiện lũy kế
+   ===================================================================== */
+function taiGiaoKhoan() {
+  $('bangGK').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  var bl = layBoLoc();
+  bl.q = $('gkQ').value.trim(); bl.loc = $('gkLoc').value;
+  bl.trang = S.trang; bl.moiTrang = 100;
+  delete bl.tuNgay; delete bl.denNgay; delete bl.loaiMu; delete bl.chatLuong; delete bl.trangThai; delete bl.maCn;
+
+  goiCache('giaoKhoan', bl).then(function (d) {
+    var k = d.kpi, chua = bl.loc === 'chuaGiao';
+    $('kpisGK').innerHTML =
+      the_kpi('Phần cạo đã giao', soVN(k.soGiaoKhoan, 0), 'dòng', 'Mùa vụ ' + d.muaVu + ' · ' + soVN(k.tongCay, 0) + ' cây') +
+      the_kpi('Phần cạo chưa giao', soVN(k.soChuaGiao, 0), 'phần', 'Đang khai thác nhưng chưa có người nhận') +
+      the_kpi('Kế hoạch mùa vụ', soVN(k.tongKh / 1000, 1), 'tấn', 'Cộng kế hoạch mủ chén + mủ dây') +
+      the_kpi('Thực hiện lũy kế', soVN(k.tongTh / 1000, 1), 'tấn', 'Đạt ' + soVN(k.tyLe, 1) + '% kế hoạch · thời gian đã qua ' + soVN(d.tyLeThoiGian, 1) + '%') +
+      the_kpi('Chậm kế hoạch', soVN(k.soCham, 0), 'dòng', 'Đạt thấp hơn tỷ lệ thời gian trên 10 điểm %');
+    $('tomTatGK').textContent = (chua ? 'Phần cạo chưa giao: ' : 'Giao khoán: ') + soVN(d.tong, 0) + ' dòng';
+
+    var h;
+    if (chua) {
+      h = '<thead><tr><th>Mã phần cạo</th><th>Tổ</th><th>Lô</th><th>Hàng</th><th class="p">Số cây</th></tr></thead><tbody>';
+      if (!d.chuaGiao.length) h += '<tr><td colspan="5"><div class="rong">Không có phần cạo nào chưa giao.</div></td></tr>';
+      for (var j = 0; j < d.chuaGiao.length; j++) {
+        var c = d.chuaGiao[j];
+        h += '<tr><td><b>' + thoat(c.phanCao) + '</b></td><td>' + thoat(c.to) + '</td><td>' + thoat(c.lo) +
+             '</td><td>' + thoat(c.hang) + '</td><td class="p num">' + soVN(c.cay, 0) + '</td></tr>';
+      }
+    } else {
+      h = '<thead><tr><th>Mã CN</th><th>Phiên</th><th>Phần cạo</th><th>Lô</th><th>Hàng</th><th class="p">Số cây</th>' +
+          '<th class="p">NSBQ kg/cây</th><th class="p">KH mủ chén</th><th class="p">KH mủ dây</th><th class="p">KH tổng (kg)</th>' +
+          '<th class="p">Thực hiện (kg)</th><th class="p">% KH</th></tr></thead><tbody>';
+      if (!d.rows.length) h += '<tr><td colspan="12"><div class="rong">Không có dữ liệu giao khoán.</div></td></tr>';
+      for (var i = 0; i < d.rows.length; i++) {
+        var r = d.rows[i];
+        h += '<tr><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.phien) + '</td><td>' + thoat(r.phanCao) +
+          '</td><td class="nhan-mo">' + thoat(r.lo) + '</td><td class="nhan-mo">' + thoat(r.hang) + '</td>' +
+          '<td class="p num">' + soVN(r.cay, 0) + '</td><td class="p num">' + soVN(r.nsbq, 3) + '</td>' +
+          '<td class="p num">' + soVN(r.khChen, 0) + '</td><td class="p num">' + soVN(r.khDay, 0) + '</td>' +
+          '<td class="p num">' + soVN(r.kh, 0) + '</td><td class="p num">' + soVN(r.th, 1) + '</td>' +
+          '<td class="p num"' + (r.cham ? ' style="color:#b3261e;font-weight:600"' : '') + '>' + soVN(r.tyLe, 1) + '%</td></tr>';
+      }
+    }
+    $('bangGK').innerHTML = h + '</tbody>';
+
+    var pt = '';
+    if (d.soTrang > 1) {
+      pt = '<button class="btn nho" id="gkTruoc"' + (d.trang <= 1 ? ' disabled' : '') + '>← Trước</button>' +
+           '<span>Trang ' + d.trang + ' / ' + d.soTrang + '</span>' +
+           '<button class="btn nho" id="gkSau"' + (d.trang >= d.soTrang ? ' disabled' : '') + '>Sau →</button>';
+    }
+    $('phanTrangGK').innerHTML = pt;
+    if ($('gkTruoc')) $('gkTruoc').onclick = function () { S.trang--; taiGiaoKhoan(); };
+    if ($('gkSau')) $('gkSau').onclick = function () { S.trang++; taiGiaoKhoan(); };
+    $('nutCsvGK').onclick = function () {
+      var cot = chua ? ['phanCao', 'to', 'lo', 'hang', 'cay'] : ['maCn', 'phien', 'phanCao', 'lo', 'hang', 'cay', 'nsbq', 'khChen', 'khDay', 'kh', 'th', 'tyLe'];
+      var ds = chua ? d.chuaGiao : d.rows, out = [cot.join(',')];
+      for (var x = 0; x < ds.length; x++) out.push(cot.map(function (c) { return '"' + String(ds[x][c]).replace(/"/g, '""') + '"'; }).join(','));
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + out.join('\n')], { type: 'text/csv;charset=utf-8' }));
+      a.download = 'giao_khoan.csv'; a.click();
+    };
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangGK').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
 }
@@ -2664,7 +2754,8 @@ var LOC_THEO_TAB = {
   xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong'],
   chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien'],
   doiChieu: ['doi', 'to'],
-  nhanSu:   []          // tab Nhân sự có bộ lọc riêng, ẩn khung lọc chung
+  nhanSu:   [],         // tab Nhân sự có bộ lọc riêng, ẩn khung lọc chung
+  giaoKhoan: ['doi', 'to', 'phien']
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -2835,6 +2926,7 @@ function taiTab() {
   else if (S.tab === 'doiChieu') taiDoiChieu();
   else if (S.tab === 'xepHang') taiXepHang();
   else if (S.tab === 'nhanSu') taiNhanSu();
+  else if (S.tab === 'giaoKhoan') taiGiaoKhoan();
 }
 
 function chuyenTab(ten) {
@@ -2850,6 +2942,7 @@ function chuyenTab(ten) {
   $('pDoiChieu').style.display = (ten === 'doiChieu') ? '' : 'none';
   $('pXepHang').style.display = (ten === 'xepHang') ? '' : 'none';
   $('pNhanSu').style.display = (ten === 'nhanSu') ? '' : 'none';
+  $('pGiaoKhoan').style.display = (ten === 'giaoKhoan') ? '' : 'none';
   capNhatHienBoLoc();
   luuChoDangXem();
   taiTab();
@@ -3795,6 +3888,8 @@ $('fTo').onchange = function () { dungLocCn(); S.trang = 1; taiTab(); };
 $('fMaCn').onchange = function () { S.trang = 1; taiTab(); };
 $('fLoaiMu').onchange = function () { S.trang = 1; taiTab(); };
 $('fPhien').onchange = function () { S.trang = 1; taiTab(); };
+$('gkLoc').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
+$('gkQ').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
 $('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
 $('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 $('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
