@@ -331,6 +331,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
     <button class="tab" data-tab="nhanSu">Nhân sự</button>
     <button class="tab" data-tab="giaoKhoan">Giao khoán</button>
+    <button class="tab" data-tab="luong">Lương</button>
   </div>
 
   <div class="wrap">
@@ -547,6 +548,27 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       </div>
     </section>
 
+    <!-- Tab: Lương — tính từ chấm công và sản lượng quy khô của kỳ -->
+    <section id="pLuong" style="display:none">
+      <div class="kpis" id="kpisLuong"></div>
+      <div class="the" style="margin-bottom:12px;padding:12px 16px;font-size:13px" id="giaDinhLuong"></div>
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatLuong">Bảng lương</h3>
+          <select class="o" id="lgKy" style="width:auto" title="Kỳ (tháng)"></select>
+          <input class="o" id="lgQ" placeholder="Tìm mã CN" style="width:140px">
+          <select class="o" id="lgLoc" style="width:auto">
+            <option value="">Tất cả</option>
+            <option value="choDuyet">Còn dòng chờ duyệt</option>
+            <option value="chuaXepLoai">Chưa xếp loại</option>
+          </select>
+          <button class="btn nho" id="nutCsvLuong">Xuất CSV</button>
+        </div>
+        <div class="cuon cuon-doc"><table id="bangLuong"></table></div>
+        <div class="phan-trang" id="phanTrangLuong"></div>
+      </div>
+    </section>
+
     <!-- Tab: Nhân sự — người lao động, biến động, vị trí, cảnh báo đối chiếu -->
     <section id="pNhanSu" style="display:none">
       <div class="kpis" id="kpisNS"></div>
@@ -728,7 +750,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1, luong: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -1558,6 +1580,81 @@ function taiGiaoKhoan() {
     baoLoi('thongBao', '');
   }).catch(function (e) {
     $('bangGK').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/* =====================================================================
+   Lương (chỉ xem): tính từ chấm công + sản lượng quy khô của kỳ (tháng)
+   ===================================================================== */
+function taiLuong() {
+  $('bangLuong').innerHTML = '<tbody><tr><td><div class="rong">Đang tính…</div></td></tr></tbody>';
+  var bl = layBoLoc();
+  bl.q = $('lgQ').value.trim(); bl.loc = $('lgLoc').value;
+  bl.ky = $('lgKy').value || '';
+  bl.tuNgay = bl.ky ? bl.ky + '-01' : '';   // để Cloud Run không kéo cả lịch sử BigQuery khi kỳ còn mới
+  bl.trang = S.trang; bl.moiTrang = 100;
+  delete bl.denNgay; delete bl.loaiMu; delete bl.chatLuong; delete bl.maCn;
+  if (!bl.ky) delete bl.tuNgay;
+
+  goiCache('luong', bl).then(function (d) {
+    var sel = $('lgKy'), cu = sel.value;
+    if (sel.options.length !== d.dsKy.length) {
+      sel.innerHTML = d.dsKy.map(function (k) { return '<option value="' + thoat(k) + '">' + thoat(k) + '</option>'; }).join('');
+    }
+    sel.value = d.ky || cu;
+    var k = d.kpi || {};
+    var tam = k.soChoDuyet ? ' · ' + soVN(k.soChoDuyet, 0) + ' người còn dòng chờ duyệt (tạm tính)' : ' · số đã duyệt';
+    $('kpisLuong').innerHTML =
+      the_kpi('Số người', soVN(k.soNguoi || 0, 0), 'người', 'Kỳ ' + thoat(d.ky) + tam) +
+      the_kpi('Tổng thu nhập', soVN((k.tongThuNhap || 0) / 1000000, 2), 'triệu riel', 'Trước bảo hiểm và thuế') +
+      the_kpi('Thực nhận', soVN((k.tongThucNhan || 0) / 1000000, 2), 'triệu riel', 'Sau bảo hiểm 2% và thuế') +
+      the_kpi('Chưa xếp loại', soVN(k.soChuaXepLoai || 0, 0), 'người', 'Tạm tính 100%') +
+      the_kpi('Đơn giá kỳ', soVN(d.donGia ? d.donGia.chen : 0, 0) + ' / ' + soVN(d.donGia ? d.donGia.day : 0, 0), 'riel/kg', 'Mủ chén / mủ dây (quy khô)');
+    $('tomTatLuong').textContent = 'Bảng lương kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' người';
+    $('giaDinhLuong').innerHTML = d.giaDinh && d.giaDinh.length
+      ? '<b>Lưu ý cách tính</b><ul style="margin:6px 0 0 18px;padding:0">' + d.giaDinh.map(function (g) { return '<li>' + thoat(g) + '</li>'; }).join('') + '</ul>'
+      : '';
+
+    var h = '<thead><tr><th>Mã CN</th><th class="p">Công thường</th><th class="p">Công lễ/CN</th>' +
+      '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th>Xếp loại</th>' +
+      '<th class="p">Lương công</th><th class="p">SP mủ chén</th><th class="p">SP mủ dây</th>' +
+      '<th class="p">Tổng thu nhập</th><th class="p">BH 2%</th><th class="p">Thuế</th><th class="p">Thực nhận</th><th>Chờ duyệt</th></tr></thead><tbody>';
+    if (!d.rows.length) h += '<tr><td colspan="14"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    for (var i = 0; i < d.rows.length; i++) {
+      var r = d.rows[i];
+      h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
+        '<td class="p num">' + soVN(r.congThuong, 1) + '</td><td class="p num">' + soVN(r.congLe, 1) + '</td>' +
+        '<td class="p num">' + soVN(r.quyKhoChen, 1) + '</td><td class="p num">' + soVN(r.quyKhoDay, 1) + '</td>' +
+        '<td>' + (r.xepLoai ? thoat(r.xepLoai) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + soVN(r.luongCong, 0) + '</td><td class="p num">' + soVN(r.luongChen, 0) + '</td>' +
+        '<td class="p num">' + soVN(r.luongDay, 0) + '</td><td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
+        '<td class="p num">' + soVN(r.bhxh, 0) + '</td><td class="p num">' + soVN(r.thue, 0) + '</td>' +
+        '<td class="p num"><b>' + soVN(r.thucNhan, 0) + '</b></td>' +
+        '<td class="nhan-mo">' + (r.choDuyet ? soVN(r.choDuyet, 0) + ' dòng' : '') + '</td></tr>';
+    }
+    $('bangLuong').innerHTML = h + '</tbody>';
+
+    var pt = '';
+    if (d.soTrang > 1) {
+      pt = '<button class="btn nho" id="lgTruoc"' + (d.trang <= 1 ? ' disabled' : '') + '>← Trước</button>' +
+           '<span>Trang ' + d.trang + ' / ' + d.soTrang + '</span>' +
+           '<button class="btn nho" id="lgSau"' + (d.trang >= d.soTrang ? ' disabled' : '') + '>Sau →</button>';
+    }
+    $('phanTrangLuong').innerHTML = pt;
+    if ($('lgTruoc')) $('lgTruoc').onclick = function () { S.trang--; taiLuong(); };
+    if ($('lgSau')) $('lgSau').onclick = function () { S.trang++; taiLuong(); };
+    $('nutCsvLuong').onclick = function () {
+      var cot = ['maCn', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'xepLoai', 'luongCong', 'luongChen', 'luongDay', 'tong', 'bhxh', 'thue', 'thucNhan', 'choDuyet'];
+      var out = [cot.join(',')];
+      for (var x = 0; x < d.rows.length; x++) out.push(cot.map(function (c) { return '"' + String(d.rows[x][c]).replace(/"/g, '""') + '"'; }).join(','));
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + out.join('\n')], { type: 'text/csv;charset=utf-8' }));
+      a.download = 'luong_' + d.ky + '.csv'; a.click();
+    };
+    baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangLuong').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
 }
@@ -2755,7 +2852,8 @@ var LOC_THEO_TAB = {
   chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien'],
   doiChieu: ['doi', 'to'],
   nhanSu:   [],         // tab Nhân sự có bộ lọc riêng, ẩn khung lọc chung
-  giaoKhoan: ['doi', 'to', 'phien']
+  giaoKhoan: ['doi', 'to', 'phien'],
+  luong: ['doi', 'to']
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -2927,6 +3025,7 @@ function taiTab() {
   else if (S.tab === 'xepHang') taiXepHang();
   else if (S.tab === 'nhanSu') taiNhanSu();
   else if (S.tab === 'giaoKhoan') taiGiaoKhoan();
+  else if (S.tab === 'luong') taiLuong();
 }
 
 function chuyenTab(ten) {
@@ -2943,6 +3042,7 @@ function chuyenTab(ten) {
   $('pXepHang').style.display = (ten === 'xepHang') ? '' : 'none';
   $('pNhanSu').style.display = (ten === 'nhanSu') ? '' : 'none';
   $('pGiaoKhoan').style.display = (ten === 'giaoKhoan') ? '' : 'none';
+  $('pLuong').style.display = (ten === 'luong') ? '' : 'none';
   capNhatHienBoLoc();
   luuChoDangXem();
   taiTab();
@@ -3890,6 +3990,9 @@ $('fLoaiMu').onchange = function () { S.trang = 1; taiTab(); };
 $('fPhien').onchange = function () { S.trang = 1; taiTab(); };
 $('gkLoc').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
 $('gkQ').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
+$('lgKy').onchange = function () { S.trang = 1; taiLuong(); };
+$('lgLoc').onchange = function () { S.trang = 1; taiLuong(); };
+$('lgQ').onchange = function () { S.trang = 1; taiLuong(); };
 $('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
 $('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 $('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
