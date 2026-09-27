@@ -560,7 +560,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <input class="o" id="slTongChen" type="number" min="0" step="1" placeholder="kg quy khô" style="width:130px">
           <label class="nhan" for="slTongDay">mủ dây</label>
           <input class="o" id="slTongDay" type="number" min="0" step="1" placeholder="kg quy khô" style="width:130px">
-          <button class="btn chinh nho" id="nutTinhGiao">Lập bảng giao</button>
+          <button class="btn chinh nho" id="nutTinhGiao">Lập kế hoạch tháng</button>
         </div>
         <div class="goi-y" style="margin-top:8px">Chia theo đúng cách đội làm: <b>mủ dây</b> chia theo số cây cạo mùa vụ; <b>mủ chén</b> đặt sàn cho từng người sao cho <b>không ai có lương vượt</b>, phần dư chia theo sản lượng thực hiện. Làm tròn lũy kế nên tổng chia ra khớp tuyệt đối với số nhập; mủ nguyên liệu = quy khô ÷ DRC. Nhập tổng quá thấp thì hệ thống báo thiếu bao nhiêu kg. Bấm lại sẽ ghi đè bảng giao cũ của kỳ này cho toàn đội.</div>
       </div>
@@ -1678,6 +1678,7 @@ function taiSlTheoCn(giuBao) {
     $('tomTatSlCn').textContent = 'Sản lượng kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' công nhân';
     $('khungTinhGiao').style.display = d.duocTinh ? '' : 'none';
     _giaoSlLanTinh = d.lanTinh || '';
+    $('nutTinhGiao').textContent = nhanNutLapKH();
 
     var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Ngày có SL</th><th class="p">SL tươi (kg)</th>' +
       '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">Quy khô khác</th>' +
@@ -1726,10 +1727,16 @@ function taiSlTheoCn(giuBao) {
 
 /** Đội trưởng bấm: sinh mức giao cho cả đội trong kỳ đang chọn (ghi đè). */
 var _giaoSlLanTinh = '';
-var _xtDuLieu = null;          // kết quả xem trước đang hiển thị, để xuất file
+var _xtDuLieu = null;
+
+/** Nhãn nút theo kỳ đang chọn, ví dụ "Lập kế hoạch tháng 9". */
+function nhanNutLapKH() {
+  var m = String($('slKy').value || '').match(/^\d{4}-(\d{2})$/);
+  return 'Lập kế hoạch tháng' + (m ? ' ' + Number(m[1]) : '');
+}          // kết quả xem trước đang hiển thị, để xuất file
 
 /**
- * Bấm "Lập bảng giao": tính thử trên máy chủ rồi mở POPUP xem trước.
+ * Bấm "Lập kế hoạch tháng": tính thử trên máy chủ rồi mở POPUP xem trước.
  * Chưa ghi gì cả — chỉ khi bấm "Xác nhận ghi" trong popup mới thật sự vào cơ sở dữ liệu.
  */
 function tinhGiaoSl() {
@@ -1751,11 +1758,11 @@ function tinhGiaoSl() {
   goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky,
                          tongChen: tChen, tongDay: tDay, xemTruoc: 1 }, 120000)
     .then(function (xt) {
-      nut.disabled = false; nut.textContent = 'Lập bảng giao';
+      nut.disabled = false; nut.textContent = nhanNutLapKH();
       veXemTruocGiao(xt, thamSo, tChen);
     })
     .catch(function (e) {
-      nut.disabled = false; nut.textContent = 'Lập bảng giao';
+      nut.disabled = false; nut.textContent = nhanNutLapKH();
       baoLoi('thongBao', e.message);
     });
 }
