@@ -331,6 +331,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
     <button class="tab" data-tab="nhanSu">Nhân sự</button>
     <button class="tab" data-tab="giaoKhoan">Giao khoán</button>
+    <button class="tab" data-tab="slTheoCn">Sản lượng theo CN</button>
     <button class="tab" data-tab="luong">Lương</button>
   </div>
 
@@ -548,6 +549,38 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       </div>
     </section>
 
+    <!-- Tab: Sản lượng theo công nhân — tổng theo tháng + lập mức giao sản lượng -->
+    <section id="pSlTheoCn" style="display:none">
+      <div class="kpis" id="kpisSlCn"></div>
+      <div class="the" id="khungTinhGiao" style="display:none;margin-bottom:12px;padding:12px 16px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <b>Lập bảng giao sản lượng</b>
+          <span class="nhan-mo" style="font-size:13px">giao = sản lượng đã duyệt (mủ chén + dây) + ngẫu nhiên</span>
+          <input class="o" id="slTu" type="number" min="0" max="100" step="0.5" value="2" style="width:70px">
+          <span class="nhan-mo">% đến</span>
+          <input class="o" id="slDen" type="number" min="0" max="100" step="0.5" value="10" style="width:70px">
+          <span class="nhan-mo">%</span>
+          <button class="btn chinh nho" id="nutTinhGiao">Tính giao sản lượng</button>
+        </div>
+        <div class="goi-y" style="margin-top:8px">Số <b>demo</b> để chạy thử lương vượt sản lượng — đội lập bảng giao thật vào cuối tháng sau khi có sản lượng. Bấm lại sẽ ghi đè mức giao cũ của kỳ này, áp dụng cho toàn đội.</div>
+      </div>
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSlCn">Sản lượng theo công nhân</h3>
+          <select class="o" id="slKy" style="width:auto" title="Kỳ (tháng)"></select>
+          <input class="o" id="slQ" placeholder="Tìm mã CN" style="width:140px">
+          <select class="o" id="slLoc" style="width:auto">
+            <option value="">Tất cả</option>
+            <option value="chuaGiao">Chưa có mức giao</option>
+            <option value="vuot">Vượt mức giao</option>
+          </select>
+          <button class="btn nho" id="nutCsvSlCn">Xuất CSV</button>
+        </div>
+        <div class="cuon cuon-doc"><table id="bangSlCn"></table></div>
+        <div class="phan-trang" id="phanTrangSlCn"></div>
+      </div>
+    </section>
+
     <!-- Tab: Lương — tính từ chấm công và sản lượng quy khô của kỳ -->
     <section id="pLuong" style="display:none">
       <div class="kpis" id="kpisLuong"></div>
@@ -561,6 +594,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="">Tất cả</option>
             <option value="choDuyet">Còn dòng chờ duyệt</option>
             <option value="chuaXepLoai">Chưa xếp loại</option>
+            <option value="vuot">Có lương vượt</option>
           </select>
           <button class="btn nho" id="nutCsvLuong">Xuất CSV</button>
         </div>
@@ -750,7 +784,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1, luong: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -759,6 +793,10 @@ var LENH_GHI_NHAN_SU = { deXuatBienDong: 1, xuLyCanhBaoNS: 1, capNhatNguoiNS: 1 
 // BigQuery cần ~30-60 giây sau khi ghi mới có số mới: trong 2 phút sau một lần ghi nhân sự thì đọc thẳng
 // Apps Script (Sheet) để người vừa gửi đề xuất thấy ngay.
 var _nsGhiLuc = 0;
+// Tương tự cho bảng giao sản lượng tháng: vừa bấm "Tính giao sản lượng" thì 2 phút
+// kế tiếp đọc thẳng Apps Script, vì BigQuery chưa kịp nhận bảng mới.
+var LENH_DOC_GIAO_SL = { slTheoCn: 1, luong: 1 };
+var _giaoSlGhiLuc = 0;
 
 /* =====================================================================
    Trạng thái
@@ -785,7 +823,8 @@ var _demCb = 0;
    đơn vị...) thì không gửi lại — Apps Script cũng sẽ báo đúng lỗi đó. */
 function goiAPI(action, thamSo, msCho) {
   var vuaGhiNS = LENH_DOC_NHAN_SU[action] && (Date.now() - _nsGhiLuc < 120000);
-  if (LENH_DOC[action] && S.apiDoc && !vuaGhiNS) {
+  var vuaGhiGiao = LENH_DOC_GIAO_SL[action] && (Date.now() - _giaoSlGhiLuc < 120000);
+  if (LENH_DOC[action] && S.apiDoc && !vuaGhiNS && !vuaGhiGiao) {
     return goiQua(S.apiDoc, action, thamSo, Math.min(msCho || 30000, 20000))
       .catch(function (e) {
         // Lỗi đường truyền, hoặc Cloud Run chưa deploy bản có lệnh này / chưa đọc được BigQuery → dùng Apps Script
@@ -1585,6 +1624,115 @@ function taiGiaoKhoan() {
 }
 
 /* =====================================================================
+   Sản lượng theo công nhân theo tháng (chỉ tính dòng ĐÃ DUYỆT) +
+   nút "Tính giao sản lượng" của đội trưởng.
+   ===================================================================== */
+function taiSlTheoCn(giuBao) {
+  $('bangSlCn').innerHTML = '<tbody><tr><td><div class="rong">Đang tính…</div></td></tr></tbody>';
+  var bl = layBoLoc();
+  bl.ky = $('slKy').value || '';
+  bl.q = $('slQ').value.trim();
+  bl.loc = $('slLoc').value;
+  bl.trang = S.trang; bl.moiTrang = 100;
+  delete bl.tuNgay; delete bl.denNgay; delete bl.loaiMu; delete bl.chatLuong;
+  delete bl.maCn; delete bl.phien; delete bl.trangThai;
+
+  goiCache('slTheoCn', bl).then(function (d) {
+    var sel = $('slKy');
+    if (sel.options.length !== d.dsKy.length) {
+      sel.innerHTML = d.dsKy.map(function (k) { return '<option value="' + thoat(k) + '">' + thoat(k) + '</option>'; }).join('');
+    }
+    sel.value = d.ky || sel.value;
+    var k = d.kpi || {};
+    $('kpisSlCn').innerHTML =
+      the_kpi('Công nhân có sản lượng', soVN(k.soCn || 0, 0), 'người', 'Kỳ ' + thoat(d.ky) + ' · chỉ dòng đã duyệt') +
+      the_kpi('Sản lượng tươi', soVN((k.tongTuoi || 0) / 1000, 1), 'tấn', 'Mọi loại mủ') +
+      the_kpi('Quy khô mủ chén + dây', soVN((k.tongCoSo || 0) / 1000, 1), 'tấn', 'Cơ sở tính lương sản phẩm và mức giao') +
+      the_kpi('Tổng sản lượng giao', k.tongGiao ? soVN(k.tongGiao / 1000, 1) : '—', 'tấn',
+              k.tongGiao ? (d.nguonGiao === 'DEMO_NGAU_NHIEN' ? 'Số demo · lập ' + thoat(d.lanTinh) : 'Lập ' + thoat(d.lanTinh)) : 'Chưa lập bảng giao') +
+      the_kpi('% hoàn thành', k.tongGiao ? soVN(k.tyLeHT, 1) : '—', '%',
+              k.soChuaGiao ? soVN(k.soChuaGiao, 0) + ' người chưa có mức giao' : 'Tất cả đã có mức giao');
+    $('tomTatSlCn').textContent = 'Sản lượng kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' công nhân';
+    $('khungTinhGiao').style.display = d.duocTinh ? '' : 'none';
+
+    var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Ngày có SL</th><th class="p">SL tươi (kg)</th>' +
+      '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">Quy khô khác</th>' +
+      '<th class="p">Chén + dây</th><th class="p">Tổng SL giao</th><th class="p">% hoàn thành</th></tr></thead><tbody>';
+    if (!d.rows.length) h += '<tr><td colspan="10"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    for (var i = 0; i < d.rows.length; i++) {
+      var r = d.rows[i];
+      h += '<tr><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.to) + '</td>' +
+        '<td class="p num">' + soVN(r.soNgay, 0) + '</td><td class="p num">' + soVN(r.tuoi, 1) + '</td>' +
+        '<td class="p num">' + soVN(r.chen, 1) + '</td><td class="p num">' + soVN(r.day, 1) + '</td>' +
+        '<td class="p num nhan-mo">' + (r.khac ? soVN(r.khac, 1) : '—') + '</td>' +
+        '<td class="p num"><b>' + soVN(r.coSo, 1) + '</b></td>' +
+        '<td class="p num">' + (r.giao ? soVN(r.giao, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num"' + (r.vuot ? ' style="color:#b3261e;font-weight:600"' : '') + '>' +
+        (r.giao ? soVN(r.tyLeHT, 1) + '%' : '<span class="nhan-mo">—</span>') + '</td></tr>';
+    }
+    $('bangSlCn').innerHTML = h + '</tbody>';
+
+    var pt = '';
+    if (d.soTrang > 1) {
+      pt = '<button class="btn nho" id="slTruoc"' + (d.trang <= 1 ? ' disabled' : '') + '>← Trước</button>' +
+           '<span>Trang ' + d.trang + ' / ' + d.soTrang + '</span>' +
+           '<button class="btn nho" id="slSau"' + (d.trang >= d.soTrang ? ' disabled' : '') + '>Sau →</button>';
+    }
+    $('phanTrangSlCn').innerHTML = pt;
+    if ($('slTruoc')) $('slTruoc').onclick = function () { S.trang--; taiSlTheoCn(); };
+    if ($('slSau')) $('slSau').onclick = function () { S.trang++; taiSlTheoCn(); };
+    $('nutCsvSlCn').onclick = function () {
+      var cot = ['maCn', 'to', 'soNgay', 'tuoi', 'chen', 'day', 'khac', 'coSo', 'giao', 'tyLeHT'];
+      var out = [cot.join(',')];
+      for (var x = 0; x < d.rows.length; x++) out.push(cot.map(function (c) { return '"' + String(d.rows[x][c]).replace(/"/g, '""') + '"'; }).join(','));
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + out.join('\n')], { type: 'text/csv;charset=utf-8' }));
+      a.download = 'san_luong_cn_' + d.ky + '.csv'; a.click();
+    };
+    if (!giuBao) baoLoi('thongBao', '');
+  }).catch(function (e) {
+    $('bangSlCn').innerHTML = '';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/** Đội trưởng bấm: sinh mức giao cho cả đội trong kỳ đang chọn (ghi đè). */
+function tinhGiaoSl() {
+  var ky = $('slKy').value;
+  if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
+  var tu = parseFloat($('slTu').value), den = parseFloat($('slDen').value);
+  if (isNaN(tu) || isNaN(den) || tu < 0 || den < 0 || tu > den) {
+    baoLoi('thongBao', 'Khoảng phần trăm không hợp lệ: phải là hai số không âm, số đầu nhỏ hơn hoặc bằng số sau.');
+    return;
+  }
+  if (!confirm('Tính lại mức giao sản lượng kỳ ' + ky + ' cho toàn đội ' + S.maDonVi + '?\n\n' +
+               'Mỗi công nhân: giao = sản lượng đã duyệt (mủ chén + mủ dây) cộng thêm ngẫu nhiên ' +
+               tu + '–' + den + '%.\n' +
+               'Số demo, sẽ GHI ĐÈ mức giao cũ của kỳ này.')) return;
+
+  var nut = $('nutTinhGiao');
+  nut.disabled = true; nut.textContent = 'Đang tính…';
+  goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, tuPhanTram: tu, denPhanTram: den }, 120000)
+    .then(function (d) {
+      _giaoSlGhiLuc = Date.now();
+      _cacheFE = {};
+      nut.disabled = false; nut.textContent = 'Tính giao sản lượng';
+      $('thongBao').innerHTML =
+        '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+        'Đã lập mức giao kỳ ' + thoat(d.ky) + ' cho <b>' + soVN(d.soDong, 0) + '</b> công nhân' +
+        (d.soXoa ? ' (ghi đè ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
+        'Thực hiện ' + soVN(d.tongTh, 0) + ' kg, giao ' + soVN(d.tongGiao, 0) + ' kg, đạt ' + soVN(d.tyLeHT, 1) + '%. ' +
+        'Đây là số demo (ngẫu nhiên ' + d.tu + '–' + d.den + '%), sẽ thay khi có bảng giao thật của đội.</div>';
+      S.trang = 1;
+      taiSlTheoCn(true);
+    })
+    .catch(function (e) {
+      nut.disabled = false; nut.textContent = 'Tính giao sản lượng';
+      baoLoi('thongBao', e.message);
+    });
+}
+
+/* =====================================================================
    Lương (chỉ xem): tính từ chấm công + sản lượng quy khô của kỳ (tháng)
    ===================================================================== */
 function taiLuong() {
@@ -1609,7 +1757,8 @@ function taiLuong() {
       the_kpi('Số người', soVN(k.soNguoi || 0, 0), 'người', 'Kỳ ' + thoat(d.ky) + tam) +
       the_kpi('Tổng thu nhập', soVN((k.tongThuNhap || 0) / 1000000, 2), 'triệu riel', 'Trước bảo hiểm và thuế') +
       the_kpi('Thực nhận', soVN((k.tongThucNhan || 0) / 1000000, 2), 'triệu riel', 'Sau bảo hiểm 2% và thuế') +
-      the_kpi('Chưa xếp loại', soVN(k.soChuaXepLoai || 0, 0), 'người', 'Tạm tính 100%') +
+      the_kpi('Chưa xếp loại', soVN(k.soChuaXepLoai || 0, 0), 'người',
+              (k.soChuaGiao ? soVN(k.soChuaGiao, 0) + ' người chưa có mức giao SL' : 'Tạm tính 100%')) +
       the_kpi('Đơn giá kỳ', soVN(d.donGia ? d.donGia.chen : 0, 0) + ' / ' + soVN(d.donGia ? d.donGia.day : 0, 0), 'riel/kg', 'Mủ chén / mủ dây (quy khô)');
     $('tomTatLuong').textContent = 'Bảng lương kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' người';
     $('giaDinhLuong').innerHTML = d.giaDinh && d.giaDinh.length
@@ -1617,18 +1766,24 @@ function taiLuong() {
       : '';
 
     var h = '<thead><tr><th>Mã CN</th><th class="p">Công thường</th><th class="p">Công lễ/CN</th>' +
-      '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th>Xếp loại</th>' +
+      '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">SL giao</th><th>Xếp loại</th>' +
       '<th class="p">Lương công</th><th class="p">SP mủ chén</th><th class="p">SP mủ dây</th>' +
+      '<th class="p">Vượt (kg)</th><th class="p">Lương vượt</th><th class="p">Chuyên cần</th>' +
       '<th class="p">Tổng thu nhập</th><th class="p">BH 2%</th><th class="p">Thuế</th><th class="p">Thực nhận</th><th>Chờ duyệt</th></tr></thead><tbody>';
-    if (!d.rows.length) h += '<tr><td colspan="14"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    if (!d.rows.length) h += '<tr><td colspan="18"><div class="rong">Không có dữ liệu.</div></td></tr>';
     for (var i = 0; i < d.rows.length; i++) {
       var r = d.rows[i];
       h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
         '<td class="p num">' + soVN(r.congThuong, 1) + '</td><td class="p num">' + soVN(r.congLe, 1) + '</td>' +
         '<td class="p num">' + soVN(r.quyKhoChen, 1) + '</td><td class="p num">' + soVN(r.quyKhoDay, 1) + '</td>' +
+        '<td class="p num">' + (r.giao ? soVN(r.giao, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td>' + (r.xepLoai ? thoat(r.xepLoai) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + soVN(r.luongCong, 0) + '</td><td class="p num">' + soVN(r.luongChen, 0) + '</td>' +
-        '<td class="p num">' + soVN(r.luongDay, 0) + '</td><td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
+        '<td class="p num">' + soVN(r.luongDay, 0) + '</td>' +
+        '<td class="p num">' + (r.vuot ? soVN(r.vuot, 1) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + (r.luongVuot ? soVN(r.luongVuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + soVN(r.chuyenCan, 0) + '</td>' +
+        '<td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
         '<td class="p num">' + soVN(r.bhxh, 0) + '</td><td class="p num">' + soVN(r.thue, 0) + '</td>' +
         '<td class="p num"><b>' + soVN(r.thucNhan, 0) + '</b></td>' +
         '<td class="nhan-mo">' + (r.choDuyet ? soVN(r.choDuyet, 0) + ' dòng' : '') + '</td></tr>';
@@ -1645,7 +1800,7 @@ function taiLuong() {
     if ($('lgTruoc')) $('lgTruoc').onclick = function () { S.trang--; taiLuong(); };
     if ($('lgSau')) $('lgSau').onclick = function () { S.trang++; taiLuong(); };
     $('nutCsvLuong').onclick = function () {
-      var cot = ['maCn', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'xepLoai', 'luongCong', 'luongChen', 'luongDay', 'tong', 'bhxh', 'thue', 'thucNhan', 'choDuyet'];
+      var cot = ['maCn', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'giao', 'xepLoai', 'luongCong', 'luongChen', 'luongDay', 'vuot', 'luongVuot', 'chuyenCan', 'tong', 'bhxh', 'thue', 'thucNhan', 'choDuyet'];
       var out = [cot.join(',')];
       for (var x = 0; x < d.rows.length; x++) out.push(cot.map(function (c) { return '"' + String(d.rows[x][c]).replace(/"/g, '""') + '"'; }).join(','));
       var a = document.createElement('a');
@@ -2853,6 +3008,7 @@ var LOC_THEO_TAB = {
   doiChieu: ['doi', 'to'],
   nhanSu:   [],         // tab Nhân sự có bộ lọc riêng, ẩn khung lọc chung
   giaoKhoan: ['doi', 'to', 'phien'],
+  slTheoCn: ['doi', 'to'],
   luong: ['doi', 'to']
 };
 
@@ -3025,6 +3181,7 @@ function taiTab() {
   else if (S.tab === 'xepHang') taiXepHang();
   else if (S.tab === 'nhanSu') taiNhanSu();
   else if (S.tab === 'giaoKhoan') taiGiaoKhoan();
+  else if (S.tab === 'slTheoCn') taiSlTheoCn();
   else if (S.tab === 'luong') taiLuong();
 }
 
@@ -3042,6 +3199,7 @@ function chuyenTab(ten) {
   $('pXepHang').style.display = (ten === 'xepHang') ? '' : 'none';
   $('pNhanSu').style.display = (ten === 'nhanSu') ? '' : 'none';
   $('pGiaoKhoan').style.display = (ten === 'giaoKhoan') ? '' : 'none';
+  $('pSlTheoCn').style.display = (ten === 'slTheoCn') ? '' : 'none';
   $('pLuong').style.display = (ten === 'luong') ? '' : 'none';
   capNhatHienBoLoc();
   luuChoDangXem();
@@ -3993,6 +4151,10 @@ $('gkQ').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
 $('lgKy').onchange = function () { S.trang = 1; taiLuong(); };
 $('lgLoc').onchange = function () { S.trang = 1; taiLuong(); };
 $('lgQ').onchange = function () { S.trang = 1; taiLuong(); };
+$('slKy').onchange = function () { S.trang = 1; taiSlTheoCn(); };
+$('slLoc').onchange = function () { S.trang = 1; taiSlTheoCn(); };
+$('slQ').onchange = function () { S.trang = 1; taiSlTheoCn(); };
+$('nutTinhGiao').onclick = tinhGiaoSl;
 $('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
 $('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 $('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
