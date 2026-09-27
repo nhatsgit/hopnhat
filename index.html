@@ -1812,14 +1812,17 @@ function veXemTruocGiao(xt, thamSo, tChen) {
     (soVuot ? soVuot + ' người vượt trên 5%' : 'không ai vượt quá 5%') + '.</p>' +
     canhBao;
 
-  var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Số cây</th>' +
-    '<th class="p">TH chén</th><th class="p">TH dây</th>' +
-    '<th class="p">Giao chén (QK)</th><th class="p">Giao dây (QK)</th><th class="p">Giao tổng (QK)</th>' +
-    '<th class="p">NL chén</th><th class="p">NL dây</th><th class="p">% hoàn thành</th></tr></thead><tbody>';
-  if (!ds.length) h += '<tr><td colspan="11"><div class="rong">Không có dòng nào.</div></td></tr>';
+  var h = '<thead><tr><th>Mã CN</th><th>Họ và tên</th><th>Tổ</th><th class="p">Số cây</th>' +
+    '<th class="p">Thực hiện chén</th><th class="p">Thực hiện dây</th>' +
+    '<th class="p">Giao chén (quy khô)</th><th class="p">Giao dây (quy khô)</th><th class="p">Giao tổng (quy khô)</th>' +
+    '<th class="p">Giao chén (nguyên liệu)</th><th class="p">Giao dây (nguyên liệu)</th>' +
+    '<th class="p">% hoàn thành</th></tr></thead><tbody>';
+  if (!ds.length) h += '<tr><td colspan="12"><div class="rong">Không có dòng nào.</div></td></tr>';
   for (var i = 0; i < ds.length; i++) {
     var r = ds[i], pt = xtPhanTram(r);
-    h += '<tr><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.to) + '</td>' +
+    h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
+      '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td>' + thoat(r.to) + '</td>' +
       '<td class="p num">' + soVN(r.cay, 0) + '</td>' +
       '<td class="p num">' + soVN(r.thChen, 1) + '</td><td class="p num">' + soVN(r.thDay, 1) + '</td>' +
       '<td class="p num">' + soVN(r.giaoChen, 0) + '</td><td class="p num">' + soVN(r.giaoDay, 0) + '</td>' +
@@ -1840,49 +1843,105 @@ function dongXemTruoc() {
   _xtDuLieu = null;
 }
 
-/** Xuất bảng xem trước ra Excel để gửi đội xem trước khi chốt. */
+/**
+ * Xuất bảng giao ra Excel theo ĐÚNG bố cục biểu mẫu "GIAO SL" của đội:
+ * tiêu đề song ngữ Khmer – Việt, hai tầng đầu cột có gộp ô, mủ nguyên liệu
+ * đứng trước mủ quy khô, dòng TỔNG CỘNG, khối ký tên cuối trang.
+ * Thư viện xlsx bản cộng đồng chỉ ghi được giá trị, ô gộp và độ rộng cột —
+ * KHÔNG ghi được khung viền, chữ đậm hay nền màu, nên file ra sẽ phẳng.
+ */
 function xtXuatFile() {
   if (!_xtDuLieu) return;
   var xt = _xtDuLieu.xt, ds = xt.rows || [];
-  var dong = [['Mã CN', 'Tổ', 'Số cây cạo', 'TH mủ chén (QK kg)', 'TH mủ dây (QK kg)',
-               'Giao mủ chén (QK kg)', 'Giao mủ dây (QK kg)', 'Giao tổng (QK kg)',
-               'Giao mủ chén nguyên liệu (kg)', 'Giao mủ dây nguyên liệu (kg)', '% hoàn thành']];
+  var m = String(xt.ky).match(/^(\d{4})-(\d{2})$/);
+  var thang = m ? m[2] : '', nam = m ? m[1] : '';
+  var R = [];                                   // từng dòng của sheet
+
+  R.push([null, null, null, null, null, null, null, 'ព្រះរាជាណាចក្រកម្ពុជា']);
+  R.push(['ស៊ី.អ.ស៊ី.ខេ.២', null, null, null, null, null, null, 'ជាតិ  សាសនា  ព្រះមហាក្សត្រ']);
+  R.push(['អភិវឌ្ឍន៍កៅស៊ូ ខូអិលធីឌី', null, null, null, null, null, null, 'VƯƠNG QUỐC CAMPUCHIA']);
+  R.push(['C.R.C.K.2 APHIVATH', null, null, null, null, null, null, ' Dân tộc – Tôn giáo – Quốc vương']);
+  R.push(['CAOUTCHOUC CO., LTD']);
+  R.push(['ផ្តល់ផែនការទិន្នផល ខែ ' + thang + ' ឆ្នាំ ' + nam +
+          '\nGIAO KẾ HOẠCH SẢN LƯỢNG THÁNG ' + thang + ' NĂM ' + nam]);
+  R.push(['កងផលិត / Bộ phận: ' + S.maDonVi + (S.tenDonVi ? ' — ' + S.tenDonVi : '')]);
+  R.push(['ល.រ\nSTT', 'លេខអត្តសញ្ញាណប័ណ្ណ ឬ អត្តលេខកម្មករ\nSố chứng minh nhân dân/ Mã số công nhân',
+          'គោត្តនាម និងនាម\nHọ và tên', 'សរុបដើមដែលចៀរ\nTỔNG SỐ CÂY CẠO',
+          'សរុបទិន្នផលផ្តល់ជ័រកកចាន\nTỔNG SẢN LƯƠNG GIAO MỦ ĐÔNG CHÉN', null,
+          'សរុបទិន្នផលជ័រខ្សែ\nTỔNG SẢN LƯƠNG GIAO MỦ DÂY', null,
+          'សរុបទិន្នផលផ្តល់ជ័រស្ងួត\nTổng sản lượng giao quy khô', 'ចុះហត្ថលេខា\nKÝ XÁC NHẬN']);
+  R.push([null, null, null, null, 'ជ័រឆៅ\nMủ nguyên liệu (kg)', 'ជ័រស្ងួត\nMủ quy khô (kg)',
+          'ជ័រឆៅ\nMủ nguyên liệu (kg)', 'ជ័រស្ងួត\nMủ quy khô (kg)']);
+
+  var dongDau = R.length;                       // chỉ số 0-based của dòng dữ liệu đầu
+  var tCay = 0, tNlC = 0, tQkC = 0, tNlD = 0, tQkD = 0, tTong = 0;
   for (var i = 0; i < ds.length; i++) {
     var r = ds[i];
-    dong.push([r.maCn, r.to, r.cay, r.thChen, r.thDay, r.giaoChen, r.giaoDay, r.giao,
-               r.nlChen, r.nlDay, xtPhanTram(r)]);
+    tCay += r.cay; tNlC += r.nlChen; tQkC += r.giaoChen;
+    tNlD += r.nlDay; tQkD += r.giaoDay; tTong += r.giao;
+    R.push([i + 1, r.cccd || r.maCn, r.ten || '', r.cay,
+            r.nlChen, r.giaoChen, r.nlDay, r.giaoDay, r.giao, null]);
   }
-  var ws = XLSX.utils.aoa_to_sheet(dong);
-  ws['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 11 }, { wch: 17 }, { wch: 17 },
-                 { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 24 }, { wch: 24 }, { wch: 13 }];
+  R.push(['សរុប / TỔNG CỘNG', null, null, tCay, tNlC, tQkC, tNlD, tQkD, tTong, null]);
+
+  var hn = new Date();
+  R.push([]);
+  R.push([null, null, null, null, null, null,
+          'កំពង់ធំ ថ្ងៃទី ' + hn.getDate() + ' ខែ ' + (hn.getMonth() + 1) + ' ឆ្នាំ ' + hn.getFullYear()]);
+  R.push([null, null, null, null, null, null,
+          'Kampong Thom, ngày ' + hn.getDate() + ' tháng ' + (hn.getMonth() + 1) + ' năm ' + hn.getFullYear()]);
+  R.push(['កងផលិត', null, null, null, null, null, 'អ្នកធ្វើតារាង']);
+  R.push(['ĐỘI SẢN XUẤT', null, null, null, null, null, 'LẬP BIỂU']);
+
+  var ws = XLSX.utils.aoa_to_sheet(R);
+  var dongTong = dongDau + ds.length;
+  ws['!merges'] = [
+    { s: { r: 5, c: 0 }, e: { r: 5, c: 9 } },                 // tiêu đề bảng
+    { s: { r: 7, c: 0 }, e: { r: 8, c: 0 } },                 // STT
+    { s: { r: 7, c: 1 }, e: { r: 8, c: 1 } },                 // số CMND / mã CN
+    { s: { r: 7, c: 2 }, e: { r: 8, c: 2 } },                 // họ tên
+    { s: { r: 7, c: 3 }, e: { r: 8, c: 3 } },                 // số cây cạo
+    { s: { r: 7, c: 4 }, e: { r: 7, c: 5 } },                 // mủ đông chén
+    { s: { r: 7, c: 6 }, e: { r: 7, c: 7 } },                 // mủ dây
+    { s: { r: 7, c: 8 }, e: { r: 8, c: 8 } },                 // tổng quy khô
+    { s: { r: 7, c: 9 }, e: { r: 8, c: 9 } },                 // ký xác nhận
+    { s: { r: dongTong, c: 0 }, e: { r: dongTong, c: 2 } }    // TỔNG CỘNG
+  ];
+  ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 26 }, { wch: 12 },
+                 { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 }];
+  ws['!rows'] = [];
+  ws['!rows'][5] = { hpt: 34 };
+  ws['!rows'][7] = { hpt: 52 };
+  ws['!rows'][8] = { hpt: 34 };
+
+  // Sheet phụ: cách chia và các mốc, để người duyệt đối chiếu.
   var tt = XLSX.utils.aoa_to_sheet([
-    ['BẢNG GIAO SẢN LƯỢNG — XEM TRƯỚC, CHƯA GHI VÀO HỆ THỐNG'],
-    ['Kỳ', xt.ky],
-    ['Đội', S.maDonVi],
-    ['Số công nhân', xt.soDong],
+    ['CÁCH LẬP BẢNG GIAO — do hệ thống tính, chưa có khung viền vì thư viện không hỗ trợ'],
+    ['Kỳ', xt.ky], ['Đội', S.maDonVi], ['Số công nhân', xt.soDong],
     [],
     ['', 'Quy khô (kg)', 'Nguyên liệu (kg)', 'DRC'],
     ['Giao mủ chén', xt.giaoChen, xt.nlChen, xt.drcChen],
     ['Giao mủ dây', xt.giaoDay, xt.nlDay, xt.drcDay],
     ['Cộng', xt.giaoTong, xt.nlChen + xt.nlDay, ''],
     [],
-    ['Thực hiện đã duyệt (QK kg)', xt.thTong, 'mủ chén ' + xt.thChen, 'mủ dây ' + xt.thDay],
+    ['Thực hiện đã duyệt (quy khô kg)', xt.thTong, 'mủ chén ' + xt.thChen, 'mủ dây ' + xt.thDay],
     ['% hoàn thành chung', xt.tyLeHT],
-    [],
-    ['Sàn tối thiểu để không ai có lương vượt (QK kg)', xt.tongSan],
+    ['Sàn tối thiểu để không ai có lương vượt (kg)', xt.tongSan],
     ['Phần dư chia theo sản lượng thực hiện (kg)', xt.conLai],
     ['Số người chạm sàn', xt.soChamSan],
     ['Số người chưa có số cây cạo', xt.soThieuCay],
     [],
-    ['Cách chia: mủ dây theo số cây cạo mùa vụ; mủ chén đặt sàn cho từng người rồi chia phần dư'],
-    ['theo sản lượng thực hiện. Làm tròn lũy kế nên tổng khớp tuyệt đối. Nguyên liệu = quy khô ÷ DRC.']
+    ['Mủ dây chia theo số cây cạo mùa vụ.'],
+    ['Mủ chén đặt sàn cho từng người rồi chia phần dư theo sản lượng thực hiện.'],
+    ['Làm tròn lũy kế nên tổng chia ra khớp tuyệt đối. Nguyên liệu = quy khô ÷ DRC.']
   ]);
   tt['!cols'] = [{ wch: 46 }, { wch: 18 }, { wch: 22 }, { wch: 14 }];
+
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, tt, 'Tom tat');
-  XLSX.utils.book_append_sheet(wb, ws, 'Giao SL');
+  XLSX.utils.book_append_sheet(wb, ws, 'GIAO SL');
+  XLSX.utils.book_append_sheet(wb, tt, 'Cach lap');
   // Chỉ bỏ ký tự Windows cấm đặt tên file, giữ nguyên chữ có dấu ("Đ1" chứ không thành "_1").
-  XLSX.writeFile(wb, 'xem_truoc_giao_sl_' + S.maDonVi.replace(/[\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx');
+  XLSX.writeFile(wb, 'giao_sl_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx');
 }
 
 /** Ghi thật — chỉ chạy khi người dùng đã bấm "Xác nhận ghi" trong popup. */
