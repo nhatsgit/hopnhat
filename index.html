@@ -564,19 +564,6 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         </div>
         <div class="goi-y" style="margin-top:8px">Chia theo đúng cách đội làm: <b>mủ dây</b> chia theo số cây cạo mùa vụ; <b>mủ chén</b> đặt sàn cho từng người sao cho <b>không ai có lương vượt</b>, phần dư chia theo sản lượng thực hiện. Làm tròn lũy kế nên tổng chia ra khớp tuyệt đối với số nhập; mủ nguyên liệu = quy khô ÷ DRC. Nhập tổng quá thấp thì hệ thống báo thiếu bao nhiêu kg. Bấm lại sẽ ghi đè bảng giao cũ của kỳ này cho toàn đội.</div>
       </div>
-      <div class="the" id="khungXemTruoc" style="display:none;margin-bottom:20px;border-color:var(--leaf)">
-        <div style="padding:14px 16px">
-          <h3 class="tieude-muc" style="margin:0 0 8px">Xem trước bảng giao — chưa ghi gì cả</h3>
-          <div id="xtTomTat" style="font-size:13px;line-height:1.7"></div>
-        </div>
-        <div class="cuon cuon-doc"><table id="bangXemTruoc"></table></div>
-        <div style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <button class="btn chinh" id="nutXacNhanGhi">Xác nhận ghi vào cơ sở dữ liệu</button>
-          <button class="btn" id="nutHuyXemTruoc">Huỷ</button>
-          <span class="nhan-mo" style="font-size:13px">Bấm Huỷ thì không có gì thay đổi.</span>
-        </div>
-      </div>
-
       <div class="the" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSlCn">Sản lượng theo công nhân</h3>
@@ -714,6 +701,19 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 </div>
 
 <!-- ===================== HỘP THOẠI PHIẾU ===================== -->
+<!-- Popup xem trước bảng giao — hiện trước khi ghi, bấm Xác nhận mới vào cơ sở dữ liệu -->
+<div class="nen-mo" id="nenXemTruoc">
+  <div class="hop-thoai" style="max-width:1180px">
+    <div class="dau-hop">
+      <h2>Xem trước bảng giao — chưa ghi gì cả</h2>
+      <button class="btn nho" id="nutXtXuatFile">Xuất Excel</button>
+      <button class="btn chinh nho" id="nutXacNhanGhi">Xác nhận ghi</button>
+      <button class="btn nho" id="nutHuyXemTruoc">Huỷ</button>
+    </div>
+    <div class="than-hop" id="thanXemTruoc"></div>
+  </div>
+</div>
+
 <div class="nen-mo" id="nenPhieu">
   <div class="hop-thoai">
     <div class="dau-hop">
@@ -1678,7 +1678,6 @@ function taiSlTheoCn(giuBao) {
     $('tomTatSlCn').textContent = 'Sản lượng kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' công nhân';
     $('khungTinhGiao').style.display = d.duocTinh ? '' : 'none';
     _giaoSlLanTinh = d.lanTinh || '';
-    $('khungXemTruoc').style.display = 'none';
 
     var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Ngày có SL</th><th class="p">SL tươi (kg)</th>' +
       '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">Quy khô khác</th>' +
@@ -1727,10 +1726,11 @@ function taiSlTheoCn(giuBao) {
 
 /** Đội trưởng bấm: sinh mức giao cho cả đội trong kỳ đang chọn (ghi đè). */
 var _giaoSlLanTinh = '';
+var _xtDuLieu = null;          // kết quả xem trước đang hiển thị, để xuất file
 
 /**
- * Bấm "Lập bảng giao": tính thử trên máy chủ, dựng BẢNG XEM TRƯỚC ngay trên trang.
- * Chưa ghi gì cả — chỉ khi bấm "Xác nhận ghi" mới thật sự vào cơ sở dữ liệu.
+ * Bấm "Lập bảng giao": tính thử trên máy chủ rồi mở POPUP xem trước.
+ * Chưa ghi gì cả — chỉ khi bấm "Xác nhận ghi" trong popup mới thật sự vào cơ sở dữ liệu.
  */
 function tinhGiaoSl() {
   var ky = $('slKy').value;
@@ -1747,7 +1747,6 @@ function tinhGiaoSl() {
   var thamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, tongChen: tChen, tongDay: tDay };
   nut.disabled = true; nut.textContent = 'Đang tính thử…';
   baoLoi('thongBao', '');
-  $('khungXemTruoc').style.display = 'none';
 
   goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky,
                          tongChen: tChen, tongDay: tDay, xemTruoc: 1 }, 120000)
@@ -1761,59 +1760,128 @@ function tinhGiaoSl() {
     });
 }
 
-/** Dựng khung xem trước: tóm tắt + bảng từng người + nút xác nhận. */
+/** % hoàn thành của một dòng xem trước: thực hiện chia mức giao. */
+function xtPhanTram(r) {
+  return r.giao ? Math.round((r.thChen + r.thDay) / r.giao * 1000) / 10 : 0;
+}
+
+/** Mở popup xem trước: tóm tắt + bảng từng người + nút xác nhận / xuất file. */
 function veXemTruocGiao(xt, thamSo, tChen) {
+  _xtDuLieu = { xt: xt, thamSo: thamSo, tChen: tChen };
   var d1 = ' · ';
   var canhBao = '';
   if (xt.soThieuCay) {
-    canhBao += '<div class="bao-loi" style="margin-top:8px">' + soVN(xt.soThieuCay, 0) +
+    canhBao += '<div class="bao-loi" style="margin-top:10px">' + soVN(xt.soThieuCay, 0) +
       ' người chưa có số cây cạo trong giao khoán mùa vụ — họ sẽ không được chia mủ dây.</div>';
   }
   if (_giaoSlLanTinh) {
-    canhBao += '<div class="bao-loi" style="margin-top:8px">Kỳ này <b>đã có bảng giao</b> lập lúc ' +
+    canhBao += '<div class="bao-loi" style="margin-top:10px">Kỳ này <b>đã có bảng giao</b> lập lúc ' +
       thoat(_giaoSlLanTinh) + '. Xác nhận sẽ GHI ĐÈ toàn bộ bảng cũ của đội.</div>';
   }
 
-  $('xtTomTat').innerHTML =
-    '<b>Kỳ ' + thoat(xt.ky) + '</b>' + d1 + 'đội ' + thoat(S.maDonVi) + d1 +
-    soVN(xt.soDong, 0) + ' công nhân<br>' +
-    '<b>Sẽ giao (quy khô):</b> mủ chén ' + soVN(xt.giaoChen, 0) + ' kg' + d1 +
-    'mủ dây ' + soVN(xt.giaoDay, 0) + ' kg' + d1 + 'cộng ' + soVN(xt.giaoTong, 0) + ' kg<br>' +
+  var ds = xt.rows || [];
+  var soVuot = 0;
+  for (var v = 0; v < ds.length; v++) if (xtPhanTram(ds[v]) > 105) soVuot++;
+
+  var tomTat =
+    '<div class="dong-tt">' +
+    '<div><span>Kỳ</span><b>' + thoat(xt.ky) + '</b></div>' +
+    '<div><span>Đội</span><b>' + thoat(S.maDonVi) + '</b></div>' +
+    '<div><span>Công nhân</span><b>' + soVN(xt.soDong, 0) + '</b></div>' +
+    '<div><span>Giao mủ chén (QK)</span><b>' + soVN(xt.giaoChen, 0) + ' kg</b></div>' +
+    '<div><span>Giao mủ dây (QK)</span><b>' + soVN(xt.giaoDay, 0) + ' kg</b></div>' +
+    '<div><span>Giao tổng (QK)</span><b>' + soVN(xt.giaoTong, 0) + ' kg</b></div>' +
+    '<div><span>% hoàn thành chung</span><b>' + soVN(xt.tyLeHT, 1) + '%</b></div>' +
+    '</div>' +
+    '<p class="goi-y" style="margin:0 0 12px">' +
     '<b>Nguyên liệu tương ứng:</b> mủ chén ' + soVN(xt.nlChen, 0) + ' kg (DRC ' +
     soVN(xt.drcChen * 100, 0) + '%)' + d1 + 'mủ dây ' + soVN(xt.nlDay, 0) + ' kg (DRC ' +
-    soVN(xt.drcDay * 100, 0) + '%)<br>' +
-    '<b>Thực hiện đã duyệt:</b> ' + soVN(xt.thTong, 0) + ' kg' + d1 + 'đạt ' +
-    soVN(xt.tyLeHT, 1) + '% mức giao<br>' +
-    '<b>Không ai có lương vượt:</b> sàn tối thiểu ' + soVN(xt.tongSan, 0) + ' kg mủ chén' + d1 +
+    soVN(xt.drcDay * 100, 0) + '%).<br>' +
+    '<b>Thực hiện đã duyệt:</b> ' + soVN(xt.thTong, 0) + ' kg quy khô' + d1 +
+    'mủ chén ' + soVN(xt.thChen, 0) + d1 + 'mủ dây ' + soVN(xt.thDay, 0) + '.<br>' +
+    '<b>Lương vượt:</b> sàn tối thiểu ' + soVN(xt.tongSan, 0) + ' kg mủ chén' + d1 +
     'bạn nhập ' + soVN(tChen, 0) + ' kg' + d1 + 'dư ' + soVN(xt.conLai, 0) +
-    ' kg chia theo sản lượng thực hiện' + d1 + soVN(xt.soChamSan, 0) + ' người chạm sàn' +
+    ' kg chia theo sản lượng thực hiện' + d1 + soVN(xt.soChamSan, 0) + ' người chạm sàn' + d1 +
+    (soVuot ? soVuot + ' người vượt trên 5%' : 'không ai vượt quá 5%') + '.</p>' +
     canhBao;
 
   var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Số cây</th>' +
     '<th class="p">TH chén</th><th class="p">TH dây</th>' +
     '<th class="p">Giao chén (QK)</th><th class="p">Giao dây (QK)</th><th class="p">Giao tổng (QK)</th>' +
-    '<th class="p">NL chén</th><th class="p">NL dây</th></tr></thead><tbody>';
-  var ds = xt.rows || [];
-  if (!ds.length) h += '<tr><td colspan="10"><div class="rong">Không có dòng nào.</div></td></tr>';
+    '<th class="p">NL chén</th><th class="p">NL dây</th><th class="p">% hoàn thành</th></tr></thead><tbody>';
+  if (!ds.length) h += '<tr><td colspan="11"><div class="rong">Không có dòng nào.</div></td></tr>';
   for (var i = 0; i < ds.length; i++) {
-    var r = ds[i];
+    var r = ds[i], pt = xtPhanTram(r);
     h += '<tr><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.to) + '</td>' +
       '<td class="p num">' + soVN(r.cay, 0) + '</td>' +
       '<td class="p num">' + soVN(r.thChen, 1) + '</td><td class="p num">' + soVN(r.thDay, 1) + '</td>' +
       '<td class="p num">' + soVN(r.giaoChen, 0) + '</td><td class="p num">' + soVN(r.giaoDay, 0) + '</td>' +
       '<td class="p num"><b>' + soVN(r.giao, 0) + '</b></td>' +
       '<td class="p num nhan-mo">' + soVN(r.nlChen, 0) + '</td>' +
-      '<td class="p num nhan-mo">' + soVN(r.nlDay, 0) + '</td></tr>';
+      '<td class="p num nhan-mo">' + soVN(r.nlDay, 0) + '</td>' +
+      '<td class="p num"' + (pt > 105 ? ' style="color:#b3261e;font-weight:600"' : '') + '>' +
+      soVN(pt, 1) + '%</td></tr>';
   }
-  $('bangXemTruoc').innerHTML = h + '</tbody>';
-  $('khungXemTruoc').style.display = '';
-  $('khungXemTruoc').scrollIntoView({ block: 'nearest' });
 
-  $('nutXacNhanGhi').onclick = function () { ghiBangGiao(thamSo); };
+  $('thanXemTruoc').innerHTML = tomTat +
+    '<div class="cuon cuon-doc"><table>' + h + '</tbody></table></div>';
+  $('nenXemTruoc').classList.add('hien');
 }
 
-/** Ghi thật — chỉ chạy khi người dùng đã bấm "Xác nhận ghi". */
-function ghiBangGiao(thamSo) {
+function dongXemTruoc() {
+  $('nenXemTruoc').classList.remove('hien');
+  _xtDuLieu = null;
+}
+
+/** Xuất bảng xem trước ra Excel để gửi đội xem trước khi chốt. */
+function xtXuatFile() {
+  if (!_xtDuLieu) return;
+  var xt = _xtDuLieu.xt, ds = xt.rows || [];
+  var dong = [['Mã CN', 'Tổ', 'Số cây cạo', 'TH mủ chén (QK kg)', 'TH mủ dây (QK kg)',
+               'Giao mủ chén (QK kg)', 'Giao mủ dây (QK kg)', 'Giao tổng (QK kg)',
+               'Giao mủ chén nguyên liệu (kg)', 'Giao mủ dây nguyên liệu (kg)', '% hoàn thành']];
+  for (var i = 0; i < ds.length; i++) {
+    var r = ds[i];
+    dong.push([r.maCn, r.to, r.cay, r.thChen, r.thDay, r.giaoChen, r.giaoDay, r.giao,
+               r.nlChen, r.nlDay, xtPhanTram(r)]);
+  }
+  var ws = XLSX.utils.aoa_to_sheet(dong);
+  ws['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 11 }, { wch: 17 }, { wch: 17 },
+                 { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 24 }, { wch: 24 }, { wch: 13 }];
+  var tt = XLSX.utils.aoa_to_sheet([
+    ['BẢNG GIAO SẢN LƯỢNG — XEM TRƯỚC, CHƯA GHI VÀO HỆ THỐNG'],
+    ['Kỳ', xt.ky],
+    ['Đội', S.maDonVi],
+    ['Số công nhân', xt.soDong],
+    [],
+    ['', 'Quy khô (kg)', 'Nguyên liệu (kg)', 'DRC'],
+    ['Giao mủ chén', xt.giaoChen, xt.nlChen, xt.drcChen],
+    ['Giao mủ dây', xt.giaoDay, xt.nlDay, xt.drcDay],
+    ['Cộng', xt.giaoTong, xt.nlChen + xt.nlDay, ''],
+    [],
+    ['Thực hiện đã duyệt (QK kg)', xt.thTong, 'mủ chén ' + xt.thChen, 'mủ dây ' + xt.thDay],
+    ['% hoàn thành chung', xt.tyLeHT],
+    [],
+    ['Sàn tối thiểu để không ai có lương vượt (QK kg)', xt.tongSan],
+    ['Phần dư chia theo sản lượng thực hiện (kg)', xt.conLai],
+    ['Số người chạm sàn', xt.soChamSan],
+    ['Số người chưa có số cây cạo', xt.soThieuCay],
+    [],
+    ['Cách chia: mủ dây theo số cây cạo mùa vụ; mủ chén đặt sàn cho từng người rồi chia phần dư'],
+    ['theo sản lượng thực hiện. Làm tròn lũy kế nên tổng khớp tuyệt đối. Nguyên liệu = quy khô ÷ DRC.']
+  ]);
+  tt['!cols'] = [{ wch: 46 }, { wch: 18 }, { wch: 22 }, { wch: 14 }];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, tt, 'Tom tat');
+  XLSX.utils.book_append_sheet(wb, ws, 'Giao SL');
+  // Chỉ bỏ ký tự Windows cấm đặt tên file, giữ nguyên chữ có dấu ("Đ1" chứ không thành "_1").
+  XLSX.writeFile(wb, 'xem_truoc_giao_sl_' + S.maDonVi.replace(/[\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx');
+}
+
+/** Ghi thật — chỉ chạy khi người dùng đã bấm "Xác nhận ghi" trong popup. */
+function ghiBangGiao() {
+  if (!_xtDuLieu) return;
+  var thamSo = _xtDuLieu.thamSo;
   var nutOk = $('nutXacNhanGhi');
   nutOk.disabled = true; nutOk.textContent = 'Đang ghi…';
   goiAPI('tinhGiaoSl', thamSo, 120000)
@@ -1822,8 +1890,8 @@ function ghiBangGiao(thamSo) {
       // tạm đọc Apps Script (Sheet) để người vừa bấm vẫn thấy số của mình.
       _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
       _cacheFE = {};
-      nutOk.disabled = false; nutOk.textContent = 'Xác nhận ghi vào cơ sở dữ liệu';
-      $('khungXemTruoc').style.display = 'none';
+      nutOk.disabled = false; nutOk.textContent = 'Xác nhận ghi';
+      dongXemTruoc();
       var canhBao = d.soThieuCay
         ? ' <b>' + soVN(d.soThieuCay, 0) + ' người chưa có số cây cạo</b> trong giao khoán mùa vụ nên không được chia mủ dây.'
         : '';
@@ -1842,7 +1910,7 @@ function ghiBangGiao(thamSo) {
       taiSlTheoCn(true);
     })
     .catch(function (e) {
-      nutOk.disabled = false; nutOk.textContent = 'Xác nhận ghi vào cơ sở dữ liệu';
+      nutOk.disabled = false; nutOk.textContent = 'Xác nhận ghi';
       baoLoi('thongBao', e.message);
     });
 }
@@ -4270,7 +4338,10 @@ $('slKy').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('slLoc').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('slQ').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('nutTinhGiao').onclick = tinhGiaoSl;
-$('nutHuyXemTruoc').onclick = function () { $('khungXemTruoc').style.display = 'none'; baoLoi('thongBao', ''); };
+$('nutHuyXemTruoc').onclick = function () { dongXemTruoc(); baoLoi('thongBao', ''); };
+$('nutXacNhanGhi').onclick = ghiBangGiao;
+$('nutXtXuatFile').onclick = xtXuatFile;
+$('nenXemTruoc').onclick = function (e) { if (e.target === this) dongXemTruoc(); };
 $('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
 $('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
 $('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
