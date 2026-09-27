@@ -555,14 +555,14 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="the" id="khungTinhGiao" style="display:none;margin-bottom:12px;padding:12px 16px">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <b>Lập bảng giao sản lượng</b>
-          <span class="nhan-mo" style="font-size:13px">giao = sản lượng đã duyệt (mủ chén + dây) + ngẫu nhiên</span>
-          <input class="o" id="slTu" type="number" min="0" max="100" step="0.5" value="2" style="width:70px">
-          <span class="nhan-mo">% đến</span>
-          <input class="o" id="slDen" type="number" min="0" max="100" step="0.5" value="10" style="width:70px">
-          <span class="nhan-mo">%</span>
-          <button class="btn chinh nho" id="nutTinhGiao">Tính giao sản lượng</button>
+          <span class="nhan-mo" style="font-size:13px">Tổng quy khô công ty giao —</span>
+          <label class="nhan" for="slTongChen">mủ chén</label>
+          <input class="o" id="slTongChen" type="number" min="0" step="1" placeholder="kg quy khô" style="width:130px">
+          <label class="nhan" for="slTongDay">mủ dây</label>
+          <input class="o" id="slTongDay" type="number" min="0" step="1" placeholder="kg quy khô" style="width:130px">
+          <button class="btn chinh nho" id="nutTinhGiao">Lập bảng giao</button>
         </div>
-        <div class="goi-y" style="margin-top:8px">Số <b>demo</b> để chạy thử lương vượt sản lượng — đội lập bảng giao thật vào cuối tháng sau khi có sản lượng. Bấm lại sẽ ghi đè mức giao cũ của kỳ này, áp dụng cho toàn đội.</div>
+        <div class="goi-y" style="margin-top:8px">Chia theo đúng cách đội làm: <b>mủ chén</b> chia theo sản lượng thực hiện đã duyệt, <b>mủ dây</b> chia theo số cây cạo của mùa vụ, làm tròn lũy kế nên tổng chia ra khớp tuyệt đối với số nhập. Mủ nguyên liệu = quy khô ÷ DRC. Bấm lại sẽ ghi đè bảng giao cũ của kỳ này cho toàn đội.</div>
       </div>
       <div class="the" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1649,7 +1649,7 @@ function taiSlTheoCn(giuBao) {
       the_kpi('Sản lượng tươi', soVN((k.tongTuoi || 0) / 1000, 1), 'tấn', 'Mọi loại mủ') +
       the_kpi('Quy khô mủ chén + dây', soVN((k.tongCoSo || 0) / 1000, 1), 'tấn', 'Cơ sở tính lương sản phẩm và mức giao') +
       the_kpi('Tổng sản lượng giao', k.tongGiao ? soVN(k.tongGiao / 1000, 1) : '—', 'tấn',
-              k.tongGiao ? (d.nguonGiao === 'DEMO_NGAU_NHIEN' ? 'Số demo · lập ' + thoat(d.lanTinh) : 'Lập ' + thoat(d.lanTinh)) : 'Chưa lập bảng giao') +
+              k.tongGiao ? ('Chén ' + soVN(k.tongGiaoChen, 0) + ' + dây ' + soVN(k.tongGiaoDay, 0) + ' kg · lập ' + thoat(d.lanTinh)) : 'Chưa lập bảng giao') +
       the_kpi('% hoàn thành', k.tongGiao ? soVN(k.tyLeHT, 1) : '—', '%',
               k.soChuaGiao ? soVN(k.soChuaGiao, 0) + ' người chưa có mức giao' : 'Tất cả đã có mức giao');
     $('tomTatSlCn').textContent = 'Sản lượng kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' công nhân';
@@ -1657,8 +1657,9 @@ function taiSlTheoCn(giuBao) {
 
     var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Ngày có SL</th><th class="p">SL tươi (kg)</th>' +
       '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">Quy khô khác</th>' +
-      '<th class="p">Chén + dây</th><th class="p">Tổng SL giao</th><th class="p">% hoàn thành</th></tr></thead><tbody>';
-    if (!d.rows.length) h += '<tr><td colspan="10"><div class="rong">Không có dữ liệu.</div></td></tr>';
+      '<th class="p">Chén + dây</th><th class="p">Giao chén</th><th class="p">Giao dây</th>' +
+      '<th class="p">Tổng SL giao</th><th class="p">% hoàn thành</th></tr></thead><tbody>';
+    if (!d.rows.length) h += '<tr><td colspan="12"><div class="rong">Không có dữ liệu.</div></td></tr>';
     for (var i = 0; i < d.rows.length; i++) {
       var r = d.rows[i];
       h += '<tr><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.to) + '</td>' +
@@ -1666,6 +1667,8 @@ function taiSlTheoCn(giuBao) {
         '<td class="p num">' + soVN(r.chen, 1) + '</td><td class="p num">' + soVN(r.day, 1) + '</td>' +
         '<td class="p num nhan-mo">' + (r.khac ? soVN(r.khac, 1) : '—') + '</td>' +
         '<td class="p num"><b>' + soVN(r.coSo, 1) + '</b></td>' +
+        '<td class="p num">' + (r.giao ? soVN(r.giaoChen, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + (r.giao ? soVN(r.giaoDay, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + (r.giao ? soVN(r.giao, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num"' + (r.vuot ? ' style="color:#b3261e;font-weight:600"' : '') + '>' +
         (r.giao ? soVN(r.tyLeHT, 1) + '%' : '<span class="nhan-mo">—</span>') + '</td></tr>';
@@ -1682,7 +1685,8 @@ function taiSlTheoCn(giuBao) {
     if ($('slTruoc')) $('slTruoc').onclick = function () { S.trang--; taiSlTheoCn(); };
     if ($('slSau')) $('slSau').onclick = function () { S.trang++; taiSlTheoCn(); };
     $('nutCsvSlCn').onclick = function () {
-      var cot = ['maCn', 'to', 'soNgay', 'tuoi', 'chen', 'day', 'khac', 'coSo', 'giao', 'tyLeHT'];
+      var cot = ['maCn', 'to', 'soNgay', 'cay', 'tuoi', 'chen', 'day', 'khac', 'coSo',
+                 'giaoChen', 'giaoDay', 'giao', 'nlChen', 'nlDay', 'tyLeHT'];
       var out = [cot.join(',')];
       for (var x = 0; x < d.rows.length; x++) out.push(cot.map(function (c) { return '"' + String(d.rows[x][c]).replace(/"/g, '""') + '"'; }).join(','));
       var a = document.createElement('a');
@@ -1700,34 +1704,41 @@ function taiSlTheoCn(giuBao) {
 function tinhGiaoSl() {
   var ky = $('slKy').value;
   if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
-  var tu = parseFloat($('slTu').value), den = parseFloat($('slDen').value);
-  if (isNaN(tu) || isNaN(den) || tu < 0 || den < 0 || tu > den) {
-    baoLoi('thongBao', 'Khoảng phần trăm không hợp lệ: phải là hai số không âm, số đầu nhỏ hơn hoặc bằng số sau.');
+  var tChen = parseFloat($('slTongChen').value) || 0;
+  var tDay = parseFloat($('slTongDay').value) || 0;
+  if (tChen < 0 || tDay < 0) { baoLoi('thongBao', 'Tổng quy khô không được âm.'); return; }
+  if (!tChen && !tDay) {
+    baoLoi('thongBao', 'Nhập tổng quy khô công ty giao cho tháng này — ít nhất một trong hai loại mủ.');
     return;
   }
-  if (!confirm('Tính lại mức giao sản lượng kỳ ' + ky + ' cho toàn đội ' + S.maDonVi + '?\n\n' +
-               'Mỗi công nhân: giao = sản lượng đã duyệt (mủ chén + mủ dây) cộng thêm ngẫu nhiên ' +
-               tu + '–' + den + '%.\n' +
-               'Số demo, sẽ GHI ĐÈ mức giao cũ của kỳ này.')) return;
+  if (!confirm('Lập bảng giao sản lượng kỳ ' + ky + ' cho toàn đội ' + S.maDonVi + '?\n\n' +
+               'Tổng quy khô giao: mủ chén ' + soVN(tChen, 0) + ' kg, mủ dây ' + soVN(tDay, 0) + ' kg.\n' +
+               'Mủ chén chia theo sản lượng thực hiện, mủ dây chia theo số cây cạo.\n' +
+               'Sẽ GHI ĐÈ bảng giao cũ của kỳ này.')) return;
 
   var nut = $('nutTinhGiao');
-  nut.disabled = true; nut.textContent = 'Đang tính…';
-  goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, tuPhanTram: tu, denPhanTram: den }, 120000)
+  nut.disabled = true; nut.textContent = 'Đang chia…';
+  goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, tongChen: tChen, tongDay: tDay }, 120000)
     .then(function (d) {
       _giaoSlGhiLuc = Date.now();
       _cacheFE = {};
-      nut.disabled = false; nut.textContent = 'Tính giao sản lượng';
+      nut.disabled = false; nut.textContent = 'Lập bảng giao';
+      var canhBao = d.soThieuCay
+        ? ' <b>' + soVN(d.soThieuCay, 0) + ' người chưa có số cây cạo</b> trong giao khoán mùa vụ nên không được chia mủ dây.'
+        : '';
       $('thongBao').innerHTML =
-        '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
-        'Đã lập mức giao kỳ ' + thoat(d.ky) + ' cho <b>' + soVN(d.soDong, 0) + '</b> công nhân' +
+        '<div class="bao-loi" style="' + (d.soThieuCay ? '' : 'background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)') + '">' +
+        'Đã lập bảng giao kỳ ' + thoat(d.ky) + ' cho <b>' + soVN(d.soDong, 0) + '</b> công nhân' +
         (d.soXoa ? ' (ghi đè ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
-        'Thực hiện ' + soVN(d.tongTh, 0) + ' kg, giao ' + soVN(d.tongGiao, 0) + ' kg, đạt ' + soVN(d.tyLeHT, 1) + '%. ' +
-        'Đây là số demo (ngẫu nhiên ' + d.tu + '–' + d.den + '%), sẽ thay khi có bảng giao thật của đội.</div>';
+        'Giao quy khô: mủ chén ' + soVN(d.giaoChen, 0) + ' kg, mủ dây ' + soVN(d.giaoDay, 0) + ' kg — khớp đúng số nhập. ' +
+        'Nguyên liệu tương ứng ' + soVN(d.nlChen, 0) + ' và ' + soVN(d.nlDay, 0) + ' kg (DRC ' +
+        soVN(d.drcChen * 100, 0) + '% và ' + soVN(d.drcDay * 100, 0) + '%). ' +
+        'Thực hiện ' + soVN(d.thTong, 0) + ' kg, đạt ' + soVN(d.tyLeHT, 1) + '% mức giao.' + canhBao + '</div>';
       S.trang = 1;
       taiSlTheoCn(true);
     })
     .catch(function (e) {
-      nut.disabled = false; nut.textContent = 'Tính giao sản lượng';
+      nut.disabled = false; nut.textContent = 'Lập bảng giao';
       baoLoi('thongBao', e.message);
     });
 }
