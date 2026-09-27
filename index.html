@@ -1654,6 +1654,7 @@ function taiSlTheoCn(giuBao) {
               k.soChuaGiao ? soVN(k.soChuaGiao, 0) + ' người chưa có mức giao' : 'Tất cả đã có mức giao');
     $('tomTatSlCn').textContent = 'Sản lượng kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' công nhân';
     $('khungTinhGiao').style.display = d.duocTinh ? '' : 'none';
+    _giaoSlLanTinh = d.lanTinh || '';
 
     var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th class="p">Ngày có SL</th><th class="p">SL tươi (kg)</th>' +
       '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">Quy khô khác</th>' +
@@ -1701,6 +1702,8 @@ function taiSlTheoCn(giuBao) {
 }
 
 /** Đội trưởng bấm: sinh mức giao cho cả đội trong kỳ đang chọn (ghi đè). */
+var _giaoSlLanTinh = '';
+
 function tinhGiaoSl() {
   var ky = $('slKy').value;
   if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
@@ -1711,16 +1714,51 @@ function tinhGiaoSl() {
     baoLoi('thongBao', 'Nhập tổng quy khô công ty giao cho tháng này — ít nhất một trong hai loại mủ.');
     return;
   }
-  if (!confirm('Lập bảng giao sản lượng kỳ ' + ky + ' cho toàn đội ' + S.maDonVi + '?\n\n' +
-               'Tổng quy khô giao: mủ chén ' + soVN(tChen, 0) + ' kg, mủ dây ' + soVN(tDay, 0) + ' kg.\n' +
-               'Mủ chén chia theo sản lượng thực hiện, mủ dây chia theo số cây cạo.\n' +
-               'Sẽ GHI ĐÈ bảng giao cũ của kỳ này.')) return;
 
   var nut = $('nutTinhGiao');
-  nut.disabled = true; nut.textContent = 'Đang chia…';
-  goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, tongChen: tChen, tongDay: tDay }, 120000)
+  var thamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, tongChen: tChen, tongDay: tDay };
+  nut.disabled = true; nut.textContent = 'Đang tính thử…';
+  baoLoi('thongBao', '');
+
+  // Bước 1: tính thử, KHÔNG ghi — để hỏi xác nhận bằng số thật chứ không hỏi khơi khơi.
+  goiAPI('tinhGiaoSl', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky,
+                         tongChen: tChen, tongDay: tDay, xemTruoc: 1 }, 120000)
+    .then(function (xt) {
+      nut.disabled = false; nut.textContent = 'Lập bảng giao';
+      var d1 = ' · ';
+      var hoi =
+        'LẬP BẢNG GIAO SẢN LƯỢNG — kỳ ' + xt.ky + ', đội ' + S.maDonVi + '\n' +
+        '────────────────────────────────\n' +
+        'Số công nhân được chia: ' + soVN(xt.soDong, 0) + '\n' +
+        'Thực hiện đã duyệt: ' + soVN(xt.thTong, 0) + ' kg quy khô' +
+        d1 + 'mủ chén ' + soVN(xt.thChen, 0) + d1 + 'mủ dây ' + soVN(xt.thDay, 0) + '\n\n' +
+        'SẼ GIAO (quy khô)\n' +
+        '  Mủ chén: ' + soVN(xt.giaoChen, 0) + ' kg\n' +
+        '  Mủ dây : ' + soVN(xt.giaoDay, 0) + ' kg\n' +
+        '  Cộng   : ' + soVN(xt.giaoTong, 0) + ' kg → đạt ' + soVN(xt.tyLeHT, 1) + '% mức giao\n\n' +
+        'NGUYÊN LIỆU TƯƠNG ỨNG (quy khô ÷ DRC)\n' +
+        '  Mủ chén: ' + soVN(xt.nlChen, 0) + ' kg (DRC ' + soVN(xt.drcChen * 100, 0) + '%)\n' +
+        '  Mủ dây : ' + soVN(xt.nlDay, 0) + ' kg (DRC ' + soVN(xt.drcDay * 100, 0) + '%)\n\n' +
+        'KIỂM LƯƠNG VƯỢT\n' +
+        '  Mức tối thiểu để KHÔNG AI bị vượt: ' + soVN(xt.tongSan, 0) + ' kg mủ chén\n' +
+        '  Bạn nhập ' + soVN(tChen, 0) + ' kg → dư ' + soVN(xt.conLai, 0) +
+        ' kg, chia tiếp theo sản lượng thực hiện\n' +
+        '  Số người chạm sàn: ' + soVN(xt.soChamSan, 0) + ' / ' + soVN(xt.soDong, 0) + '\n' +
+        (xt.soThieuCay ? '\n⚠ ' + soVN(xt.soThieuCay, 0) + ' người chưa có số cây cạo trong giao khoán mùa vụ' +
+                         ' → không được chia mủ dây.\n' : '') +
+        (_giaoSlLanTinh ? '\n⚠ GHI ĐÈ bảng giao đã lập lúc ' + _giaoSlLanTinh + '.\n' : '') +
+        '\nĐồng ý ghi vào cơ sở dữ liệu?';
+      if (!confirm(hoi)) { baoLoi('thongBao', ''); return; }
+
+      // Bước 2: ghi thật.
+      nut.disabled = true; nut.textContent = 'Đang ghi…';
+      return goiAPI('tinhGiaoSl', thamSo, 120000);
+    })
     .then(function (d) {
-      _giaoSlGhiLuc = Date.now();
+      if (!d) return;
+      // Đẩy BigQuery xong thì đọc thẳng BigQuery luôn; chỉ khi đẩy hỏng mới
+      // tạm đọc Apps Script (Sheet) để người vừa bấm vẫn thấy số của mình.
+      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
       _cacheFE = {};
       nut.disabled = false; nut.textContent = 'Lập bảng giao';
       var canhBao = d.soThieuCay
@@ -1736,7 +1774,11 @@ function tinhGiaoSl() {
         'Thực hiện ' + soVN(d.thTong, 0) + ' kg, đạt ' + soVN(d.tyLeHT, 1) + '% mức giao. ' +
         '<b>Không ai có lương vượt</b>: mủ chén đã đặt sàn ' + soVN(d.tongSan, 0) + ' kg (' +
         soVN(d.soChamSan, 0) + ' người chạm sàn), phần dư ' + soVN(d.conLai, 0) +
-        ' kg chia theo sản lượng thực hiện.' + canhBao + '</div>';
+        ' kg chia theo sản lượng thực hiện. ' +
+        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
+                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
+                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
+        canhBao + '</div>';
       S.trang = 1;
       taiSlTheoCn(true);
     })
