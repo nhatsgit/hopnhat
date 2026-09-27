@@ -1627,6 +1627,12 @@ function taiGiaoKhoan() {
    Sản lượng theo công nhân theo tháng (chỉ tính dòng ĐÃ DUYỆT) +
    nút "Tính giao sản lượng" của đội trưởng.
    ===================================================================== */
+/** Thẻ khối lượng: dưới 1 tấn thì để kg cho dễ đọc, từ 1 tấn trở lên mới đổi sang tấn. */
+function the_kpi_kg(ten, kg, phu) {
+  return kg >= 1000 ? the_kpi(ten, soVN(kg / 1000, 1), 'tấn', phu)
+                    : the_kpi(ten, soVN(kg, 0), 'kg', phu);
+}
+
 function taiSlTheoCn(giuBao) {
   $('bangSlCn').innerHTML = '<tbody><tr><td><div class="rong">Đang tính…</div></td></tr></tbody>';
   var bl = layBoLoc();
@@ -1647,7 +1653,9 @@ function taiSlTheoCn(giuBao) {
     $('kpisSlCn').innerHTML =
       the_kpi('Công nhân có sản lượng', soVN(k.soCn || 0, 0), 'người', 'Kỳ ' + thoat(d.ky) + ' · chỉ dòng đã duyệt') +
       the_kpi('Sản lượng tươi', soVN((k.tongTuoi || 0) / 1000, 1), 'tấn', 'Mọi loại mủ') +
-      the_kpi('Quy khô mủ chén + dây', soVN((k.tongCoSo || 0) / 1000, 1), 'tấn', 'Cơ sở tính lương sản phẩm và mức giao') +
+      the_kpi_kg('Quy khô mủ chén + dây', k.tongCoSo || 0, 'Cơ sở tính lương sản phẩm và mức giao') +
+      the_kpi_kg('Thực tế mủ chén', k.tongChen || 0, 'Quy khô · trọng số chia mủ chén') +
+      the_kpi_kg('Thực tế mủ dây', k.tongDay || 0, 'Quy khô · mủ dây chia theo số cây cạo') +
       the_kpi('Tổng sản lượng giao', k.tongGiao ? soVN(k.tongGiao / 1000, 1) : '—', 'tấn',
               k.tongGiao ? ('Chén ' + soVN(k.tongGiaoChen, 0) + ' + dây ' + soVN(k.tongGiaoDay, 0) + ' kg · lập ' + thoat(d.lanTinh)) : 'Chưa lập bảng giao') +
       the_kpi('% hoàn thành', k.tongGiao ? soVN(k.tyLeHT, 1) : '—', '%',
