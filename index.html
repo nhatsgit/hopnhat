@@ -562,7 +562,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <input class="o" id="slTongDay" type="number" min="0" step="1" placeholder="kg quy khô" style="width:130px">
           <button class="btn chinh nho" id="nutTinhGiao">Lập bảng giao</button>
         </div>
-        <div class="goi-y" style="margin-top:8px">Chia theo đúng cách đội làm: <b>mủ chén</b> chia theo sản lượng thực hiện đã duyệt, <b>mủ dây</b> chia theo số cây cạo của mùa vụ, làm tròn lũy kế nên tổng chia ra khớp tuyệt đối với số nhập. Mủ nguyên liệu = quy khô ÷ DRC. Bấm lại sẽ ghi đè bảng giao cũ của kỳ này cho toàn đội.</div>
+        <div class="goi-y" style="margin-top:8px">Chia theo đúng cách đội làm: <b>mủ dây</b> chia theo số cây cạo mùa vụ; <b>mủ chén</b> đặt sàn cho từng người sao cho <b>không ai có lương vượt</b>, phần dư chia theo sản lượng thực hiện. Làm tròn lũy kế nên tổng chia ra khớp tuyệt đối với số nhập; mủ nguyên liệu = quy khô ÷ DRC. Nhập tổng quá thấp thì hệ thống báo thiếu bao nhiêu kg. Bấm lại sẽ ghi đè bảng giao cũ của kỳ này cho toàn đội.</div>
       </div>
       <div class="the" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1733,7 +1733,10 @@ function tinhGiaoSl() {
         'Giao quy khô: mủ chén ' + soVN(d.giaoChen, 0) + ' kg, mủ dây ' + soVN(d.giaoDay, 0) + ' kg — khớp đúng số nhập. ' +
         'Nguyên liệu tương ứng ' + soVN(d.nlChen, 0) + ' và ' + soVN(d.nlDay, 0) + ' kg (DRC ' +
         soVN(d.drcChen * 100, 0) + '% và ' + soVN(d.drcDay * 100, 0) + '%). ' +
-        'Thực hiện ' + soVN(d.thTong, 0) + ' kg, đạt ' + soVN(d.tyLeHT, 1) + '% mức giao.' + canhBao + '</div>';
+        'Thực hiện ' + soVN(d.thTong, 0) + ' kg, đạt ' + soVN(d.tyLeHT, 1) + '% mức giao. ' +
+        '<b>Không ai có lương vượt</b>: mủ chén đã đặt sàn ' + soVN(d.tongSan, 0) + ' kg (' +
+        soVN(d.soChamSan, 0) + ' người chạm sàn), phần dư ' + soVN(d.conLai, 0) +
+        ' kg chia theo sản lượng thực hiện.' + canhBao + '</div>';
       S.trang = 1;
       taiSlTheoCn(true);
     })
