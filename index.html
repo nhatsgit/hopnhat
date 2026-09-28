@@ -9,6 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Đọc/ghi file Excel (.xlsx) ngay trên trình duyệt — dùng cho Nhập hàng
      loạt và Tải mẫu Excel, không cần gửi file thô lên server. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
+  integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz"
+  crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
   integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
   crossorigin="anonymous"></script>
@@ -584,6 +587,13 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab: Lương — tính từ chấm công và sản lượng quy khô của kỳ -->
     <section id="pLuong" style="display:none">
       <div class="kpis" id="kpisLuong"></div>
+      <div class="the" id="khungChotLuong" style="display:none;margin-bottom:12px;padding:12px 16px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <b>Chốt bảng lương</b>
+          <span class="nhan-mo" style="font-size:13px">Tính lại từ số ĐÃ DUYỆT, ghi một bản chụp vào cơ sở dữ liệu.</span>
+          <button class="btn chinh nho" id="nutChotLuong" style="margin-left:auto">Chốt bảng lương tháng</button>
+        </div>
+      </div>
       <div class="the" style="margin-bottom:12px;padding:12px 16px;font-size:13px" id="giaDinhLuong"></div>
       <div class="the" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -711,6 +721,22 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <button class="btn nho" id="nutHuyXemTruoc">Huỷ</button>
     </div>
     <div class="than-hop" id="thanXemTruoc"></div>
+  </div>
+</div>
+
+<!-- Popup xem trước bảng lương trước khi chốt — chưa ghi gì cả -->
+<div class="nen-mo" id="nenXemTruocLuong">
+  <div class="hop-thoai" style="max-width:1180px">
+    <div class="dau-hop">
+      <h2>Xem trước bảng lương — chưa ghi gì cả</h2>
+      <button class="btn nho" id="nutXtLuongXuatFile">Xuất Excel</button>
+      <button class="btn chinh nho" id="nutXacNhanChotLuong">Xác nhận chốt</button>
+      <button class="btn nho" id="nutHuyXemTruocLuong">Huỷ</button>
+    </div>
+    <div class="than-hop" id="thanXemTruocLuong">
+      <div id="xtLuongTomTat"></div>
+      <div class="cuon cuon-doc"><table id="bangXemTruocLuong"></table></div>
+    </div>
   </div>
 </div>
 
@@ -2017,6 +2043,245 @@ function ghiBangGiao() {
 /* =====================================================================
    Lương (chỉ xem): tính từ chấm công + sản lượng quy khô của kỳ (tháng)
    ===================================================================== */
+var _ltDuLieu = null;          // ket qua xem truoc dang hien thi, de xac nhan ghi / xuat file
+
+/** Nhãn nút theo kỳ đang chọn, ví dụ "Chốt bảng lương tháng 8". */
+function nhanNutChotLuong() {
+  var m = String($('lgKy').value || '').match(/^\d{4}-(\d{2})$/);
+  return 'Chốt bảng lương tháng' + (m ? ' ' + Number(m[1]) : '');
+}
+
+/** Bấm nút: tính thử trên máy chủ (chỉ số ĐÃ DUYỆT) rồi mở popup xem trước. */
+function chotLuongThang() {
+  var ky = $('lgKy').value;
+  if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
+  var thamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky };
+  var nut = $('nutChotLuong');
+  nut.disabled = true; nut.textContent = 'Đang tính thử…';
+  baoLoi('thongBao', '');
+
+  goiAPI('chotLuong', Object.assign({ xemTruoc: 1 }, thamSo), 120000)
+    .then(function (xt) {
+      nut.disabled = false; nut.textContent = nhanNutChotLuong();
+      veXemTruocLuong(xt, thamSo);
+    })
+    .catch(function (e) {
+      nut.disabled = false; nut.textContent = nhanNutChotLuong();
+      baoLoi('thongBao', e.message);
+    });
+}
+
+function veXemTruocLuong(xt, thamSo) {
+  _ltDuLieu = { xt: xt, thamSo: thamSo };
+  var d1 = ' · ';
+  var canhBao = '';
+  if (xt.soChuaXepLoai) {
+    canhBao += '<div class="bao-loi" style="margin-top:10px">' + soVN(xt.soChuaXepLoai, 0) +
+      ' người chưa có xếp loại tháng ' + thoat(xt.ky) + ' — tạm tính xếp loại A (100%).</div>';
+  }
+
+  $('xtLuongTomTat').innerHTML =
+    '<div class="dong-tt">' +
+    '<div><span>Kỳ</span><b>' + thoat(xt.ky) + '</b></div>' +
+    '<div><span>Đội</span><b>' + thoat(S.maDonVi) + '</b></div>' +
+    '<div><span>Công nhân</span><b>' + soVN(xt.soDong, 0) + '</b></div>' +
+    '<div><span>Tổng thu nhập</span><b>' + soVN(xt.tongThuNhap / 1000000, 2) + ' triệu riel</b></div>' +
+    '<div><span>Thực nhận</span><b>' + soVN(xt.tongThucNhan / 1000000, 2) + ' triệu riel</b></div>' +
+    '</div>' +
+    '<p class="goi-y" style="margin:0 0 12px">Chỉ tính trên chấm công và sản lượng <b>đã duyệt</b> — ' +
+    'bỏ qua nút gạt tạm tính trên tab Lương. Xác nhận sẽ ghi một bản chụp vào cơ sở dữ liệu, ' +
+    'thay được nếu chốt lại kỳ này.</p>' +
+    (xt.giaDinh && xt.giaDinh.length
+      ? '<p class="goi-y" style="margin:0 0 12px"><b>Lưu ý cách tính</b><br>' + xt.giaDinh.map(thoat).join('<br>') + '</p>'
+      : '') + canhBao;
+
+  var ds = xt.rows || [];
+  var h = '<thead><tr><th>Mã CN</th><th class="p">Công thường</th><th class="p">Công lễ/CN</th>' +
+    '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th>Xếp loại</th>' +
+    '<th class="p">Lương công</th><th class="p">SP chén</th><th class="p">SP dây</th>' +
+    '<th class="p">Vượt (kg)</th><th class="p">Lương vượt</th><th class="p">Chuyên cần</th>' +
+    '<th class="p">Tổng thu nhập</th><th class="p">BH 2%</th><th class="p">Thuế</th><th class="p">Thực nhận</th></tr></thead><tbody>';
+  if (!ds.length) h += '<tr><td colspan="16"><div class="rong">Không có dòng nào.</div></td></tr>';
+  for (var i = 0; i < ds.length; i++) {
+    var r = ds[i];
+    h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
+      '<td class="p num">' + soVN(r.congThuong, 1) + '</td><td class="p num">' + soVN(r.congLe, 1) + '</td>' +
+      '<td class="p num">' + soVN(r.quyKhoChen, 0) + '</td><td class="p num">' + soVN(r.quyKhoDay, 0) + '</td>' +
+      '<td>' + (r.xepLoai ? thoat(r.xepLoai) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p num">' + soVN(r.luongCong, 0) + '</td><td class="p num">' + soVN(r.luongChen, 0) + '</td>' +
+      '<td class="p num">' + soVN(r.luongDay, 0) + '</td>' +
+      '<td class="p num">' + (r.vuot ? soVN(r.vuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p num">' + (r.luongVuot ? soVN(r.luongVuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p num">' + soVN(r.chuyenCan, 0) + '</td>' +
+      '<td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
+      '<td class="p num">' + soVN(r.bhxh, 0) + '</td><td class="p num">' + soVN(r.thue, 0) + '</td>' +
+      '<td class="p num"><b>' + soVN(r.thucNhan, 0) + '</b></td></tr>';
+  }
+  $('bangXemTruocLuong').innerHTML = h + '</tbody>';
+  $('nenXemTruocLuong').classList.add('hien');
+}
+
+function dongXemTruocLuong() {
+  $('nenXemTruocLuong').classList.remove('hien');
+  _ltDuLieu = null;
+}
+
+/** Ghi thật — chỉ chạy khi người dùng đã bấm "Xác nhận chốt" trong popup. */
+function ghiChotLuong() {
+  if (!_ltDuLieu) return;
+  var nutOk = $('nutXacNhanChotLuong');
+  nutOk.disabled = true; nutOk.textContent = 'Đang ghi…';
+  goiAPI('chotLuong', _ltDuLieu.thamSo, 120000)
+    .then(function (d) {
+      nutOk.disabled = false; nutOk.textContent = 'Xác nhận chốt';
+      dongXemTruocLuong();
+      var canhBao = d.soChuaXepLoai
+        ? ' <b>' + soVN(d.soChuaXepLoai, 0) + ' người chưa có xếp loại</b>, tạm tính xếp loại A.'
+        : '';
+      $('thongBao').innerHTML =
+        '<div class="bao-loi" style="' + (d.soChuaXepLoai ? '' : 'background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)') + '">' +
+        'Đã chốt bảng lương kỳ ' + thoat(d.ky) + ' cho <b>' + soVN(d.soDong, 0) + '</b> công nhân' +
+        (d.soXoa ? ' (ghi đè ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
+        'Tổng thu nhập ' + soVN(d.tongThuNhap, 0) + ' riel, thực nhận ' + soVN(d.tongThucNhan, 0) + ' riel. ' +
+        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
+                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
+                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
+        canhBao + '</div>';
+      taiLuong();
+    })
+    .catch(function (e) {
+      nutOk.disabled = false; nutOk.textContent = 'Xác nhận chốt';
+      baoLoi('thongBao', e.message);
+    });
+}
+
+/* =====================================================================
+   Xuất Excel bảng lương theo đúng bố cục biểu mẫu "THANH TOÁN" của đội —
+   tiêu đề song ngữ Khmer–Việt, dùng ExcelJS (không phải SheetJS) vì cần
+   đặt FONT KHMER OS BATTAMBANG cho phần chữ Khmer và tách RICH TEXT khi
+   một ô có cả chữ Khmer lẫn tiếng Việt (SheetJS bản miễn phí không ghi
+   được font/kiểu chữ, xem trao đổi với đội 2026-09-28).
+   ===================================================================== */
+var KHMER_FONT = 'Khmer OS Battambang';
+var KHMER_RE = /[ក-៿᧠-᧿]/;
+
+/** Tách chuỗi thành các đoạn { khmer: true/false, text }, gộp dấu câu/khoảng
+    trắng theo đoạn liền trước — để không cắt vụn chữ Khmer. */
+function tachDoanKhmer(text) {
+  var doan = [], hienTai = '', dangKhmer = null;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i], laKhmer;
+    if (KHMER_RE.test(ch)) laKhmer = true;
+    else if (/[\s()\[\]{}.,:;/%+*'"\-–—]/.test(ch)) laKhmer = dangKhmer === null ? false : dangKhmer;
+    else laKhmer = false;
+    if (hienTai && laKhmer !== dangKhmer) { doan.push({ khmer: dangKhmer, text: hienTai }); hienTai = ''; }
+    hienTai += ch; dangKhmer = laKhmer;
+  }
+  if (hienTai) doan.push({ khmer: dangKhmer, text: hienTai });
+  return doan;
+}
+
+/** Gán giá trị cho 1 ô: chữ thường nếu không có Khmer, rich-text tách font
+    nếu có — giữ nguyên font Việt/Latin đang dùng, chỉ riêng đoạn Khmer đổi
+    sang Khmer OS Battambang. */
+function oKhmer(cell, text, fontChung) {
+  if (!KHMER_RE.test(text)) { cell.value = text; if (fontChung) cell.font = fontChung; return; }
+  var doan = tachDoanKhmer(text);
+  cell.value = {
+    richText: doan.map(function (d) {
+      var f = Object.assign({}, fontChung || {});
+      f.name = d.khmer ? KHMER_FONT : (fontChung && fontChung.name) || 'Times New Roman';
+      return { font: f, text: d.text };
+    })
+  };
+}
+
+function xtXuatFileLuong() {
+  if (!_ltDuLieu || !window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
+  var xt = _ltDuLieu.xt, ds = xt.rows || [];
+  var m = String(xt.ky).match(/^(\d{4})-(\d{2})$/);
+  var thang = m ? m[2] : '', nam = m ? m[1] : '';
+
+  var wb = new ExcelJS.Workbook();
+  var ws = wb.addWorksheet('THANH TOAN');
+  var cotRong = [6, 18, 11, 11, 13, 11, 13, 12, 12, 12, 12, 12, 11, 14, 11, 11, 12, 16];
+  cotRong.forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
+
+  var dam = { bold: true, size: 9, name: 'Times New Roman' };
+  var thuong = { size: 9, name: 'Times New Roman' };
+
+  ws.mergeCells('A1:R1');
+  oKhmer(ws.getCell('A1'),
+    'តារាងទូទាត់ប្រាក់បៀវត្សកម្មករចៀរជ័រ ខែ ' + thang + ' ឆ្នាំ ' + nam +
+    '\nBẢNG THANH TOÁN TIỀN LƯƠNG CÔNG NHÂN KHAI THÁC THÁNG ' + thang + ' NĂM ' + nam, dam);
+  ws.getRow(1).height = 34;
+  ws.getCell('A1').alignment = { wrapText: true, vertical: 'middle' };
+
+  ws.mergeCells('A2:R2');
+  oKhmer(ws.getCell('A2'), 'កងផលិត/Bộ phận: Đội ' + S.maDonVi, thuong);
+
+  var tieuDe = [
+    'ល.រ\nSTT', 'លេខអត្តសញ្ញាណប័ណ្ណ ឬ អត្តលេខកម្មករ\nSố chứng minh nhân dân/ Mã số công nhân',
+    'ចំណាត់ថ្នាក់\nXếp loại',
+    'ចំនួនថ្ងៃធ្វើការ\nSố công thường', 'ប្រាក់ធ្វើការថ្ងៃធម្មតា\nLương ngày thường',
+    'ចំនួនថ្ងៃធ្វើការ\nSố công lễ/CN', 'ប្រាក់ធ្វើការថ្ងៃអាទិត្យ និងបុណ្យ\nLương ngày lễ/CN',
+    'ជ័រចាន (គីឡូក្រាម)\nQuy khô mủ chén (kg)', 'ប្រាក់បរិមាណជ័រ\nLương SL mủ đông chén',
+    'ជ័រខ្សែ (គីឡូក្រាម)\nQuy khô mủ dây (kg)', 'ប្រាក់ទិន្នផលជ័រខ្សែ\nLương SL mủ dây',
+    'ប្រាក់បរិមាណជ័រលើស\nLương vượt sản lượng', 'ប្រាក់ឧស្សាហ៍ព្យាយាម\nLương chuyên cần',
+    'ប្រាក់ខែសរុប\nTổng tiền lương', 'ប្រាក់ត្រូវបង់ 2%\nSố tiền phải đóng 2%',
+    'ពន្ធប្រាក់បៀវត្ស\nThuế TNCN', 'ទឹកប្រាក់នៅសល់ត្រូវទទួល\nCòn nhận',
+    'ហត្ថលេខា ឬស្នាមមេដៃ\nKý nhận'
+  ];
+  var hangTieuDe = 3;
+  ws.getRow(hangTieuDe).height = 48;
+  for (var c = 0; c < tieuDe.length; c++) {
+    var cell = ws.getCell(hangTieuDe, c + 1);
+    oKhmer(cell, tieuDe[c], dam);
+    cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE9EE' } };
+  }
+
+  var r = hangTieuDe + 1;
+  for (var i = 0; i < ds.length; i++) {
+    var x = ds[i], rr = ws.getRow(r);
+    ws.getCell(r, 1).value = i + 1;
+    ws.getCell(r, 2).value = x.maCn;
+    ws.getCell(r, 3).value = x.xepLoai || '';
+    ws.getCell(r, 4).value = x.congThuong;
+    ws.getCell(r, 5).value = Math.round(x.congThuong * (xt.donGia ? xt.donGia.thuong : 0));
+    ws.getCell(r, 6).value = x.congLe;
+    ws.getCell(r, 7).value = Math.round(x.congLe * (xt.donGia ? xt.donGia.le : 0));
+    ws.getCell(r, 8).value = x.quyKhoChen;
+    ws.getCell(r, 9).value = x.luongChen;
+    ws.getCell(r, 10).value = x.quyKhoDay;
+    ws.getCell(r, 11).value = x.luongDay;
+    ws.getCell(r, 12).value = x.luongVuot;
+    ws.getCell(r, 13).value = x.chuyenCan;
+    ws.getCell(r, 14).value = x.tong;
+    ws.getCell(r, 15).value = x.bhxh;
+    ws.getCell(r, 16).value = x.thue;
+    ws.getCell(r, 17).value = x.thucNhan;
+    for (var cc = 4; cc <= 17; cc++) { ws.getCell(r, cc).font = thuong; ws.getCell(r, cc).numFmt = '#,##0'; }
+    ws.getCell(r, 1).font = thuong; ws.getCell(r, 2).font = thuong; ws.getCell(r, 3).font = thuong;
+    r++;
+  }
+  ws.mergeCells(r, 1, r, 3);
+  oKhmer(ws.getCell(r, 1), 'សរុប / TỔNG CỘNG', dam);
+  var congThuc = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+  congThuc.forEach(function (col) {
+    var cell = ws.getCell(col + r);
+    cell.value = { formula: 'SUM(' + col + (hangTieuDe + 1) + ':' + col + (r - 1) + ')' };
+    cell.font = dam; cell.numFmt = '#,##0';
+  });
+
+  var ten = 'bang_luong_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx';
+  wb.xlsx.writeBuffer().then(function (buf) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.download = ten; a.click();
+  });
+}
+
 function taiLuong() {
   $('bangLuong').innerHTML = '<tbody><tr><td><div class="rong">Đang tính…</div></td></tr></tbody>';
   var bl = layBoLoc();
@@ -2046,6 +2311,8 @@ function taiLuong() {
     $('giaDinhLuong').innerHTML = d.giaDinh && d.giaDinh.length
       ? '<b>Lưu ý cách tính</b><ul style="margin:6px 0 0 18px;padding:0">' + d.giaDinh.map(function (g) { return '<li>' + thoat(g) + '</li>'; }).join('') + '</ul>'
       : '';
+    $('khungChotLuong').style.display = d.duocTinh ? '' : 'none';
+    if (d.duocTinh) $('nutChotLuong').textContent = nhanNutChotLuong();
 
     var h = '<thead><tr><th>Mã CN</th><th class="p">Công thường</th><th class="p">Công lễ/CN</th>' +
       '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">SL giao</th><th>Xếp loại</th>' +
@@ -4437,6 +4704,11 @@ $('slKy').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('slLoc').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('slQ').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('nutTinhGiao').onclick = tinhGiaoSl;
+$('nutChotLuong').onclick = chotLuongThang;
+$('nutHuyXemTruocLuong').onclick = function () { dongXemTruocLuong(); baoLoi('thongBao', ''); };
+$('nutXacNhanChotLuong').onclick = ghiChotLuong;
+$('nutXtLuongXuatFile').onclick = xtXuatFileLuong;
+$('nenXemTruocLuong').onclick = function (e) { if (e.target === this) dongXemTruocLuong(); };
 $('nutHuyXemTruoc').onclick = function () { dongXemTruoc(); baoLoi('thongBao', ''); };
 $('nutXacNhanGhi').onclick = ghiBangGiao;
 $('nutXtXuatFile').onclick = xtXuatFile;
