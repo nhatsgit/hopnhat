@@ -1873,84 +1873,117 @@ function dongXemTruoc() {
  * Dựng MỘT sheet theo đúng bố cục biểu mẫu "GIAO SL" của đội.
  * `ds` là danh sách dòng của sheet đó, `donVi` là dòng "Bộ phận" in trên đầu.
  */
-function xtSheetGiao(ds, donVi, ky) {
+/**
+ * Dựng MỘT sheet theo đúng bố cục biểu mẫu "GIAO SL" của đội, trong workbook
+ * ExcelJS đã có sẵn. Dùng ExcelJS (không phải SheetJS) để đặt đúng font
+ * Khmer OS Battambang cho chữ Khmer và tách rich-text khi một ô có cả
+ * Khmer lẫn tiếng Việt (xem oKhmer/tachDoanKhmer — dùng chung với xuất lương).
+ */
+function xtSheetGiao(wb, tenSheet, ds, donVi, ky) {
   var m = String(ky).match(/^(\d{4})-(\d{2})$/);
   var thang = m ? m[2] : '', nam = m ? m[1] : '';
-  var R = [];
+  var ws = wb.addWorksheet(tenSheet);
 
-  R.push([null, null, null, null, null, null, null, 'ព្រះរាជាណាចក្រកម្ពុជា']);
-  R.push(['ស៊ី.អ.ស៊ី.ខេ.២', null, null, null, null, null, null, 'ជាតិ  សាសនា  ព្រះមហាក្សត្រ']);
-  R.push(['អភិវឌ្ឍន៍កៅស៊ូ ខូអិលធីឌី', null, null, null, null, null, null, 'VƯƠNG QUỐC CAMPUCHIA']);
-  R.push(['C.R.C.K.2 APHIVATH', null, null, null, null, null, null, ' Dân tộc – Tôn giáo – Quốc vương']);
-  R.push(['CAOUTCHOUC CO., LTD']);
-  R.push(['ផ្តល់ផែនការទិន្នផល ខែ ' + thang + ' ឆ្នាំ ' + nam +
-          '\nGIAO KẾ HOẠCH SẢN LƯỢNG THÁNG ' + thang + ' NĂM ' + nam]);
-  R.push(['កងផលិត / Bộ phận: ' + donVi]);
-  R.push(['ល.រ\nSTT', 'លេខអត្តសញ្ញាណប័ណ្ណ ឬ អត្តលេខកម្មករ\nSố chứng minh nhân dân/ Mã số công nhân',
-          'គោត្តនាម និងនាម\nHọ và tên', 'សរុបដើមដែលចៀរ\nTỔNG SỐ CÂY CẠO',
-          'សរុបទិន្នផលផ្តល់ជ័រកកចាន\nTỔNG SẢN LƯƠNG GIAO MỦ ĐÔNG CHÉN', null,
-          'សរុបទិន្នផលជ័រខ្សែ\nTỔNG SẢN LƯƠNG GIAO MỦ DÂY', null,
-          'សរុបទិន្នផលផ្តល់ជ័រស្ងួត\nTổng sản lượng giao quy khô', 'ចុះហត្ថលេខា\nKÝ XÁC NHẬN']);
-  R.push([null, null, null, null, 'ជ័រឆៅ\nMủ nguyên liệu (kg)', 'ជ័រស្ងួត\nMủ quy khô (kg)',
-          'ជ័រឆៅ\nMủ nguyên liệu (kg)', 'ជ័រស្ងួត\nMủ quy khô (kg)']);
+  var dam = { bold: true, size: 9, name: 'Times New Roman' };
+  var thuong = { size: 9, name: 'Times New Roman' };
+  var damNho = { bold: true, size: 9, name: 'Times New Roman' };
 
-  var dongDau = R.length;
-  var tCay = 0, tNlC = 0, tQkC = 0, tNlD = 0, tQkD = 0, tTong = 0;
-  for (var i = 0; i < ds.length; i++) {
-    var r = ds[i];
-    tCay += r.cay; tNlC += r.nlChen; tQkC += r.giaoChen;
-    tNlD += r.nlDay; tQkD += r.giaoDay; tTong += r.giao;
-    R.push([i + 1, r.cccd || r.maCn, r.ten || '', r.cay,
-            r.nlChen, r.giaoChen, r.nlDay, r.giaoDay, r.giao, null]);
+  ws.getColumn(1).width = 6; ws.getColumn(2).width = 22; ws.getColumn(3).width = 26;
+  ws.getColumn(4).width = 12; ws.getColumn(5).width = 16; ws.getColumn(6).width = 14;
+  ws.getColumn(7).width = 16; ws.getColumn(8).width = 14; ws.getColumn(9).width = 16;
+  ws.getColumn(10).width = 18;
+
+  ws.mergeCells(6, 1, 6, 10);
+  oKhmer(ws.getCell(6, 1),
+    'ផ្តល់ផែនការទិន្នផល ខែ ' + thang + ' ឆ្នាំ ' + nam +
+    '\nGIAO KẾ HOẠCH SẢN LƯỢNG THÁNG ' + thang + ' NĂM ' + nam, dam);
+  ws.getRow(6).height = 34;
+  ws.getCell(6, 1).alignment = { wrapText: true, vertical: 'middle' };
+
+  ws.mergeCells(7, 1, 7, 10);
+  oKhmer(ws.getCell(7, 1), 'កងផលិត / Bộ phận: ' + donVi, thuong);
+
+  var tieuDe1 = ['ល.រ\nSTT', 'លេខអត្តសញ្ញាណប័ណ្ណ ឬ អត្តលេខកម្មករ\nSố chứng minh nhân dân/ Mã số công nhân',
+    'គោត្តនាម និងនាម\nHọ và tên', 'សរុបដើមដែលចៀរ\nTỔNG SỐ CÂY CẠO',
+    'សរុបទិន្នផលផ្តល់ជ័រកកចាន\nTỔNG SẢN LƯƠNG GIAO MỦ ĐÔNG CHÉN', null,
+    'សរុបទិន្នផលជ័រខ្សែ\nTỔNG SẢN LƯƠNG GIAO MỦ DÂY', null,
+    'សរុបទិន្នផលផ្តល់ជ័រស្ងួត\nTổng sản lượng giao quy khô', 'ចុះហត្ថលេខា\nKÝ XÁC NHẬN'];
+  for (var c1 = 0; c1 < tieuDe1.length; c1++) {
+    if (tieuDe1[c1] === null) continue;
+    var cell = ws.getCell(9, c1 + 1);
+    oKhmer(cell, tieuDe1[c1], damNho);
+    cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE9EE' } };
   }
-  R.push(['សរុប / TỔNG CỘNG', null, null, tCay, tNlC, tQkC, tNlD, tQkD, tTong, null]);
+  var duoi2 = { 5: 'ជ័រឆៅ\nMủ nguyên liệu (kg)', 6: 'ជ័រស្ងួត\nMủ quy khô (kg)',
+                7: 'ជ័រឆៅ\nMủ nguyên liệu (kg)', 8: 'ជ័រស្ងួត\nMủ quy khô (kg)' };
+  for (var c2 in duoi2) {
+    var cell2 = ws.getCell(10, Number(c2));
+    oKhmer(cell2, duoi2[c2], damNho);
+    cell2.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
+    cell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE9EE' } };
+  }
+  ws.mergeCells(9, 1, 10, 1); ws.mergeCells(9, 2, 10, 2); ws.mergeCells(9, 3, 10, 3);
+  ws.mergeCells(9, 4, 10, 4); ws.mergeCells(9, 5, 9, 6); ws.mergeCells(9, 7, 9, 8);
+  ws.mergeCells(9, 9, 10, 9); ws.mergeCells(9, 10, 10, 10);
+  ws.getRow(9).height = 52; ws.getRow(10).height = 34;
+
+  var rDau = 11;
+  var tCay = 0, tNlC = 0, tQkC = 0, tNlD = 0, tQkD = 0, tTong = 0;
+  var r = rDau;
+  for (var i = 0; i < ds.length; i++) {
+    var x = ds[i];
+    tCay += x.cay; tNlC += x.nlChen; tQkC += x.giaoChen;
+    tNlD += x.nlDay; tQkD += x.giaoDay; tTong += x.giao;
+    ws.getCell(r, 1).value = i + 1;
+    ws.getCell(r, 2).value = x.cccd || x.maCn;
+    ws.getCell(r, 3).value = x.ten || '';
+    ws.getCell(r, 4).value = x.cay;
+    ws.getCell(r, 5).value = x.nlChen;
+    ws.getCell(r, 6).value = x.giaoChen;
+    ws.getCell(r, 7).value = x.nlDay;
+    ws.getCell(r, 8).value = x.giaoDay;
+    ws.getCell(r, 9).value = x.giao;
+    for (var cc = 1; cc <= 9; cc++) { ws.getCell(r, cc).font = thuong; if (cc >= 4) ws.getCell(r, cc).numFmt = '#,##0'; }
+    r++;
+  }
+  var rTong = r;
+  ws.mergeCells(rTong, 1, rTong, 3);
+  oKhmer(ws.getCell(rTong, 1), 'សរុប / TỔNG CỘNG', dam);
+  var tongGia = [tCay, tNlC, tQkC, tNlD, tQkD, tTong];
+  for (var g = 0; g < tongGia.length; g++) {
+    var cellT = ws.getCell(rTong, g + 4);
+    cellT.value = tongGia[g]; cellT.font = dam; cellT.numFmt = '#,##0';
+  }
 
   var hn = new Date();
-  R.push([]);
-  R.push([null, null, null, null, null, null,
-          'កំពង់ធំ ថ្ងៃទី ' + hn.getDate() + ' ខែ ' + (hn.getMonth() + 1) + ' ឆ្នាំ ' + hn.getFullYear()]);
-  R.push([null, null, null, null, null, null,
-          'Kampong Thom, ngày ' + hn.getDate() + ' tháng ' + (hn.getMonth() + 1) + ' năm ' + hn.getFullYear()]);
-  R.push(['កងផលិត', null, null, null, null, null, 'អ្នកធ្វើតារាង']);
-  R.push(['ĐỘI SẢN XUẤT', null, null, null, null, null, 'LẬP BIỂU']);
+  var rKy = rTong + 2;
+  ws.mergeCells(rKy, 6, rKy, 10);
+  oKhmer(ws.getCell(rKy, 6), 'កំពង់ធំ ថ្ងៃទី ' + hn.getDate() + ' ខែ ' + (hn.getMonth() + 1) + ' ឆ្នាំ ' + hn.getFullYear(), thuong);
+  ws.mergeCells(rKy + 1, 6, rKy + 1, 10);
+  ws.getCell(rKy + 1, 6).value = 'Kampong Thom, ngày ' + hn.getDate() + ' tháng ' + (hn.getMonth() + 1) + ' năm ' + hn.getFullYear();
+  ws.getCell(rKy + 1, 6).font = thuong;
+  oKhmer(ws.getCell(rKy + 2, 1), 'កងផលិត', thuong);
+  oKhmer(ws.getCell(rKy + 2, 6), 'អ្នកធ្វើតារាង', thuong);
+  ws.getCell(rKy + 3, 1).value = 'ĐỘI SẢN XUẤT'; ws.getCell(rKy + 3, 1).font = thuong;
+  ws.getCell(rKy + 3, 6).value = 'LẬP BIỂU'; ws.getCell(rKy + 3, 6).font = thuong;
 
-  var ws = XLSX.utils.aoa_to_sheet(R);
-  var dongTong = dongDau + ds.length;
-  ws['!merges'] = [
-    { s: { r: 5, c: 0 }, e: { r: 5, c: 9 } },
-    { s: { r: 7, c: 0 }, e: { r: 8, c: 0 } },
-    { s: { r: 7, c: 1 }, e: { r: 8, c: 1 } },
-    { s: { r: 7, c: 2 }, e: { r: 8, c: 2 } },
-    { s: { r: 7, c: 3 }, e: { r: 8, c: 3 } },
-    { s: { r: 7, c: 4 }, e: { r: 7, c: 5 } },
-    { s: { r: 7, c: 6 }, e: { r: 7, c: 7 } },
-    { s: { r: 7, c: 8 }, e: { r: 8, c: 8 } },
-    { s: { r: 7, c: 9 }, e: { r: 8, c: 9 } },
-    { s: { r: dongTong, c: 0 }, e: { r: dongTong, c: 2 } }
-  ];
-  ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 26 }, { wch: 12 },
-                 { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 }];
-  ws['!rows'] = [];
-  ws['!rows'][5] = { hpt: 34 };
-  ws['!rows'][7] = { hpt: 52 };
-  ws['!rows'][8] = { hpt: 34 };
   return ws;
 }
 
 /**
  * Xuất bảng giao ra Excel: một sheet tổng của cả đội, rồi TÁCH RIÊNG mỗi tổ
  * một sheet — giống cách file "Chia sản lượng" của đội tách HS_Tổ1…HS_Tổ8,
- * để đưa mỗi tổ trưởng đúng phần của họ.
- * Thư viện xlsx bản cộng đồng chỉ ghi được giá trị, ô gộp và độ rộng cột —
- * KHÔNG ghi được khung viền, chữ đậm hay nền màu, nên file ra sẽ phẳng.
+ * để đưa mỗi tổ trưởng đúng phần của họ. Dùng ExcelJS để có đúng font Khmer
+ * OS Battambang cho chữ Khmer (xem trao đổi với đội 2026-09-28).
  */
 function xtXuatFile() {
-  if (!_xtDuLieu) return;
+  if (!_xtDuLieu || !window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
   var xt = _xtDuLieu.xt, ds = xt.rows || [];
-  var wb = XLSX.utils.book_new();
+  var wb = new ExcelJS.Workbook();
 
   // Sheet tổng của cả đội
-  XLSX.utils.book_append_sheet(wb, xtSheetGiao(ds, S.maDonVi + ' (toàn đội)', xt.ky), 'Toan doi');
+  xtSheetGiao(wb, 'Toan doi', ds, S.maDonVi + ' (toàn đội)', xt.ky);
 
   // Tách theo tổ, giữ nguyên thứ tự mã công nhân
   var theoTo = {}, dsTo = [];
@@ -1963,20 +1996,15 @@ function xtXuatFile() {
   for (var k = 0; k < dsTo.length; k++) {
     // Tên sheet Excel tối đa 31 ký tự và không được chứa : \ / ? * [ ]
     var ten = String(dsTo[k]).replace(/[:\\\/?*\[\]]/g, '-').slice(0, 31);
-    XLSX.utils.book_append_sheet(wb, xtSheetGiao(theoTo[dsTo[k]] || [], dsTo[k], xt.ky), ten);
+    xtSheetGiao(wb, ten, theoTo[dsTo[k]] || [], dsTo[k], xt.ky);
   }
 
   // Sheet cuối: cách chia và các mốc, để người duyệt đối chiếu
-  var bangTo = [['Tổ', 'Số CN', 'Giao chén (QK)', 'Giao dây (QK)', 'Giao tổng (QK)',
-                 'Chén (nguyên liệu)', 'Dây (nguyên liệu)']];
-  for (var q = 0; q < dsTo.length; q++) {
-    var g = theoTo[dsTo[q]], a = 0, b = 0, c2 = 0, d2 = 0;
-    for (var z = 0; z < g.length; z++) { a += g[z].giaoChen; b += g[z].giaoDay; c2 += g[z].nlChen; d2 += g[z].nlDay; }
-    bangTo.push([dsTo[q], g.length, a, b, a + b, c2, d2]);
-  }
-
-  var tt = XLSX.utils.aoa_to_sheet([
-    ['CÁCH LẬP BẢNG GIAO — do hệ thống tính, chưa có khung viền vì thư viện không hỗ trợ'],
+  var wsCl = wb.addWorksheet('Cach lap');
+  wsCl.getColumn(1).width = 46; wsCl.getColumn(2).width = 18; wsCl.getColumn(3).width = 22;
+  wsCl.getColumn(4).width = 16; wsCl.getColumn(5).width = 16; wsCl.getColumn(6).width = 18; wsCl.getColumn(7).width = 18;
+  var dong = [
+    ['CÁCH LẬP BẢNG GIAO — do hệ thống tính'],
     ['Kỳ', xt.ky], ['Đội', S.maDonVi], ['Số công nhân', xt.soDong],
     [],
     ['', 'Quy khô (kg)', 'Nguyên liệu (kg)', 'DRC'],
@@ -1995,12 +2023,29 @@ function xtXuatFile() {
     ['Mủ chén đặt sàn cho từng người rồi chia phần dư theo sản lượng thực hiện.'],
     ['Làm tròn lũy kế nên tổng chia ra khớp tuyệt đối. Nguyên liệu = quy khô ÷ DRC.'],
     []
-  ].concat(bangTo));
-  tt['!cols'] = [{ wch: 46 }, { wch: 18 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 18 }];
-  XLSX.utils.book_append_sheet(wb, tt, 'Cach lap');
+  ];
+  var bangTo = [['Tổ', 'Số CN', 'Giao chén (QK)', 'Giao dây (QK)', 'Giao tổng (QK)', 'Chén (nguyên liệu)', 'Dây (nguyên liệu)']];
+  for (var q = 0; q < dsTo.length; q++) {
+    var g = theoTo[dsTo[q]], a = 0, b = 0, c2 = 0, d2 = 0;
+    for (var z = 0; z < g.length; z++) { a += g[z].giaoChen; b += g[z].giaoDay; c2 += g[z].nlChen; d2 += g[z].nlDay; }
+    bangTo.push([dsTo[q], g.length, a, b, a + b, c2, d2]);
+  }
+  dong = dong.concat(bangTo);
+  for (var rr = 0; rr < dong.length; rr++) {
+    for (var cc2 = 0; cc2 < dong[rr].length; cc2++) {
+      var v = dong[rr][cc2];
+      if (v === undefined || v === null) continue;
+      wsCl.getCell(rr + 1, cc2 + 1).value = v;
+      wsCl.getCell(rr + 1, cc2 + 1).font = { size: 9, name: 'Times New Roman' };
+    }
+  }
 
-  // Chỉ bỏ ký tự Windows cấm đặt tên file, giữ nguyên chữ có dấu ("Đ1" chứ không thành "_1").
-  XLSX.writeFile(wb, 'giao_sl_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx');
+  var ten2 = 'giao_sl_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx';
+  wb.xlsx.writeBuffer().then(function (buf) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.download = ten2; a.click();
+  });
 }
 
 /** Ghi thật — chỉ chạy khi người dùng đã bấm "Xác nhận ghi" trong popup. */
