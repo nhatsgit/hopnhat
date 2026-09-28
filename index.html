@@ -591,7 +591,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <b>Chốt bảng lương</b>
           <span class="nhan-mo" style="font-size:13px">Tính lại từ số ĐÃ DUYỆT, ghi một bản chụp vào cơ sở dữ liệu.</span>
-          <button class="btn chinh nho" id="nutChotLuong" style="margin-left:auto">Chốt bảng lương tháng</button>
+          <button class="btn nho" id="nutMoKhoMieng" style="margin-left:auto">Nhập khô miệng cạo</button>
+          <button class="btn chinh nho" id="nutChotLuong">Chốt bảng lương tháng</button>
         </div>
       </div>
       <div class="the" style="margin-bottom:12px;padding:12px 16px;font-size:13px" id="giaDinhLuong"></div>
@@ -736,6 +737,24 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <div class="than-hop" id="thanXemTruocLuong">
       <div id="xtLuongTomTat"></div>
       <div class="cuon cuon-doc"><table id="bangXemTruocLuong"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup nhập hỗ trợ khô miệng cạo hàng tháng — nhập tay hàng loạt hoặc từ file Excel mẫu -->
+<div class="nen-mo" id="nenKhoMieng">
+  <div class="hop-thoai" style="max-width:820px">
+    <div class="dau-hop">
+      <h2>Nhập hỗ trợ khô miệng cạo — <span id="kmTieuDeKy"></span></h2>
+      <input type="file" id="fileKhoMieng" accept=".xlsx" style="display:none">
+      <button class="btn nho" id="nutKmTaiMau">Tải mẫu Excel</button>
+      <button class="btn nho" id="nutKmNhapFile">Nhập từ Excel</button>
+      <button class="btn chinh nho" id="nutKmLuu">Lưu</button>
+      <button class="btn nho" id="nutKmHuy">Đóng</button>
+    </div>
+    <div class="than-hop" id="thanKhoMieng">
+      <div id="kmTomTat" style="margin-bottom:10px;font-size:13px"></div>
+      <div class="cuon cuon-doc"><table id="bangKhoMieng"></table></div>
     </div>
   </div>
 </div>
@@ -2144,9 +2163,9 @@ function veXemTruocLuong(xt, thamSo) {
   var h = '<thead><tr><th>Mã CN</th><th>Họ và tên</th><th>Số CCCD</th><th class="p">Công thường</th><th class="p">Công lễ/CN</th>' +
     '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th>Xếp loại</th>' +
     '<th class="p">Lương công</th><th class="p">SP chén</th><th class="p">SP dây</th>' +
-    '<th class="p">Vượt (kg)</th><th class="p">Lương vượt</th><th class="p">Chuyên cần</th>' +
+    '<th class="p">Vượt (kg)</th><th class="p">Lương vượt</th><th class="p">Công KM</th><th class="p">Tiền KM</th><th class="p">Chuyên cần</th>' +
     '<th class="p">Tổng thu nhập</th><th class="p">BH 2%</th><th class="p">Thuế</th><th class="p">Thực nhận</th></tr></thead><tbody>';
-  if (!ds.length) h += '<tr><td colspan="18"><div class="rong">Không có dòng nào.</div></td></tr>';
+  if (!ds.length) h += '<tr><td colspan="20"><div class="rong">Không có dòng nào.</div></td></tr>';
   for (var i = 0; i < ds.length; i++) {
     var r = ds[i];
     h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
@@ -2159,6 +2178,8 @@ function veXemTruocLuong(xt, thamSo) {
       '<td class="p num">' + soVN(r.luongDay, 0) + '</td>' +
       '<td class="p num">' + (r.vuot ? soVN(r.vuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td class="p num">' + (r.luongVuot ? soVN(r.luongVuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p num">' + (r.hoTroKhoCong ? soVN(r.hoTroKhoCong, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p num">' + (r.hoTroKhoTien ? soVN(r.hoTroKhoTien, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td class="p num">' + soVN(r.chuyenCan, 0) + '</td>' +
       '<td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
       '<td class="p num">' + soVN(r.bhxh, 0) + '</td><td class="p num">' + soVN(r.thue, 0) + '</td>' +
@@ -2198,6 +2219,138 @@ function ghiChotLuong() {
     })
     .catch(function (e) {
       nutOk.disabled = false; nutOk.textContent = 'Xác nhận chốt';
+      baoLoi('thongBao', e.message);
+    });
+}
+
+/* =====================================================================
+   Ho tro kho mieng cao — doi truong nhap tay so cong moi thang (khong tu
+   tinh duoc nhu cham cong/san luong). Nhap hang loat truc tiep tren luoi,
+   hoac tai mau Excel co san danh sach cong nhan -> dien -> nhap lai file do.
+   ===================================================================== */
+var _kmDuLieu = null;   // { ky, donGia, daNhap, tong, rows: [{maCn, ten, cccd, to, soCong}] }
+
+function moKhoMieng() {
+  var ky = $('lgKy').value;
+  if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
+  $('kmTieuDeKy').textContent = ky;
+  $('bangKhoMieng').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('kmTomTat').innerHTML = '';
+  $('nenKhoMieng').classList.add('hien');
+  goiAPI('hoTroKhoDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 60000)
+    .then(function (d) { _kmDuLieu = d; veBangKhoMieng(); })
+    .catch(function (e) { baoLoi('thongBao', e.message); dongKhoMieng(); });
+}
+
+function dongKhoMieng() { $('nenKhoMieng').classList.remove('hien'); }
+
+function veBangKhoMieng() {
+  var d = _kmDuLieu;
+  $('kmTomTat').innerHTML = 'Đơn giá <b>' + soVN(d.donGia, 0) + '</b> riel/công · ' + soVN(d.tong, 0) + ' công nhân' +
+    (d.daNhap ? ' · <span class="nhan-mo">đã có dữ liệu nhập trước đó — sửa rồi bấm Lưu sẽ ghi đè</span>'
+              : ' · <span class="nhan-mo">chưa ai nhập cho kỳ này</span>');
+  var h = '<thead><tr><th>STT</th><th>Mã CN</th><th>Họ và tên</th><th>Số CCCD</th><th class="p">Số công khô miệng</th></tr></thead><tbody>';
+  if (!d.rows.length) h += '<tr><td colspan="5"><div class="rong">Đội chưa có công nhân nào.</div></td></tr>';
+  for (var i = 0; i < d.rows.length; i++) {
+    var r = d.rows[i];
+    h += '<tr data-ma="' + thoat(r.maCn) + '"><td>' + (i + 1) + '</td><td><b>' + thoat(r.maCn) + '</b></td>' +
+      '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td>' + (r.cccd ? thoat(r.cccd) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p"><input class="o kmSoCong" type="number" min="0" max="31" step="1" style="width:90px" value="' +
+      (r.soCong || 0) + '"></td></tr>';
+  }
+  $('bangKhoMieng').innerHTML = h + '</tbody>';
+}
+
+/** Đọc lại giá trị đang gõ trên lưới (trước khi nạp file mẫu / lưu), để không mất gì đã sửa. */
+function _kmDocLuoi() {
+  var tr = $('bangKhoMieng').querySelectorAll('tbody tr');
+  var theoMa = {};
+  for (var i = 0; i < tr.length; i++) {
+    var ma = tr[i].getAttribute('data-ma'), o = tr[i].querySelector('.kmSoCong');
+    if (ma && o) theoMa[ma] = Number(o.value) || 0;
+  }
+  return theoMa;
+}
+
+function kmTaiMauExcel() {
+  if (!_kmDuLieu || !window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
+  var hienTai = _kmDocLuoi();
+  var wb = new ExcelJS.Workbook();
+  var ws = wb.addWorksheet('KHO MIENG CAO');
+  ws.columns = [
+    { header: 'STT', width: 6 }, { header: 'Mã CN', width: 14 },
+    { header: 'Họ và tên', width: 24 }, { header: 'Số CCCD', width: 14 },
+    { header: 'Số công khô miệng cạo', width: 20 }
+  ];
+  ws.getRow(1).font = { bold: true };
+  var ds = _kmDuLieu.rows;
+  for (var i = 0; i < ds.length; i++) {
+    var r = ds[i];
+    ws.addRow([i + 1, r.maCn, r.ten || '', r.cccd || '', hienTai[r.maCn] || r.soCong || '']);
+  }
+  var ten = 'mau_kho_mieng_cao_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + _kmDuLieu.ky + '.xlsx';
+  wb.xlsx.writeBuffer().then(function (buf) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.download = ten; a.click();
+  });
+}
+
+function kmNhapFile() { $('fileKhoMieng').value = ''; $('fileKhoMieng').click(); }
+
+function kmXuLyFile(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file || !_kmDuLieu || !window.ExcelJS) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    var wb = new ExcelJS.Workbook();
+    wb.xlsx.load(reader.result).then(function () {
+      var ws = wb.worksheets[0];
+      var theoMa = {};
+      ws.eachRow(function (row, soHang) {
+        if (soHang === 1) return;      // dòng tiêu đề
+        var maCn = String(row.getCell(2).value || '').trim();
+        var soCong = Number(row.getCell(5).value) || 0;
+        if (maCn) theoMa[maCn] = soCong;
+      });
+      var soKhop = 0;
+      var tr = $('bangKhoMieng').querySelectorAll('tbody tr');
+      for (var i = 0; i < tr.length; i++) {
+        var ma = tr[i].getAttribute('data-ma');
+        if (theoMa[ma] === undefined) continue;
+        tr[i].querySelector('.kmSoCong').value = theoMa[ma];
+        soKhop++;
+      }
+      baoLoi('thongBao', '');
+      $('kmTomTat').innerHTML += ' · <b>Đã nhập từ file:</b> khớp ' + soVN(soKhop, 0) + ' / ' + soVN(Object.keys(theoMa).length, 0) + ' mã CN trong file.';
+    }).catch(function (err) { baoLoi('thongBao', 'Không đọc được file Excel: ' + err.message); });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function kmLuu() {
+  if (!_kmDuLieu) return;
+  var theoMa = _kmDocLuoi();
+  var dong = _kmDuLieu.rows.map(function (r) { return { maCn: r.maCn, soCong: theoMa[r.maCn] || 0 }; });
+  var nut = $('nutKmLuu');
+  nut.disabled = true; nut.textContent = 'Đang lưu…';
+  goiAPI('hoTroKhoLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: _kmDuLieu.ky, dong: JSON.stringify(dong) }, 120000)
+    .then(function (d) {
+      nut.disabled = false; nut.textContent = 'Lưu';
+      dongKhoMieng();
+      $('thongBao').innerHTML =
+        '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+        'Đã lưu hỗ trợ khô miệng cạo kỳ ' + thoat(d.ky) + ': ' + soVN(d.soCoCong, 0) + ' / ' + soVN(d.soDong, 0) +
+        ' người có công, tổng tiền ' + soVN(d.tongTien, 0) + ' riel. ' +
+        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
+                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
+                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
+        '</div>';
+      taiLuong();
+    })
+    .catch(function (e) {
+      nut.disabled = false; nut.textContent = 'Lưu';
       baoLoi('thongBao', e.message);
     });
 }
@@ -2243,86 +2396,275 @@ function oKhmer(cell, text, fontChung) {
   };
 }
 
+/* Chu Khmer/Viet trich NGUYEN VAN tu bieu mau THANH TOAN that cua doi (2026.08 - DSX1) — khong go lai bang tay. */
+var FORM_LUONG = {
+ "letter": {
+  "V1": "ព្រះរាជាណាចក្រកម្ពូជា",
+  "V2": "ជាតិ សាសនា ព្រះមហាក្សត្រ",
+  "V3": "VƯƠNG QUỐC CAMPUCHIA",
+  "V4": "Dân tộc - Tôn giáo - Quốc Vương",
+  "A2": "ស៊ី.អ.ស៊ី.ខេ.២",
+  "A3": "អភិវឌ្ឍន៍កៅស៊ូ ខូអិលធីឌី",
+  "A4": "C.R.C.K.2 APHIVATH ",
+  "A5": "CAOUTCHOUC CO., LTD"
+ },
+ "title": "តារាងទូទាត់ប្រាក់បៀវត្សកម្មករចៀរជ័រ ខែ {T} ឆ្នាំ {N}\nBẢNG THANH TOÁN TIỀN LƯƠNG CÔNG NHÂN KHAI THÁC THÁNG {T} NĂM {N}",
+ "boPhan": "កងផលិត/Bộ phận: Đội sản xuất số 01",
+ "dvt": "ĐVT: KHR",
+ "h8": {
+  "A8": "ល.រ\nSTT",
+  "B8": "លេខអត្តសញ្ញាណប័ណ្ណ ឬ អត្តលេខកម្មករ\nSố chứng minh nhân dân/ Mã số công nhân",
+  "C8": "គោត្តនាម និងនាម\nHọ và tên",
+  "D8": "ឧបត្ថម្ភចំពោះបាំងចៀរដែលមានជំងឺស្ងួតមុខចៀរ (4000រៀល/ថ្ងៃ) Hỗ trợ phần cây khô miệng cạo (4000/ngày)",
+  "F8": "ប្រាក់ធ្វើការថ្ងៃធម្មតា\n(16000រៀល/ថ្ងៃ) \nLương ngày thường\n(16000/ngày)",
+  "H8": "ប្រាក់ធ្វើការថ្ងៃអាទិត្យនិងថ្ងៃបុណ្យ (32000រៀល/ថ្ងៃ) \nLương ngày chủ nhật và ngày lễ (32000/ngày)",
+  "J8": "ចំណាត់ថ្នាក់\nXếp loại",
+  "K8": "ប្រាក់បរិមាណជ័រ\nLương SL mủ đông chén",
+  "O8": "ប្រាក់ទិន្នផលជ័រខ្សែ\nLương SL mủ dây",
+  "S8": "ប្រាក់បរិមាណជ័រលើស\nLương vượt sản lượng mủ đông chén và mủ dây",
+  "V8": "ប្រាក់ឧស្សាហ៍ព្យាយាម\nLương chuyên cần",
+  "W8": "ឧបត្ថម្ភអនុប្រធានសហជិប",
+  "X8": "ប្រាក់ខែសរុប\nTổng tiền lương",
+  "Y8": "ប្រាក់ត្រូវបង់\nSố tiền phải đóng\n2%",
+  "Z8": "ពន្ធប្រាក់បៀវត្ស\nThuế TNCN",
+  "AA8": "ទឹកប្រាក់នៅសល់ត្រូវទទួល\nCòn nhận",
+  "AB8": "ហត្ថលេខា ឬស្នាមមេដៃទទួលប្រាក់\nKý nhận​ hoặc lăn tay"
+ },
+ "h9": {
+  "D9": "ចំនួនថ្ងៃធ្វើការក្នុងខែ\nSố công​/ ​​​​​tháng",
+  "E9": "ជាទឹកប្រាក់\nTiền lương",
+  "F9": "ចំនួនថ្ងៃធ្វើការក្នុងខែ\nSố công​/ ​​​​​tháng",
+  "G9": "ជាទឹកប្រាក់\nTiền lương",
+  "H9": "ចំនួនថ្ងៃធ្វើការក្នុងខែ\nSố công​/ ​​​​​tháng",
+  "I9": "ជាទឹកប្រាក់\nTiền lương",
+  "K9": "Sản lượng mủ giao quy khô (kg)",
+  "L9": "បរិមាណជ័កៅស៊ូស្ងួត\nSản lượng mủ thực hiện quy khô\n( Kg )\n",
+  "M9": "ថ្លៃឯកតា\nĐơn giá",
+  "N9": "ជាទឹកប្រាក់\nTiền lương",
+  "O9": "Sản lượng giao mủ dây quy khô (kg)",
+  "P9": "បរិមាណជ័កៅស៊ូស្ងួត\nSản lượng thực hiện mủ dây quy khô (kg)",
+  "Q9": "ថ្លៃឯកតា\nĐơn giá",
+  "R9": "ជាទឹកប្រាក់\nTiền lương",
+  "S9": "បរិមាណជ័កៅស៊ូស្ងួត\nSản lượng mủ quy khô vượt\n( Kg )\n",
+  "T9": "ថ្លៃឯកតា\nĐơn giá",
+  "U9": "ជាទឹកប្រាក់\nTiền lương",
+  "W9": "Phụ cấp Tổ phó Công đoàn"
+ },
+ "r10": [
+  "A",
+  "B",
+  "C",
+  1,
+  "2=1*4000",
+  3,
+  "4=3*16000",
+  5,
+  "6=5*32000",
+  7,
+  8,
+  9,
+  10,
+  "11=9*10",
+  12,
+  13,
+  14,
+  "15=13*14",
+  16,
+  17,
+  "18=16*17",
+  19,
+  17,
+  "20=2+4+6+11+15+18+19",
+  21,
+  22,
+  "23=20-21-22",
+  "D"
+ ],
+ "tong": "សរុបរួម/TỔNG CỘNG",
+ "chu410": "សរសេរជាអក្សរ៖………………………………………………",
+ "ngayKh": "កំពង់ធំ ថ្ងៃទី  31 ខែ {T} ឆ្នាំ {N}",
+ "ngayVn": "Kampong Thom, ngày  {D} tháng {T} năm {N}",
+ "s414": {
+  "A414": "អគ្គនាយក",
+  "I414": "ការិយាល័យហរិញ្ញវត្",
+  "N414": "ការិយាល័យចាត់តាំងរដ្ឋបាល",
+  "V414": "ក្រុមផលិត",
+  "Z414": "អ្នករៀបចំ"
+ },
+ "s415": {
+  "A415": "TỔNG GIÁM ĐỐC ",
+  "H415": "PHÒNG TC-KT",
+  "L415": "PHÒNG TC-HC",
+  "V415": "ĐỘI SẢN XUẤT",
+  "Z415": "LẬP BIỂU"
+ }
+};
+
+/** Doc so nguyen ra chu tieng Viet (dung cho dong "So tien bang chu" cua bieu mau). */
+function docSoVN(n) {
+  n = Math.round(Math.abs(n));
+  if (n === 0) return 'không';
+  var chu = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+  function ba(x, day) {
+    var tram = Math.floor(x / 100), chuc = Math.floor((x % 100) / 10), dv = x % 10, s = [];
+    if (tram > 0 || day) s.push(chu[tram] + ' trăm');
+    if (chuc > 1) s.push(chu[chuc] + ' mươi');
+    else if (chuc === 1) s.push('mười');
+    else if ((tram > 0 || day) && dv > 0) s.push('linh');
+    if (dv > 0) {
+      if (chuc > 1 && dv === 1) s.push('mốt');
+      else if (chuc >= 1 && dv === 5) s.push('lăm');
+      else if (chuc > 1 && dv === 4) s.push('tư');
+      else s.push(chu[dv]);
+    }
+    return s.join(' ');
+  }
+  var hang = ['', ' nghìn', ' triệu', ' tỷ'], nhom = [], i;
+  while (n > 0) { nhom.push(n % 1000); n = Math.floor(n / 1000); }
+  var kq = [];
+  for (i = nhom.length - 1; i >= 0; i--) {
+    if (nhom[i] === 0) continue;
+    kq.push(ba(nhom[i], i < nhom.length - 1) + hang[i]);
+  }
+  return kq.join(' ');
+}
+
 function xtXuatFileLuong() {
   if (!_ltDuLieu || !window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
-  var xt = _ltDuLieu.xt, ds = xt.rows || [];
+  var xt = _ltDuLieu.xt, ds = xt.rows || [], F = FORM_LUONG;
   var m = String(xt.ky).match(/^(\d{4})-(\d{2})$/);
-  var thang = m ? m[2] : '', nam = m ? m[1] : '';
+  var nam = m ? m[1] : '', thang = m ? String(Number(m[2])) : '';
+  var ngayCuoi = m ? new Date(Number(m[1]), Number(m[2]), 0).getDate() : 30;
+  var dg = xt.donGia || {};
+  var gKm = dg.hoTroKho || 4000, gTh = dg.thuong || 16000, gLe = dg.le || 32000;
+  var gChen = dg.chen || 0, gDay = dg.day || 0, gVuot = dg.vuot || 0;
+  var dt = function (s) {
+    return String(s).replace(/\b32000\b/g, gLe).replace(/\b16000\b/g, gTh).replace(/\b4000\b/g, gKm)
+      .replace(/\{T\}/g, thang).replace(/\{N\}/g, nam).replace(/\{D\}/g, ngayCuoi);
+  };
+  var boPhan = String(F.boPhan);
+  var soDoi = String(S.maDonVi || '').replace(/\D/g, '');
+  if (soDoi) boPhan = boPhan.replace(/Đội sản xuất số \d+/, 'Đội sản xuất số ' + ('0' + soDoi).slice(-2));
 
   var wb = new ExcelJS.Workbook();
-  var ws = wb.addWorksheet('THANH TOAN');
-  var cotRong = [6, 14, 22, 14, 11, 11, 13, 11, 13, 12, 12, 12, 12, 12, 11, 14, 11, 11, 12, 16];
-  cotRong.forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
-
-  var dam = { bold: true, size: 9, name: 'Times New Roman' };
-  var thuong = { size: 9, name: 'Times New Roman' };
-
-  ws.mergeCells('A1:T1');
-  oKhmer(ws.getCell('A1'),
-    'តារាងទូទាត់ប្រាក់បៀវត្សកម្មករចៀរជ័រ ខែ ' + thang + ' ឆ្នាំ ' + nam +
-    '\nBẢNG THANH TOÁN TIỀN LƯƠNG CÔNG NHÂN KHAI THÁC THÁNG ' + thang + ' NĂM ' + nam, dam);
-  ws.getRow(1).height = 34;
-  ws.getCell('A1').alignment = { wrapText: true, vertical: 'middle' };
-
-  ws.mergeCells('A2:T2');
-  oKhmer(ws.getCell('A2'), 'កងផលិត/Bộ phận: Đội ' + S.maDonVi, thuong);
-
-  var tieuDe = [
-    'ល.រ\nSTT', 'អត្តលេខកម្មករ\nMã công nhân',
-    'គោត្តនាម និងនាម\nHọ và tên', 'លេខអត្តសញ្ញាណប័ណ្ណ\nSố CCCD',
-    'ចំណាត់ថ្នាក់\nXếp loại',
-    'ចំនួនថ្ងៃធ្វើការ\nSố công thường', 'ប្រាក់ធ្វើការថ្ងៃធម្មតា\nLương ngày thường',
-    'ចំនួនថ្ងៃធ្វើការ\nSố công lễ/CN', 'ប្រាក់ធ្វើការថ្ងៃអាទិត្យ និងបុណ្យ\nLương ngày lễ/CN',
-    'ជ័រចាន (គីឡូក្រាម)\nQuy khô mủ chén (kg)', 'ប្រាក់បរិមាណជ័រ\nLương SL mủ đông chén',
-    'ជ័រខ្សែ (គីឡូក្រាម)\nQuy khô mủ dây (kg)', 'ប្រាក់ទិន្នផលជ័រខ្សែ\nLương SL mủ dây',
-    'ប្រាក់បរិមាណជ័រលើស\nLương vượt sản lượng', 'ប្រាក់ឧស្សាហ៍ព្យាយាម\nLương chuyên cần',
-    'ប្រាក់ខែសរុប\nTổng tiền lương', 'ប្រាក់ត្រូវបង់ 2%\nSố tiền phải đóng 2%',
-    'ពន្ធប្រាក់បៀវត្ស\nThuế TNCN', 'ទឹកប្រាក់នៅសល់ត្រូវទទួល\nCòn nhận',
-    'ហត្ថលេខា ឬស្នាមមេដៃ\nKý nhận'
-  ];
-  var hangTieuDe = 3;
-  ws.getRow(hangTieuDe).height = 48;
-  for (var c = 0; c < tieuDe.length; c++) {
-    var cell = ws.getCell(hangTieuDe, c + 1);
-    oKhmer(cell, tieuDe[c], dam);
-    cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE9EE' } };
-  }
-
-  var r = hangTieuDe + 1;
-  for (var i = 0; i < ds.length; i++) {
-    var x = ds[i], rr = ws.getRow(r);
-    ws.getCell(r, 1).value = i + 1;
-    ws.getCell(r, 2).value = x.maCn;
-    ws.getCell(r, 3).value = x.ten || '';
-    ws.getCell(r, 4).value = x.cccd || '';
-    ws.getCell(r, 5).value = x.xepLoai || '';
-    ws.getCell(r, 6).value = x.congThuong;
-    ws.getCell(r, 7).value = Math.round(x.congThuong * (xt.donGia ? xt.donGia.thuong : 0));
-    ws.getCell(r, 8).value = x.congLe;
-    ws.getCell(r, 9).value = Math.round(x.congLe * (xt.donGia ? xt.donGia.le : 0));
-    ws.getCell(r, 10).value = x.quyKhoChen;
-    ws.getCell(r, 11).value = x.luongChen;
-    ws.getCell(r, 12).value = x.quyKhoDay;
-    ws.getCell(r, 13).value = x.luongDay;
-    ws.getCell(r, 14).value = x.luongVuot;
-    ws.getCell(r, 15).value = x.chuyenCan;
-    ws.getCell(r, 16).value = x.tong;
-    ws.getCell(r, 17).value = x.bhxh;
-    ws.getCell(r, 18).value = x.thue;
-    ws.getCell(r, 19).value = x.thucNhan;
-    for (var cc = 6; cc <= 19; cc++) { ws.getCell(r, cc).font = thuong; ws.getCell(r, cc).numFmt = '#,##0'; }
-    for (var cc0 = 1; cc0 <= 5; cc0++) ws.getCell(r, cc0).font = thuong;
-    r++;
-  }
-  ws.mergeCells(r, 1, r, 5);
-  oKhmer(ws.getCell(r, 1), 'សរុប / TỔNG CỘNG', dam);
-  var congThuc = ['F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S'];
-  congThuc.forEach(function (col) {
-    var cell = ws.getCell(col + r);
-    cell.value = { formula: 'SUM(' + col + (hangTieuDe + 1) + ':' + col + (r - 1) + ')' };
-    cell.font = dam; cell.numFmt = '#,##0';
+  var ws = wb.addWorksheet('THANH TOAN', {
+    pageSetup: { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+                 margins: { left: 0.12, right: 0.12, top: 0.2, bottom: 0.12, header: 0.1, footer: 0.1 } }
   });
+  var rong = [6.3, 18.8, 24, 10.8, 12.7, 9.7, 13.7, 9.8, 14.8, 8.2, 12, 13.7, 7.3, 14, 12, 13.7, 7.3, 14, 9.7, 8.7, 15.8, 13.3, 11.7, 13.8, 13.7, 16.2, 17.7, 43.5];
+  rong.forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
+  ws.getColumn(23).hidden = true;                    // cot W "Phu cap To pho Cong doan" — an nhu bieu mau that
+
+  var TNR = 'Times New Roman';
+  var font = function (size, bold) { return { name: TNR, size: size, bold: !!bold }; };
+  var vien = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  var giua = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  var chu = function (addr, text, f, al) {
+    var c = ws.getCell(addr); oKhmer(c, text, f); c.alignment = al || giua; return c;
+  };
+  var gop = function (a) { ws.mergeCells(a); };
+
+  // --- Quoc hieu + ten cong ty (hang 1-5)
+  [1, 2, 3, 4, 5].forEach(function (r) { ws.getRow(r).height = 33; });
+  ['V1:AB1', 'V2:AB2', 'V3:AB3', 'V4:AB4', 'A2:C2', 'A3:C3', 'A4:C4', 'A5:C5'].forEach(gop);
+  chu('V1', F.letter.V1, font(18, true)); chu('V2', F.letter.V2, font(18, true));
+  chu('V3', F.letter.V3, font(18, true)); chu('V4', F.letter.V4, font(18, true));
+  chu('A2', F.letter.A2, font(18, true)); chu('A3', F.letter.A3, font(18, true));
+  chu('A4', F.letter.A4, font(18, true)); chu('A5', F.letter.A5, font(18, true));
+
+  // --- Tieu de bang + bo phan
+  gop('A6:AB6'); ws.getRow(6).height = 76;
+  chu('A6', dt(F.title), font(22, true));
+  ws.getRow(7).height = 30; gop('A7:I7');
+  chu('A7', boPhan, font(20, true), { horizontal: 'left', vertical: 'middle', wrapText: true });
+  chu('AA7', F.dvt, font(14, true));
+
+  // --- Tieu de cot (hang 8-9) + hang ky hieu cong thuc (hang 10)
+  ws.getRow(8).height = 121; ws.getRow(9).height = 220; ws.getRow(10).height = 50.5;
+  ['A8:A9', 'B8:B9', 'C8:C9', 'D8:E8', 'F8:G8', 'H8:I8', 'J8:J9', 'K8:N8', 'O8:R8', 'S8:U8',
+   'V8:V9', 'W8:W9', 'X8:X9', 'Y8:Y9', 'Z8:Z9', 'AA8:AA9', 'AB8:AB9'].forEach(gop);
+  Object.keys(F.h8).forEach(function (k) { chu(k, dt(F.h8[k]), font(12, true)); });
+  Object.keys(F.h9).forEach(function (k) { chu(k, dt(F.h9[k]), font(12, true)); });
+  for (var c0 = 1; c0 <= 28; c0++) for (var r0 = 8; r0 <= 9; r0++) ws.getCell(r0, c0).border = vien;
+  F.r10.forEach(function (v, i) {
+    var cell = ws.getCell(10, i + 1);
+    cell.value = typeof v === 'string' ? dt(v) : v;
+    cell.font = font(12, true); cell.alignment = giua; cell.border = vien;
+  });
+
+  // --- Du lieu tung cong nhan (bang cong thuc song, giong bieu mau that)
+  var hs = function (xl) { return xl === 'B' ? 0.9 : (xl === 'C' ? 0.8 : 1); };
+  var tong = {};
+  var cotTong = ['D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'N', 'O', 'P', 'R', 'S', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA'];
+  cotTong.forEach(function (k) { tong[k] = 0; });
+  var R0 = 11, r = R0;
+  for (var i = 0; i < ds.length; i++, r++) {
+    var x = ds[i], h = hs(x.xepLoai);
+    var E = Math.round((x.hoTroKhoCong || 0) * gKm), G = Math.round(x.congThuong * gTh), I = Math.round(x.congLe * gLe);
+    var N = Math.round(gChen * x.quyKhoChen * h), Rr = Math.round(gDay * x.quyKhoDay * h);
+    var giaoT = (x.giaoChen || 0) + (x.giaoDay || 0), th = x.quyKhoChen + x.quyKhoDay;
+    var Sv = giaoT > 0 && th > giaoT ? th - giaoT : 0;
+    var U = Math.round(gVuot * Sv * h);
+    var X = E + G + I + N + Rr + U + x.chuyenCan, AA = X - x.bhxh - x.thue;
+    var hsF = 'IF(OR(J' + r + '="A",J' + r + '=""),1,IF(J' + r + '="B",0.9,0.8))';
+    var v = {
+      A: i + 1, B: x.cccd || x.maCn, C: x.ten || x.maCn, D: x.hoTroKhoCong || null,
+      E: { formula: 'D' + r + '*' + gKm, result: E },
+      F: x.congThuong, G: { formula: 'F' + r + '*' + gTh, result: G },
+      H: x.congLe, I: { formula: 'H' + r + '*' + gLe, result: I },
+      J: x.xepLoai || '', K: x.giaoChen || 0, L: x.quyKhoChen, M: gChen,
+      N: { formula: 'ROUND(M' + r + '*L' + r + '*' + hsF + ',0)', result: N },
+      O: x.giaoDay || 0, P: x.quyKhoDay, Q: gDay,
+      R: { formula: 'ROUND(Q' + r + '*P' + r + '*' + hsF + ',0)', result: Rr },
+      S: { formula: 'IF(AND((K' + r + '+O' + r + ')>0,(P' + r + '+L' + r + ')>(K' + r + '+O' + r + ')),(P' + r + '+L' + r + ')-(K' + r + '+O' + r + '),0)', result: Sv },
+      T: gVuot, U: { formula: 'ROUND(T' + r + '*S' + r + '*' + hsF + ',0)', result: U },
+      V: x.chuyenCan, W: null,
+      X: { formula: 'E' + r + '+G' + r + '+I' + r + '+N' + r + '+R' + r + '+U' + r + '+V' + r, result: X },
+      Y: x.bhxh, Z: x.thue, AA: { formula: 'X' + r + '-Y' + r + '-Z' + r, result: AA }, AB: null
+    };
+    ws.getRow(r).height = 159;
+    Object.keys(v).forEach(function (col) {
+      var cell = ws.getCell(col + r);
+      if (v[col] !== null) cell.value = v[col];
+      cell.font = font(13, false); cell.border = vien;
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: col === 'C' };
+      if (col !== 'A' && col !== 'B' && col !== 'C' && col !== 'J') cell.numFmt = '#,##0';
+      if (col === 'B') cell.numFmt = '@';
+      var val = v[col] && typeof v[col] === 'object' ? v[col].result : v[col];
+      if (tong[col] !== undefined && typeof val === 'number') tong[col] += val;
+    });
+  }
+
+  // --- Dong tong cong + so tien bang chu
+  var rt = r, rEnd = r - 1;
+  ws.getRow(rt).height = 54; gop('A' + rt + ':C' + rt);
+  chu('A' + rt, F.tong, font(14, true));
+  for (var ct = 1; ct <= 28; ct++) ws.getCell(rt, ct).border = vien;
+  cotTong.forEach(function (col) {
+    var cell = ws.getCell(col + rt);
+    cell.value = { formula: 'SUBTOTAL(9,' + col + R0 + ':' + col + rEnd + ')', result: tong[col] };
+    cell.font = font(13, true); cell.numFmt = '#,##0'; cell.alignment = giua;
+  });
+  ws.getRow(rt + 1).height = 38; chu('A' + (rt + 1), F.chu410, font(14, true), { horizontal: 'left', vertical: 'middle' });
+  ws.getRow(rt + 2).height = 39; gop('A' + (rt + 2) + ':AA' + (rt + 2));
+  chu('A' + (rt + 2), '(Số tiền bằng chữ: ' + docSoVN(tong.AA).replace(/^./, function (s) { return s.toUpperCase(); }) + ' Riel ).',
+      font(14, true), { horizontal: 'left', vertical: 'middle', wrapText: true });
+
+  // --- Noi/ngay ky + khung chu ky
+  var rk = rt + 3;
+  ws.getRow(rk).height = 34; ws.getRow(rk + 1).height = 29;
+  gop('Y' + rk + ':AB' + rk); gop('Y' + (rk + 1) + ':AB' + (rk + 1));
+  chu('Y' + rk, dt(F.ngayKh), font(14, true)); chu('Y' + (rk + 1), dt(F.ngayVn), font(14, true));
+  var rs = rk + 2;
+  ws.getRow(rs).height = 38; ws.getRow(rs + 1).height = 55;
+  ['A' + rs + ':C' + rs, 'A' + (rs + 1) + ':C' + (rs + 1), 'N' + rs + ':R' + rs, 'H' + (rs + 1) + ':K' + (rs + 1),
+   'L' + (rs + 1) + ':U' + (rs + 1), 'V' + rs + ':Y' + rs, 'V' + (rs + 1) + ':Y' + (rs + 1),
+   'Z' + rs + ':AB' + rs, 'Z' + (rs + 1) + ':AB' + (rs + 1)].forEach(gop);
+  Object.keys(F.s414).forEach(function (k) { chu(k.replace('414', rs), F.s414[k], font(14, true)); });
+  Object.keys(F.s415).forEach(function (k) { chu(k.replace('415', rs + 1), F.s415[k], font(14, true)); });
+
+  ws.pageSetup.printTitlesRow = '8:10';
+  ws.pageSetup.printArea = 'A1:AB' + (rs + 1);
 
   var ten = 'bang_luong_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + xt.ky + '.xlsx';
   wb.xlsx.writeBuffer().then(function (buf) {
@@ -2367,9 +2709,9 @@ function taiLuong() {
     var h = '<thead><tr><th>Mã CN</th><th>Họ và tên</th><th>Số CCCD</th><th class="p">Công thường</th><th class="p">Công lễ/CN</th>' +
       '<th class="p">Quy khô chén</th><th class="p">Quy khô dây</th><th class="p">SL giao</th><th>Xếp loại</th>' +
       '<th class="p">Lương công</th><th class="p">SP mủ chén</th><th class="p">SP mủ dây</th>' +
-      '<th class="p">Vượt (kg)</th><th class="p">Lương vượt</th><th class="p">Chuyên cần</th>' +
+      '<th class="p">Vượt (kg)</th><th class="p">Lương vượt</th><th class="p">Công KM</th><th class="p">Tiền KM</th><th class="p">Chuyên cần</th>' +
       '<th class="p">Tổng thu nhập</th><th class="p">BH 2%</th><th class="p">Thuế</th><th class="p">Thực nhận</th><th>Chờ duyệt</th></tr></thead><tbody>';
-    if (!d.rows.length) h += '<tr><td colspan="20"><div class="rong">Không có dữ liệu.</div></td></tr>';
+    if (!d.rows.length) h += '<tr><td colspan="22"><div class="rong">Không có dữ liệu.</div></td></tr>';
     for (var i = 0; i < d.rows.length; i++) {
       var r = d.rows[i];
       h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
@@ -2383,6 +2725,8 @@ function taiLuong() {
         '<td class="p num">' + soVN(r.luongDay, 0) + '</td>' +
         '<td class="p num">' + (r.vuot ? soVN(r.vuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + (r.luongVuot ? soVN(r.luongVuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + (r.hoTroKhoCong ? soVN(r.hoTroKhoCong, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + (r.hoTroKhoTien ? soVN(r.hoTroKhoTien, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + soVN(r.chuyenCan, 0) + '</td>' +
         '<td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
         '<td class="p num">' + soVN(r.bhxh, 0) + '</td><td class="p num">' + soVN(r.thue, 0) + '</td>' +
@@ -2401,7 +2745,7 @@ function taiLuong() {
     if ($('lgTruoc')) $('lgTruoc').onclick = function () { S.trang--; taiLuong(); };
     if ($('lgSau')) $('lgSau').onclick = function () { S.trang++; taiLuong(); };
     $('nutCsvLuong').onclick = function () {
-      var cot = ['maCn', 'ten', 'cccd', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'giao', 'xepLoai', 'luongCong', 'luongChen', 'luongDay', 'vuot', 'luongVuot', 'chuyenCan', 'tong', 'bhxh', 'thue', 'thucNhan', 'choDuyet'];
+      var cot = ['maCn', 'ten', 'cccd', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'giao', 'xepLoai', 'luongCong', 'luongChen', 'luongDay', 'vuot', 'luongVuot', 'hoTroKhoCong', 'hoTroKhoTien', 'chuyenCan', 'tong', 'bhxh', 'thue', 'thucNhan', 'choDuyet'];
       var out = [cot.join(',')];
       for (var x = 0; x < d.rows.length; x++) out.push(cot.map(function (c) { return '"' + String(d.rows[x][c]).replace(/"/g, '""') + '"'; }).join(','));
       var a = document.createElement('a');
@@ -4761,6 +5105,14 @@ $('nutHuyXemTruocLuong').onclick = function () { dongXemTruocLuong(); baoLoi('th
 $('nutXacNhanChotLuong').onclick = ghiChotLuong;
 $('nutXtLuongXuatFile').onclick = xtXuatFileLuong;
 $('nenXemTruocLuong').onclick = function (e) { if (e.target === this) dongXemTruocLuong(); };
+
+$('nutMoKhoMieng').onclick = moKhoMieng;
+$('nutKmHuy').onclick = function () { dongKhoMieng(); baoLoi('thongBao', ''); };
+$('nutKmTaiMau').onclick = kmTaiMauExcel;
+$('nutKmNhapFile').onclick = kmNhapFile;
+$('fileKhoMieng').onchange = kmXuLyFile;
+$('nutKmLuu').onclick = kmLuu;
+$('nenKhoMieng').onclick = function (e) { if (e.target === this) dongKhoMieng(); };
 $('nutHuyXemTruoc').onclick = function () { dongXemTruoc(); baoLoi('thongBao', ''); };
 $('nutXacNhanGhi').onclick = ghiBangGiao;
 $('nutXtXuatFile').onclick = xtXuatFile;
