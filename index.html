@@ -1689,9 +1689,9 @@ function taiSlTheoCn(giuBao) {
       var r = d.rows[i];
       h += '<tr><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.to) + '</td>' +
         '<td class="p num">' + soVN(r.soNgay, 0) + '</td><td class="p num">' + soVN(r.tuoi, 1) + '</td>' +
-        '<td class="p num">' + soVN(r.chen, 1) + '</td><td class="p num">' + soVN(r.day, 1) + '</td>' +
-        '<td class="p num nhan-mo">' + (r.khac ? soVN(r.khac, 1) : '—') + '</td>' +
-        '<td class="p num"><b>' + soVN(r.coSo, 1) + '</b></td>' +
+        '<td class="p num">' + soVN(r.chen, 0) + '</td><td class="p num">' + soVN(r.day, 0) + '</td>' +
+        '<td class="p num nhan-mo">' + (r.khac ? soVN(r.khac, 0) : '—') + '</td>' +
+        '<td class="p num"><b>' + soVN(r.coSo, 0) + '</b></td>' +
         '<td class="p num">' + (r.giao ? soVN(r.giaoChen, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + (r.giao ? soVN(r.giaoDay, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + (r.giao ? soVN(r.giao, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
@@ -1824,7 +1824,7 @@ function veXemTruocGiao(xt, thamSo, tChen) {
       '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td>' + thoat(r.to) + '</td>' +
       '<td class="p num">' + soVN(r.cay, 0) + '</td>' +
-      '<td class="p num">' + soVN(r.thChen, 1) + '</td><td class="p num">' + soVN(r.thDay, 1) + '</td>' +
+      '<td class="p num">' + soVN(r.thChen, 0) + '</td><td class="p num">' + soVN(r.thDay, 0) + '</td>' +
       '<td class="p num">' + soVN(r.giaoChen, 0) + '</td><td class="p num">' + soVN(r.giaoDay, 0) + '</td>' +
       '<td class="p num"><b>' + soVN(r.giao, 0) + '</b></td>' +
       '<td class="p num nhan-mo">' + soVN(r.nlChen, 0) + '</td>' +
@@ -2057,12 +2057,12 @@ function taiLuong() {
       var r = d.rows[i];
       h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
         '<td class="p num">' + soVN(r.congThuong, 1) + '</td><td class="p num">' + soVN(r.congLe, 1) + '</td>' +
-        '<td class="p num">' + soVN(r.quyKhoChen, 1) + '</td><td class="p num">' + soVN(r.quyKhoDay, 1) + '</td>' +
+        '<td class="p num">' + soVN(r.quyKhoChen, 0) + '</td><td class="p num">' + soVN(r.quyKhoDay, 0) + '</td>' +
         '<td class="p num">' + (r.giao ? soVN(r.giao, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td>' + (r.xepLoai ? thoat(r.xepLoai) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + soVN(r.luongCong, 0) + '</td><td class="p num">' + soVN(r.luongChen, 0) + '</td>' +
         '<td class="p num">' + soVN(r.luongDay, 0) + '</td>' +
-        '<td class="p num">' + (r.vuot ? soVN(r.vuot, 1) : '<span class="nhan-mo">—</span>') + '</td>' +
+        '<td class="p num">' + (r.vuot ? soVN(r.vuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + (r.luongVuot ? soVN(r.luongVuot, 0) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="p num">' + soVN(r.chuyenCan, 0) + '</td>' +
         '<td class="p num"><b>' + soVN(r.tong, 0) + '</b></td>' +
