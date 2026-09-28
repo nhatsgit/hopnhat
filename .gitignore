@@ -8,3 +8,6 @@
 Code.gs
 .clasp*
 appsscript.json
+
+# Mẫu cấu trúc hồ sơ lương — KHÔNG chứa dữ liệu người (đã đối chiếu tên/CCCD khi trích)
+!mau_ho_so_luong.json

@@ -12,6 +12,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
   integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz"
   crossorigin="anonymous"></script>
+<!-- Dựng file "Hồ sơ lương" đầy đủ theo biểu mẫu của đội (nhiều tab) — xem xuat_ho_so_luong.js -->
+<script src="xuat_ho_so_luong.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
   integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
   crossorigin="anonymous"></script>
@@ -591,7 +593,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <b>Chốt bảng lương</b>
           <span class="nhan-mo" style="font-size:13px">Tính lại từ số ĐÃ DUYỆT, ghi một bản chụp vào cơ sở dữ liệu.</span>
-          <button class="btn nho" id="nutMoKhoMieng" style="margin-left:auto">Nhập khô miệng cạo</button>
+          <button class="btn nho" id="nutHoSoLuong" style="margin-left:auto" title="Cả bộ hồ sơ lương của đội: chấm công, sản lượng, giao SL, xếp loại, thanh toán, thuế — đúng biểu mẫu, công thức sống">Xuất hồ sơ lương đầy đủ</button>
+          <button class="btn nho" id="nutMoKhoMieng">Nhập khô miệng cạo</button>
+          <button class="btn nho" id="nutMoDieuChinh" title="Cộng/trừ vài kg quy khô cho từng người khi đội chỉnh tay trong bảng lương (vd. −1 kg mủ dây)">Điều chỉnh quy khô</button>
           <button class="btn chinh nho" id="nutChotLuong">Chốt bảng lương tháng</button>
         </div>
       </div>
@@ -759,6 +763,21 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
   </div>
 </div>
 
+<!-- Popup điều chỉnh quy khô ±kg từng người (đội chỉnh tay trong bảng lương thật) -->
+<div class="nen-mo" id="nenDieuChinh">
+  <div class="hop-thoai" style="max-width:900px">
+    <div class="dau-hop">
+      <h2>Điều chỉnh quy khô — <span id="dcTieuDeKy"></span></h2>
+      <button class="btn chinh nho" id="nutDcLuu">Lưu</button>
+      <button class="btn nho" id="nutDcHuy">Đóng</button>
+    </div>
+    <div class="than-hop">
+      <div id="dcTomTat" style="margin-bottom:10px;font-size:13px"></div>
+      <div class="cuon cuon-doc"><table id="bangDieuChinh"></table></div>
+    </div>
+  </div>
+</div>
+
 <div class="nen-mo" id="nenPhieu">
   <div class="hop-thoai">
     <div class="dau-hop">
@@ -842,7 +861,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, dieuChinhQkDs: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -853,7 +872,7 @@ var LENH_GHI_NHAN_SU = { deXuatBienDong: 1, xuLyCanhBaoNS: 1, capNhatNguoiNS: 1 
 var _nsGhiLuc = 0;
 // Tương tự cho bảng giao sản lượng tháng: vừa bấm "Tính giao sản lượng" thì 2 phút
 // kế tiếp đọc thẳng Apps Script, vì BigQuery chưa kịp nhận bảng mới.
-var LENH_DOC_GIAO_SL = { slTheoCn: 1, luong: 1 };
+var LENH_DOC_GIAO_SL = { slTheoCn: 1, luong: 1, hoTroKhoDs: 1, dieuChinhQkDs: 1 };   // cũng dùng cho khô miệng cạo: vừa lưu mà BigQuery chưa kịp thì đọc thẳng Apps Script
 var _giaoSlGhiLuc = 0;
 
 /* =====================================================================
@@ -2224,6 +2243,114 @@ function ghiChotLuong() {
 }
 
 /* =====================================================================
+   Xuất HỒ SƠ LƯƠNG đầy đủ: cả workbook nhiều tab đúng biểu mẫu của đội (mẫu cấu trúc lấy từ
+   mau_ho_so_luong.json, số liệu đã duyệt lấy từ backend hoSoLuong — chỉ đội trưởng).
+   ===================================================================== */
+var _mauHoSoLuong = null;
+
+function xuatHoSoLuong() {
+  var ky = $('lgKy').value;
+  if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
+  if (!window.ExcelJS || !window.HoSoLuong) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
+  var nut = $('nutHoSoLuong'), chu = nut.textContent;
+  var xong = function () { nut.disabled = false; nut.textContent = chu; };
+  nut.disabled = true; nut.textContent = 'Đang lấy số liệu…';
+  baoLoi('thongBao', '');
+
+  var mau = _mauHoSoLuong ? Promise.resolve(_mauHoSoLuong)
+    : fetch('mau_ho_so_luong.json').then(function (r) {
+        if (!r.ok) throw new Error('Không tải được mẫu hồ sơ lương (' + r.status + ').');
+        return r.json();
+      }).then(function (j) { _mauHoSoLuong = j; return j; });
+
+  Promise.all([mau, goiAPI('hoSoLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 180000)])
+    .then(function (kq) {
+      nut.textContent = 'Đang dựng file…';
+      var wb = HoSoLuong.xayDung(ExcelJS, kq[0], kq[1]);
+      return wb.xlsx.writeBuffer().then(function (buf) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+        a.download = 'ho_so_luong_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + ky + '.xlsx';
+        a.click();
+        $('thongBao').innerHTML = '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+          'Đã xuất hồ sơ lương kỳ ' + thoat(ky) + ' cho <b>' + soVN(kq[1].nguoi.length, 0) + '</b> công nhân (số ĐÃ DUYỆT). ' +
+          'Mọi ô tính lương là công thức — sửa số ở các tab dữ liệu thì bảng THANH TOÁN tự tính lại.</div>';
+        xong();
+      });
+    })
+    .catch(function (e) { xong(); baoLoi('thongBao', e.message); });
+}
+
+/* =====================================================================
+   Điều chỉnh quy khô ±kg từng người trong tháng (đội chỉnh tay trong bảng lương thật, vd. −1 kg mủ dây).
+   Số này cộng vào quy khô THỰC HIỆN: lương, tab Sản lượng theo CN, file xuất.
+   ===================================================================== */
+var _dcDuLieu = null;
+
+function moDieuChinh() {
+  var ky = $('lgKy').value;
+  if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
+  $('dcTieuDeKy').textContent = ky;
+  $('bangDieuChinh').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('dcTomTat').innerHTML = '';
+  $('nenDieuChinh').classList.add('hien');
+  goiAPI('dieuChinhQkDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 60000)
+    .then(function (d) { _dcDuLieu = d; veBangDieuChinh(); })
+    .catch(function (e) { baoLoi('thongBao', e.message); dongDieuChinh(); });
+}
+
+function dongDieuChinh() { $('nenDieuChinh').classList.remove('hien'); }
+
+function veBangDieuChinh() {
+  var d = _dcDuLieu, soCo = 0;
+  var h = '<thead><tr><th>STT</th><th>Mã CN</th><th>Họ và tên</th><th class="p">Mủ chén ± kg</th><th class="p">Mủ dây ± kg</th><th>Lý do</th></tr></thead><tbody>';
+  if (!d.rows.length) h += '<tr><td colspan="6"><div class="rong">Đội chưa có công nhân nào.</div></td></tr>';
+  for (var i = 0; i < d.rows.length; i++) {
+    var r = d.rows[i];
+    if (r.dcChen || r.dcDay) soCo++;
+    h += '<tr data-ma="' + thoat(r.maCn) + '"><td>' + (i + 1) + '</td><td><b>' + thoat(r.maCn) + '</b></td>' +
+      '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td class="p"><input class="o dcChen" type="number" min="-50" max="50" step="1" style="width:80px" value="' + (r.dcChen || '') + '" placeholder="0"></td>' +
+      '<td class="p"><input class="o dcDay" type="number" min="-50" max="50" step="1" style="width:80px" value="' + (r.dcDay || '') + '" placeholder="0"></td>' +
+      '<td><input class="o dcLyDo" type="text" maxlength="200" style="width:260px" value="' + thoat(r.lyDo || '') + '" placeholder="Lý do (tuỳ chọn)"></td></tr>';
+  }
+  $('bangDieuChinh').innerHTML = h + '</tbody>';
+  $('dcTomTat').innerHTML = soVN(d.tong, 0) + ' công nhân · ' + (soCo ? '<b>' + soVN(soCo, 0) + '</b> người đang có điều chỉnh' : 'chưa có ai được điều chỉnh') +
+    ' · số dương = cộng thêm, số âm = trừ bớt (kg quy khô). Chỉ người có số khác 0 mới được lưu; bấm Lưu sẽ ghi đè cả đội trong kỳ này.';
+}
+
+function luuDieuChinh() {
+  if (!_dcDuLieu) return;
+  var tr = $('bangDieuChinh').querySelectorAll('tbody tr'), dong = [];
+  for (var i = 0; i < tr.length; i++) {
+    var ma = tr[i].getAttribute('data-ma');
+    if (!ma) continue;
+    var c = Number(tr[i].querySelector('.dcChen').value) || 0, dd = Number(tr[i].querySelector('.dcDay').value) || 0;
+    if (c || dd) dong.push({ maCn: ma, dcChen: c, dcDay: dd, lyDo: tr[i].querySelector('.dcLyDo').value.trim() });
+  }
+  var nut = $('nutDcLuu');
+  nut.disabled = true; nut.textContent = 'Đang lưu…';
+  goiAPI('dieuChinhQkLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: _dcDuLieu.ky, dong: JSON.stringify(dong) }, 120000)
+    .then(function (d) {
+      nut.disabled = false; nut.textContent = 'Lưu';
+      dongDieuChinh();
+      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
+      $('thongBao').innerHTML =
+        '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+        'Đã lưu điều chỉnh quy khô kỳ ' + thoat(d.ky) + ': <b>' + soVN(d.soDong, 0) + '</b> người' +
+        (d.soXoa ? ' (thay ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
+        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
+                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
+                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') + '</div>';
+      taiLuong();
+    })
+    .catch(function (e) {
+      nut.disabled = false; nut.textContent = 'Lưu';
+      baoLoi('thongBao', e.message);
+    });
+}
+
+/* =====================================================================
    Ho tro kho mieng cao — doi truong nhap tay so cong moi thang (khong tu
    tinh duoc nhu cham cong/san luong). Nhap hang loat truc tiep tren luoi,
    hoac tai mau Excel co san danh sach cong nhan -> dien -> nhap lai file do.
@@ -2339,6 +2466,7 @@ function kmLuu() {
     .then(function (d) {
       nut.disabled = false; nut.textContent = 'Lưu';
       dongKhoMieng();
+      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
       $('thongBao').innerHTML =
         '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
         'Đã lưu hỗ trợ khô miệng cạo kỳ ' + thoat(d.ky) + ': ' + soVN(d.soCoCong, 0) + ' / ' + soVN(d.soDong, 0) +
@@ -5106,7 +5234,12 @@ $('nutXacNhanChotLuong').onclick = ghiChotLuong;
 $('nutXtLuongXuatFile').onclick = xtXuatFileLuong;
 $('nenXemTruocLuong').onclick = function (e) { if (e.target === this) dongXemTruocLuong(); };
 
+$('nutHoSoLuong').onclick = xuatHoSoLuong;
 $('nutMoKhoMieng').onclick = moKhoMieng;
+$('nutMoDieuChinh').onclick = moDieuChinh;
+$('nutDcHuy').onclick = function () { dongDieuChinh(); baoLoi('thongBao', ''); };
+$('nutDcLuu').onclick = luuDieuChinh;
+$('nenDieuChinh').onclick = function (e) { if (e.target === this) dongDieuChinh(); };
 $('nutKmHuy').onclick = function () { dongKhoMieng(); baoLoi('thongBao', ''); };
 $('nutKmTaiMau').onclick = kmTaiMauExcel;
 $('nutKmNhapFile').onclick = kmNhapFile;
