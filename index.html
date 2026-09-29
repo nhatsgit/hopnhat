@@ -3299,8 +3299,10 @@ function taiVeCSV(ten, tieuDe, dong) {
     }).join(';');
   }).join('\r\n');
 
-  // BOM để Excel mở đúng tiếng Việt
-  var blob = new Blob(['﻿' + d], { type: 'text/csv;charset=utf-8;' });
+  // Dòng "sep=;" ép Excel đọc đúng dấu ; làm dấu ngăn cột, bất kể máy đang đặt dấu ngăn danh sách
+  // là dấu phẩy hay chấm phẩy trong Control Panel — thiếu dòng này thì máy nào đặt dấu phẩy sẽ
+  // thấy cả dòng dồn vào một cột duy nhất. BOM để Excel mở đúng tiếng Việt.
+  var blob = new Blob(['﻿sep=;\r\n' + d], { type: 'text/csv;charset=utf-8;' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = ten;
