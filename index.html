@@ -1555,6 +1555,10 @@ function taiKhoiLanhDaoMoRong() {
     function () {
       return nsGoi('nhanSuTongQuan').then(function (d) {
         var k = d.kpi || {};
+        // Biến động của tháng gần nhất có ghi nhận (tuyển mới/giao mã/chuyển tổ/nghỉ) — không
+        // tính mốc khởi tạo dữ liệu, nên "Chưa có biến động" là bình thường nếu tháng đó yên ắng.
+        var bd0 = (d.bienDongThang || [])[0] || {};
+        var phuBd = bd0.ky ? 'Tháng ' + bd0.ky : 'Chưa có biến động';
         $('kpisNhanSuTH').innerHTML =
           the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
                   k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Toàn công ty') +
@@ -1563,7 +1567,10 @@ function taiKhoiLanhDaoMoRong() {
           the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
                   'Dưới 18 tuổi: ' + soVN(k.duoi18 || 0, 0) + ' người') +
           the_kpi('Vị trí còn trống', soVN(k.viTriTrong || 0, 0), 'vị trí',
-                  'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí');
+                  'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí') +
+          the_kpi('Tuyển mới', soVN(bd0.tuyenMoi || 0, 0), 'người', phuBd) +
+          the_kpi('Nghỉ việc', soVN(bd0.nghi || 0, 0), 'người', phuBd) +
+          the_kpi('Chuyển tổ', soVN(bd0.chuyenTo || 0, 0), 'người', phuBd);
       }).catch(function (e) { $('kpisNhanSuTH').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
     },
     function () {
@@ -3109,17 +3116,38 @@ var COT_CC = [
   { k: 'trangThai', t: 'Trạng thái' }, { k: '_sua', t: '' }
 ];
 
+/**
+ * Tổng biến động nhân sự (nghỉ việc, chuyển tổ) rơi vào đúng khoảng ngày đang lọc của Chấm công —
+ * dùng lại action nhanSuTongQuan có sẵn (bienDongThang theo tháng), cộng các tháng nằm trong
+ * [tuNgay, denNgay]. Trả về null nếu gọi lỗi — Chấm công vẫn hiện KPI chính bình thường.
+ */
+function bienDongTrongKhoang(tuNgay, denNgay) {
+  return nsGoi('nhanSuTongQuan').then(function (d) {
+    var kyTu = (tuNgay || '').substring(0, 7), kyDen = (denNgay || '').substring(0, 7);
+    var soNghi = 0, soChuyenTo = 0;
+    (d.bienDongThang || []).forEach(function (m) {
+      if (kyTu && m.ky < kyTu) return;
+      if (kyDen && m.ky > kyDen) return;
+      soNghi += m.nghi; soChuyenTo += m.chuyenTo;
+    });
+    return { soNghi: soNghi, soChuyenTo: soChuyenTo };
+  }).catch(function () { return null; });
+}
+
 function taiChamCong() {
   $('bangCC').innerHTML = skBang();
   var bl = layBoLocCC();
   bl.trang = S.trang; bl.moiTrang = 100;
 
-  goiCache('chamCong', bl).then(function (d) {
+  Promise.all([goiCache('chamCong', bl), bienDongTrongKhoang(bl.tuNgay, bl.denNgay)]).then(function (kq) {
+    var d = kq[0], bd = kq[1];
     var k = d.kpi;
     $('kpisCC').innerHTML =
       the_kpi('Công nhân', soVN(k.soCongNhan, 0), 'người', k.soNgay + ' ngày trong kỳ') +
       the_kpi('Bình quân', soVN(k.soCongNhan ? k.tongCong / k.soCongNhan : 0, 2), 'công/người', 'Trên toàn bộ kỳ đã lọc') +
-      the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt');
+      the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt') +
+      (bd ? the_kpi('Nghỉ việc', soVN(bd.soNghi, 0), 'người', 'Trong khoảng đang lọc') +
+            the_kpi('Chuyển tổ', soVN(bd.soChuyenTo, 0), 'người', 'Trong khoảng đang lọc') : '');
 
     // Cơ cấu ký hiệu
     var tongD = 0;
