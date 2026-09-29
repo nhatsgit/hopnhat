@@ -4642,12 +4642,12 @@ function veTuyChonDoi() {
  * "Tháng này" hay "Toàn bộ" — đỡ lag khi vào tab này.
  */
 function vaoTongQuanMacDinh() {
-  // "7 ngày gần nhất" tính từ ngày CÓ DỮ LIỆU mới nhất (ngayMax), không phải hôm nay theo lịch —
+  // "Tháng này" tính theo tháng của ngày CÓ DỮ LIỆU mới nhất (ngayMax), không phải hôm nay theo lịch —
   // đội thường nhập trễ vài ngày, lấy mốc hôm nay dễ ra toàn 0 (nhìn như trang bị hỏng).
   var mocDen = (S.meta && S.meta.ngayMax) ? new Date(S.meta.ngayMax + 'T00:00:00') : new Date();
   mocDen.setHours(0, 0, 0, 0);
-  var mocTu = new Date(mocDen.getTime() - 6 * 86400000);
-  $('fTuNgay').value = dinhDangISO(mocTu);
+  var dauThang = new Date(mocDen.getFullYear(), mocDen.getMonth(), 1);
+  $('fTuNgay').value = dinhDangISO(dauThang);
   $('fDenNgay').value = dinhDangISO(mocDen);
   $('fDoi').value = ''; $('fTo').value = ''; $('fLoaiMu').value = '';
   $('fPhien').value = ''; $('fChatLuong').value = ''; $('fMaCn').value = '';
