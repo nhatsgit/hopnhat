@@ -369,6 +369,12 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <label class="nhan" for="fDenNgay">Đến ngày</label>
         <input class="o" type="date" id="fDenNgay">
       </div>
+      <!-- Chọn nhanh 1 năm cụ thể: tự set Từ ngày/Đến ngày theo đúng năm đó (năm hiện tại thì
+           đến hôm nay, không sang năm sau). Ẩn cùng điều kiện với ô Tháng bên dưới. -->
+      <div id="khungLocNamCuThe">
+        <label class="nhan" for="fNamCuThe">Năm</label>
+        <select class="o" id="fNamCuThe"><option value="">Chọn năm…</option></select>
+      </div>
       <!-- Chọn nhanh 1 tháng cụ thể: tự set Từ ngày/Đến ngày theo đúng tháng đó (tháng hiện tại thì
            đến hôm nay, không sang tháng sau). Ẩn ở tab tính theo tháng (Lương/Sản lượng theo CN) vì
            2 tab đó đã có ô "Kỳ" riêng, và ở tab Nhân sự (không dùng khoảng ngày). -->
@@ -4447,6 +4453,7 @@ function capNhatHienBoLoc() {
   $('khungLocTuNgay').style.display = theoThang ? 'none' : '';
   $('khungLocDenNgay').style.display = theoThang ? 'none' : '';
   $('khungLocThangCuThe').style.display = (theoThang || laNS) ? 'none' : '';
+  $('khungLocNamCuThe').style.display = (theoThang || laNS) ? 'none' : '';
   $('locNhanh').style.display = theoThang ? 'none' : '';
   $('khungLocKy').style.display = theoThang ? '' : 'none';
   $('slKy').style.display = S.tab === 'slTheoCn' ? '' : 'none';
@@ -4684,10 +4691,9 @@ function chuyenTab(ten) {
    ===================================================================== */
 var MOC_NHANH = [
   { id: 'hom_nay', ten: 'Hôm nay', ngay: 1 },
+  { id: 'tuan_nay', ten: 'Tuần này', ngay: 0 },
   { id: 'thang_nay', ten: 'Tháng này', ngay: 0 },
-  { id: '7', ten: '7 ngày gần nhất', ngay: 7 },
-  { id: '30', ten: '30 ngày gần nhất', ngay: 30 },
-  { id: '90', ten: '90 ngày gần nhất', ngay: 90 },
+  { id: 'nam_nay', ten: 'Năm nay', ngay: 0 },
   { id: 'all', ten: 'Toàn bộ', ngay: 0 }
 ];
 
@@ -4703,12 +4709,32 @@ function khoangCuaMoc(id) {
     var dauThang = new Date(hn.getFullYear(), hn.getMonth(), 1);
     return { tu: dinhDangISO(dauThang), den: dinhDangISO(hn) };
   }
-  var m = null;
-  for (var i = 0; i < MOC_NHANH.length; i++) if (MOC_NHANH[i].id === id) m = MOC_NHANH[i];
-  if (!m) return null;
+  if (id === 'nam_nay') {
+    var hnN = new Date();
+    hnN.setHours(0, 0, 0, 0);
+    var dauNam = new Date(hnN.getFullYear(), 0, 1);
+    return { tu: dinhDangISO(dauNam), den: dinhDangISO(hnN) };
+  }
+  if (id === 'tuan_nay') {
+    var hnT = new Date();
+    hnT.setHours(0, 0, 0, 0);
+    var thu = hnT.getDay();                          // 0=CN,1=T2,...,6=T7
+    var lechDauTuan = (thu === 0) ? 6 : thu - 1;      // số ngày lùi về thứ Hai
+    var dauTuan = new Date(hnT.getTime() - lechDauTuan * 86400000);
+    return { tu: dinhDangISO(dauTuan), den: dinhDangISO(hnT) };
+  }
+  if (id === 'hom_nay') {
+    var hnH = new Date();
+    hnH.setHours(0, 0, 0, 0);
+    return { tu: dinhDangISO(hnH), den: dinhDangISO(hnH) };
+  }
+  // Mốc số ngày (vd '30'): không còn chip riêng trên giao diện, nhưng vẫn dùng nội bộ
+  // (vd bảng "chuyên cần theo đội" chỉ cần 30 ngày gần nhất) nên giữ lại cách tính này.
+  var soNgay = Number(id);
+  if (!soNgay) return null;
   var den = new Date();
   den.setHours(0, 0, 0, 0);
-  var tu = new Date(den.getTime() - (m.ngay - 1) * 86400000);
+  var tu = new Date(den.getTime() - (soNgay - 1) * 86400000);
   return { tu: dinhDangISO(tu), den: dinhDangISO(den) };
 }
 
@@ -4739,6 +4765,20 @@ function veThangCuThe() {
 }
 
 /**
+ * Dựng ô "Năm" (chọn nhanh 1 năm cụ thể) từ ngayMin/ngayMax thật của dữ liệu — cùng lý do
+ * với ô "Tháng" ở trên: không hiện năm nào ngoài phạm vi thật dữ liệu.
+ */
+function veNamCuThe() {
+  var sel = $('fNamCuThe');
+  if (!sel) return;
+  if (!S.meta || !S.meta.ngayMin || !S.meta.ngayMax) { sel.innerHTML = '<option value="">Chọn năm…</option>'; return; }
+  var yDen = +S.meta.ngayMax.substring(0, 4), yTu = +S.meta.ngayMin.substring(0, 4);
+  var h = '<option value="">Chọn năm…</option>';
+  for (var y = yDen; y >= yTu; y--) h += '<option value="' + y + '">Năm ' + y + '</option>';
+  sel.innerHTML = h;
+}
+
+/**
  * Đồng bộ hai chiều giữa chip lọc nhanh / ô Tháng và ô Từ ngày / Đến ngày:
  * sửa tay ngày mà trùng đúng một mốc thì chip/ô đó sáng, không trùng mốc nào
  * thì không chip/ô nào sáng.
@@ -4762,6 +4802,18 @@ function dongBoChip() {
       if (den === denChuan || (denChuan > homNay && den === homNay)) thangKhop = vThang;
     }
     selT.value = thangKhop;
+  }
+
+  var selN = $('fNamCuThe');
+  if (selN) {
+    var namKhop = '';
+    if (tu && den && tu.substring(5) === '01-01') {
+      var vNam = tu.substring(0, 4);
+      var denChuanNam = vNam + '-12-31';
+      var homNayN = dinhDangISO(new Date());
+      if (den === denChuanNam || (denChuanNam > homNayN && den === homNayN)) namKhop = vNam;
+    }
+    selN.value = namKhop;
   }
 }
 
@@ -5011,6 +5063,7 @@ function vaoApp(d, vtChon) {
     $('fTuNgay').value = khoangMacDinh ? khoangMacDinh.tu : m.ngayMin;
     $('fDenNgay').value = khoangMacDinh ? khoangMacDinh.den : m.ngayMax;
     veThangCuThe();
+    veNamCuThe();
     dongBoChip();
 
     // URL có tham số thì ưu tiên, không thì lấy lại chỗ xem lần trước —
@@ -5683,6 +5736,17 @@ $('fThangCuThe').onchange = function () {
   var homNay = dinhDangISO(new Date());
   var denChuan = ngayCuoiThang(v);
   $('fTuNgay').value = v + '-01';
+  $('fDenNgay').value = denChuan > homNay ? homNay : denChuan;
+  dongBoChip();
+  S.trang = 1;
+  taiTab();
+};
+$('fNamCuThe').onchange = function () {
+  var v = this.value;
+  if (!v) return;
+  var homNay = dinhDangISO(new Date());
+  var denChuan = v + '-12-31';
+  $('fTuNgay').value = v + '-01-01';
   $('fDenNgay').value = denChuan > homNay ? homNay : denChuan;
   dongBoChip();
   S.trang = 1;
