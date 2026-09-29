@@ -511,6 +511,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
     <!-- Tab: Phiếu nội trạm -->
     <section id="pPhieu" style="display:none">
+      <div class="kpis" id="kpisPhieu"></div>
       <div class="the">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatPhieu">—</h3>
@@ -1731,8 +1732,17 @@ function taiSanLuong() {
    ===================================================================== */
 function taiPhieu() {
   $('bangPhieu').innerHTML = skBang();
+  dangTai($('kpisPhieu'), true);
 
   goiCache('phieu', layBoLoc()).then(function (d) {
+    var soChoDuyet = 0;
+    for (var q = 0; q < d.rows.length; q++) if (d.rows[q].trangThai === 'CHO_DUYET') soChoDuyet++;
+    $('kpisPhieu').innerHTML =
+      the_kpi('Tổng phiếu', soVN(d.tong, 0), 'phiếu', 'Trong khoảng đang lọc') +
+      the_kpi('Tổng khối lượng', soVN(d.tongKg, 2), 'kg', 'Cộng mọi phiếu') +
+      the_kpi('Lệch đối chiếu', soVN(d.soLech, 0), 'phiếu', 'Tổng chi tiết khác tổng phiếu') +
+      the_kpi('Chờ duyệt', soVN(soChoDuyet, 0), 'phiếu', 'Còn dòng sản lượng chưa duyệt');
+
     $('tomTatPhieu').textContent = soVN(d.tong, 0) + ' phiếu · ' + soVN(d.tongKg, 2) + ' kg' +
       (d.soLech ? ' · ' + d.soLech + ' phiếu lệch chi tiết' : '');
 
