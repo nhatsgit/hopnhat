@@ -450,7 +450,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutThemSL">+ Nhập 1 người</button>
           <button class="btn nho" id="nutMauSL" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
           <button class="btn nho" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
-          <button class="btn nho" id="nutCsvSL">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvSL">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangSL"></table></div>
         <div class="phan-trang" id="phanTrangSL"></div>
@@ -462,7 +462,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="the">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatPhieu">—</h3>
-          <button class="btn nho" id="nutCsvPhieu">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvPhieu">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangPhieu"></table></div>
       </div>
@@ -488,7 +488,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn chinh nho" id="nutThemCC">+ Chấm công</button>
           <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
           <button class="btn nho" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
-          <button class="btn nho" id="nutCsvCC">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvCC">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangCC"></table></div>
         <div class="phan-trang" id="phanTrangCC"></div>
@@ -535,7 +535,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="nsbq">Theo NSBQ kg/nhát</option>
             <option value="binhQuanNgay">Theo bình quân ngày</option>
           </select>
-          <button class="btn nho" id="nutCsvXH">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvXH">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangXH"></table></div>
       </div>
@@ -553,7 +553,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="thieu">Chậm kế hoạch</option>
             <option value="chuaGiao">Phần cạo chưa giao</option>
           </select>
-          <button class="btn nho" id="nutCsvGK">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvGK">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangGK"></table></div>
         <div class="phan-trang" id="phanTrangGK"></div>
@@ -584,7 +584,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="chuaGiao">Chưa có mức giao</option>
             <option value="vuot">Vượt mức giao trên 5%</option>
           </select>
-          <button class="btn nho" id="nutCsvSlCn">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvSlCn">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangSlCn"></table></div>
         <div class="phan-trang" id="phanTrangSlCn"></div>
@@ -615,7 +615,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="chuaXepLoai">Chưa xếp loại</option>
             <option value="vuot">Có lương vượt</option>
           </select>
-          <button class="btn nho" id="nutCsvLuong">Xuất CSV</button>
+          <button class="btn nho" id="nutCsvLuong">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangLuong"></table></div>
         <div class="phan-trang" id="phanTrangLuong"></div>
@@ -662,7 +662,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <option value="TAM_HOAN">Tạm hoãn</option>
           </select>
           <button class="btn chinh nho" id="nsThem">+ Tuyển mới</button>
-          <button class="btn nho" id="nsCsv">Xuất CSV</button>
+          <button class="btn nho" id="nsCsv">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangNguoiNS"></table></div>
         <div class="phan-trang" id="phanTrangNguoiNS"></div>
@@ -3289,27 +3289,55 @@ function luuChamCong(action, them) {
 }
 
 /* =====================================================================
-   Xuất CSV
+   Xuất Excel (các nút xuất bảng — trước đây là CSV, nay đổi sang .xlsx có định dạng)
    ===================================================================== */
-function taiVeCSV(ten, tieuDe, dong) {
-  var d = [tieuDe].concat(dong).map(function (r) {
-    return r.map(function (o) {
-      var s = (o === null || o === undefined) ? '' : String(o);
-      return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-    }).join(';');
-  }).join('\r\n');
+/**
+ * Xuất một bảng dữ liệu ra file .xlsx có định dạng dễ nhìn (đầu bảng đậm có nền, kẻ ô, cố định
+ * dòng đầu, giãn cột theo nội dung, số có dấu phân cách nghìn) — thay cho CSV thuần trước đây
+ * (không tô được gì, mở lên có khi dồn hết vào một cột nếu máy đặt sai dấu ngăn danh sách).
+ * `ten` kết thúc bằng .xlsx, `nhan` là mảng tiêu đề cột hiển thị, `dong` là mảng các mảng giá trị.
+ */
+function xuatBangExcel(ten, nhan, dong) {
+  if (!window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
+  var wb = new ExcelJS.Workbook();
+  var ws = wb.addWorksheet('Dữ liệu');
+  var VIEN = { style: 'thin', color: { argb: 'FFC9C2B3' } };
+  var O_VIEN = { top: VIEN, left: VIEN, bottom: VIEN, right: VIEN };
 
-  // Dòng "sep=;" ép Excel đọc đúng dấu ; làm dấu ngăn cột, bất kể máy đang đặt dấu ngăn danh sách
-  // là dấu phẩy hay chấm phẩy trong Control Panel — thiếu dòng này thì máy nào đặt dấu phẩy sẽ
-  // thấy cả dòng dồn vào một cột duy nhất. BOM để Excel mở đúng tiếng Việt.
-  var blob = new Blob(['﻿sep=;\r\n' + d], { type: 'text/csv;charset=utf-8;' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = ten;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  var hang = ws.addRow(nhan);
+  hang.eachCell(function (o) {
+    o.font = { bold: true, color: { argb: 'FF3B3226' } };
+    o.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8DCC4' } };
+    o.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    o.border = O_VIEN;
+  });
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  dong.forEach(function (r) {
+    var hangDl = ws.addRow(r);
+    hangDl.eachCell(function (o) {
+      o.border = O_VIEN;
+      var laSo = typeof o.value === 'number';
+      o.alignment = { horizontal: laSo ? 'right' : 'left', vertical: 'middle' };
+      if (laSo && Math.abs(o.value) >= 1000 && Math.round(o.value) === o.value) o.numFmt = '#,##0';
+    });
+  });
+
+  nhan.forEach(function (ten2, i) {
+    var rong = String(ten2 || '').length;
+    dong.forEach(function (r) { var v = r[i]; var l = v == null ? 0 : String(v).length; if (l > rong) rong = l; });
+    ws.getColumn(i + 1).width = Math.max(8, Math.min(38, rong + 2));
+  });
+
+  wb.xlsx.writeBuffer().then(function (buf) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.download = ten;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
 }
 
 /**
@@ -3331,32 +3359,39 @@ function layTatCaTrang(action, thamSo, moiTrang, khoa) {
   return tiep();
 }
 
-function csvTuCot(ten, cot, ds) {
-  taiVeCSV(ten, cot, ds.map(function (r) { return cot.map(function (c) { return r[c]; }); }));
+function csvTuCot(ten, cot, nhan, ds) {
+  xuatBangExcel(ten, nhan, ds.map(function (r) { return cot.map(function (c) { return r[c]; }); }));
 }
 
 function csvGiaoKhoanTatCa(bl, chua) {
   baoLoi('thongBao', '');
   layTatCaTrang('giaoKhoan', bl, 300, chua ? 'chuaGiao' : 'rows').then(function (d) {
     var cot = chua ? ['phanCao', 'to', 'lo', 'hang', 'cay'] : ['maCn', 'phien', 'phanCao', 'lo', 'hang', 'cay', 'nsbq', 'khChen', 'khDay', 'kh', 'th', 'tyLe'];
-    csvTuCot('giao_khoan.csv', cot, chua ? d.chuaGiao : d.rows);
+    var nhan = chua ? ['Phần cao', 'Tổ', 'Lô', 'Hàng', 'Cây']
+      : ['Mã CN', 'Phiên cạo', 'Phần cao', 'Lô', 'Hàng', 'Cây', 'NSBQ (kg/nhát)', 'Khoán chén', 'Khoán dây', 'Mức khoán', 'Thực hiện', 'Tỷ lệ (%)'];
+    csvTuCot('giao_khoan.xlsx', cot, nhan, chua ? d.chuaGiao : d.rows);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
 function csvSlTheoCnTatCa(bl) {
   baoLoi('thongBao', '');
   layTatCaTrang('slTheoCn', bl, 300).then(function (d) {
-    csvTuCot('san_luong_cn_' + d.ky + '.csv', ['maCn', 'to', 'soNgay', 'cay', 'tuoi', 'chen', 'day', 'khac', 'coSo',
-      'giaoChen', 'giaoDay', 'giao', 'nlChen', 'nlDay', 'tyLeHT'], d.rows);
+    csvTuCot('san_luong_cn_' + d.ky + '.xlsx', ['maCn', 'to', 'soNgay', 'cay', 'tuoi', 'chen', 'day', 'khac', 'coSo',
+      'giaoChen', 'giaoDay', 'giao', 'nlChen', 'nlDay', 'tyLeHT'],
+      ['Mã CN', 'Tổ', 'Ngày có SL', 'Số cây cạo', 'SL tươi (kg)', 'Quy khô chén', 'Quy khô dây', 'Quy khô khác',
+       'Chén + dây (cơ sở)', 'Giao chén', 'Giao dây', 'Tổng SL giao', 'NL chén (kg)', 'NL dây (kg)', '% hoàn thành'], d.rows);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
 function csvLuongTatCa(bl) {
   baoLoi('thongBao', '');
   layTatCaTrang('luong', bl, 300).then(function (d) {
-    csvTuCot('luong_' + d.ky + '.csv', ['maCn', 'ten', 'cccd', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'giao', 'xepLoai',
+    csvTuCot('luong_' + d.ky + '.xlsx', ['maCn', 'ten', 'cccd', 'congThuong', 'congLe', 'quyKhoChen', 'quyKhoDay', 'giao', 'xepLoai',
       'luongCong', 'luongChen', 'luongDay', 'vuot', 'luongVuot', 'hoTroKhoCong', 'hoTroKhoTien', 'chuyenCan', 'tong', 'bhxh', 'thue',
-      'thucNhan', 'choDuyet'], d.rows);
+      'thucNhan', 'choDuyet'],
+      ['Mã CN', 'Họ và tên', 'Số CCCD', 'Công thường', 'Công lễ/CN', 'Quy khô chén', 'Quy khô dây', 'SL giao', 'Xếp loại',
+       'Lương công', 'SP mủ chén', 'SP mủ dây', 'Vượt (kg)', 'Lương vượt', 'Công KM', 'Tiền KM', 'Chuyên cần', 'Tổng thu nhập',
+       'BH 2%', 'Thuế', 'Thực nhận', 'Chờ duyệt'], d.rows);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -3371,10 +3406,10 @@ function csvSanLuong() {
       return [r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
               r.kg, r.nhat, r.drc, r.quyKho, r.nsbq, r.nguon, r.trangThai, r.ghiChu];
     });
-    taiVeCSV('san_luong_' + S.maDonVi + '.csv',
-      ['MA_BAN_GHI', 'NGAY', 'MA_CN', 'TO', 'MA_PHAN_CAO', 'PHIEN_CAO', 'MA_LOAI_MU',
-       'CHAT_LUONG', 'SAN_LUONG_KG', 'SO_NHAT_CAO', 'DRC_AP_DUNG', 'QUY_KHO_KG',
-       'NSBQ_KG_NHAT', 'NGUON_GHI', 'TRANG_THAI', 'GHI_CHU'], dong);
+    xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx',
+      ['Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
+       'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC áp dụng', 'Quy khô (kg)',
+       'NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú'], dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -3390,9 +3425,9 @@ function csvPhieu() {
         dong.push([p.ma, p.ngay, p.to, p.kg, c.loaiMu, c.kg, p.khop ? 'KHOP' : 'LECH']);
       });
     });
-    taiVeCSV('phieu_noi_tram_' + S.maDonVi + '.csv',
-      ['MA_PHIEU_NT', 'NGAY', 'MA_DON_VI', 'TONG_KHOI_LUONG_KG', 'MA_LOAI_MU',
-       'KHOI_LUONG_LOAI_MU_KG', 'DOI_CHIEU'], dong);
+    xuatBangExcel('phieu_noi_tram_' + S.maDonVi + '.xlsx',
+      ['Mã phiếu NT', 'Ngày', 'Đơn vị (tổ)', 'Tổng khối lượng (kg)', 'Loại mủ',
+       'Khối lượng loại mủ (kg)', 'Đối chiếu'], dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -3402,9 +3437,9 @@ function csvChamCong() {
     var dong = d.rows.map(function (r) {
       return [r.ma, r.ngay, r.maCn, r.to, r.kyHieu, r.soCong, r.phien, r.phanCao, r.trangThai, r.ghiChu];
     });
-    taiVeCSV('cham_cong_' + S.maDonVi + '.csv',
-      ['MA_CHAM_CONG', 'NGAY', 'MA_CN', 'TO', 'KY_HIEU', 'SO_CONG',
-       'PHIEN_CAO', 'MA_PHAN_CAO', 'TRANG_THAI', 'GHI_CHU'], dong);
+    xuatBangExcel('cham_cong_' + S.maDonVi + '.xlsx',
+      ['Mã chấm công', 'Ngày', 'Mã CN', 'Tổ', 'Ký hiệu', 'Số công',
+       'Phiên cạo', 'Phần cao', 'Trạng thái', 'Ghi chú'], dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -3415,9 +3450,9 @@ function csvXepHang() {
     var dong = d.rows.map(function (r, i) {
       return [i + 1, r.maCn, r.to, r.chucDanh, r.kg, r.quyKho, r.nhat, r.nsbq, r.soNgay, r.binhQuanNgay];
     });
-    taiVeCSV('xep_hang_' + S.maDonVi + '.csv',
-      ['HANG', 'MA_CN', 'TO', 'CHUC_DANH', 'TONG_KG', 'QUY_KHO_KG', 'SO_NHAT',
-       'NSBQ_KG_NHAT', 'SO_NGAY', 'BINH_QUAN_NGAY'], dong);
+    xuatBangExcel('xep_hang_' + S.maDonVi + '.xlsx',
+      ['Hạng', 'Mã CN', 'Tổ', 'Chức danh', 'Tổng SL (kg)', 'Quy khô (kg)', 'Số nhát',
+       'NSBQ (kg/nhát)', 'Số ngày', 'Bình quân/ngày'], dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -4826,8 +4861,8 @@ function nsCsvNguoi() {
     });
   }
   tiep().then(function () {
-    taiVeCSV('nhan_su_' + S.maDonVi + '.csv',
-      ['MA_CN', 'HO_TEN', 'GIOI_TINH', 'TUOI', 'DOI', 'TO', 'CHUC_DANH', 'CCCD_DA_CHE', 'TRANG_THAI', 'CANH_BAO', 'NSSF'], rows);
+    xuatBangExcel('nhan_su_' + S.maDonVi + '.xlsx',
+      ['Mã CN', 'Họ tên', 'Giới tính', 'Tuổi', 'Đội', 'Tổ', 'Chức danh', 'CCCD (đã che)', 'Trạng thái', 'Cảnh báo', 'NSSF'], rows);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
