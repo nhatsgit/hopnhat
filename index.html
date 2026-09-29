@@ -291,6 +291,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <select class="o" id="oVaiTro">
         <option value="TO_TRUONG">Tổ trưởng</option>
         <option value="DOI_TRUONG">Đội trưởng</option>
+        <option value="TRO_LY">Trợ lý (tạm thời, quyền ngang đội trưởng)</option>
+        <option value="KTNN">Phòng KTNN (tạm thời, quyền ngang lãnh đạo)</option>
         <option value="BAN_LANH_DAO">Ban lãnh đạo</option>
       </select>
     </div>
@@ -4531,16 +4533,27 @@ function batDau() {
   capNhatGoiY();
 }
 
+/**
+ * Vai trò tạm (Trợ lý, Phòng KTNN) chỉ khác NHÃN hiển thị — quyền và cách gọi backend
+ * giống hệt vai trò chính tương ứng: Trợ lý ngang Đội trưởng, Phòng KTNN ngang Ban lãnh đạo.
+ * Backend (Code.gs/Cloud Run) không biết 2 vai trò này, luôn nhận đúng vaiTro chính.
+ */
+function vaiTroThuc(vt) {
+  if (vt === 'TRO_LY') return 'DOI_TRUONG';
+  if (vt === 'KTNN') return 'BAN_LANH_DAO';
+  return vt;
+}
+
 function capNhatGoiY() {
   var vt = $('oVaiTro').value;
   if (vt === 'TO_TRUONG') {
     $('goiYMa').innerHTML = 'Tổ trưởng nhập <b>mã tổ</b>, ví dụ <b>Đ1-KV1</b>.';
     $('oMaDonVi').placeholder = 'Đ1-KV1';
-  } else if (vt === 'DOI_TRUONG') {
-    $('goiYMa').innerHTML = 'Đội trưởng nhập <b>mã đội</b>: <b>Đ1</b>, <b>Đ2</b>, <b>Đ3</b> hoặc <b>Đ6</b>.';
+  } else if (vt === 'DOI_TRUONG' || vt === 'TRO_LY') {
+    $('goiYMa').innerHTML = (vt === 'TRO_LY' ? 'Trợ lý' : 'Đội trưởng') + ' nhập <b>mã đội</b>: <b>Đ1</b>, <b>Đ2</b>, <b>Đ3</b> hoặc <b>Đ6</b>.';
     $('oMaDonVi').placeholder = 'Đ1';
   } else {
-    $('goiYMa').innerHTML = 'Ban lãnh đạo nhập <b>CRCK</b> để xem toàn công ty, tổng hợp theo đội.';
+    $('goiYMa').innerHTML = (vt === 'KTNN' ? 'Phòng KTNN' : 'Ban lãnh đạo') + ' nhập <b>CRCK</b> để xem toàn công ty, tổng hợp theo đội.';
     $('oMaDonVi').placeholder = 'CRCK';
   }
 }
@@ -4548,18 +4561,22 @@ function capNhatGoiY() {
 function tenVaiTro(vt) {
   if (vt === 'TO_TRUONG') return 'Tổ trưởng';
   if (vt === 'DOI_TRUONG') return 'Đội trưởng';
+  if (vt === 'TRO_LY') return 'Trợ lý';
+  if (vt === 'KTNN') return 'Phòng KTNN';
   return 'Ban lãnh đạo';
 }
 
-function vaoApp(d) {
+function vaoApp(d, vtChon) {
   S.vaiTro = d.vaiTro; S.maDonVi = d.maDonVi; S.tenDonVi = d.ten;
   S.dsTo = d.dsTo; S.toanCongTy = d.toanCongTy;
   S.dsCn = d.dsCn || [];
+  // Nhãn hiển thị (Trợ lý/Phòng KTNN) khác vaiTro thật gửi backend (Đội trưởng/Ban lãnh đạo).
+  S.vaiTroHienThi = vtChon || d.vaiTro;
 
-  ghiLS('crck2_dangnhap', JSON.stringify({ vaiTro: d.vaiTro, maDonVi: d.maDonVi }));
+  ghiLS('crck2_dangnhap', JSON.stringify({ vaiTro: S.vaiTroHienThi, maDonVi: d.maDonVi }));
 
   $('dongDonVi').textContent = d.ten + ' · ' + d.dsTo.length + ' tổ trong phạm vi';
-  $('theVaiTro').textContent = tenVaiTro(d.vaiTro) + ' · ' + d.maDonVi;
+  $('theVaiTro').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + d.maDonVi;
 
   // Toàn công ty có tới 33 tổ — thêm ô lọc theo đội cho đỡ rối
   var dsDoi = [];
@@ -5208,7 +5225,8 @@ $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').cl
 
 $('nutVao').onclick = function () {
   baoLoi('loiDangNhap', '');
-  var vt = $('oVaiTro').value;
+  var vtChon = $('oVaiTro').value;
+  var vt = vaiTroThuc(vtChon);
   var ma = $('oMaDonVi').value.trim();
   if (!ma) { baoLoi('loiDangNhap', 'Chưa nhập mã đơn vị.'); return; }
 
@@ -5216,7 +5234,7 @@ $('nutVao').onclick = function () {
   nut.disabled = true; nut.textContent = 'Đang kiểm tra…';
   goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }).then(function (d) {
     nut.disabled = false; nut.textContent = 'Xem sản lượng';
-    vaoApp(d);
+    vaoApp(d, vtChon);
   }).catch(function (e) {
     nut.disabled = false; nut.textContent = 'Xem sản lượng';
     baoLoi('loiDangNhap', e.message);
@@ -5224,7 +5242,7 @@ $('nutVao').onclick = function () {
 };
 
 $('nutThoat').onclick = function () {
-  S.vaiTro = ''; S.maDonVi = '';
+  S.vaiTro = ''; S.maDonVi = ''; S.vaiTroHienThi = '';
   xoaLS('crck2_dangnhap');
   xoaLS('crck2_dangxem');
   _cacheFE = {};
