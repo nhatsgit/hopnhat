@@ -796,7 +796,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div class="ns-thanh">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="bdTomTat">—</h3>
           <input class="o" id="bdQ" placeholder="Tìm tên hoặc mã CN" style="width:200px">
-          <select class="o" id="bdLoai" style="width:auto"></select>
+          <select class="o" id="bdBienDongLoai" style="width:auto"></select>
           <select class="o" id="bdTt" style="width:auto">
             <option value="">Mọi trạng thái</option>
             <option value="CHO_DUYET">Chờ duyệt</option>
@@ -5171,7 +5171,8 @@ function vaoApp(d, vtChon) {
 
   ghiLS('crck2_dangnhap', JSON.stringify({ vaiTro: S.vaiTroHienThi, maDonVi: d.maDonVi }));
 
-  $('dongDonVi').textContent = d.ten;
+  // Tên công ty ở CRCK có kèm "(Bean Heack)" (dữ liệu meta backend) — không cần hiện ở đây.
+  $('dongDonVi').textContent = d.ten.replace(/\s*\(bean heack\)\s*/i, '');
   $('theVaiTro').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + d.maDonVi;
 
   // Toàn công ty có tới 33 tổ — thêm ô lọc theo đội cho đỡ rối
@@ -5352,7 +5353,7 @@ function napLocNS(dsDoi) {
 
   var bl = '<option value="">Mọi loại biến động</option>';
   for (var k = 0; k < NS_LOAI_BD.length; k++) bl += '<option value="' + NS_LOAI_BD[k][0] + '">' + thoat(NS_LOAI_BD[k][1]) + '</option>';
-  $('bdLoai').innerHTML = bl;
+  $('bdBienDongLoai').innerHTML = bl;
   NS.view = 'nguoi';
   NS.trang = { nguoi: 1, bienDong: 1, viTri: 1 };
 }
@@ -5675,9 +5676,9 @@ function nsMoCapNhat(r) {
 /* ---- Biến động ---- */
 function nsTaiBienDong() {
   $('bangBienDongNS').innerHTML = skBang();
-  nsGoi('bienDongNS', { q: $('bdQ').value.trim(), loai: $('bdLoai').value, trangThai: $('bdTt').value, trang: NS.trang.bienDong, moiTrang: 100 }).then(function (d) {
+  nsGoi('bienDongNS', { q: $('bdQ').value.trim(), loai: $('bdBienDongLoai').value, trangThai: $('bdTt').value, trang: NS.trang.bienDong, moiTrang: 100 }).then(function (d) {
     NS.dsBienDong = d.rows;
-    $('bdTomTat').textContent = soVN(d.tong, 0) + ' biến động' + ($('bdLoai').value === '' ? ' (chưa gồm mốc khởi tạo)' : '');
+    $('bdTomTat').textContent = soVN(d.tong, 0) + ' biến động' + ($('bdBienDongLoai').value === '' ? ' (chưa gồm mốc khởi tạo)' : '');
     var h = '<thead><tr><th>Mã BĐ</th><th>Ngày hiệu lực</th><th>Người</th><th>Loại</th><th>Mã CN</th><th>Tổ</th><th>Trạng thái</th>' +
             '<th>Đề xuất bởi</th><th>Duyệt bởi</th><th>Ghi chú</th><th></th></tr></thead><tbody>';
     if (!d.rows.length) h += '<tr><td colspan="11"><div class="rong">Chưa có biến động nào khớp bộ lọc.</div></td></tr>';
@@ -5784,7 +5785,7 @@ function ganSuKienNS() {
   $('bdQ').oninput = tre('bienDong', nsTaiBienDong);
   $('vtQ').oninput = tre('viTri', nsTaiViTri);
   ['nsDoi', 'nsTo', 'nsLoc', 'nsTt'].forEach(function (id) { $(id).onchange = function () { lai('nguoi', nsTaiNguoi); }; });
-  ['bdLoai', 'bdTt'].forEach(function (id) { $(id).onchange = function () { lai('bienDong', nsTaiBienDong); }; });
+  ['bdBienDongLoai', 'bdTt'].forEach(function (id) { $(id).onchange = function () { lai('bienDong', nsTaiBienDong); }; });
   ['vtTo', 'vtTt'].forEach(function (id) { $(id).onchange = function () { lai('viTri', nsTaiViTri); }; });
   ['cbLoai', 'cbTt'].forEach(function (id) { $(id).onchange = nsTaiCanhBao; });
   $('nsThem').onclick = nsMoTuyenMoi;
