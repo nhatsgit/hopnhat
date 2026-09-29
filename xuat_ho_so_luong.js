@@ -116,6 +116,11 @@
 
     mau.sheets.forEach(function (sh) {
       var ws = wb.addWorksheet(sh.ten, { state: sh.state === 'hidden' ? 'hidden' : 'visible' });
+      // Cỡ mặc định của cả sheet (file thật của đội không đặt riêng ExcelJS mới lấy đúng mặc định
+      // của mình, hẹp hơn hẳn — ví dụ TH SẢN LƯỢNG 15.25 so với ~8.43): áp trước, cột/dòng có
+      // độ rộng/cao riêng ở dưới sẽ ghi đè lên.
+      if (sh.dcw) ws.properties.defaultColWidth = sh.dcw;
+      if (sh.drh) ws.properties.defaultRowHeight = sh.drh;
       Object.keys(sh.cot || {}).forEach(function (k) {
         var c = ws.getColumn(+k), e = sh.cot[k];
         if (e.w) c.width = e.w;
