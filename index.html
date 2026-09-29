@@ -1433,9 +1433,18 @@ function taiTongQuan() {
 
   goiCache('tongQuan', layBoLoc()).then(function (d) {
     var k = d.kpi;
+    // Quy khô tách riêng mủ chén (MU_DONG) / mủ dây (MU_DAY) — 2 loại mủ chính, thay cho
+    // 1 thẻ "Quy khô" gộp chung trước đây (DRC hai loại khác hẳn nhau, gộp lại không nói lên gì).
+    var quyKhoTheoLoai = {};
+    (d.theoLoaiMu || []).forEach(function (x) { quyKhoTheoLoai[x.ma] = x; });
+    var muChen = quyKhoTheoLoai.MU_DONG || { kg: 0, quyKho: 0 };
+    var muDay = quyKhoTheoLoai.MU_DAY || { kg: 0, quyKho: 0 };
     $('kpis').innerHTML =
       the_kpi('Tổng sản lượng tươi', soVN(k.tongKg, 2), 'kg', k.soDong + ' dòng ghi nhận') +
-      the_kpi('Quy khô', soVN(k.tongQuyKho, 2), 'kg', 'DRC bình quân ' + soVN(k.drcBinhQuan * 100, 1) + '%') +
+      the_kpi('Quy khô mủ chén', soVN(muChen.quyKho, 2), 'kg',
+              muChen.kg ? 'DRC ' + soVN(muChen.quyKho / muChen.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
+      the_kpi('Quy khô mủ dây', soVN(muDay.quyKho, 2), 'kg',
+              muDay.kg ? 'DRC ' + soVN(muDay.quyKho / muDay.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
       the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', 'Trên toàn bộ dòng đã lọc') +
       the_kpi('Phạm vi', soVN(k.soCongNhan, 0), 'công nhân', k.soNgay + ' ngày có sản lượng') +
       // Ban lãnh đạo đọc thẳng BigQuery — vốn chỉ có dòng đã duyệt — nên
