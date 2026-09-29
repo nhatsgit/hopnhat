@@ -308,6 +308,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <option value="TRO_LY">Trợ lý (tạm thời, quyền ngang đội trưởng)</option>
         <option value="KTNN">Phòng KTNN (tạm thời, quyền ngang lãnh đạo)</option>
         <option value="BAN_LANH_DAO">Ban lãnh đạo</option>
+        <option value="ADMIN">Admin (tạm thời, quyền ngang lãnh đạo)</option>
       </select>
     </div>
     <div class="truong">
@@ -4781,7 +4782,7 @@ function batDau() {
  */
 function vaiTroThuc(vt) {
   if (vt === 'TRO_LY') return 'DOI_TRUONG';
-  if (vt === 'KTNN') return 'BAN_LANH_DAO';
+  if (vt === 'KTNN' || vt === 'ADMIN') return 'BAN_LANH_DAO';
   return vt;
 }
 
@@ -4794,7 +4795,8 @@ function capNhatGoiY() {
     $('goiYMa').innerHTML = (vt === 'TRO_LY' ? 'Trợ lý' : 'Đội trưởng') + ' nhập <b>mã đội</b>: <b>Đ1</b>, <b>Đ2</b>, <b>Đ3</b> hoặc <b>Đ6</b>.';
     $('oMaDonVi').placeholder = 'Đ1';
   } else {
-    $('goiYMa').innerHTML = (vt === 'KTNN' ? 'Phòng KTNN' : 'Ban lãnh đạo') + ' nhập <b>CRCK</b> để xem toàn công ty, tổng hợp theo đội.';
+    var nhanNhom = vt === 'KTNN' ? 'Phòng KTNN' : (vt === 'ADMIN' ? 'Admin' : 'Ban lãnh đạo');
+    $('goiYMa').innerHTML = nhanNhom + ' nhập <b>CRCK</b> để xem toàn công ty, tổng hợp theo đội.';
     $('oMaDonVi').placeholder = 'CRCK';
   }
 }
@@ -4804,6 +4806,7 @@ function tenVaiTro(vt) {
   if (vt === 'DOI_TRUONG') return 'Đội trưởng';
   if (vt === 'TRO_LY') return 'Trợ lý';
   if (vt === 'KTNN') return 'Phòng KTNN';
+  if (vt === 'ADMIN') return 'Admin';
   return 'Ban lãnh đạo';
 }
 
@@ -4837,8 +4840,11 @@ function vaoApp(d, vtChon) {
   napLocNS(dsDoi);
   $('tieuDeSoSanh').textContent = d.toanCongTy ? 'So sánh theo đội' : 'So sánh theo tổ';
   // Đẩy danh mục là việc quản trị, chỉ ban lãnh đạo thấy nút
-  $('nutDongBoDM').style.display = d.toanCongTy ? '' : 'none';
-  $('nutDongBoPS').style.display = d.toanCongTy ? '' : 'none';
+  // Chỉ Admin thấy 2 nút đẩy dữ liệu sang BigQuery — Ban lãnh đạo/Phòng KTNN chỉ xem, không cần
+  // (và tránh bấm nhầm việc quản trị). "quyền ngang lãnh đạo" chỉ tính phần XEM dữ liệu.
+  var laAdmin = S.vaiTroHienThi === 'ADMIN';
+  $('nutDongBoDM').style.display = laAdmin ? '' : 'none';
+  $('nutDongBoPS').style.display = laAdmin ? '' : 'none';
 
   // Chỉ tổ trưởng được nhập/sửa số liệu. Ban lãnh đạo chỉ xem — dashboard
   // của họ đọc thẳng BigQuery (chỉ đã duyệt), không đọc/ghi Sheet. Đội
