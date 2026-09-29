@@ -364,7 +364,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
          nội dung bên phải (#tabsCon), không lồng bên trong sidebar. -->
     <aside class="thanh-ben" id="thanhBen">
       <div class="hieu">
-        <b>Theo dõi sản lượng &amp; phiếu nội trạm</b>
+        <b>Hệ thống quản trị hợp nhất</b>
         <span id="dongDonVi">—</span>
       </div>
       <div class="ben-taikhoan">
@@ -5097,7 +5097,7 @@ function vaoApp(d, vtChon) {
 
   ghiLS('crck2_dangnhap', JSON.stringify({ vaiTro: S.vaiTroHienThi, maDonVi: d.maDonVi }));
 
-  $('dongDonVi').textContent = d.ten + ' · ' + d.dsTo.length + ' tổ trong phạm vi';
+  $('dongDonVi').textContent = d.ten;
   $('theVaiTro').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + d.maDonVi;
 
   // Toàn công ty có tới 33 tổ — thêm ô lọc theo đội cho đỡ rối
