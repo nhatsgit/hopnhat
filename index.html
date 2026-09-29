@@ -93,6 +93,20 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   padding:10px 14px;border-radius:2px;margin:12px 0;font-size:14px}
 .rong{text-align:center;color:var(--ink-3);padding:36px 16px;font-size:14px}
 
+/* ---------- Bóng mờ khi đang tải dữ liệu (thay cho chữ "Đang tải…") ---------- */
+.skeleton{position:relative;overflow:hidden;background:var(--line);border-radius:4px}
+.skeleton::after{content:'';position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
+  animation:skel-shine 1.4s ease-in-out infinite}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .skeleton::after{
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}}
+:root[data-theme="dark"] .skeleton::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+@keyframes skel-shine{100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){.skeleton::after{animation:none}}
+.sk-bang td{padding:14px 16px}
+.sk-kpi{height:74px;border-radius:2px}
+.sk-khoi{height:210px;border-radius:4px}
+
 /* ---------- Màn hình mở đầu (cấu hình / đăng nhập) ---------- */
 .man-hinh{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .hop{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);
@@ -1178,7 +1192,44 @@ function baoLoi(nut, thong) {
 }
 
 function dangTai(el, co) {
-  if (co) el.innerHTML = '<div class="rong">Đang tải dữ liệu…</div>';
+  if (co) el.innerHTML = skKpis(4);
+}
+
+/**
+ * Bóng mờ (shimmer) thay cho chữ "Đang tải…" — trông giống khung dữ liệu thật đang hiện dần.
+ *   skBang(soDong)   -> nội dung <tbody> gồm vài dòng bóng mờ, dùng cho mọi bảng (colspan giãn hết bề ngang)
+ *   skKpis(soThe)     -> vài thẻ KPI bóng mờ, dùng cho khối .kpis
+ *   skKhoi()          -> một khối bóng mờ đơn (biểu đồ, vùng nội dung chưa có bảng)
+ */
+function skBang(soDong) {
+  soDong = soDong || 5;
+  var h = '';
+  for (var i = 0; i < soDong; i++) {
+    h += '<tr class="sk-bang"><td colspan="100"><div class="skeleton" style="height:16px;width:' +
+         (50 + (i % 3) * 16) + '%"></div></td></tr>';
+  }
+  return '<tbody>' + h + '</tbody>';
+}
+
+function skKpis(soThe) {
+  soThe = soThe || 4;
+  var h = '';
+  for (var i = 0; i < soThe; i++) h += '<div class="the kpi"><div class="skeleton sk-kpi"></div></div>';
+  return h;
+}
+
+function skKhoi() {
+  return '<div class="skeleton sk-khoi"></div>';
+}
+
+/** Vài dòng bóng mờ ngắn — dùng cho popup/modal đang tải nội dung (nhẹ hơn skKhoi). */
+function skDong(soDong) {
+  soDong = soDong || 3;
+  var h = '';
+  for (var i = 0; i < soDong; i++) {
+    h += '<div class="skeleton" style="height:14px;margin:8px 0;width:' + (50 + (i % 3) * 16) + '%"></div>';
+  }
+  return h;
 }
 
 /* =====================================================================
@@ -1354,7 +1405,11 @@ function goiCache(action, thamSo) {
    ===================================================================== */
 function taiTongQuan() {
   dangTai($('kpis'), true);
-  $('bdNgay').innerHTML = ''; $('bdLoai').innerHTML = ''; $('bangTo').innerHTML = '';
+  $('bdNgay').innerHTML = skKhoi(); $('bdLoai').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
+  if (S.toanCongTy) {
+    $('bdChatLuong').innerHTML = skKhoi(); $('bdXepDoi').innerHTML = skKhoi();
+    $('bdNsbqDoi').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
+  }
 
   goiCache('tongQuan', layBoLoc()).then(function (d) {
     var k = d.kpi;
@@ -1447,6 +1502,9 @@ function taiTongQuan() {
  */
 function taiKhoiLanhDaoMoRong() {
   var bl = { vaiTro: S.vaiTro, maDonVi: S.maDonVi };
+  ['bdXuHuong', 'bdChiPhiLuong', 'bdHieuSuatGK', 'bdChuyenCanDoi']
+    .forEach(function (id) { $(id).innerHTML = skKhoi(); });
+  $('kpisNhanSuTH').innerHTML = skKpis(4);
 
   goiCache('xuHuongThang', bl).then(function (d) {
     veCotThang($('bdXuHuong'), d.theoThang,
@@ -1523,7 +1581,7 @@ function viTrangThai(tt) {
 }
 
 function taiSanLuong() {
-  $('bangSL').innerHTML = '<tbody><tr><td><div class="rong">Đang tải dữ liệu…</div></td></tr></tbody>';
+  $('bangSL').innerHTML = skBang();
 
   var bl = layBoLoc();
   bl.sapXep = S.sapXep; bl.chieu = S.chieu; bl.trang = S.trang; bl.moiTrang = 100;
@@ -1616,7 +1674,7 @@ function taiSanLuong() {
    Tab: Phiếu nội trạm
    ===================================================================== */
 function taiPhieu() {
-  $('bangPhieu').innerHTML = '<tbody><tr><td><div class="rong">Đang tải dữ liệu…</div></td></tr></tbody>';
+  $('bangPhieu').innerHTML = skBang();
 
   goiCache('phieu', layBoLoc()).then(function (d) {
     $('tomTatPhieu').textContent = soVN(d.tong, 0) + ' phiếu · ' + soVN(d.tongKg, 2) + ' kg' +
@@ -1670,7 +1728,7 @@ function taiPhieu() {
 function moPhieu(ma) {
   $('nenPhieu').classList.add('hien');
   $('tieuDePhieu').textContent = 'Phiếu ' + ma;
-  $('thanPhieu').innerHTML = '<div class="rong">Đang tải…</div>';
+  $('thanPhieu').innerHTML = skDong(4);
 
   goiCache('phieuChiTiet', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, maPhieu: ma }).then(function (d) {
     var p = d.phieu;
@@ -1727,7 +1785,7 @@ function moPhieu(ma) {
    Tab: Xếp hạng
    ===================================================================== */
 function taiXepHang() {
-  $('bangXH').innerHTML = '<tbody><tr><td><div class="rong">Đang tải dữ liệu…</div></td></tr></tbody>';
+  $('bangXH').innerHTML = skBang();
 
   var bl = layBoLoc();
   bl.theo = $('fTheo').value;
@@ -1766,7 +1824,7 @@ function taiXepHang() {
    Giao khoán (chỉ xem): ai nhận phần cạo nào, kế hoạch mùa vụ, thực hiện lũy kế
    ===================================================================== */
 function taiGiaoKhoan() {
-  $('bangGK').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangGK').innerHTML = skBang();
   var bl = layBoLoc();
   bl.q = $('gkQ').value.trim(); bl.loc = $('gkLoc').value;
   bl.trang = S.trang; bl.moiTrang = 100;
@@ -1837,7 +1895,7 @@ function the_kpi_kg(ten, kg, phu) {
 }
 
 function taiSlTheoCn(giuBao) {
-  $('bangSlCn').innerHTML = '<tbody><tr><td><div class="rong">Đang tính…</div></td></tr></tbody>';
+  $('bangSlCn').innerHTML = skBang();
   var bl = layBoLoc();
   bl.ky = $('slKy').value || '';
   bl.q = $('slQ').value.trim();
@@ -2410,7 +2468,7 @@ function moDieuChinh() {
   var ky = $('lgKy').value;
   if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
   $('dcTieuDeKy').textContent = ky;
-  $('bangDieuChinh').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangDieuChinh').innerHTML = skBang();
   $('dcTomTat').innerHTML = '';
   $('nenDieuChinh').classList.add('hien');
   goiAPI('dieuChinhQkDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 60000)
@@ -2480,7 +2538,7 @@ function moKhoMieng() {
   var ky = $('lgKy').value;
   if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
   $('kmTieuDeKy').textContent = ky;
-  $('bangKhoMieng').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangKhoMieng').innerHTML = skBang();
   $('kmTomTat').innerHTML = '';
   $('nenKhoMieng').classList.add('hien');
   goiAPI('hoTroKhoDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 60000)
@@ -2922,7 +2980,7 @@ function xtXuatFileLuong() {
 }
 
 function taiLuong() {
-  $('bangLuong').innerHTML = '<tbody><tr><td><div class="rong">Đang tính…</div></td></tr></tbody>';
+  $('bangLuong').innerHTML = skBang();
   var bl = layBoLoc();
   bl.q = $('lgQ').value.trim(); bl.loc = $('lgLoc').value;
   bl.ky = $('lgKy').value || '';
@@ -3017,7 +3075,7 @@ var COT_CC = [
 ];
 
 function taiChamCong() {
-  $('bangCC').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangCC').innerHTML = skBang();
   var bl = layBoLocCC();
   bl.trang = S.trang; bl.moiTrang = 100;
 
@@ -3149,7 +3207,7 @@ function taiBangChamCongThang() {
   var thang = $('ccThang').value;
   var kt = ngayTrongThang(thang);
 
-  $('bangCCThang').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangCCThang').innerHTML = skBang();
   $('tomTatBangCC').textContent = 'Đang tải…';
 
   var bl = layBoLoc();
@@ -3222,7 +3280,7 @@ function taiBangChamCongThang() {
 }
 
 function taiDoiChieu() {
-  $('bangDC').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangDC').innerHTML = skBang();
   $('bangPC').innerHTML = '';
 
   goiCache('doiChieuCong', layBoLoc()).then(function (d) {
@@ -5003,7 +5061,7 @@ function nsThamSoNguoi(trang) {
 }
 
 function nsTaiNguoi() {
-  $('bangNguoiNS').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangNguoiNS').innerHTML = skBang();
   nsGoi('nhanSu', nsThamSoNguoi(NS.trang.nguoi)).then(function (d) {
     NS.dsNguoi = d.rows;
     $('nsTomTat').textContent = soVN(d.tong, 0) + ' người';
@@ -5097,7 +5155,7 @@ function nsMoThaoTac(ref) {
 
 /* ---- Lịch sử một người / một vị trí ---- */
 function nsMoLichSu(tham, ten) {
-  nsMoModal('Lịch sử — ' + ten, '<div class="rong">Đang tải…</div>');
+  nsMoModal('Lịch sử — ' + ten, skDong(3));
   nsGoi('lichSuNS', tham).then(function (d) {
     var h = '<div class="cuon"><table><thead><tr><th>Mã BĐ</th><th>Loại</th><th>Mã CN</th><th>Tổ</th><th>Từ ngày</th><th>Đến ngày</th><th>Lý do kết thúc</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead><tbody>';
     if (!d.rows.length) h += '<tr><td colspan="9"><div class="rong">Chưa có dòng nào.</div></td></tr>';
@@ -5161,7 +5219,7 @@ function nsMoDeXuat(loai, r) {
     };
   };
   if (!can) { mo([]); return; }
-  nsMoModal(NS_TIEU_DE[loai], '<div class="rong">Đang tải các mã vị trí trống…</div>');
+  nsMoModal(NS_TIEU_DE[loai], skDong(3));
   nsGoi('viTriNS', { trangThai: 'CHUA_GIAO', moiTrang: 300 }).then(function (d) { mo(d.rows); })
     .catch(function (e) { $('thanPhieu').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
@@ -5185,7 +5243,7 @@ function nsGuiDeXuat(t) {
 }
 
 function nsMoTuyenMoi() {
-  nsMoModal('Tuyển mới', '<div class="rong">Đang tải các mã vị trí trống…</div>');
+  nsMoModal('Tuyển mới', skDong(3));
   nsGoi('viTriNS', { trangThai: 'CHUA_GIAO', moiTrang: 300 }).then(function (d) {
     var dsTo = '<option value="">— chọn tổ —</option>';
     for (var i = 0; i < S.dsTo.length; i++) dsTo += '<option value="' + thoat(S.dsTo[i].ma) + '">' + thoat(S.dsTo[i].ma) + '</option>';
@@ -5237,7 +5295,7 @@ function nsMoCapNhat(r) {
 
 /* ---- Biến động ---- */
 function nsTaiBienDong() {
-  $('bangBienDongNS').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangBienDongNS').innerHTML = skBang();
   nsGoi('bienDongNS', { q: $('bdQ').value.trim(), loai: $('bdLoai').value, trangThai: $('bdTt').value, trang: NS.trang.bienDong, moiTrang: 100 }).then(function (d) {
     NS.dsBienDong = d.rows;
     $('bdTomTat').textContent = soVN(d.tong, 0) + ' biến động' + ($('bdLoai').value === '' ? ' (chưa gồm mốc khởi tạo)' : '');
@@ -5267,7 +5325,7 @@ function nsKhungXuLy() {
 
 /* ---- Vị trí ---- */
 function nsTaiViTri() {
-  $('bangViTriNS').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangViTriNS').innerHTML = skBang();
   nsGoi('viTriNS', { q: $('vtQ').value.trim(), to: $('vtTo').value, trangThai: $('vtTt').value, trang: NS.trang.viTri, moiTrang: 100 }).then(function (d) {
     $('vtTomTat').textContent = soVN(d.tong, 0) + ' vị trí';
     var h = '<thead><tr><th>Mã CN</th><th>Tổ</th><th>Chức danh</th><th>Trạng thái</th><th>Người đang giữ</th><th>Từ ngày</th><th></th></tr></thead><tbody>';
@@ -5290,7 +5348,7 @@ function nsTaiViTri() {
 
 /* ---- Cảnh báo đối chiếu ---- */
 function nsTaiCanhBao() {
-  $('bangCanhBaoNS').innerHTML = '<tbody><tr><td><div class="rong">Đang tải…</div></td></tr></tbody>';
+  $('bangCanhBaoNS').innerHTML = skBang();
   nsGoi('canhBaoNS', { loai: $('cbLoai').value, trangThai: $('cbTt').value }).then(function (d) {
     NS.dsCanhBao = d.rows;
     var chon = $('cbLoai').value;
