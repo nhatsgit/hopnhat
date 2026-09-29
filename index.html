@@ -116,26 +116,54 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .hop .truong{margin-bottom:16px}
 .goi-y{font-size:12.5px;color:var(--ink-3);margin-top:6px;line-height:1.45}
 
-/* ---------- Khung ứng dụng ---------- */
-.thanh-tren{border-bottom:1px solid var(--line);background:var(--card);
-  position:sticky;top:0;z-index:40}
-.thanh-tren-in{max-width:1320px;margin:0 auto;padding:12px 24px;
-  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.hieu{display:flex;flex-direction:column;line-height:1.2;margin-right:auto}
+/* ---------- Khung ứng dụng: sidebar trái + nội dung phải ---------- */
+.khung-ung-dung{display:flex;align-items:flex-start;min-height:100vh}
+.thanh-ben{width:250px;flex:none;background:var(--card);border-right:1px solid var(--line);
+  padding:20px 16px;display:flex;flex-direction:column;gap:16px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40}
+.hieu{display:flex;flex-direction:column;line-height:1.2}
 .hieu b{font-weight:600;font-size:16px;letter-spacing:-.01em}
 .hieu span{color:var(--ink-3);font-size:12.5px}
 .the-vaitro{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
   background:var(--leaf-soft);color:var(--leaf);border-radius:2px;
-  font-size:12.5px;font-weight:600}
+  font-size:12.5px;font-weight:600;align-self:flex-start}
 
-.tabs{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;gap:2px;
-  border-bottom:1px solid var(--line);overflow-x:auto}
+/* Thông tin tài khoản trong sidebar: xếp dọc, nút full-width thay vì trải hàng ngang. */
+.ben-taikhoan{display:flex;flex-direction:column;gap:8px;padding-bottom:16px;
+  border-bottom:1px solid var(--line)}
+.ben-taikhoan .gat{flex-direction:column}
+.ben-taikhoan .btn.nho{width:100%;text-align:center}
+
+/* Nhóm tab chính (Tổng quan/Sản lượng/Nhân sự/Lương) — liệt kê dọc trong sidebar. */
+.tabs-nhom-doc{display:flex;flex-direction:column;gap:2px}
+.tabs-nhom-doc .tab{width:100%;text-align:left;border-radius:2px;
+  border-bottom:none;border-left:3px solid transparent}
+.tabs-nhom-doc .tab.on{background:var(--leaf-soft);border-bottom-color:transparent}
+
 .tab{padding:11px 16px;border:none;background:none;color:var(--ink-3);
   border-bottom:2px solid transparent;font-weight:500;white-space:nowrap}
 .tab:hover{color:var(--ink)}
 .tab.on{color:var(--leaf);border-bottom-color:var(--leaf);font-weight:600}
+/* Tab con (chức năng bên trong 1 nhóm): nằm ngang trên đầu khu nội dung bên phải. */
+.tabs.tabs-con{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;gap:2px;
+  border-bottom:1px solid var(--line);overflow-x:auto;background:var(--card)}
+.tabs-con .tab{padding:8px 16px;font-size:13px}
 
+.noi-dung-chinh{flex:1;min-width:0}
 .wrap{max-width:1320px;margin:0 auto;padding:20px 24px 80px}
+
+/* Hamburger mở sidebar + nền mờ đằng sau — chỉ hiện trên màn hẹp (xem media query bên dưới). */
+.nut-mo-ben{display:none;position:fixed;top:14px;left:14px;z-index:50;width:36px;height:36px;
+  border:1px solid var(--line-2);background:var(--card);color:var(--ink);
+  border-radius:50%;font-size:16px;line-height:1;box-shadow:var(--shadow)}
+.nen-ben{display:none}
+@media (max-width:900px){
+  .nut-mo-ben{display:flex;align-items:center;justify-content:center}
+  .thanh-ben{position:fixed;top:0;left:0;z-index:60;
+    transform:translateX(-100%);transition:transform .2s ease;box-shadow:var(--shadow)}
+  .thanh-ben.mo{transform:translateX(0)}
+  .nen-ben.mo{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55}
+}
 
 /* ---------- Bộ lọc ---------- */
 .bo-loc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -259,7 +287,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 /* ---------- In ---------- */
 @media print{
   body{background:#fff}
-  .thanh-tren,.tabs,.bo-loc,.dau-hop .btn,.khong-in{display:none !important}
+  .thanh-ben,.nut-mo-ben,.tabs,.bo-loc,.dau-hop .btn,.khong-in{display:none !important}
   .nen-mo{position:static;background:none;padding:0;display:block}
   .hop-thoai{box-shadow:none;max-width:none}
   .wrap{padding:0}
@@ -268,7 +296,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 }
 
 @media (max-width:640px){
-  .thanh-tren-in,.tabs,.wrap{padding-left:14px;padding-right:14px}
+  .thanh-ben{width:230px;padding-left:20px}
+  .tabs,.wrap{padding-left:14px;padding-right:14px}
   .kpi .so{font-size:22px}
   .hieu b{font-size:15px}
   .dong-tt{gap:16px}
@@ -326,38 +355,35 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
 <!-- ===================== ỨNG DỤNG ===================== -->
 <div id="app" style="display:none">
+  <div class="khung-ung-dung">
+    <button class="nut-mo-ben" id="nutMoBen" type="button" aria-label="Mở menu">☰</button>
+    <div class="nen-ben" id="nenBen"></div>
 
-  <div class="thanh-tren">
-    <div class="thanh-tren-in">
+    <!-- Sidebar trái: tiêu đề + thông tin tài khoản + điều hướng theo NHOM_TAB (xem script).
+         Bấm 1 nhóm mở tab đầu tiên của nhóm đó; tab con của nhóm hiện ở thanh ngang phía trên
+         nội dung bên phải (#tabsCon), không lồng bên trong sidebar. -->
+    <aside class="thanh-ben" id="thanhBen">
       <div class="hieu">
         <b>Theo dõi sản lượng &amp; phiếu nội trạm</b>
         <span id="dongDonVi">—</span>
       </div>
-      <span class="the-vaitro" id="theVaiTro">—</span>
-      <!-- Chỉ tổ trưởng/đội trưởng thấy — ban lãnh đạo khoá cứng xem đã duyệt,
-           không cần gạt gì (xem BigQuery, không có khái niệm chờ duyệt). -->
-      <div class="gat" id="gatTrangThai" style="display:none"></div>
-      <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
-      <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
-      <button class="btn nho" id="nutTai">Tải lại</button>
-      <button class="btn nho" id="nutThoat">Đổi người dùng</button>
-    </div>
-  </div>
+      <div class="ben-taikhoan">
+        <span class="the-vaitro" id="theVaiTro">—</span>
+        <!-- Chỉ tổ trưởng/đội trưởng thấy — ban lãnh đạo khoá cứng xem đã duyệt,
+             không cần gạt gì (xem BigQuery, không có khái niệm chờ duyệt). -->
+        <div class="gat" id="gatTrangThai" style="display:none"></div>
+        <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
+        <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
+        <button class="btn nho" id="nutTai">Tải lại</button>
+        <button class="btn nho" id="nutThoat">Đổi người dùng</button>
+      </div>
+      <nav class="tabs-nhom-doc" id="tabsNhom"></nav>
+    </aside>
 
-  <div class="tabs">
-    <button class="tab on" data-tab="tongQuan">Tổng quan</button>
-    <button class="tab" data-tab="sanLuong">Sản lượng chi tiết</button>
-    <button class="tab" data-tab="phieu">Phiếu nội trạm</button>
-    <button class="tab" data-tab="chamCong">Chấm công</button>
-    <button class="tab" data-tab="doiChieu" style="display:none">Đối chiếu</button>
-    <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
-    <button class="tab" data-tab="nhanSu">Nhân sự</button>
-    <button class="tab" data-tab="giaoKhoan">Giao khoán</button>
-    <button class="tab" data-tab="slTheoCn">Sản lượng theo CN</button>
-    <button class="tab" data-tab="luong">Lương</button>
-  </div>
+    <main class="noi-dung-chinh">
+      <div class="tabs tabs-con" id="tabsCon" style="display:none"></div>
 
-  <div class="wrap">
+      <div class="wrap">
 
     <!-- Bộ lọc -->
     <div class="the bo-loc" id="khungBoLocChung">
@@ -777,6 +803,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </section>
 
   </div>
+    </main>
+  </div>
 </div>
 
 <!-- ===================== HỘP THOẠI PHIẾU ===================== -->
@@ -948,7 +976,7 @@ var S = {
   apiDoc: docLS('crck2_api_doc') || API_DOC_MAC_DINH,
   vaiTro: '', maDonVi: '', tenDonVi: '', dsTo: [], dsCn: [], toanCongTy: false,
   meta: null,
-  tab: 'tongQuan',
+  tab: 'tongQuan', nhom: 'tongQuan',
   sapXep: 'ngay', chieu: 'giam', trang: 1,
   locNhanhDangChon: '',
   trangThai: '',          // '' = Tất cả. Nút gạt đầu trang, chỉ tổ trưởng/đội trưởng thấy.
@@ -3738,7 +3766,7 @@ function csvXepHang() {
 function luuChoDangXem() {
   if (!S.vaiTro) return;
   ghiLS('crck2_dangxem', JSON.stringify({
-    tab: S.tab,
+    tab: S.tab, nhom: S.nhom,
     tuNgay: $('fTuNgay').value, denNgay: $('fDenNgay').value,
     doi: $('fDoi').value, to: $('fTo').value, maCn: $('fMaCn').value,
     loaiMu: $('fLoaiMu').value, phien: $('fPhien').value,
@@ -3769,6 +3797,10 @@ function khoiPhucChoDangXem() {
   if (j.trangThai) { S.trangThai = j.trangThai; veGatTrangThai(); }
   if (j.kyHieu) $('fKyHieu').value = j.kyHieu;
   if (j.tab && LOC_THEO_TAB[j.tab] && !TAB_AN[j.tab]) S.tab = j.tab;
+  // Nhóm đã lưu chỉ dùng được nếu đúng là 1 trong các nhóm chứa tab vừa khôi phục — phòng
+  // trường hợp tab con thuộc nhiều nhóm (vd Chấm công): giữ đúng nhóm lần trước đang mở.
+  var nhCu = j.nhom && timNhom(j.nhom);
+  S.nhom = (nhCu && nhCu.tabs.indexOf(S.tab) > -1) ? j.nhom : '';
 
   dongBoChip();
   return true;
@@ -4662,13 +4694,93 @@ function vaoTongQuanMacDinh() {
   dongBoChip();
 }
 
-function chuyenTab(ten) {
-  S.tab = ten;
-  if (ten === 'tongQuan') vaoTongQuanMacDinh();
-  var tabs = document.querySelectorAll('.tab');
-  for (var i = 0; i < tabs.length; i++) {
-    tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab') === ten);
+/**
+ * Tab được nhóm lại theo chức năng (kiểu phân cấp: bấm vào nhóm ở hàng trên, hàng dưới hiện
+ * các tab con của nhóm đó). Một tab con có thể thuộc nhiều nhóm (vd Chấm công vừa ở Nhân sự
+ * vừa ở Lương) — chỉ là 2 lối vào khác nhau tới cùng 1 tab, không nhân đôi dữ liệu/trạng thái.
+ */
+var NHOM_TAB = [
+  { id: 'tongQuan', ten: 'Tổng quan', tabs: ['tongQuan'] },
+  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan'] },
+  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang'] },
+  { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'luong'] }
+];
+var TEN_TAB = {
+  tongQuan: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
+  chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
+  nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN', luong: 'Lương'
+};
+
+function timNhom(id) {
+  for (var i = 0; i < NHOM_TAB.length; i++) if (NHOM_TAB[i].id === id) return NHOM_TAB[i];
+  return null;
+}
+
+/** Nhóm đầu tiên chứa tab này — dùng để suy ra nhóm đang xem khi khôi phục tab đã lưu/URL. */
+function timNhomCuaTab(tab) {
+  for (var i = 0; i < NHOM_TAB.length; i++) if (NHOM_TAB[i].tabs.indexOf(tab) > -1) return NHOM_TAB[i].id;
+  return NHOM_TAB[0].id;
+}
+
+function veNhomTab() {
+  var h = '';
+  for (var i = 0; i < NHOM_TAB.length; i++) {
+    h += '<button class="tab' + (S.nhom === NHOM_TAB[i].id ? ' on' : '') +
+         '" data-nhom="' + NHOM_TAB[i].id + '">' + NHOM_TAB[i].ten + '</button>';
   }
+  $('tabsNhom').innerHTML = h;
+  var nuts = $('tabsNhom').querySelectorAll('button[data-nhom]');
+  for (var j = 0; j < nuts.length; j++) {
+    nuts[j].onclick = function () { chuyenNhom(this.getAttribute('data-nhom')); };
+  }
+}
+
+/** Hàng tab con: chỉ hiện khi nhóm đang chọn có từ 2 tab con trở lên (Tổng quan chỉ 1 nên ẩn). */
+function veTabCon() {
+  var nh = timNhom(S.nhom);
+  var el = $('tabsCon');
+  var dsTab = (nh ? nh.tabs : []).filter(function (t) { return !TAB_AN[t]; });
+  if (dsTab.length < 2) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  var h = '';
+  for (var i = 0; i < dsTab.length; i++) {
+    h += '<button class="tab' + (S.tab === dsTab[i] ? ' on' : '') +
+         '" data-tab="' + dsTab[i] + '">' + TEN_TAB[dsTab[i]] + '</button>';
+  }
+  el.innerHTML = h;
+  el.style.display = '';
+  var nuts = el.querySelectorAll('button[data-tab]');
+  for (var j = 0; j < nuts.length; j++) {
+    // Giữ nguyên đúng nhóm đang mở (S.nhom) khi bấm tab con — 1 tab con có thể thuộc nhiều
+    // nhóm (vd Chấm công), không để chuyenTab tự suy ra lại nhóm khác (xem timNhomCuaTab).
+    nuts[j].onclick = function () { S.trang = 1; chuyenTab(this.getAttribute('data-tab'), S.nhom); };
+  }
+}
+
+/** Bấm vào 1 nhóm: luôn mở tab đầu tiên của nhóm đó, kể cả khi nhóm đang mở sẵn. */
+function chuyenNhom(id) {
+  var nh = timNhom(id);
+  if (!nh) return;
+  S.trang = 1;
+  chuyenTab(nh.tabs[0], nh.id);
+}
+
+/**
+ * ten: tab muốn mở. nhomMoi: nhóm muốn hiện đang chọn (tuỳ chọn) — truyền vào khi biết chắc
+ * (bấm nhóm/tab con), bỏ trống thì tự suy ra nhóm đầu tiên chứa tab đó (khôi phục phiên/URL).
+ */
+function chuyenTab(ten, nhomMoi) {
+  S.tab = ten;
+  if (nhomMoi) {
+    S.nhom = nhomMoi;
+  } else {
+    // Không chỉ định nhóm (khôi phục phiên/URL): giữ nguyên nhóm đang có nếu nó vẫn còn
+    // chứa tab này, không thì mới suy ra nhóm đầu tiên chứa tab đó.
+    var nhHienTai = timNhom(S.nhom);
+    if (!nhHienTai || nhHienTai.tabs.indexOf(ten) === -1) S.nhom = timNhomCuaTab(ten);
+  }
+  if (ten === 'tongQuan') vaoTongQuanMacDinh();
+  veNhomTab();
+  veTabCon();
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
   $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
   $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
@@ -5817,13 +5929,21 @@ document.addEventListener('keydown', function (ev) {
   if (ev.key === 'Escape') $('nenPhieu').classList.remove('hien');
 });
 
-var cacTab = document.querySelectorAll('.tab');
-for (var t = 0; t < cacTab.length; t++) {
-  cacTab[t].onclick = function () {
-    S.trang = 1;
-    chuyenTab(this.getAttribute('data-tab'));
-  };
-}
+// Tab giờ dựng động theo nhóm (xem veNhomTab/veTabCon) — mỗi lần dựng lại đã tự gắn onclick,
+// không cần gắn tĩnh 1 lần ở đây như trước.
+
+// Sidebar chỉ ẩn/hiện bằng CSS transform trên màn hẹp (xem media query .thanh-ben) — mở bằng nút
+// hamburger, đóng bằng nền mờ / phím Esc / bấm chọn xong 1 nhóm (đỡ phải tự tay đóng lại).
+(function () {
+  var ben = $('thanhBen'), nen = $('nenBen'), nutMo = $('nutMoBen');
+  function dongBen() { ben.classList.remove('mo'); nen.classList.remove('mo'); }
+  nutMo.onclick = function () { ben.classList.add('mo'); nen.classList.add('mo'); };
+  nen.onclick = dongBen;
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') dongBen(); });
+  ben.addEventListener('click', function (ev) {
+    if (ev.target.closest('button[data-nhom]')) dongBen();
+  });
+})();
 
 S.thamSoURL = layThamSoURL();
 batDau();
