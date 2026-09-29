@@ -1129,10 +1129,13 @@ function goiQua(goc, action, thamSo, msCho) {
    ===================================================================== */
 function $(id) { return document.getElementById(id); }
 
+// Dùng en-US (không phải vi-VN) để phần nghìn là dấu phẩy, phần thập phân là dấu chấm
+// (vd 1000.1 -> "1,000.1") theo đúng yêu cầu, dù tên hàm vẫn giữ "soVN" cho khỏi phải đổi
+// hàng trăm chỗ gọi.
 function soVN(n, le) {
   if (n === null || n === undefined || isNaN(n)) return '—';
   le = (le === undefined) ? 0 : le;
-  return Number(n).toLocaleString('vi-VN', { minimumFractionDigits: le, maximumFractionDigits: le });
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: le, maximumFractionDigits: le });
 }
 
 function ngayVN(s) {
@@ -1485,7 +1488,7 @@ function layBoLoc() {
    Cache phía trình duyệt — đổi qua đổi lại giữa các tab với cùng bộ lọc
    thì không gọi lại backend. Nút "Tải lại" xoá sạch cache này.
    ===================================================================== */
-var CACHE_FE_MS = 5 * 60 * 1000;
+var CACHE_FE_MS = 2 * 60 * 1000;
 var _cacheFE = {};
 
 function goiCache(action, thamSo) {
@@ -2297,7 +2300,7 @@ function xtSheetGiao(wb, tenSheet, ds, donVi, ky) {
     ws.getCell(r, 7).value = x.nlDay;
     ws.getCell(r, 8).value = x.giaoDay;
     ws.getCell(r, 9).value = x.giao;
-    for (var cc = 1; cc <= 9; cc++) { ws.getCell(r, cc).font = thuong; if (cc >= 4) ws.getCell(r, cc).numFmt = '#,##0'; }
+    for (var cc = 1; cc <= 9; cc++) { ws.getCell(r, cc).font = thuong; if (cc >= 4) ws.getCell(r, cc).numFmt = '[$-409]#,##0'; }
     r++;
   }
   var rTong = r;
@@ -2306,7 +2309,7 @@ function xtSheetGiao(wb, tenSheet, ds, donVi, ky) {
   var tongGia = [tCay, tNlC, tQkC, tNlD, tQkD, tTong];
   for (var g = 0; g < tongGia.length; g++) {
     var cellT = ws.getCell(rTong, g + 4);
-    cellT.value = tongGia[g]; cellT.font = dam; cellT.numFmt = '#,##0';
+    cellT.value = tongGia[g]; cellT.font = dam; cellT.numFmt = '[$-409]#,##0';
   }
 
   var hn = new Date();
@@ -3071,7 +3074,7 @@ function xtXuatFileLuong() {
       if (v[col] !== null) cell.value = v[col];
       cell.font = font(13, false); cell.border = vien;
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: col === 'C' };
-      if (col !== 'A' && col !== 'B' && col !== 'C' && col !== 'J') cell.numFmt = '#,##0';
+      if (col !== 'A' && col !== 'B' && col !== 'C' && col !== 'J') cell.numFmt = '[$-409]#,##0';
       if (col === 'B') cell.numFmt = '@';
       var val = v[col] && typeof v[col] === 'object' ? v[col].result : v[col];
       if (tong[col] !== undefined && typeof val === 'number') tong[col] += val;
@@ -3086,7 +3089,7 @@ function xtXuatFileLuong() {
   cotTong.forEach(function (col) {
     var cell = ws.getCell(col + rt);
     cell.value = { formula: 'SUBTOTAL(9,' + col + R0 + ':' + col + rEnd + ')', result: tong[col] };
-    cell.font = font(13, true); cell.numFmt = '#,##0'; cell.alignment = giua;
+    cell.font = font(13, true); cell.numFmt = '[$-409]#,##0'; cell.alignment = giua;
   });
   ws.getRow(rt + 1).height = 38; chu('A' + (rt + 1), F.chu410, font(14, true), { horizontal: 'left', vertical: 'middle' });
   ws.getRow(rt + 2).height = 39; gop('A' + (rt + 2) + ':AA' + (rt + 2));
@@ -3663,7 +3666,7 @@ function xuatBangExcel(ten, nhan, dong) {
       o.border = O_VIEN;
       var laSo = typeof o.value === 'number';
       o.alignment = { horizontal: laSo ? 'right' : 'left', vertical: 'middle' };
-      if (laSo && Math.abs(o.value) >= 1000 && Math.round(o.value) === o.value) o.numFmt = '#,##0';
+      if (laSo && Math.abs(o.value) >= 1000 && Math.round(o.value) === o.value) o.numFmt = '[$-409]#,##0';
     });
   });
 
