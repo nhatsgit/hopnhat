@@ -162,9 +162,6 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .luoi-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
 @media (max-width:900px){.luoi-2{grid-template-columns:1fr}}
 .o-bieu-do{padding:16px}
-/* Thẻ tràn hết chiều ngang màn hình, không bị giới hạn theo max-width 1320px của .wrap —
-   dùng cho biểu đồ cần nhiều chỗ ngang (Sản lượng theo ngày, hiện nhãn từng ngày). */
-.day-man-hinh{width:100vw;position:relative;left:50%;margin-left:-50vw;box-sizing:border-box;border-radius:0}
 .chu-thich{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:13px}
 .chu-thich i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}
 
@@ -424,13 +421,15 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab: Tổng quan -->
     <section id="pTongQuan">
       <div class="kpis" id="kpis"></div>
-      <!-- Sản lượng theo ngày để riêng, tràn hết chiều ngang màn hình — đủ chỗ hiện nhãn TỪNG
-           ngày thay vì chỉ 3 mốc đầu/giữa/cuối như trước, không bị ép chung cột với Cơ cấu loại mủ. -->
-      <div class="the o-bieu-do day-man-hinh" style="margin-bottom:20px;padding:16px 24px">
+      <!-- Sản lượng theo ngày để riêng hẳn 1 hàng (rộng bằng các thẻ khác, không tràn màn hình) —
+           đủ chỗ hiện nhãn TỪNG ngày thay vì chỉ 3 mốc đầu/giữa/cuối như trước. -->
+      <div class="the o-bieu-do" style="margin-bottom:20px">
         <h3 class="tieude-muc">Sản lượng theo ngày</h3>
         <div id="bdNgay"></div>
       </div>
-      <div class="the o-bieu-do" style="margin-bottom:20px">
+      <!-- Biểu đồ tròn nhỏ — không cần rộng hết hàng như Sản lượng theo ngày, giới hạn bề
+           ngang cho cân đối, khỏi trống trải hai bên. -->
+      <div class="the o-bieu-do" style="margin-bottom:20px;max-width:420px">
         <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
         <div id="bdLoai"></div>
       </div>
