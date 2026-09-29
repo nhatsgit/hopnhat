@@ -215,6 +215,9 @@
         fitToPage: !!pi.fitToPage, fitToWidth: pi.fitToWidth == null ? 1 : pi.fitToWidth, fitToHeight: pi.fitToHeight == null ? 0 : pi.fitToHeight,
         margins: pi.margins || undefined
       };
+      // Sheet không dùng "vừa trang" (fitToPage=false, ví dụ XẾP LOẠI CN, KẾ HOẠCH CẠO BÙ) thì in
+      // theo % thu nhỏ (scale) của file thật — thiếu dòng này Excel mặc định in ở 100%, lệch hẳn.
+      if (pi.scale) ws.pageSetup.scale = pi.scale;
       if (pi.titles) ws.pageSetup.printTitlesRow = String(pi.titles).replace(/\$/g, '');
       var ma = /\$([A-Z]+)\$(\d+):\$([A-Z]+)\$(\d+)$/.exec(pi.area || '');
       if (ma && lastRow) ws.pageSetup.printArea = 'A1:' + ma[3] + lastRow;
