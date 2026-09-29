@@ -951,7 +951,7 @@ var _demCb = 0;
 /* Lệnh đọc gửi Cloud Run. Cloud Run không trả lời được (sập, quá tải, hết
    giờ) thì gửi lại cho Apps Script, trang vẫn chạy. Lỗi NGHIỆP VỤ (sai mã
    đơn vị...) thì không gửi lại — Apps Script cũng sẽ báo đúng lỗi đó. */
-function goiAPI(action, thamSo, msCho) {
+function goiApiMotLan(action, thamSo, msCho) {
   var vuaGhiNS = LENH_DOC_NHAN_SU[action] && (Date.now() - _nsGhiLuc < 120000);
   var vuaGhiGiao = LENH_DOC_GIAO_SL[action] && (Date.now() - _giaoSlGhiLuc < 120000);
   if (LENH_DOC[action] && S.apiDoc && !vuaGhiNS && !vuaGhiGiao) {
@@ -965,6 +965,24 @@ function goiAPI(action, thamSo, msCho) {
       });
   }
   return goiQua(S.api, action, thamSo, msCho);
+}
+
+/**
+ * Gọi backend, TỰ THỬ LẠI ĐÚNG 1 LẦN nếu lần đầu hết thời gian chờ/lỗi đường truyền
+ * (mất mạng, backend không phản hồi...) — vì phần lớn trường hợp lần 2 sẽ qua ngay
+ * (mạng chập chờn, Cloud Run vừa "nguội máy"). Lỗi NGHIỆP VỤ (sai mã đơn vị, thiếu
+ * quyền...) không thử lại vì thử lại cũng ra đúng lỗi đó. Thử lại xong vẫn lỗi thì
+ * báo rõ "lỗi mạng" thay vì để nguyên thông báo kỹ thuật hết-giờ khó hiểu.
+ */
+function goiAPI(action, thamSo, msCho, _daThuLai) {
+  return goiApiMotLan(action, thamSo, msCho).catch(function (e) {
+    if (!e.vanChuyen) throw e;               // lỗi nghiệp vụ — báo luôn, không thử lại
+    if (!_daThuLai) {
+      try { console.warn('Backend lỗi đường truyền, tự thử lại lần 2:', e.message); } catch (x) {}
+      return goiAPI(action, thamSo, msCho, true);
+    }
+    throw new Error('Lỗi mạng: không kết nối được máy chủ sau khi đã thử lại. Kiểm tra kết nối mạng rồi bấm "Tải lại".');
+  });
 }
 
 function goiQua(goc, action, thamSo, msCho) {
