@@ -118,33 +118,62 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 
 /* ---------- Khung ứng dụng: sidebar trái + nội dung phải ---------- */
 .khung-ung-dung{display:flex;align-items:flex-start;min-height:100vh}
-.thanh-ben{width:250px;flex:none;background:var(--card);border-right:1px solid var(--line);
+/* Sidebar mang màu thương hiệu cố định (xanh lá đậm), KHÔNG đổi theo sáng/tối — giống mẫu
+   tham khảo. Khai báo riêng 1 bộ biến --sb-* để mọi thành phần con bên trong tự lấy màu theo,
+   không lẫn với --ink/--card của phần nội dung bên phải (vẫn đổi theo theme như cũ). */
+.thanh-ben{
+  --sb-bg:#157A5A; --sb-ink:#FFFFFF; --sb-ink-2:rgba(255,255,255,.68);
+  --sb-line:rgba(255,255,255,.2); --sb-hover:rgba(255,255,255,.12);
+  --sb-active-bg:#FFFFFF; --sb-active-ink:#0F5A40;
+  width:250px;flex:none;background:var(--sb-bg);color:var(--sb-ink);
   padding:20px 16px;display:flex;flex-direction:column;gap:16px;
   position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40}
 .hieu{display:flex;flex-direction:column;line-height:1.2}
 .hieu b{font-weight:600;font-size:16px;letter-spacing:-.01em}
 .hieu span{color:var(--ink-3);font-size:12.5px}
+.thanh-ben .hieu span{color:var(--sb-ink-2)}
 .the-vaitro{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
   background:var(--leaf-soft);color:var(--leaf);border-radius:2px;
   font-size:12.5px;font-weight:600;align-self:flex-start}
+.thanh-ben .the-vaitro{background:rgba(255,255,255,.16);color:var(--sb-ink)}
 
 /* Thông tin tài khoản trong sidebar: xếp dọc, nút full-width thay vì trải hàng ngang. */
 .ben-taikhoan{display:flex;flex-direction:column;gap:8px;padding-bottom:16px;
-  border-bottom:1px solid var(--line)}
+  border-bottom:1px solid var(--sb-line)}
 .ben-taikhoan .gat{flex-direction:column}
 .ben-taikhoan .btn.nho{width:100%;text-align:center}
 
 /* Tải lại / Đổi người dùng: đẩy hẳn xuống đáy sidebar (margin-top:auto trong cột flex),
    tách khỏi khối thông tin tài khoản ở trên và nhóm điều hướng ở giữa. */
 .ben-duoi{margin-top:auto;display:flex;flex-direction:column;gap:8px;
-  padding-top:16px;border-top:1px solid var(--line)}
+  padding-top:16px;border-top:1px solid var(--sb-line)}
 .ben-duoi .btn.nho{width:100%;text-align:center}
 
-/* Nhóm tab chính (Tổng quan/Sản lượng/Nhân sự/Lương) — liệt kê dọc trong sidebar. */
+/* Nút/chip bên trong sidebar (Tải lại, Đổi người dùng, Đồng bộ..., gạt Tất cả/Chưa/Đã duyệt):
+   viền + chữ trắng mờ trên nền xanh, thay vì màu --card/--leaf mặc định (lẫn vào nền). */
+.thanh-ben .btn.nho{background:rgba(255,255,255,.08);border-color:var(--sb-line);color:var(--sb-ink)}
+.thanh-ben .btn.nho:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45)}
+.thanh-ben .chip{background:transparent;border-color:var(--sb-line);color:var(--sb-ink-2)}
+.thanh-ben .chip:hover{border-color:rgba(255,255,255,.5);color:var(--sb-ink)}
+.thanh-ben .chip.on{background:var(--sb-active-bg);border-color:var(--sb-active-bg);color:var(--sb-active-ink)}
+
+/* Nhóm tab chính (Tổng quan/Sản lượng/Nhân sự/Lương) — liệt kê dọc trong sidebar, mục đang
+   chọn thành khối bo góc nền trắng như mẫu tham khảo, kèm icon bên trái tên nhóm. */
 .tabs-nhom-doc{display:flex;flex-direction:column;gap:2px}
-.tabs-nhom-doc .tab{width:100%;text-align:left;border-radius:2px;
-  border-bottom:none;border-left:3px solid transparent}
-.tabs-nhom-doc .tab.on{background:var(--leaf-soft);border-bottom-color:transparent}
+.nhom-khoi{display:flex;flex-direction:column;gap:2px}
+.tabs-nhom-doc .tab{width:100%;text-align:left;border-radius:8px;border-bottom:none;
+  color:var(--sb-ink-2);display:flex;align-items:center;gap:10px}
+.tabs-nhom-doc .tab:hover{color:var(--sb-ink);background:var(--sb-hover)}
+.tabs-nhom-doc .tab.on{background:var(--sb-active-bg);color:var(--sb-active-ink);font-weight:600}
+.nhom-icon{display:inline-flex;flex:none}
+.nhom-icon svg{display:block}
+.nhom-ten{flex:1}
+
+/* Tab con xổ ra ngay dưới nhóm đang chọn, thụt vào bằng viền dọc mờ bên trái. */
+.nhom-con{display:flex;flex-direction:column;gap:2px;margin:2px 0 6px;
+  padding-left:14px;border-left:2px solid var(--sb-line)}
+.nhom-con .tab{font-size:13px;padding:8px 12px;font-weight:400}
+.nhom-con .tab.on{font-weight:600}
 
 .tab{padding:11px 16px;border:none;background:none;color:var(--ink-3);
   border-bottom:2px solid transparent;font-weight:500;white-space:nowrap}
@@ -4719,6 +4748,13 @@ var TEN_TAB = {
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN', luong: 'Lương'
 };
+/** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
+var ICON_NHOM = {
+  tongQuan: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg>',
+  sanLuong: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="4" y1="17" x2="4" y2="10"/><line x1="10" y1="17" x2="10" y2="5"/><line x1="16" y1="17" x2="16" y2="12"/></svg>',
+  nhanSu: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="6" r="2.6"/><path d="M2.5 17c0-3 2-4.8 4.5-4.8s4.5 1.8 4.5 4.8"/><circle cx="14.5" cy="7" r="2.1"/><path d="M12.8 12.6c.5-.2 1.1-.3 1.7-.3 2.2 0 3.8 1.5 3.8 4"/></svg>',
+  luong: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="2.5" y="5.5" width="15" height="10" rx="1.5"/><path d="M2.5 8.5h15"/><circle cx="14" cy="12" r="1"/></svg>'
+};
 
 function timNhom(id) {
   for (var i = 0; i < NHOM_TAB.length; i++) if (NHOM_TAB[i].id === id) return NHOM_TAB[i];
@@ -4731,16 +4767,45 @@ function timNhomCuaTab(tab) {
   return NHOM_TAB[0].id;
 }
 
+/**
+ * Nhóm dựng dạng cây: mỗi nhóm 1 nút (kèm icon), nhóm đang mở thì xổ thêm danh sách tab con
+ * thụt vào ngay bên dưới nó (giống kiểu sidebar phân cấp tham khảo) — chỉ xổ đúng 1 nhóm tại
+ * 1 thời điểm (nhóm đang chọn), không phải accordion nhiều nhóm cùng mở.
+ */
 function veNhomTab() {
   var h = '';
   for (var i = 0; i < NHOM_TAB.length; i++) {
-    h += '<button class="tab' + (S.nhom === NHOM_TAB[i].id ? ' on' : '') +
-         '" data-nhom="' + NHOM_TAB[i].id + '">' + NHOM_TAB[i].ten + '</button>';
+    var nh = NHOM_TAB[i];
+    var dangMo = S.nhom === nh.id;
+    h += '<div class="nhom-khoi">';
+    h += '<button class="tab' + (dangMo ? ' on' : '') + '" data-nhom="' + nh.id + '">' +
+         '<span class="nhom-icon">' + (ICON_NHOM[nh.id] || '') + '</span>' +
+         '<span class="nhom-ten">' + nh.ten + '</span></button>';
+    var dsCon = nh.tabs.filter(function (t) { return !TAB_AN[t]; });
+    if (dangMo && dsCon.length > 1) {
+      h += '<div class="nhom-con">';
+      for (var k = 0; k < dsCon.length; k++) {
+        h += '<button class="tab' + (S.tab === dsCon[k] ? ' on' : '') +
+             '" data-tab="' + dsCon[k] + '" data-nhom-cha="' + nh.id + '">' + TEN_TAB[dsCon[k]] + '</button>';
+      }
+      h += '</div>';
+    }
+    h += '</div>';
   }
   $('tabsNhom').innerHTML = h;
-  var nuts = $('tabsNhom').querySelectorAll('button[data-nhom]');
-  for (var j = 0; j < nuts.length; j++) {
-    nuts[j].onclick = function () { chuyenNhom(this.getAttribute('data-nhom')); };
+
+  var nutNhom = $('tabsNhom').querySelectorAll('button[data-nhom]');
+  for (var j = 0; j < nutNhom.length; j++) {
+    nutNhom[j].onclick = function () { chuyenNhom(this.getAttribute('data-nhom')); };
+  }
+  var nutCon = $('tabsNhom').querySelectorAll('button[data-tab]');
+  for (var m = 0; m < nutCon.length; m++) {
+    // Giữ nguyên đúng nhóm cha đang xổ — 1 tab con có thể thuộc nhiều nhóm (vd Chấm công),
+    // không để chuyenTab tự suy ra lại nhóm khác (xem timNhomCuaTab).
+    nutCon[m].onclick = function () {
+      S.trang = 1;
+      chuyenTab(this.getAttribute('data-tab'), this.getAttribute('data-nhom-cha'));
+    };
   }
 }
 
