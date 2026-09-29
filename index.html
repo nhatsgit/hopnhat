@@ -1525,46 +1525,61 @@ function taiKhoiLanhDaoMoRong() {
     .forEach(function (id) { $(id).innerHTML = skKhoi(); });
   $('kpisNhanSuTH').innerHTML = skKpis(4);
 
-  goiCache('xuHuongThang', bl).then(function (d) {
-    veCotThang($('bdXuHuong'), d.theoThang,
-      function (x) { return x.quyKho; },
-      function (x) { return 'Tháng ' + x.thang + ': ' + soVN(x.quyKho, 0) + ' kg quy khô / ' +
-             soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân'; },
-      'var(--leaf)');
-  }).catch(function (e) { $('bdXuHuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+  // "Chuyên cần theo đội" chỉ cần vài chục ngày gần nhất để có ý nghĩa — gọi cả lịch sử chấm công
+  // của toàn công ty (có thể hàng năm) vừa nặng vừa không cần thiết cho một con số snapshot.
+  var k30 = khoangCuaMoc('30');
+  var blCC = k30 ? Object.assign({}, bl, { tuNgay: k30.tu, denNgay: k30.den }) : bl;
 
-  goiCache('chiPhiLuongTongHop', bl).then(function (d) {
-    veCotThang($('bdChiPhiLuong'), d.theoThang,
-      function (x) { return x.tongThuNhap; },
-      function (x) { return 'Kỳ ' + x.ky + ': ' + soVN(x.tongThuNhap, 0) + ' riel tổng thu nhập, ' +
-             soVN(x.tongThucNhan, 0) + ' riel thực nhận (' + soVN(x.soNguoi, 0) + ' người)'; },
-      'var(--clay)');
-  }).catch(function (e) { $('bdChiPhiLuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
-
-  nsGoi('nhanSuTongQuan').then(function (d) {
-    var k = d.kpi || {};
-    $('kpisNhanSuTH').innerHTML =
-      the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
-              k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Toàn công ty') +
-      the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo || 0, 0), 'cảnh báo',
-              'Thiếu NSSF: ' + soVN(k.thieuNssf || 0, 0) + ' người') +
-      the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
-              'Dưới 18 tuổi: ' + soVN(k.duoi18 || 0, 0) + ' người') +
-      the_kpi('Vị trí còn trống', soVN(k.viTriTrong || 0, 0), 'vị trí',
-              'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí');
-  }).catch(function (e) { $('kpisNhanSuTH').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
-
-  goiCache('giaoKhoan', bl).then(function (d) {
-    veCotNgang($('bdHieuSuatGK'), d.theoDoi || [],
-      function (x) { return x.doi; }, function (x) { return x.tyLe; },
-      function (v) { return soVN(v, 1) + '%'; }, 'var(--leaf)');
-  }).catch(function (e) { $('bdHieuSuatGK').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
-
-  goiCache('chamCong', bl).then(function (d) {
-    veCotNgang($('bdChuyenCanDoi'), d.theoDoi || [],
-      function (x) { return x.doi; }, function (x) { return x.congBqNguoi; },
-      function (v) { return soVN(v, 1) + ' công/người'; }, 'var(--sky)');
-  }).catch(function (e) { $('bdChuyenCanDoi').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+  // 5 khối này chỉ là thông tin phụ (đã có bóng mờ chờ, không chặn phần chính) — gọi TUẦN TỰ thay
+  // vì đồng loạt, đỡ dồn cùng lúc nhiều truy vấn nặng (BigQuery/Cloud Run), giảm lag chung của trang.
+  [
+    function () {
+      return goiCache('xuHuongThang', bl).then(function (d) {
+        veCotThang($('bdXuHuong'), d.theoThang,
+          function (x) { return x.quyKho; },
+          function (x) { return 'Tháng ' + x.thang + ': ' + soVN(x.quyKho, 0) + ' kg quy khô / ' +
+                 soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân'; },
+          'var(--leaf)');
+      }).catch(function (e) { $('bdXuHuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+    },
+    function () {
+      return goiCache('chiPhiLuongTongHop', bl).then(function (d) {
+        veCotThang($('bdChiPhiLuong'), d.theoThang,
+          function (x) { return x.tongThuNhap; },
+          function (x) { return 'Kỳ ' + x.ky + ': ' + soVN(x.tongThuNhap, 0) + ' riel tổng thu nhập, ' +
+                 soVN(x.tongThucNhan, 0) + ' riel thực nhận (' + soVN(x.soNguoi, 0) + ' người)'; },
+          'var(--clay)');
+      }).catch(function (e) { $('bdChiPhiLuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+    },
+    function () {
+      return nsGoi('nhanSuTongQuan').then(function (d) {
+        var k = d.kpi || {};
+        $('kpisNhanSuTH').innerHTML =
+          the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
+                  k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Toàn công ty') +
+          the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo || 0, 0), 'cảnh báo',
+                  'Thiếu NSSF: ' + soVN(k.thieuNssf || 0, 0) + ' người') +
+          the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
+                  'Dưới 18 tuổi: ' + soVN(k.duoi18 || 0, 0) + ' người') +
+          the_kpi('Vị trí còn trống', soVN(k.viTriTrong || 0, 0), 'vị trí',
+                  'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí');
+      }).catch(function (e) { $('kpisNhanSuTH').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+    },
+    function () {
+      return goiCache('giaoKhoan', bl).then(function (d) {
+        veCotNgang($('bdHieuSuatGK'), d.theoDoi || [],
+          function (x) { return x.doi; }, function (x) { return x.tyLe; },
+          function (v) { return soVN(v, 1) + '%'; }, 'var(--leaf)');
+      }).catch(function (e) { $('bdHieuSuatGK').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+    },
+    function () {
+      return goiCache('chamCong', blCC).then(function (d) {
+        veCotNgang($('bdChuyenCanDoi'), d.theoDoi || [],
+          function (x) { return x.doi; }, function (x) { return x.congBqNguoi; },
+          function (v) { return soVN(v, 1) + ' công/người'; }, 'var(--sky)');
+      }).catch(function (e) { $('bdChuyenCanDoi').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+    }
+  ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
 }
 
 function the_kpi(ten, so, dv, phu) {
@@ -4565,8 +4580,29 @@ function veTuyChonDoi() {
   selDoi.value = conHopLe ? truoc : (chiDoi ? (dsDoi[0] || '') : '');
 }
 
+/**
+ * Tổng quan là trang "ảnh chụp nhanh" — mỗi lần vào lại (kể cả từ tab khác chuyển sang) đều
+ * reset về mặc định 7 ngày gần nhất + mọi đội/tổ..., không kế thừa bộ lọc đang dùng ở tab khác.
+ * Vừa đỡ nhầm ("ơ sao tổng quan lại đang lọc đúng 1 đội/1 tháng cũ") vừa nhẹ hơn hẳn so với lọc
+ * "Tháng này" hay "Toàn bộ" — đỡ lag khi vào tab này.
+ */
+function vaoTongQuanMacDinh() {
+  // "7 ngày gần nhất" tính từ ngày CÓ DỮ LIỆU mới nhất (ngayMax), không phải hôm nay theo lịch —
+  // đội thường nhập trễ vài ngày, lấy mốc hôm nay dễ ra toàn 0 (nhìn như trang bị hỏng).
+  var mocDen = (S.meta && S.meta.ngayMax) ? new Date(S.meta.ngayMax + 'T00:00:00') : new Date();
+  mocDen.setHours(0, 0, 0, 0);
+  var mocTu = new Date(mocDen.getTime() - 6 * 86400000);
+  $('fTuNgay').value = dinhDangISO(mocTu);
+  $('fDenNgay').value = dinhDangISO(mocDen);
+  $('fDoi').value = ''; $('fTo').value = ''; $('fLoaiMu').value = '';
+  $('fPhien').value = ''; $('fChatLuong').value = ''; $('fMaCn').value = '';
+  S.trangThai = ''; veGatTrangThai();
+  dongBoChip();
+}
+
 function chuyenTab(ten) {
   S.tab = ten;
+  if (ten === 'tongQuan') vaoTongQuanMacDinh();
   var tabs = document.querySelectorAll('.tab');
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab') === ten);
