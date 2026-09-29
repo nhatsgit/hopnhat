@@ -542,23 +542,17 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         </div>
         <div class="luoi-2">
           <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Chi phí lương theo tháng (toàn công ty)</h3>
-            <div id="bdChiPhiLuong"></div>
-          </div>
-          <div class="the o-bieu-do">
             <h3 class="tieude-muc">Nhân sự tổng hợp</h3>
             <div class="kpis" id="kpisNhanSuTH"></div>
           </div>
-        </div>
-        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">% hoàn thành giao khoán theo đội (mùa vụ)</h3>
             <div id="bdHieuSuatGK"></div>
           </div>
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Công bình quân/người theo đội (chuyên cần)</h3>
-            <div id="bdChuyenCanDoi"></div>
-          </div>
+        </div>
+        <div class="the o-bieu-do" style="margin-bottom:20px">
+          <h3 class="tieude-muc">Công bình quân/người theo đội (chuyên cần)</h3>
+          <div id="bdChuyenCanDoi"></div>
         </div>
       </div>
     </section>
@@ -1603,13 +1597,15 @@ function taiTongQuan() {
 }
 
 /**
- * 4 khối mở rộng riêng cho Ban lãnh đạo trong tab Tổng quan: xu hướng nhiều tháng, chi phí lương,
- * nhân sự tổng hợp, hiệu suất giao khoán + chuyên cần theo đội. Mỗi khối tự bắt lỗi riêng — một
- * khối lỗi (ví dụ chưa có dữ liệu lương tháng nào) không kéo hỏng các khối còn lại.
+ * 4 khối mở rộng riêng cho Ban lãnh đạo trong tab Tổng quan: xu hướng nhiều tháng, nhân sự tổng
+ * hợp, hiệu suất giao khoán + chuyên cần theo đội. Mỗi khối tự bắt lỗi riêng — một khối lỗi
+ * không kéo hỏng các khối còn lại.
+ * (Đã bỏ khối "Chi phí lương theo tháng" — quá nặng: mỗi lần tải phải tính lương cho tới 12 kỳ,
+ * mỗi kỳ lại quét toàn bộ vài bảng lớn, là khối tốn nhất trong cả trang Tổng quan.)
  */
 function taiKhoiLanhDaoMoRong() {
   var bl = { vaiTro: S.vaiTro, maDonVi: S.maDonVi };
-  ['bdXuHuong', 'bdChiPhiLuong', 'bdHieuSuatGK', 'bdChuyenCanDoi']
+  ['bdXuHuong', 'bdHieuSuatGK', 'bdChuyenCanDoi']
     .forEach(function (id) { $(id).innerHTML = skKhoi(); });
   $('kpisNhanSuTH').innerHTML = skKpis(4);
 
@@ -1629,15 +1625,6 @@ function taiKhoiLanhDaoMoRong() {
                  soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân'; },
           'var(--leaf)');
       }).catch(function (e) { $('bdXuHuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
-    },
-    function () {
-      return goiCache('chiPhiLuongTongHop', bl).then(function (d) {
-        veCotThang($('bdChiPhiLuong'), d.theoThang,
-          function (x) { return x.tongThuNhap; },
-          function (x) { return 'Kỳ ' + x.ky + ': ' + soVN(x.tongThuNhap, 0) + ' riel tổng thu nhập, ' +
-                 soVN(x.tongThucNhan, 0) + ' riel thực nhận (' + soVN(x.soNguoi, 0) + ' người)'; },
-          'var(--clay)');
-      }).catch(function (e) { $('bdChiPhiLuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
     },
     function () {
       return nsGoi('nhanSuTongQuan').then(function (d) {
