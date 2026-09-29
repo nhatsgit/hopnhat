@@ -4544,6 +4544,27 @@ function taiTab() {
   else if (S.tab === 'luong') taiLuong();
 }
 
+/**
+ * Các tab bắt buộc chọn đúng 1 đội khi xem toàn công ty (Admin/Ban lãnh đạo/Phòng KTNN) —
+ * dữ liệu chi tiết theo từng dòng/từng người, xem "Tất cả" cùng lúc quá nặng và khó đọc.
+ * Tổng quan/Xếp hạng/Giao khoán vẫn xem được "Tất cả" vì đã có sẵn bảng tổng hợp theo đội.
+ */
+var TAB_CHI_DOI = { sanLuong: 1, phieu: 1, chamCong: 1, doiChieu: 1, nhanSu: 1, slTheoCn: 1, luong: 1 };
+
+/** Dựng lại option của ô Đội theo tab đang xem — ẩn hẳn "Tất cả" ở các tab TAB_CHI_DOI. */
+function veTuyChonDoi() {
+  var selDoi = $('fDoi');
+  if (!selDoi) return;
+  var dsDoi = S.dsDoi || [];
+  var chiDoi = S.toanCongTy && TAB_CHI_DOI[S.tab];
+  var truoc = selDoi.value;
+  var h = chiDoi ? '' : ('<option value="">Tất cả (' + dsDoi.length + ' đội)</option>');
+  for (var w = 0; w < dsDoi.length; w++) h += '<option value="' + thoat(dsDoi[w]) + '">' + thoat(dsDoi[w]) + '</option>';
+  selDoi.innerHTML = h;
+  var conHopLe = truoc && dsDoi.indexOf(truoc) > -1;
+  selDoi.value = conHopLe ? truoc : (chiDoi ? (dsDoi[0] || '') : '');
+}
+
 function chuyenTab(ten) {
   S.tab = ten;
   var tabs = document.querySelectorAll('.tab');
@@ -4560,6 +4581,8 @@ function chuyenTab(ten) {
   $('pGiaoKhoan').style.display = (ten === 'giaoKhoan') ? '' : 'none';
   $('pSlTheoCn').style.display = (ten === 'slTheoCn') ? '' : 'none';
   $('pLuong').style.display = (ten === 'luong') ? '' : 'none';
+  veTuyChonDoi();
+  dungLocTo();
   capNhatHienBoLoc();
   luuChoDangXem();
   taiTab();
@@ -4829,12 +4852,9 @@ function vaoApp(d, vtChon) {
     if (dsDoi.indexOf(md) === -1) dsDoi.push(md);
   }
   dsDoi.sort();
-  var selDoi = $('fDoi');
-  selDoi.innerHTML = '<option value="">Tất cả (' + dsDoi.length + ' đội)</option>';
-  for (var w = 0; w < dsDoi.length; w++) {
-    selDoi.innerHTML += '<option value="' + thoat(dsDoi[w]) + '">' + thoat(dsDoi[w]) + '</option>';
-  }
+  S.dsDoi = dsDoi;
   S.coNhieuDoi = (dsDoi.length > 1);
+  veTuyChonDoi();
 
   dungLocTo();
   napLocNS(dsDoi);
@@ -4980,12 +5000,17 @@ function nsThe(cb) {
   return h;
 }
 
-/** Ô lọc Đội / Tổ của tab Nhân sự — dựng lúc đăng nhập theo phạm vi. */
+/**
+ * Ô lọc Đội / Tổ của tab Nhân sự — dựng lúc đăng nhập theo phạm vi. Admin/Ban lãnh đạo/Phòng KTNN
+ * (xem toàn công ty) không có "Mọi đội" — bắt buộc chọn đúng 1 đội (hoặc NMCB), mặc định đội đầu tiên,
+ * cùng nguyên tắc với các tab dùng ô lọc chung (xem TAB_CHI_DOI).
+ */
 function napLocNS(dsDoi) {
-  var hd = '<option value="">' + (dsDoi.length > 1 || S.toanCongTy ? 'Mọi đội' : 'Đội ' + (dsDoi[0] || '')) + '</option>';
+  var hd = S.toanCongTy ? '' : ('<option value="">' + (dsDoi.length > 1 ? 'Mọi đội' : 'Đội ' + (dsDoi[0] || '')) + '</option>');
   for (var i = 0; i < dsDoi.length; i++) hd += '<option value="' + thoat(dsDoi[i]) + '">' + thoat(dsDoi[i]) + '</option>';
   if (S.toanCongTy) hd += '<option value="NMCB">NMCB (nhà máy)</option>';
   $('nsDoi').innerHTML = hd;
+  if (S.toanCongTy) $('nsDoi').value = dsDoi[0] || '';
   var ht = '<option value="">' + (S.dsTo.length > 1 ? 'Mọi tổ' : 'Tổ ' + (S.dsTo[0] ? S.dsTo[0].ma : '')) + '</option>';
   for (var j = 0; j < S.dsTo.length; j++) ht += '<option value="' + thoat(S.dsTo[j].ma) + '">' + thoat(S.dsTo[j].ma) + '</option>';
   $('nsTo').innerHTML = ht;
@@ -5548,6 +5573,7 @@ $('nutXoaLoc').onclick = function () {
   $('fChatLuong').value = ''; $('fMaCn').value = '';
   $('fKyHieu').value = '';
   $('fTo').value = '';
+  veTuyChonDoi();   // tab bắt buộc chọn đội thì "" không hợp lệ — rơi về đội đầu tiên
   dungLocTo();
   if (S.meta) { $('fTuNgay').value = S.meta.ngayMin; $('fDenNgay').value = S.meta.ngayMax; }
   S.trangThai = '';
