@@ -162,6 +162,9 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .luoi-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
 @media (max-width:900px){.luoi-2{grid-template-columns:1fr}}
 .o-bieu-do{padding:16px}
+/* Thẻ tràn hết chiều ngang màn hình, không bị giới hạn theo max-width 1320px của .wrap —
+   dùng cho biểu đồ cần nhiều chỗ ngang (Sản lượng theo ngày, hiện nhãn từng ngày). */
+.day-man-hinh{width:100vw;position:relative;left:50%;margin-left:-50vw;box-sizing:border-box;border-radius:0}
 .chu-thich{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:13px}
 .chu-thich i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}
 
@@ -421,15 +424,15 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab: Tổng quan -->
     <section id="pTongQuan">
       <div class="kpis" id="kpis"></div>
-      <div class="luoi-2">
-        <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Sản lượng theo ngày</h3>
-          <div id="bdNgay"></div>
-        </div>
-        <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
-          <div id="bdLoai"></div>
-        </div>
+      <!-- Sản lượng theo ngày để riêng, tràn hết chiều ngang màn hình — đủ chỗ hiện nhãn TỪNG
+           ngày thay vì chỉ 3 mốc đầu/giữa/cuối như trước, không bị ép chung cột với Cơ cấu loại mủ. -->
+      <div class="the o-bieu-do day-man-hinh" style="margin-bottom:20px;padding:16px 24px">
+        <h3 class="tieude-muc">Sản lượng theo ngày</h3>
+        <div id="bdNgay"></div>
+      </div>
+      <div class="the o-bieu-do" style="margin-bottom:20px">
+        <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
+        <div id="bdLoai"></div>
       </div>
       <!-- Ẩn với tổ trưởng: phạm vi của họ chỉ có 1 tổ, "so sánh" vô nghĩa. -->
       <div class="the" id="theSoSanh">
@@ -1265,7 +1268,7 @@ function veCot(el, dl) {
 
   var rongCot = 100 / dl.length;
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
-            'style="width:100%;height:210px;overflow:visible" role="img" aria-label="Sản lượng theo ngày">';
+            'style="width:100%;height:210px;overflow:visible;display:block" role="img" aria-label="Sản lượng theo ngày">';
 
   // Lưới ngang + nhãn trục
   for (var g = 0; g <= 3; g++) {
@@ -1285,12 +1288,14 @@ function veCot(el, dl) {
   }
   svg += '</svg>';
 
-  // Nhãn ngày: chỉ hiện đầu / giữa / cuối để không chen chúc
-  var nhan = '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-top:4px">' +
-    '<span>' + ngayVN(dl[0].ngay) + '</span>' +
-    (dl.length > 2 ? '<span>' + ngayVN(dl[Math.floor(dl.length / 2)].ngay) + '</span>' : '') +
-    (dl.length > 1 ? '<span>' + ngayVN(dl[dl.length - 1].ngay) + '</span>' : '') +
-    '</div>';
+  // Nhãn TẤT CẢ các ngày (không chỉ đầu/giữa/cuối như trước) — giãn hết bề ngang thẻ (thẻ này
+  // đã để riêng, rộng bằng màn hình), không cuộn ngang.
+  var nhan = '<div style="display:flex">';
+  for (var k = 0; k < dl.length; k++) {
+    nhan += '<div style="flex:1;text-align:center;font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden">' +
+            thoat(ngayVN(dl[k].ngay)) + '</div>';
+  }
+  nhan += '</div>';
 
   var dinh = '<div style="font-size:12px;color:var(--ink-3);margin-bottom:6px">' +
     'Cao nhất: <b style="color:var(--ink)">' + soVN(maxV, 2) + ' kg</b> · ' +
