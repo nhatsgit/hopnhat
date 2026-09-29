@@ -427,11 +427,18 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <h3 class="tieude-muc">Sản lượng theo ngày</h3>
         <div id="bdNgay"></div>
       </div>
-      <!-- Biểu đồ tròn nhỏ — không cần rộng hết hàng như Sản lượng theo ngày, giới hạn bề
-           ngang cho cân đối, khỏi trống trải hai bên. -->
-      <div class="the o-bieu-do" style="margin-bottom:20px;max-width:420px">
-        <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
-        <div id="bdLoai"></div>
+      <!-- 2 biểu đồ tròn nhỏ đi cùng hàng cho cân đối, khỏi trống trải bên cạnh — cơ cấu chất
+           lượng mủ trước chỉ ban lãnh đạo thấy, nay hiện cho mọi vai trò vì cũng hữu ích với
+           đội trưởng/tổ trưởng. -->
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
+          <div id="bdLoai"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Cơ cấu chất lượng mủ</h3>
+          <div id="bdChatLuong"></div>
+        </div>
       </div>
       <!-- Ẩn với tổ trưởng: phạm vi của họ chỉ có 1 tổ, "so sánh" vô nghĩa. -->
       <div class="the" id="theSoSanh">
@@ -445,45 +452,39 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div id="khoiLanhDao" style="display:none">
         <div class="luoi-2">
           <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Cơ cấu chất lượng mủ</h3>
-            <div id="bdChatLuong"></div>
-          </div>
-          <div class="the o-bieu-do">
             <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
             <div id="bdXepDoi"></div>
           </div>
-        </div>
-        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Năng suất bình quân theo đội (kg/nhát)</h3>
             <div id="bdNsbqDoi"></div>
           </div>
+        </div>
+        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Tổ dẫn đầu &amp; tổ cần chú ý</h3>
             <div id="bangTopTo"></div>
           </div>
-        </div>
-        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Xu hướng quy khô theo tháng</h3>
             <div id="bdXuHuong"></div>
           </div>
+        </div>
+        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Chi phí lương theo tháng (toàn công ty)</h3>
             <div id="bdChiPhiLuong"></div>
           </div>
-        </div>
-        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Nhân sự tổng hợp</h3>
             <div class="kpis" id="kpisNhanSuTH"></div>
           </div>
+        </div>
+        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">% hoàn thành giao khoán theo đội (mùa vụ)</h3>
             <div id="bdHieuSuatGK"></div>
           </div>
-        </div>
-        <div class="luoi-2">
           <div class="the o-bieu-do">
             <h3 class="tieude-muc">Công bình quân/người theo đội (chuyên cần)</h3>
             <div id="bdChuyenCanDoi"></div>
@@ -1430,9 +1431,10 @@ function goiCache(action, thamSo) {
    ===================================================================== */
 function taiTongQuan() {
   dangTai($('kpis'), true);
-  $('bdNgay').innerHTML = skKhoi(); $('bdLoai').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
+  $('bdNgay').innerHTML = skKhoi(); $('bdLoai').innerHTML = skKhoi();
+  $('bdChatLuong').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
   if (S.toanCongTy) {
-    $('bdChatLuong').innerHTML = skKhoi(); $('bdXepDoi').innerHTML = skKhoi();
+    $('bdXepDoi').innerHTML = skKhoi();
     $('bdNsbqDoi').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
   }
 
@@ -1461,6 +1463,7 @@ function taiTongQuan() {
 
     veCot($('bdNgay'), d.theoNgay);
     veDonut($('bdLoai'), d.theoLoaiMu);
+    veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
 
     // Tổ trưởng chỉ quản 1 tổ — không có gì để "so sánh", ẩn hẳn khối này
     // thay vì hiện một bảng chỉ có đúng 1 dòng (chính họ).
@@ -1504,8 +1507,6 @@ function taiTongQuan() {
     // cần vì phạm vi của họ đã nhỏ (1 đội/1 tổ), so sánh không có nhiều ý nghĩa.
     if (S.toanCongTy) {
       $('khoiLanhDao').style.display = '';
-
-      veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
 
       veCotNgang($('bdXepDoi'), d.theoDoi,
         function (x) { return x.doi; }, function (x) { return x.kg; },
