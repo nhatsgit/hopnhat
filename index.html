@@ -354,7 +354,13 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <label class="nhan" for="fDenNgay">Đến ngày</label>
         <input class="o" type="date" id="fDenNgay">
       </div>
-      <!-- Chỉ hiện ở tab Sản lượng theo CN và Lương: hai tab này tính theo THÁNG, không lọc theo khoảng ngày -->
+      <!-- Chọn nhanh 1 tháng cụ thể: tự set Từ ngày/Đến ngày theo đúng tháng đó (tháng hiện tại thì
+           đến hôm nay, không sang tháng sau). Ẩn ở tab tính theo tháng (Lương/Sản lượng theo CN) vì
+           2 tab đó đã có ô "Kỳ" riêng, và ở tab Nhân sự (không dùng khoảng ngày). -->
+      <div id="khungLocThangCuThe">
+        <label class="nhan" for="fThangCuThe">Tháng</label>
+        <select class="o" id="fThangCuThe"><option value="">Chọn tháng…</option></select>
+      </div>
       <div id="khungLocKy" style="display:none">
         <label class="nhan" for="lgKy">Tháng</label>
         <select class="o" id="slKy" style="display:none" title="Kỳ (tháng)"></select>
@@ -4296,6 +4302,7 @@ function capNhatHienBoLoc() {
   $('khungBoLocChung').style.display = laNS ? 'none' : '';
   $('khungLocTuNgay').style.display = theoThang ? 'none' : '';
   $('khungLocDenNgay').style.display = theoThang ? 'none' : '';
+  $('khungLocThangCuThe').style.display = (theoThang || laNS) ? 'none' : '';
   $('locNhanh').style.display = theoThang ? 'none' : '';
   $('khungLocKy').style.display = theoThang ? '' : 'none';
   $('slKy').style.display = S.tab === 'slTheoCn' ? '' : 'none';
@@ -4514,10 +4521,36 @@ function khoangCuaMoc(id) {
   return { tu: dinhDangISO(tu), den: dinhDangISO(den) };
 }
 
+/** Ngày cuối cùng (yyyy-mm-dd) của một tháng 'yyyy-mm'. */
+function ngayCuoiThang(thang) {
+  var nam = +thang.substring(0, 4), t = +thang.substring(5, 7);
+  var cuoi = new Date(Date.UTC(nam, t, 0)).getUTCDate();
+  return thang + '-' + (cuoi < 10 ? '0' : '') + cuoi;
+}
+
 /**
- * Đồng bộ hai chiều giữa chip lọc nhanh và ô Từ ngày / Đến ngày:
- * sửa tay ngày mà trùng đúng một mốc thì chip đó sáng, không trùng mốc nào
- * thì không chip nào sáng.
+ * Dựng ô "Tháng" (chọn nhanh 1 tháng cụ thể) từ ngayMin/ngayMax thật của dữ liệu — không hiện
+ * tháng nào ngoài phạm vi thật, tránh chọn nhầm tháng chưa có dữ liệu.
+ */
+function veThangCuThe() {
+  var sel = $('fThangCuThe');
+  if (!sel) return;
+  if (!S.meta || !S.meta.ngayMin || !S.meta.ngayMax) { sel.innerHTML = '<option value="">Chọn tháng…</option>'; return; }
+  var y = +S.meta.ngayMax.substring(0, 4), m = +S.meta.ngayMax.substring(5, 7);
+  var yTu = +S.meta.ngayMin.substring(0, 4), mTu = +S.meta.ngayMin.substring(5, 7);
+  var h = '<option value="">Chọn tháng…</option>';
+  while (y > yTu || (y === yTu && m >= mTu)) {
+    var v = y + '-' + (m < 10 ? '0' : '') + m;
+    h += '<option value="' + v + '">Tháng ' + m + '/' + y + '</option>';
+    m--; if (m === 0) { m = 12; y--; }
+  }
+  sel.innerHTML = h;
+}
+
+/**
+ * Đồng bộ hai chiều giữa chip lọc nhanh / ô Tháng và ô Từ ngày / Đến ngày:
+ * sửa tay ngày mà trùng đúng một mốc thì chip/ô đó sáng, không trùng mốc nào
+ * thì không chip/ô nào sáng.
  */
 function dongBoChip() {
   var tu = $('fTuNgay').value, den = $('fDenNgay').value;
@@ -4527,6 +4560,18 @@ function dongBoChip() {
     if (k && k.tu === tu && k.den === den) { S.locNhanhDangChon = MOC_NHANH[i].id; break; }
   }
   veChipNhanh();
+
+  var selT = $('fThangCuThe');
+  if (selT) {
+    var thangKhop = '';
+    if (tu && den && tu.substring(8) === '01') {
+      var vThang = tu.substring(0, 7);
+      var denChuan = ngayCuoiThang(vThang);
+      var homNay = dinhDangISO(new Date());
+      if (den === denChuan || (denChuan > homNay && den === homNay)) thangKhop = vThang;
+    }
+    selT.value = thangKhop;
+  }
 }
 
 function veChipNhanh() {
@@ -4772,6 +4817,7 @@ function vaoApp(d, vtChon) {
     var khoangMacDinh = khoangCuaMoc('thang_nay');
     $('fTuNgay').value = khoangMacDinh ? khoangMacDinh.tu : m.ngayMin;
     $('fDenNgay').value = khoangMacDinh ? khoangMacDinh.den : m.ngayMax;
+    veThangCuThe();
     dongBoChip();
 
     // URL có tham số thì ưu tiên, không thì lấy lại chỗ xem lần trước —
@@ -5432,6 +5478,17 @@ $('nutXoaLoc').onclick = function () {
 // Đổi đội thì dựng lại danh sách tổ rồi tải lại ngay — các ô lọc khác cũng
 // áp dụng ngay khi chọn, cho nhất quán với chip lọc nhanh.
 // Đội -> dựng lại Tổ -> dựng lại Công nhân; Tổ -> dựng lại Công nhân
+$('fThangCuThe').onchange = function () {
+  var v = this.value;
+  if (!v) return;
+  var homNay = dinhDangISO(new Date());
+  var denChuan = ngayCuoiThang(v);
+  $('fTuNgay').value = v + '-01';
+  $('fDenNgay').value = denChuan > homNay ? homNay : denChuan;
+  dongBoChip();
+  S.trang = 1;
+  taiTab();
+};
 $('fDoi').onchange = function () { dungLocTo(); S.trang = 1; taiTab(); };
 $('fTo').onchange = function () { dungLocCn(); S.trang = 1; taiTab(); };
 $('fMaCn').onchange = function () { S.trang = 1; taiTab(); };
