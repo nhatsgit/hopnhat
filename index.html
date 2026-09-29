@@ -349,7 +349,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <button class="tab" data-tab="sanLuong">Sản lượng chi tiết</button>
     <button class="tab" data-tab="phieu">Phiếu nội trạm</button>
     <button class="tab" data-tab="chamCong">Chấm công</button>
-    <button class="tab" data-tab="doiChieu">Đối chiếu</button>
+    <button class="tab" data-tab="doiChieu" style="display:none">Đối chiếu</button>
     <button class="tab" data-tab="xepHang">Xếp hạng công nhân</button>
     <button class="tab" data-tab="nhanSu">Nhân sự</button>
     <button class="tab" data-tab="giaoKhoan">Giao khoán</button>
@@ -531,7 +531,20 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
         </div>
       </div>
-      <div class="the" id="theDanhSachCC" style="margin-bottom:20px">
+      <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
+           trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". Đưa lên đầu vì đây
+           là dữ liệu chính đội cần xem/in mỗi tháng, danh sách chi tiết bên dưới chỉ để sửa dòng lẻ. -->
+      <div class="the" id="theBangCC" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatBangCC">—</h3>
+          <label class="nhan" for="ccThang" style="margin:0">Tháng</label>
+          <input class="o" id="ccThang" type="month" style="width:auto">
+        </div>
+        <div class="bang-cc-thang" id="khungBangCC"><table id="bangCCThang"></table></div>
+        <div id="chuThichCC" class="goi-y" style="padding:10px 16px"></div>
+      </div>
+
+      <div class="the" id="theDanhSachCC">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatCC">—</h3>
           <button class="btn chinh nho" id="nutThemCC">+ Chấm công</button>
@@ -542,21 +555,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div class="cuon cuon-doc"><table id="bangCC"></table></div>
         <div class="phan-trang" id="phanTrangCC"></div>
       </div>
-
-      <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
-           trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". -->
-      <div class="the" id="theBangCC">
-        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatBangCC">—</h3>
-          <label class="nhan" for="ccThang" style="margin:0">Tháng</label>
-          <input class="o" id="ccThang" type="month" style="width:auto">
-        </div>
-        <div class="bang-cc-thang" id="khungBangCC"><table id="bangCCThang"></table></div>
-        <div id="chuThichCC" class="goi-y" style="padding:10px 16px"></div>
-      </div>
     </section>
 
-    <!-- Tab: Đối chiếu -->
+    <!-- Tab: Đối chiếu (đang ẩn) -->
     <section id="pDoiChieu" style="display:none">
       <div class="the" style="margin-bottom:20px">
         <h3 class="tieude-muc" style="padding:16px 16px 0" id="tomTatDC">Công đối chiếu sản lượng</h3>
@@ -3116,7 +3117,6 @@ function taiChamCong() {
   goiCache('chamCong', bl).then(function (d) {
     var k = d.kpi;
     $('kpisCC').innerHTML =
-      the_kpi('Tổng số công', soVN(k.tongCong, 1), 'công', k.soDong + ' dòng chấm công') +
       the_kpi('Công nhân', soVN(k.soCongNhan, 0), 'người', k.soNgay + ' ngày trong kỳ') +
       the_kpi('Bình quân', soVN(k.soCongNhan ? k.tongCong / k.soCongNhan : 0, 2), 'công/người', 'Trên toàn bộ kỳ đã lọc') +
       the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt');
@@ -3710,7 +3710,7 @@ function khoiPhucChoDangXem() {
   if (j.chatLuong) $('fChatLuong').value = j.chatLuong;
   if (j.trangThai) { S.trangThai = j.trangThai; veGatTrangThai(); }
   if (j.kyHieu) $('fKyHieu').value = j.kyHieu;
-  if (j.tab && LOC_THEO_TAB[j.tab]) S.tab = j.tab;
+  if (j.tab && LOC_THEO_TAB[j.tab] && !TAB_AN[j.tab]) S.tab = j.tab;
 
   dongBoChip();
   return true;
@@ -4566,6 +4566,9 @@ function taiTab() {
  */
 var TAB_CHI_DOI = { sanLuong: 1, phieu: 1, chamCong: 1, doiChieu: 1, nhanSu: 1, slTheoCn: 1, luong: 1 };
 
+/** Tab đang ẩn khỏi thanh tab — không cho phục hồi/URL đưa thẳng vào, rơi về Tổng quan. */
+var TAB_AN = { doiChieu: 1 };
+
 /** Dựng lại option của ô Đội theo tab đang xem — ẩn hẳn "Tất cả" ở các tab TAB_CHI_DOI. */
 function veTuyChonDoi() {
   var selDoi = $('fDoi');
@@ -4788,7 +4791,7 @@ function apThamSoURL() {
   }
 
   if (coApDung) dongBoChip();
-  if (q.tab) S.tab = q.tab;
+  if (q.tab && !TAB_AN[q.tab]) S.tab = q.tab;
   return coApDung;
 }
 
