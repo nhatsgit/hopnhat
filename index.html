@@ -440,6 +440,32 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
             <div id="bangTopTo"></div>
           </div>
         </div>
+        <div class="luoi-2">
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Xu hướng quy khô theo tháng</h3>
+            <div id="bdXuHuong"></div>
+          </div>
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Chi phí lương theo tháng (toàn công ty)</h3>
+            <div id="bdChiPhiLuong"></div>
+          </div>
+        </div>
+        <div class="luoi-2">
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Nhân sự tổng hợp</h3>
+            <div class="kpis" id="kpisNhanSuTH"></div>
+          </div>
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">% hoàn thành giao khoán theo đội (mùa vụ)</h3>
+            <div id="bdHieuSuatGK"></div>
+          </div>
+        </div>
+        <div class="luoi-2">
+          <div class="the o-bieu-do">
+            <h3 class="tieude-muc">Công bình quân/người theo đội (chuyên cần)</h3>
+            <div id="bdChuyenCanDoi"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -868,6 +894,7 @@ var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, dieuChinhQkDs: 1,
+  xuHuongThang: 1, chiPhiLuongTongHop: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -1195,6 +1222,48 @@ function veCot(el, dl) {
   el.innerHTML = dinh + svg + nhan;
 }
 
+/**
+ * Biểu đồ cột theo THÁNG/KỲ (tối đa ~24 cột, ít nên hiện đủ nhãn dưới mỗi cột) — dùng chung cho
+ * xu hướng sản lượng và chi phí lương của Ban lãnh đạo.
+ *   dl          mảng đối tượng đã sắp xếp cũ -> mới, mỗi phần tử có .thang hoặc .ky ('YYYY-MM')
+ *   layGiaTri(x) -> số dùng để vẽ chiều cao cột
+ *   layMoTa(x)   -> chuỗi hiện khi rê chuột
+ */
+function veCotThang(el, dl, layGiaTri, layMoTa, mau) {
+  if (!dl.length) { el.innerHTML = '<div class="rong">Chưa có đủ dữ liệu nhiều tháng.</div>'; return; }
+  mau = mau || 'var(--sky)';
+  var W = 100, H = 210, tren = 14, duoi = 22;
+  var maxV = 0;
+  for (var i = 0; i < dl.length; i++) maxV = Math.max(maxV, layGiaTri(dl[i]));
+  if (maxV <= 0) maxV = 1;
+
+  var rongCot = 100 / dl.length;
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+            'style="width:100%;height:210px;overflow:visible" role="img">';
+  for (var g = 0; g <= 3; g++) {
+    var y = tren + (H - tren - duoi) * g / 3;
+    svg += '<line x1="0" y1="' + y + '" x2="100" y2="' + y + '" stroke="var(--line)" stroke-width=".4" vector-effect="non-scaling-stroke"/>';
+  }
+  for (var j = 0; j < dl.length; j++) {
+    var v = layGiaTri(dl[j]);
+    var h = (v / maxV) * (H - tren - duoi);
+    var x = j * rongCot, yc = H - duoi - h;
+    svg += '<rect x="' + (x + rongCot * 0.15) + '" y="' + yc + '" width="' + (rongCot * 0.7) +
+           '" height="' + Math.max(h, 0.5) + '" fill="' + mau + '" opacity=".85"><title>' +
+           thoat(layMoTa(dl[j])) + '</title></rect>';
+  }
+  svg += '</svg>';
+
+  var nhan = '<div style="display:flex;font-size:11px;color:var(--ink-3);margin-top:4px;gap:2px">';
+  for (var k = 0; k < dl.length; k++) {
+    var th = String(dl[k].thang || dl[k].ky || '');
+    var ngan = th.length === 7 ? (th.substring(5, 7) + '/' + th.substring(2, 4)) : th;
+    nhan += '<span style="flex:1;text-align:center;white-space:nowrap">' + thoat(ngan) + '</span>';
+  }
+  nhan += '</div>';
+  el.innerHTML = svg + nhan;
+}
+
 function veDonut(el, dl, layMau) {
   layMau = layMau || mauLoaiMu;
   var tong = 0, i;
@@ -1353,6 +1422,7 @@ function taiTongQuan() {
         function (v) { return soVN(v, 3); }, 'var(--sky)');
 
       veTopTo($('bangTopTo'), d.theoTo);
+      taiKhoiLanhDaoMoRong();
     } else {
       $('khoiLanhDao').style.display = 'none';
     }
@@ -1362,6 +1432,56 @@ function taiTongQuan() {
     $('kpis').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
+}
+
+/**
+ * 4 khối mở rộng riêng cho Ban lãnh đạo trong tab Tổng quan: xu hướng nhiều tháng, chi phí lương,
+ * nhân sự tổng hợp, hiệu suất giao khoán + chuyên cần theo đội. Mỗi khối tự bắt lỗi riêng — một
+ * khối lỗi (ví dụ chưa có dữ liệu lương tháng nào) không kéo hỏng các khối còn lại.
+ */
+function taiKhoiLanhDaoMoRong() {
+  var bl = { vaiTro: S.vaiTro, maDonVi: S.maDonVi };
+
+  goiCache('xuHuongThang', bl).then(function (d) {
+    veCotThang($('bdXuHuong'), d.theoThang,
+      function (x) { return x.quyKho; },
+      function (x) { return 'Tháng ' + x.thang + ': ' + soVN(x.quyKho, 0) + ' kg quy khô / ' +
+             soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân'; },
+      'var(--leaf)');
+  }).catch(function (e) { $('bdXuHuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+
+  goiCache('chiPhiLuongTongHop', bl).then(function (d) {
+    veCotThang($('bdChiPhiLuong'), d.theoThang,
+      function (x) { return x.tongThuNhap; },
+      function (x) { return 'Kỳ ' + x.ky + ': ' + soVN(x.tongThuNhap, 0) + ' riel tổng thu nhập, ' +
+             soVN(x.tongThucNhan, 0) + ' riel thực nhận (' + soVN(x.soNguoi, 0) + ' người)'; },
+      'var(--clay)');
+  }).catch(function (e) { $('bdChiPhiLuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+
+  nsGoi('nhanSuTongQuan').then(function (d) {
+    var k = d.kpi || {};
+    $('kpisNhanSuTH').innerHTML =
+      the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
+              k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Toàn công ty') +
+      the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo || 0, 0), 'cảnh báo',
+              'Thiếu NSSF: ' + soVN(k.thieuNssf || 0, 0) + ' người') +
+      the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
+              'Dưới 18 tuổi: ' + soVN(k.duoi18 || 0, 0) + ' người') +
+      the_kpi('Vị trí còn trống', soVN(k.viTriTrong || 0, 0), 'vị trí',
+              'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí');
+  }).catch(function (e) { $('kpisNhanSuTH').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+
+  goiCache('giaoKhoan', bl).then(function (d) {
+    veCotNgang($('bdHieuSuatGK'), d.theoDoi || [],
+      function (x) { return x.doi; }, function (x) { return x.tyLe; },
+      function (v) { return soVN(v, 1) + '%'; }, 'var(--leaf)');
+  }).catch(function (e) { $('bdHieuSuatGK').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+
+  goiCache('chamCong', bl).then(function (d) {
+    veCotNgang($('bdChuyenCanDoi'), d.theoDoi || [],
+      function (x) { return x.doi; }, function (x) { return x.congBqNguoi; },
+      function (v) { return soVN(v, 1) + ' công/người'; }, 'var(--sky)');
+  }).catch(function (e) { $('bdChuyenCanDoi').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
 }
 
 function the_kpi(ten, so, dv, phu) {
