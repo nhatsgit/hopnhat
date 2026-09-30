@@ -1480,21 +1480,38 @@ function veCot(el, dl) {
   }
   svg += '</svg>';
 
-  // Nhãn TẤT CẢ các ngày (không chỉ đầu/giữa/cuối như trước) — giãn hết bề ngang thẻ (thẻ này
-  // đã để riêng, rộng bằng màn hình), không cuộn ngang.
+  // Nhãn ngày ngắn gọn: cùng 1 tháng thì chỉ ghi ngày ("01"), tháng ghi 1 lần ở dòng trên; khác
+  // tháng thì "dd/mm". Thẻ hẹp (điện thoại) thì cách vài cột mới ghi 1 nhãn để chữ không đè/cắt.
+  var motThang = dl[0].ngay.substring(0, 7) === dl[dl.length - 1].ngay.substring(0, 7);
+  function nhanNgay(s) { return motThang ? s.substring(8, 10) : s.substring(8, 10) + '/' + s.substring(5, 7); }
+  var rongThe = el.clientWidth || 600;
+  var buoc = Math.max(1, Math.ceil(dl.length * (motThang ? 22 : 38) / rongThe));
   var nhan = '<div style="display:flex">';
   for (var k = 0; k < dl.length; k++) {
-    nhan += '<div style="flex:1;text-align:center;font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden">' +
-            thoat(ngayVN(dl[k].ngay)) + '</div>';
+    var hienNhan = k % buoc === 0 || (k === dl.length - 1 && (dl.length - 1) % buoc >= buoc / 2);
+    nhan += '<div style="flex:1;min-width:0;text-align:center;font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:visible">' +
+            (hienNhan ? thoat(nhanNgay(dl[k].ngay)) : '') + '</div>';
   }
   nhan += '</div>';
 
   var dinh = '<div style="font-size:12px;color:var(--ink-3);margin-bottom:6px">' +
     'Cao nhất: <b style="color:var(--ink)">' + soVN(maxV, 2) + ' kg</b> · ' +
-    dl.length + ' ngày có sản lượng</div>';
+    dl.length + ' ngày có sản lượng' +
+    (motThang ? ' · Tháng ' + dl[0].ngay.substring(5, 7) + '/' + dl[0].ngay.substring(0, 4) : '') + '</div>';
 
   el.innerHTML = dinh + svg + nhan;
+  el._duLieuCot = dl;
 }
+
+// Đổi cỡ cửa sổ / xoay điện thoại: vẽ lại để số nhãn ngày khớp bề rộng mới.
+var _henVeLaiCot = null;
+window.addEventListener('resize', function () {
+  clearTimeout(_henVeLaiCot);
+  _henVeLaiCot = setTimeout(function () {
+    var ds = document.querySelectorAll('#bdNgay');
+    for (var i = 0; i < ds.length; i++) if (ds[i]._duLieuCot && ds[i].clientWidth) veCot(ds[i], ds[i]._duLieuCot);
+  }, 200);
+});
 
 /**
  * Biểu đồ cột theo THÁNG/KỲ (tối đa ~24 cột, ít nên hiện đủ nhãn dưới mỗi cột) — dùng chung cho
