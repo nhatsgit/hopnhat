@@ -1008,6 +1008,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
               <option value="gk">% hoàn thành giao khoán</option>
             </optgroup>
             <optgroup label="Thông tin lô">
+              <option value="cayCao">Số cây cạo</option>
               <option value="ns2025">Năng suất 2025 theo kiểm kê (kg/ha)</option>
               <option value="xepHang">Xếp hạng vườn cây (Q1–Q4)</option>
               <option value="giong">Giống</option>
@@ -3984,6 +3985,7 @@ function _bdGiaTri(x, chiSo) {
   if (chiSo === 'gk') return s && s.gkTyLe !== null && s.gkTyLe !== undefined ? s.gkTyLe : null;
   if (!r) return null;
   if (chiSo === 'kgHa') return s && s.qk > 0 && r.dienTich ? s.qk / r.dienTich : null;
+  if (chiSo === 'cayCao') return r.cayCao || null;
   if (chiSo === 'ns2025') return (r.nsNam && r.nsNam[2025]) || null;
   if (chiSo === 'xepHang') return r.xepHang || null;
   if (chiSo === 'giong') return _nsvGiong(r) || null;
@@ -4046,13 +4048,14 @@ function _bdThang(ds, chiSo) {
 }
 
 var BD_TEN_CHI_SO = { qkDay: 'Quy khô mủ dây', qkChen: 'Quy khô mủ chén', qk: 'Quy khô tổng', kgTuoi: 'Sản lượng tươi',
-  nsbq: 'NSBQ kg/nhát', gk: '% hoàn thành giao khoán', kgHa: 'Năng suất kg quy khô/ha', ns2025: 'Năng suất 2025 (kg/ha)',
+  nsbq: 'NSBQ kg/nhát', gk: '% hoàn thành giao khoán', kgHa: 'Năng suất kg quy khô/ha', cayCao: 'Số cây cạo', ns2025: 'Năng suất 2025 (kg/ha)',
   xepHang: 'Xếp hạng', giong: 'Giống', namTrong: 'Năm trồng', to: 'Tổ', lech: 'Lệch diện tích' };
 
 function _bdDinhDang(v, chiSo) {
   if (v === null || v === undefined) return '—';
   if (BD_SAN_LUONG[chiSo]) return soVN(v, 0) + ' kg';
   if (chiSo === 'nsbq') return soVN(v, 2) + ' kg/nhát';
+  if (chiSo === 'cayCao') return soVN(v, 0) + ' cây';
   if (chiSo === 'gk') return soVN(v, 1) + '%';
   if (chiSo === 'kgHa' || chiSo === 'ns2025') return soVN(v, 0) + ' kg/ha';
   if (chiSo === 'lech') return (v > 0 ? '+' : '') + soVN(v, 1) + '%';
