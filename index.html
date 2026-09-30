@@ -168,6 +168,10 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .nhom-icon{display:inline-flex;flex:none}
 .nhom-icon svg{display:block}
 .nhom-ten{flex:1}
+/* Nhóm chứa tab đang xem (nhưng bản thân nhóm không phải trang) — chữ đậm, không tô nền. */
+.tabs-nhom-doc .tab.chua{color:var(--sb-ink);font-weight:600}
+.nhom-mui{flex:none;font-size:10px;opacity:.7;transition:transform .15s}
+.nhom-khoi.dong .nhom-mui{transform:rotate(-90deg)}
 
 /* Tab con xổ ra ngay dưới nhóm đang chọn, thụt vào bằng viền dọc mờ bên trái. */
 .nhom-con{display:flex;flex-direction:column;gap:2px;margin:2px 0 6px;
@@ -194,10 +198,10 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .nen-ben{display:none}
 @media (max-width:900px){
   .nut-mo-ben{display:flex;align-items:center;justify-content:center}
-  .thanh-ben{position:fixed;top:0;left:0;z-index:60;
+  .thanh-ben{position:fixed;top:0;left:0;z-index:90;
     transform:translateX(-100%);transition:transform .2s ease;box-shadow:var(--shadow)}
   .thanh-ben.mo{transform:translateX(0)}
-  .nen-ben.mo{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55}
+  .nen-ben.mo{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:85}
 }
 
 /* ---------- Bộ lọc ---------- */
@@ -443,12 +447,12 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <!-- Chỉ tổ trưởng/đội trưởng thấy — ban lãnh đạo khoá cứng xem đã duyệt,
              không cần gạt gì (xem BigQuery, không có khái niệm chờ duyệt). -->
         <div class="gat" id="gatTrangThai" style="display:none"></div>
-        <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
-        <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
       </div>
       <nav class="tabs-nhom-doc" id="tabsNhom"></nav>
       <!-- margin-top:auto (xem CSS .ben-duoi) đẩy khối này xuống sát đáy sidebar. -->
       <div class="ben-duoi">
+        <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
+        <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
         <button class="btn nho" id="nutTai">Tải lại</button>
         <button class="btn nho" id="nutThoat">Đổi người dùng</button>
       </div>
@@ -5202,16 +5206,20 @@ function timNhomCuaTab(tab) {
  * 1 thời điểm (nhóm đang chọn), không phải accordion nhiều nhóm cùng mở.
  */
 function veNhomTab() {
+  if (S.nhomXo === undefined) S.nhomXo = S.nhom;
   var h = '';
   for (var i = 0; i < NHOM_TAB.length; i++) {
     var nh = NHOM_TAB[i];
-    var dangMo = S.nhom === nh.id;
-    h += '<div class="nhom-khoi">';
-    h += '<button class="tab' + (dangMo ? ' on' : '') + '" data-nhom="' + nh.id + '">' +
-         '<span class="nhom-icon">' + (ICON_NHOM[nh.id] || '') + '</span>' +
-         '<span class="nhom-ten">' + nh.ten + '</span></button>';
     var dsCon = nh.tabs.filter(function (t) { return !TAB_AN[t]; });
-    if (dangMo && dsCon.length > 1) {
+    var coCon = dsCon.length > 1;
+    var xo = coCon && S.nhomXo === nh.id;
+    var lop = !coCon ? (S.nhom === nh.id ? ' on' : '') : (S.nhom === nh.id ? ' chua' : '');
+    h += '<div class="nhom-khoi' + (coCon && !xo ? ' dong' : '') + '">';
+    h += '<button class="tab' + lop + '" data-nhom="' + nh.id + '"' + (coCon ? ' aria-expanded="' + xo + '"' : ' data-nhom-mot="1"') + '>' +
+         '<span class="nhom-icon">' + (ICON_NHOM[nh.id] || '') + '</span>' +
+         '<span class="nhom-ten">' + nh.ten + '</span>' +
+         (coCon ? '<span class="nhom-mui">▾</span>' : '') + '</button>';
+    if (xo) {
       h += '<div class="nhom-con">';
       for (var k = 0; k < dsCon.length; k++) {
         h += '<button class="tab' + (S.tab === dsCon[k] ? ' on' : '') +
@@ -5233,6 +5241,7 @@ function veNhomTab() {
     // không để chuyenTab tự suy ra lại nhóm khác (xem timNhomCuaTab).
     nutCon[m].onclick = function () {
       S.trang = 1;
+      S.nhomXo = this.getAttribute('data-nhom-cha');
       chuyenTab(this.getAttribute('data-tab'), this.getAttribute('data-nhom-cha'));
     };
   }
@@ -5259,12 +5268,22 @@ function veTabCon() {
   }
 }
 
-/** Bấm vào 1 nhóm: luôn mở tab đầu tiên của nhóm đó, kể cả khi nhóm đang mở sẵn. */
+/**
+ * Bấm vào 1 nhóm: nhóm có nhiều tab con thì chỉ xổ ra / thu lại danh sách để chọn (không nhảy
+ * trang); nhóm chỉ có 1 tab (Tổng quan) thì mở luôn tab đó.
+ */
 function chuyenNhom(id) {
   var nh = timNhom(id);
   if (!nh) return;
+  var dsCon = nh.tabs.filter(function (t) { return !TAB_AN[t]; });
+  if (dsCon.length > 1) {
+    S.nhomXo = S.nhomXo === id ? '' : id;
+    veNhomTab();
+    return;
+  }
   S.trang = 1;
-  chuyenTab(nh.tabs[0], nh.id);
+  S.nhomXo = id;
+  chuyenTab(dsCon[0], nh.id);
 }
 
 /**
@@ -5283,6 +5302,7 @@ function chuyenTab(ten, nhomMoi) {
     var nhHienTai = timNhom(S.nhom);
     if (!nhHienTai || nhHienTai.tabs.indexOf(ten) === -1) S.nhom = timNhomCuaTab(ten);
   }
+  S.nhomXo = S.nhom;
   khoiPhucLocTab(ten);
   veNhomTab();
   veTabCon();
@@ -6477,8 +6497,9 @@ document.addEventListener('keydown', function (ev) {
   nutMo.onclick = function () { ben.classList.add('mo'); nen.classList.add('mo'); };
   nen.onclick = dongBen;
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') dongBen(); });
+  // Chỉ đóng khi đã chọn xong 1 trang (tab con, hoặc nhóm 1 tab); bấm nhóm để xổ danh sách thì giữ mở.
   ben.addEventListener('click', function (ev) {
-    if (ev.target.closest('button[data-nhom]')) dongBen();
+    if (ev.target.closest('button[data-tab], button[data-nhom-mot]')) dongBen();
   });
 })();
 
