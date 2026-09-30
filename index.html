@@ -323,6 +323,8 @@ th.sx.giam::after{content:'▼';opacity:.9}
 td.p{text-align:right}
 th.p{text-align:right}
 tbody tr:hover{background:var(--leaf-soft)}
+tbody tr.dong-dang-loc{background:var(--leaf-soft);box-shadow:inset 3px 0 0 var(--leaf)}
+tbody tr.dong-dang-loc td{font-weight:600}
 tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line-2)}
 .nhan-mo{color:var(--ink-3)}
 
@@ -534,6 +536,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       </div>
     </div>
 
+    <!-- Dữ liệu nhập tay đã ghi Sheet nhưng chưa đẩy BigQuery (xem capNhatChoDay) -->
+    <div id="khungChoDayBq" class="bao-loi" style="display:none"></div>
     <div id="thongBao"></div>
 
     <!-- Tab: Tổng quan -->
@@ -766,9 +770,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <input type="file" id="fileKhoMieng" accept=".xlsx" style="display:none">
           <button class="btn nho" id="nutKmTaiMau">Tải mẫu Excel</button>
           <button class="btn nho" id="nutKmNhapFile">Nhập từ Excel</button>
-          <button class="btn chinh nho" id="nutKmLuu">Lưu</button>
+          <button class="btn chinh nho" id="nutKmLuu">Lưu vào Sheet</button>
         </div>
-        <div id="kmTomTat" style="padding:0 16px 10px;font-size:13px"></div>
+        <div id="kmTomTat" style="padding:0 16px 4px;font-size:13px"></div>
+        <div id="kmTong" style="padding:0 16px 10px;font-size:13px"></div>
         <div class="cuon cuon-doc"><table id="bangKhoMieng"></table></div>
       </div>
     </section>
@@ -783,7 +788,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutXlDienA" title="Điền xếp loại A cho những người còn để trống">Người chưa xếp → A</button>
           <button class="btn nho" id="nutXlTaiMau">Tải mẫu Excel</button>
           <button class="btn nho" id="nutXlNhapFile">Nhập từ Excel</button>
-          <button class="btn chinh nho" id="nutXlLuu">Lưu</button>
+          <button class="btn chinh nho" id="nutXlLuu">Lưu vào Sheet</button>
         </div>
         <div id="xlTomTat" style="padding:0 16px 10px;font-size:13px"></div>
         <div class="cuon cuon-doc"><table id="bangXepLoai"></table></div>
@@ -824,11 +829,12 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <section id="pNhanSu" style="display:none">
       <div class="kpis" id="kpisNS"></div>
       <div class="luoi-2">
-        <div class="the o-bieu-do">
+        <!-- Ẩn với người chỉ quản 1 tổ: "theo tổ" chỉ còn đúng 1 dòng. -->
+        <div class="the o-bieu-do" id="theQuanSoNS">
           <h3 class="tieude-muc" id="tieuDeQuanSoNS">Quân số theo tổ</h3>
           <div class="cuon cuon-doc" style="max-height:300px"><table id="bangQuanSoNS"></table></div>
         </div>
-        <div class="the o-bieu-do">
+        <div class="the o-bieu-do" id="theBienDongThangNS">
           <h3 class="tieude-muc">Biến động theo tháng</h3>
           <div class="cuon"><table id="bangThangNS"></table></div>
         </div>
@@ -954,7 +960,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
   <div class="hop-thoai" style="max-width:900px">
     <div class="dau-hop">
       <h2>Điều chỉnh quy khô — <span id="dcTieuDeKy"></span></h2>
-      <button class="btn chinh nho" id="nutDcLuu">Lưu</button>
+      <button class="btn chinh nho" id="nutDcLuu">Lưu vào Sheet</button>
       <button class="btn nho" id="nutDcHuy">Đóng</button>
     </div>
     <div class="than-hop">
@@ -1060,7 +1066,6 @@ var _nsGhiLuc = 0;
 // Tương tự cho bảng giao sản lượng tháng: vừa bấm "Tính giao sản lượng" thì 2 phút
 // kế tiếp đọc thẳng Apps Script, vì BigQuery chưa kịp nhận bảng mới.
 var LENH_DOC_GIAO_SL = { slTheoCn: 1, luong: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1 };   // cũng dùng cho khô miệng cạo: vừa lưu mà BigQuery chưa kịp thì đọc thẳng Apps Script
-var _giaoSlGhiLuc = 0;
 
 /* =====================================================================
    Trạng thái
@@ -1086,9 +1091,57 @@ var _demCb = 0;
 /* Lệnh đọc gửi Cloud Run. Cloud Run không trả lời được (sập, quá tải, hết
    giờ) thì gửi lại cho Apps Script, trang vẫn chạy. Lỗi NGHIỆP VỤ (sai mã
    đơn vị...) thì không gửi lại — Apps Script cũng sẽ báo đúng lỗi đó. */
+/* =====================================================================
+   Ghi Sheet và đẩy BigQuery là 2 bước riêng: các nút lưu nhập tay chỉ ghi
+   Sheet; đội trưởng kiểm tra xong mới bấm "Đẩy lên BigQuery". Trong lúc còn
+   nhóm chờ đẩy, các lệnh đọc liên quan (LENH_DOC_GIAO_SL) đọc thẳng Apps
+   Script (Sheet) để thấy đúng số vừa lưu.
+   ===================================================================== */
+var _choDayBq = [];   // [{nhom, ten, luc, moTa}] — trạng thái chung toàn hệ thống (Script Properties)
+
+function capNhatChoDay(ds) {
+  if (!ds) return;
+  _choDayBq = ds;
+  var k = $('khungChoDayBq');
+  if (!ds.length) { k.style.display = 'none'; k.innerHTML = ''; return; }
+  var laDT = S.vaiTro === 'DOI_TRUONG';
+  k.style.display = '';
+  k.innerHTML = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+    '<div style="flex:1;min-width:220px"><b>Đã lưu vào Sheet, chưa đẩy lên BigQuery:</b> ' +
+    ds.map(function (x) { return thoat(x.ten) + (x.moTa ? ' (' + thoat(x.moTa) + ')' : '') + (x.luc ? ' lúc ' + thoat(x.luc.substring(11, 16)) : ''); }).join(' · ') +
+    '. Trang đang đọc thẳng Sheet cho các số này' + (laDT ? '; kiểm tra xong thì bấm đẩy.' : '; chờ đội trưởng đẩy lên.') + '</div>' +
+    (laDT ? '<button class="btn chinh nho" id="nutDayBq">Đẩy lên BigQuery</button>' : '') + '</div>';
+  if (laDT) $('nutDayBq').onclick = dayLenBq;
+}
+
+function napChoDay() {
+  return goiQua(S.api, 'choDayBq', {}, 30000).then(function (d) { capNhatChoDay(d.ds); }).catch(function () {});
+}
+
+function dayLenBq() {
+  var nut = $('nutDayBq');
+  nut.disabled = true; nut.textContent = 'Đang đẩy…';
+  goiAPI('dayBq', { vaiTro: S.vaiTro, maDonVi: S.maDonVi }, 300000).then(function (d) {
+    _cacheFE = {};
+    var loi = d.ketQua.filter(function (x) { return !x.ok; });
+    $('thongBao').innerHTML = '<div class="bao-loi"' + (loi.length ? '' : ' style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)"') + '>' +
+      d.ketQua.map(function (x) { return '<b>' + thoat(x.ten) + '</b>: ' + (x.ok ? '' : 'LỖI — ') + thoat(x.thongBao); }).join('<br>') + '</div>';
+    capNhatChoDay(d.choDay);
+    taiTab();
+  }).catch(function (e) {
+    nut.disabled = false; nut.textContent = 'Đẩy lên BigQuery';
+    baoLoi('thongBao', e.message);
+  });
+}
+
+/** Câu báo chung sau khi lưu nhập tay (chỉ ghi Sheet). */
+function cauDaLuuSheet() {
+  return ' <b>Đã ghi vào Sheet, chưa đẩy lên BigQuery</b> — kiểm tra lại rồi bấm "Đẩy lên BigQuery" ở thanh phía trên.';
+}
+
 function goiApiMotLan(action, thamSo, msCho) {
   var vuaGhiNS = LENH_DOC_NHAN_SU[action] && (Date.now() - _nsGhiLuc < 120000);
-  var vuaGhiGiao = LENH_DOC_GIAO_SL[action] && (Date.now() - _giaoSlGhiLuc < 120000);
+  var vuaGhiGiao = LENH_DOC_GIAO_SL[action] && _choDayBq.length > 0;
   if (LENH_DOC[action] && S.apiDoc && !vuaGhiNS && !vuaGhiGiao) {
     return goiQua(S.apiDoc, action, thamSo, Math.min(msCho || 30000, 20000))
       .catch(function (e) {
@@ -1211,6 +1264,12 @@ function doiCuaTo(maTo) {
   var s = String(maTo || '');
   var i = s.indexOf('-');
   return i > 0 ? s.substring(0, i) : s;
+}
+
+/** "Đ1-KV1-05" -> "Đ1-KV1" (mã CN = mã tổ + số thứ tự); mã chưa đủ 3 phần thì trả rỗng. */
+function toCuaMaCn(maCn) {
+  var s = String(maCn || '');
+  return s.split('-').length >= 3 ? s.replace(/-[^-]*$/, '') : '';
 }
 
 /**
@@ -1570,7 +1629,8 @@ function taiTongQuan() {
     $('bdNsbqDoi').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
   }
 
-  goiCache('tongQuan', layBoLoc()).then(function (d) {
+  var blTQ = layBoLoc();
+  goiCache('tongQuan', blTQ).then(function (d) {
     var k = d.kpi;
     // Quy khô tách riêng mủ chén (MU_DONG) / mủ dây (MU_DAY) — 2 loại mủ chính, thay cho
     // 1 thẻ "Quy khô" gộp chung trước đây (DRC hai loại khác hẳn nhau, gộp lại không nói lên gì).
@@ -1604,9 +1664,14 @@ function taiTongQuan() {
     } else {
       $('theSoSanh').style.display = '';
 
-      // Ban lãnh đạo xem gom theo đội; đội trưởng xem theo tổ
-      var gomDoi = S.toanCongTy && d.theoDoi && d.theoDoi.length;
+      // Ban lãnh đạo xem gom theo đội (đã chọn 1 đội thì so các tổ trong đội đó); đội trưởng xem
+      // theo tổ. Backend bỏ bộ lọc tổ/công nhân cho khối này nên luôn đủ các dòng để so sánh —
+      // dòng đang lọc được tô đậm.
+      var gomDoi = S.toanCongTy && !blTQ.doi && d.theoDoi && d.theoDoi.length;
       var ds = gomDoi ? d.theoDoi : d.theoTo;
+      var dangLoc = gomDoi ? '' : (blTQ.to || (blTQ.maCn ? toCuaMaCn(blTQ.maCn) : ''));
+      $('tieuDeSoSanh').textContent = gomDoi ? 'So sánh theo đội'
+        : 'So sánh theo tổ' + (S.toanCongTy && blTQ.doi ? ' — ' + blTQ.doi : '');
       var tongKg = 0;
       for (var z = 0; z < ds.length; z++) tongKg += ds[z].kg;
 
@@ -1621,7 +1686,7 @@ function taiTongQuan() {
       }
       for (var i = 0; i < ds.length; i++) {
         var t = ds[i];
-        h += '<tr><td><b>' + thoat(gomDoi ? t.doi : t.to) + '</b></td>' +
+        h += '<tr' + (dangLoc && t.to === dangLoc ? ' class="dong-dang-loc"' : '') + '><td><b>' + thoat(gomDoi ? t.doi : t.to) + '</b></td>' +
              (gomDoi ? '<td class="p num">' + soVN(t.soTo, 0) + '</td>' : '') +
              '<td class="p num">' + soVN(t.kg, 2) + '</td>' +
              '<td class="p num">' + (tongKg ? soVN(t.kg / tongKg * 100, 1) + '%' : '—') + '</td>' +
@@ -2462,9 +2527,7 @@ function ghiBangGiao() {
   nutOk.disabled = true; nutOk.textContent = 'Đang ghi…';
   goiAPI('tinhGiaoSl', thamSo, 120000)
     .then(function (d) {
-      // Đẩy BigQuery xong thì đọc thẳng BigQuery luôn; chỉ khi đẩy hỏng mới
-      // tạm đọc Apps Script (Sheet) để người vừa bấm vẫn thấy số của mình.
-      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
+      capNhatChoDay(d.choDay);
       _cacheFE = {};
       nutOk.disabled = false; nutOk.textContent = 'Xác nhận ghi';
       dongXemTruoc();
@@ -2477,10 +2540,7 @@ function ghiBangGiao() {
         (d.soXoa ? ' (ghi đè ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
         'Giao quy khô: mủ chén ' + soVN(d.giaoChen, 0) + ' kg, mủ dây ' + soVN(d.giaoDay, 0) + ' kg. ' +
         'Không ai có lương vượt (sàn ' + soVN(d.tongSan, 0) + ' kg, ' + soVN(d.soChamSan, 0) +
-        ' người chạm sàn, phần dư ' + soVN(d.conLai, 0) + ' kg). ' +
-        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
-                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
-                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
+        ' người chạm sàn, phần dư ' + soVN(d.conLai, 0) + ' kg).' + cauDaLuuSheet() +
         canhBao + '</div>';
       S.trang = 1;
       taiSlTheoCn(true);
@@ -2590,6 +2650,8 @@ function ghiChotLuong() {
     .then(function (d) {
       nutOk.disabled = false; nutOk.textContent = 'Xác nhận chốt';
       dongXemTruocLuong();
+      capNhatChoDay(d.choDay);
+      _cacheFE = {};
       var canhBao = d.soChuaXepLoai
         ? ' <b>' + soVN(d.soChuaXepLoai, 0) + ' người chưa có xếp loại</b>, tạm tính xếp loại A.'
         : '';
@@ -2597,10 +2659,7 @@ function ghiChotLuong() {
         '<div class="bao-loi" style="' + (d.soChuaXepLoai ? '' : 'background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)') + '">' +
         'Đã chốt bảng lương kỳ ' + thoat(d.ky) + ' cho <b>' + soVN(d.soDong, 0) + '</b> công nhân' +
         (d.soXoa ? ' (ghi đè ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
-        'Tổng thu nhập ' + soVN(d.tongThuNhap, 0) + ' riel, thực nhận ' + soVN(d.tongThucNhan, 0) + ' riel. ' +
-        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
-                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
-                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
+        'Tổng thu nhập ' + soVN(d.tongThuNhap, 0) + ' riel, thực nhận ' + soVN(d.tongThucNhan, 0) + ' riel.' + cauDaLuuSheet() +
         canhBao + '</div>';
       taiLuong();
     })
@@ -2700,20 +2759,18 @@ function luuDieuChinh() {
   nut.disabled = true; nut.textContent = 'Đang lưu…';
   goiAPI('dieuChinhQkLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: _dcDuLieu.ky, dong: JSON.stringify(dong) }, 120000)
     .then(function (d) {
-      nut.disabled = false; nut.textContent = 'Lưu';
+      nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
       dongDieuChinh();
-      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
+      capNhatChoDay(d.choDay);
+      _cacheFE = {};
       $('thongBao').innerHTML =
         '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
         'Đã lưu điều chỉnh quy khô kỳ ' + thoat(d.ky) + ': <b>' + soVN(d.soDong, 0) + '</b> người' +
-        (d.soXoa ? ' (thay ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '. ' +
-        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
-                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
-                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') + '</div>';
+        (d.soXoa ? ' (thay ' + soVN(d.soXoa, 0) + ' dòng cũ)' : '') + '.' + cauDaLuuSheet() + '</div>';
       taiLuong();
     })
     .catch(function (e) {
-      nut.disabled = false; nut.textContent = 'Lưu';
+      nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
       baoLoi('thongBao', e.message);
     });
 }
@@ -2732,7 +2789,11 @@ var _kmDuLieu = null;   // { ky, donGia, daNhap, tong, rows: [{maCn, ten, cccd, 
  * gọi tạm 1 lần cho có danh sách — goiCache nên nếu sau đó mở tab Lương thật sẽ không tốn thêm.
  */
 function napDsKyNeuChua() {
-  if ($('lgKy').options.length) return Promise.resolve();
+  // Khôi phục bộ lọc cũ có thể đặt ô Kỳ về giá trị không còn trong danh sách → ô trống: lấy kỳ mới nhất.
+  if ($('lgKy').options.length) {
+    if (!$('lgKy').value) $('lgKy').value = $('lgKy').options[0].value;
+    return Promise.resolve();
+  }
   var bl = layBoLoc();
   bl.q = ''; bl.loc = ''; bl.ky = ''; bl.trang = 1; bl.moiTrang = 1;
   delete bl.denNgay; delete bl.loaiMu; delete bl.chatLuong; delete bl.maCn; delete bl.tuNgay;
@@ -2744,7 +2805,7 @@ function napDsKyNeuChua() {
 
 function taiKhoMieng() {
   $('bangKhoMieng').innerHTML = skBang();
-  $('kmTomTat').innerHTML = '';
+  $('kmTomTat').innerHTML = ''; $('kmTong').innerHTML = '';
   napDsKyNeuChua().then(function () {
     var ky = $('lgKy').value;
     if (!ky) { $('bangKhoMieng').innerHTML = '<tbody><tr><td><div class="rong">Chưa có kỳ lương nào.</div></td></tr></tbody>'; return; }
@@ -2766,9 +2827,18 @@ function veBangKhoMieng() {
       '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td>' + (r.cccd ? thoat(r.cccd) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td class="p"><input class="o kmSoCong" type="number" min="0" max="31" step="1" style="width:90px" value="' +
-      (r.soCong || 0) + '"></td></tr>';
+      (r.soCong || 0) + '"' + (S.vaiTro === 'DOI_TRUONG' ? '' : ' disabled') + '></td></tr>';
   }
   $('bangKhoMieng').innerHTML = h + '</tbody>';
+  veTongKhoMieng();
+}
+
+/** Tổng theo lưới đang gõ (chưa lưu): số người có công, tổng công, thành tiền theo đơn giá kỳ. */
+function veTongKhoMieng() {
+  var theoMa = _kmDocLuoi(), soNguoi = 0, tongCong = 0;
+  for (var ma in theoMa) if (theoMa[ma] > 0) { soNguoi++; tongCong += theoMa[ma]; }
+  $('kmTong').innerHTML = 'Tổng: <b>' + soVN(soNguoi, 0) + '</b> người có công · <b>' + soVN(tongCong, 0) +
+    '</b> công · thành tiền <b>' + soVN(tongCong * (_kmDuLieu.donGia || 0), 0) + '</b> riel';
 }
 
 /** Đọc lại giá trị đang gõ trên lưới (trước khi nạp file mẫu / lưu), để không mất gì đã sửa. */
@@ -2832,6 +2902,7 @@ function kmXuLyFile(e) {
         soKhop++;
       }
       baoLoi('thongBao', '');
+      veTongKhoMieng();
       $('kmTomTat').innerHTML += ' · <b>Đã nhập từ file:</b> khớp ' + soVN(soKhop, 0) + ' / ' + soVN(Object.keys(theoMa).length, 0) + ' mã CN trong file.';
     }).catch(function (err) { baoLoi('thongBao', 'Không đọc được file Excel: ' + err.message); });
   };
@@ -2864,23 +2935,19 @@ function kmLuu() {
   nut.disabled = true;
   luuTheoLo('hoTroKhoLuu', _kmDuLieu.ky, dong, nut)
     .then(function (ds) {
-      var d = { ky: ds[0].ky, soDong: 0, soCoCong: 0, tongTien: 0, bq: ds[ds.length - 1].bq };
+      var d = { ky: ds[0].ky, soDong: 0, soCoCong: 0, tongTien: 0 };
       ds.forEach(function (x) { d.soDong += x.soDong; d.soCoCong += x.soCoCong; d.tongTien += x.tongTien; });
-      nut.disabled = false; nut.textContent = 'Lưu';
-      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
+      nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
+      capNhatChoDay(ds[ds.length - 1].choDay);
       _cacheFE = {};   // bảng Lương (Công KM/Tiền KM) phụ thuộc số vừa lưu — bỏ cache cũ
       $('thongBao').innerHTML =
         '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
         'Đã lưu hỗ trợ khô miệng cạo kỳ ' + thoat(d.ky) + ': ' + soVN(d.soCoCong, 0) + ' / ' + soVN(d.soDong, 0) +
-        ' người có công, tổng tiền ' + soVN(d.tongTien, 0) + ' riel. ' +
-        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
-                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
-                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
-        '</div>';
+        ' người có công, tổng tiền ' + soVN(d.tongTien, 0) + ' riel.' + cauDaLuuSheet() + '</div>';
       taiKhoMieng();
     })
     .catch(function (e) {
-      nut.disabled = false; nut.textContent = 'Lưu';
+      nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
       baoLoi('thongBao', e.message);
     });
 }
@@ -2914,7 +2981,7 @@ function veBangXepLoai() {
     h += '<tr data-ma="' + thoat(r.maCn) + '"><td>' + (i + 1) + '</td><td><b>' + thoat(r.maCn) + '</b></td>' +
       '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td>' + (r.cccd ? thoat(r.cccd) : '<span class="nhan-mo">—</span>') + '</td>' +
-      '<td><select class="o xlChon" style="width:110px">' + chon + '</select></td></tr>';
+      '<td><select class="o xlChon" style="width:110px"' + (S.vaiTro === 'DOI_TRUONG' ? '' : ' disabled') + '>' + chon + '</select></td></tr>';
   }
   $('bangXepLoai').innerHTML = h + '</tbody>';
   var tr = $('bangXepLoai').querySelectorAll('tbody tr[data-ma]');
@@ -3015,27 +3082,23 @@ function xlLuu() {
   nut.disabled = true;
   luuTheoLo('xepLoaiLuu', _xlDuLieu.ky, dong, nut)
     .then(function (ds) {
-      var d = { ky: ds[0].ky, soDong: 0, soDaXep: 0, dem: {}, bq: ds[ds.length - 1].bq };
+      var d = { ky: ds[0].ky, soDong: 0, soDaXep: 0, dem: {} };
       ds.forEach(function (x) {
         d.soDong += x.soDong; d.soDaXep += x.soDaXep;
         for (var k in x.dem) d.dem[k] = (d.dem[k] || 0) + x.dem[k];
       });
-      nut.disabled = false; nut.textContent = 'Lưu';
-      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
+      nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
+      capNhatChoDay(ds[ds.length - 1].choDay);
       _cacheFE = {};   // bảng Lương (tỷ lệ xếp loại) phụ thuộc số vừa lưu — bỏ cache cũ
       var dem = Object.keys(d.dem || {}).sort().map(function (x) { return x + ': ' + d.dem[x]; }).join(', ');
       $('thongBao').innerHTML =
         '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
         'Đã lưu xếp loại kỳ ' + thoat(d.ky) + ': ' + soVN(d.soDaXep, 0) + ' / ' + soVN(d.soDong, 0) + ' người' +
-        (dem ? ' (' + thoat(dem) + ')' : '') + '. ' +
-        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
-                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
-                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
-        '</div>';
+        (dem ? ' (' + thoat(dem) + ')' : '') + '.' + cauDaLuuSheet() + '</div>';
       taiXepLoai();
     })
     .catch(function (e) {
-      nut.disabled = false; nut.textContent = 'Lưu';
+      nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
       baoLoi('thongBao', e.message);
     });
 }
@@ -3459,8 +3522,11 @@ var COT_CC = [
  * dùng lại action nhanSuTongQuan có sẵn (bienDongThang theo tháng), cộng các tháng nằm trong
  * [tuNgay, denNgay]. Trả về null nếu gọi lỗi — Chấm công vẫn hiện KPI chính bình thường.
  */
-function bienDongTrongKhoang(tuNgay, denNgay) {
-  return nsGoi('nhanSuTongQuan').then(function (d) {
+function bienDongTrongKhoang(tuNgay, denNgay, doi, to) {
+  var them = {};
+  if (doi) them.doi = doi;
+  if (to) them.to = to;
+  return nsGoi('nhanSuTongQuan', them).then(function (d) {
     var kyTu = (tuNgay || '').substring(0, 7), kyDen = (denNgay || '').substring(0, 7);
     var soNghi = 0, soChuyenTo = 0;
     (d.bienDongThang || []).forEach(function (m) {
@@ -3477,15 +3543,19 @@ function taiChamCong() {
   var bl = layBoLocCC();
   bl.trang = S.trang; bl.moiTrang = 100;
 
-  Promise.all([goiCache('chamCong', bl), bienDongTrongKhoang(bl.tuNgay, bl.denNgay)]).then(function (kq) {
+  var toBd = bl.to || toCuaMaCn(bl.maCn);
+  Promise.all([goiCache('chamCong', bl), bienDongTrongKhoang(bl.tuNgay, bl.denNgay, bl.doi, toBd)]).then(function (kq) {
     var d = kq[0], bd = kq[1];
     var k = d.kpi;
     $('kpisCC').innerHTML =
+      the_kpi('Tổng công', soVN(k.tongCong, 1), 'công', soVN(k.soDong, 0) + ' dòng chấm công') +
       the_kpi('Công nhân', soVN(k.soCongNhan, 0), 'người', k.soNgay + ' ngày trong kỳ') +
       the_kpi('Bình quân', soVN(k.soCongNhan ? k.tongCong / k.soCongNhan : 0, 2), 'công/người', 'Trên toàn bộ kỳ đã lọc') +
-      the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt') +
-      (bd ? the_kpi('Nghỉ việc', soVN(bd.soNghi, 0), 'người', 'Trong khoảng đang lọc') +
-            the_kpi('Chuyển tổ', soVN(bd.soChuyenTo, 0), 'người', 'Trong khoảng đang lọc') : '');
+      the_kpi('Dòng nghỉ', soVN(k.soDongNghi || 0, 0), 'dòng',
+              k.soDong ? soVN((k.soDongNghi || 0) / k.soDong * 100, 1) + '% số dòng (số công = 0)' : 'Chưa có dữ liệu') +
+      (S.toanCongTy ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt')) +
+      (bd ? the_kpi('Nghỉ việc', soVN(bd.soNghi, 0), 'người', 'Trong khoảng đang lọc' + (toBd ? ' · tổ ' + toBd : '')) +
+            the_kpi('Chuyển tổ', soVN(bd.soChuyenTo, 0), 'người', 'Trong khoảng đang lọc' + (toBd ? ' · tổ ' + toBd : '')) : '');
 
     // Cơ cấu ký hiệu
     var tongD = 0;
@@ -3518,7 +3588,7 @@ function taiChamCong() {
       if (!d.theoTo.length) ht += '<tr><td colspan="5"><div class="rong">Không có dữ liệu.</div></td></tr>';
       for (var m = 0; m < d.theoTo.length; m++) {
         var t = d.theoTo[m];
-        ht += '<tr><td><b>' + thoat(t.to) + '</b></td>' +
+        ht += '<tr' + (toBd && t.to === toBd ? ' class="dong-dang-loc"' : '') + '><td><b>' + thoat(t.to) + '</b></td>' +
           '<td class="p num">' + soVN(t.soCong, 1) + '</td>' +
           '<td class="p num">' + soVN(t.soCn, 0) + '</td>' +
           '<td class="p num">' + soVN(t.congBqNguoi, 2) + '</td>' +
@@ -5505,12 +5575,18 @@ function vaoApp(d, vtChon) {
   $('nutThemCC').style.display = chiXem ? 'none' : '';
   $('nutHangLoatSL').style.display = chiXem ? 'none' : '';
   $('nutHangLoatCC').style.display = chiXem ? 'none' : '';
+  // Khô miệng cạo / Xếp loại: chỉ đội trưởng được nhập (backend cũng chặn) — vai trò khác chỉ xem.
+  var laDT = d.vaiTro === 'DOI_TRUONG';
+  ['nutKmLuu', 'nutKmNhapFile', 'nutXlLuu', 'nutXlNhapFile', 'nutXlDienA'].forEach(function (id) {
+    $(id).style.display = laDT ? '' : 'none';
+  });
   // Tải mẫu thì không ghi gì — không cần ẩn, ban lãnh đạo tải xem cũng vô hại.
   $('gatTrangThai').style.display = d.toanCongTy ? 'none' : '';
   S.trangThai = '';
   veGatTrangThai();
 
   hien('app');
+  napChoDay();
 
   // Nạp danh mục rồi vẽ tab đầu — truyền vaiTro/maDonVi để backend biết
   // đọc khoảng ngày (ngayMin/ngayMax) từ Sheet hay từ BigQuery cho đúng
@@ -5703,6 +5779,9 @@ function taiNhanSu(giuBao) {
     }
     $('bangQuanSoNS').innerHTML = ht + '</tbody>';
     $('tieuDeQuanSoNS').textContent = 'Quân số theo tổ — "Chưa rõ" = mã đang dùng nhưng chưa có dữ liệu người giữ';
+    var motTo = S.dsTo.length <= 1;
+    $('theQuanSoNS').style.display = motTo ? 'none' : '';
+    $('theBienDongThangNS').style.gridColumn = motTo ? '1 / -1' : '';
 
     var hm = '<thead><tr><th>Tháng</th><th class="p">Tuyển</th><th class="p">Giao mã</th><th class="p">Chuyển tổ</th><th class="p">Nghỉ</th></tr></thead><tbody>';
     if (!d.bienDongThang.length) hm += '<tr><td colspan="5"><div class="rong">Chưa có biến động nào ngoài mốc khởi tạo.</div></td></tr>';
@@ -6289,6 +6368,7 @@ $('nutXlNhapFile').onclick = xlNhapFile;
 $('fileXepLoai').onchange = xlXuLyFile;
 $('nutXlLuu').onclick = xlLuu;
 $('bangXepLoai').onchange = function (e) { if (e.target.classList.contains('xlChon')) veTomTatXepLoai(); };
+$('bangKhoMieng').oninput = function (e) { if (e.target.classList.contains('kmSoCong')) veTongKhoMieng(); };
 $('nutHuyXemTruoc').onclick = function () { dongXemTruoc(); baoLoi('thongBao', ''); };
 $('nutXacNhanGhi').onclick = ghiBangGiao;
 $('nutXtXuatFile').onclick = xtXuatFile;
