@@ -261,7 +261,18 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 
 /* ---------- Bố cục biểu đồ ---------- */
 .luoi-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
-@media (max-width:900px){.luoi-2{grid-template-columns:1fr}}
+.luoi-2.deu{grid-template-columns:1fr 1fr}
+.luoi-2.mot{grid-template-columns:1fr}
+@media (max-width:900px){.luoi-2,.luoi-2.deu{grid-template-columns:1fr}}
+/* Tổng quan chia theo hạng mục: mỗi hạng mục 1 tiêu đề lớn */
+.nhom-tq{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:28px 0 12px;padding-top:14px;
+  border-top:2px solid var(--line-2);font-size:17px;font-weight:700;letter-spacing:-.01em}
+.nhom-tq:first-child{margin-top:0;padding-top:0;border-top:none}
+.nhom-tq small{font-size:12.5px;font-weight:400;color:var(--ink-3)}
+.kpi.canh{border-left:3px solid var(--clay)}
+.kpi.canh .so{color:var(--clay)}
+.kpi .phu2 .tang{color:var(--leaf);font-weight:600}
+.kpi .phu2 .giam{color:var(--clay);font-weight:600}
 .o-bieu-do{padding:16px}
 .chu-thich{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:13px}
 .chu-thich i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}
@@ -551,18 +562,19 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <div id="thongBao"></div>
 
     <!-- Tab: Tổng quan -->
+    <!-- Tổng quan chia 5 hạng mục: Sản lượng · So sánh & xếp hạng · Giao khoán · Chấm công · Nhân sự.
+         Mọi vai trò đều thấy đủ 5 hạng mục, chỉ khác đơn vị so sánh: lãnh đạo theo đội, đội trưởng
+         theo tổ, tổ trưởng theo công nhân (khối nào chỉ còn 1 dòng thì ẩn). Hạng mục 3–5 tải sau,
+         tuần tự (taiTongQuanPhu), không chặn phần sản lượng. -->
     <section id="pTongQuan">
+      <h2 class="nhom-tq">Sản lượng <small id="phuNhomSL"></small></h2>
       <div class="kpis" id="kpis"></div>
-      <!-- Sản lượng theo ngày để riêng hẳn 1 hàng (rộng bằng các thẻ khác, không tràn màn hình) —
-           đủ chỗ hiện nhãn TỪNG ngày thay vì chỉ 3 mốc đầu/giữa/cuối như trước. -->
+      <!-- Sản lượng theo ngày để riêng hẳn 1 hàng — đủ chỗ hiện nhãn TỪNG ngày. -->
       <div class="the o-bieu-do" style="margin-bottom:20px">
         <h3 class="tieude-muc">Sản lượng theo ngày</h3>
         <div id="bdNgay"></div>
       </div>
-      <!-- 2 biểu đồ tròn nhỏ đi cùng hàng cho cân đối, khỏi trống trải bên cạnh — cơ cấu chất
-           lượng mủ trước chỉ ban lãnh đạo thấy, nay hiện cho mọi vai trò vì cũng hữu ích với
-           đội trưởng/tổ trưởng. -->
-      <div class="luoi-2">
+      <div class="luoi-2 deu">
         <div class="the o-bieu-do">
           <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
           <div id="bdLoai"></div>
@@ -572,55 +584,72 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div id="bdChatLuong"></div>
         </div>
       </div>
-      <!-- Ẩn với tổ trưởng: phạm vi của họ chỉ có 1 tổ, "so sánh" vô nghĩa. -->
-      <div class="the" id="theSoSanh">
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Xu hướng quy khô theo tháng <span class="nhan-mo" style="text-transform:none;font-weight:400">(đã duyệt, 12 tháng gần nhất)</span></h3>
+          <div id="bdXuHuong"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Theo phiên cạo</h3>
+          <div class="cuon"><table id="bangPhien"></table></div>
+        </div>
+      </div>
+
+      <h2 class="nhom-tq">So sánh &amp; xếp hạng <small id="phuNhomSS"></small></h2>
+      <!-- Ẩn với tổ trưởng: phạm vi của họ chỉ có 1 tổ, "so sánh theo tổ" chỉ còn 1 dòng. -->
+      <div class="the" id="theSoSanh" style="margin-bottom:20px">
         <h3 class="tieude-muc" style="padding:16px 16px 0" id="tieuDeSoSanh">So sánh theo tổ</h3>
         <div class="cuon"><table id="bangTo"></table></div>
       </div>
-
-      <!-- Chỉ ban lãnh đạo (xem toàn công ty) thấy khối này. Dữ liệu của họ
-           đọc thẳng từ BigQuery — vốn CHỈ có dòng đã duyệt — nên không còn
-           donut "tình trạng duyệt" nữa (sẽ luôn là 100%, không nói lên gì). -->
-      <div id="khoiLanhDao" style="display:none">
-        <div class="luoi-2">
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
-            <div id="bdXepDoi"></div>
-          </div>
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Năng suất bình quân theo đội (kg/nhát)</h3>
-            <div id="bdNsbqDoi"></div>
-          </div>
+      <!-- Chỉ lãnh đạo (xem nhiều đội) -->
+      <div class="luoi-2 deu" id="khoiXepDoi" style="display:none">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
+          <div id="bdXepDoi"></div>
         </div>
-        <div class="luoi-2">
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Tổ dẫn đầu &amp; tổ cần chú ý</h3>
-            <div id="bangTopTo"></div>
-          </div>
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Xu hướng quy khô theo tháng</h3>
-            <div id="bdXuHuong"></div>
-          </div>
-        </div>
-        <div class="luoi-2">
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">Nhân sự tổng hợp</h3>
-            <div class="kpis" id="kpisNhanSuTH"></div>
-          </div>
-          <div class="the o-bieu-do">
-            <h3 class="tieude-muc">% hoàn thành giao khoán theo đội (mùa vụ)</h3>
-            <div id="bdHieuSuatGK"></div>
-          </div>
-        </div>
-        <div class="the o-bieu-do" style="margin-bottom:20px">
-          <h3 class="tieude-muc">Công bình quân/người theo đội (chuyên cần)</h3>
-          <div id="bdChuyenCanDoi"></div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Năng suất bình quân theo đội (kg/nhát)</h3>
+          <div id="bdNsbqDoi"></div>
         </div>
       </div>
+      <div class="luoi-2 deu" id="khoiTopTq">
+        <div class="the o-bieu-do" id="theTopTo">
+          <h3 class="tieude-muc">Tổ dẫn đầu &amp; tổ cần chú ý <span class="nhan-mo" style="text-transform:none;font-weight:400">(theo sản lượng tươi)</span></h3>
+          <div id="bangTopTo"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Công nhân dẫn đầu &amp; cần chú ý <span class="nhan-mo" style="text-transform:none;font-weight:400">(theo kg/nhát)</span></h3>
+          <div id="bangTopCn"></div>
+        </div>
+      </div>
+
+      <h2 class="nhom-tq">Giao khoán mùa vụ <small id="phuNhomGK"></small></h2>
+      <div class="kpis" id="kpisGKTQ"></div>
+      <div class="the o-bieu-do" id="theGKTQ" style="margin-bottom:20px">
+        <h3 class="tieude-muc" id="tieuDeGKTQ">% hoàn thành giao khoán theo đội</h3>
+        <div id="bdHieuSuatGK"></div>
+      </div>
+
+      <h2 class="nhom-tq">Chấm công &amp; chuyên cần <small id="phuNhomCC"></small></h2>
+      <div class="kpis" id="kpisCCTQ"></div>
+      <div class="luoi-2" id="luoiCCTQ">
+        <div class="the o-bieu-do" id="theChuyenCanTQ">
+          <h3 class="tieude-muc" id="tieuDeChuyenCan">Công bình quân/người theo đội</h3>
+          <div id="bdChuyenCanDoi"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Cơ cấu theo ký hiệu công</h3>
+          <div id="bdKyHieuTQ"></div>
+        </div>
+      </div>
+
+      <h2 class="nhom-tq">Nhân sự <small id="phuNhomNS"></small></h2>
+      <div class="kpis" id="kpisNhanSuTH"></div>
     </section>
 
     <!-- Tab: Sản lượng chi tiết -->
     <section id="pSanLuong" style="display:none">
+      <div class="kpis" id="kpisSL"></div>
       <div class="the">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSL">—</h3>
@@ -660,6 +689,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <h3 class="tieude-muc">Số công theo tổ</h3>
           <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
         </div>
+      </div>
+      <div class="the o-bieu-do" id="theNghiNhieu" style="margin-bottom:20px;display:none">
+        <h3 class="tieude-muc">Công nhân nghỉ nhiều nhất trong kỳ <span class="nhan-mo" style="text-transform:none;font-weight:400">(số ngày có số công = 0)</span></h3>
+        <div id="bdNghiNhieu"></div>
       </div>
       <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
            trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". Đưa lên đầu vì đây
@@ -707,6 +740,17 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
     <!-- Tab: Xếp hạng -->
     <section id="pXepHang" style="display:none">
+      <div class="kpis" id="kpisXH"></div>
+      <div class="luoi-2 deu" id="luoiXH">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Phân bố năng suất (kg/nhát) <span class="nhan-mo" style="text-transform:none;font-weight:400">— số công nhân mỗi khoảng</span></h3>
+          <div id="bdPhanBoXH"></div>
+        </div>
+        <div class="the o-bieu-do" id="theXHTo">
+          <h3 class="tieude-muc">Năng suất theo tổ</h3>
+          <div class="cuon" style="max-height:320px"><table id="bangXHTo"></table></div>
+        </div>
+      </div>
       <div class="the">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto">Xếp hạng công nhân</h3>
@@ -725,6 +769,11 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab: Giao khoán — phần cạo giao cho ai, kế hoạch mùa vụ, thực hiện lũy kế -->
     <section id="pGiaoKhoan" style="display:none">
       <div class="kpis" id="kpisGK"></div>
+      <!-- Ẩn khi chỉ còn 1 tổ (tổ trưởng / đang lọc 1 tổ) -->
+      <div class="the o-bieu-do" id="theGKSoSanh" style="margin-bottom:20px;display:none">
+        <h3 class="tieude-muc" id="tieuDeGKSoSanh">% hoàn thành kế hoạch theo tổ</h3>
+        <div id="bdGKSoSanh"></div>
+      </div>
       <div class="the" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatGK">Giao khoán</h3>
@@ -809,6 +858,16 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab: Lương — tính từ chấm công và sản lượng quy khô của kỳ -->
     <section id="pLuong" style="display:none">
       <div class="kpis" id="kpisLuong"></div>
+      <div class="luoi-2" id="luoiLuongTH">
+        <div class="the o-bieu-do" id="theLuongTo">
+          <h3 class="tieude-muc">Lương theo tổ <span class="nhan-mo" style="text-transform:none;font-weight:400">(thực nhận, riel)</span></h3>
+          <div class="cuon" style="max-height:320px"><table id="bangLuongTo"></table></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Cơ cấu thu nhập</h3>
+          <div id="bdCoCauLuong"></div>
+        </div>
+      </div>
       <div class="the" id="khungChotLuong" style="display:none;margin-bottom:12px;padding:12px 16px">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <b>Chốt bảng lương</b>
@@ -1492,11 +1551,11 @@ function mauChatLuong(ma) {
  *   layNhan(x)     -> nhãn bên trái (mã đội, mã tổ...)
  *   layGiaTri(x)   -> số dùng để so độ dài thanh
  *   dinhDang(v)    -> chuỗi hiển thị bên phải (đã gồm đơn vị)
- *   mau            màu thanh, mặc định xanh lá
+ *   mau            màu thanh (chuỗi, hoặc hàm mau(x) -> màu riêng từng dòng), mặc định xanh lá
  */
 function veCotNgang(el, ds, layNhan, layGiaTri, dinhDang, mau) {
   if (!ds.length) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
-  mau = mau || 'var(--leaf)';
+  var layMau = typeof mau === 'function' ? mau : function () { return mau || 'var(--leaf)'; };
   var max = 0;
   for (var i = 0; i < ds.length; i++) max = Math.max(max, layGiaTri(ds[i]));
   if (max <= 0) max = 1;
@@ -1507,15 +1566,17 @@ function veCotNgang(el, ds, layNhan, layGiaTri, dinhDang, mau) {
     var pct = Math.max(2, v / max * 100);
     h += '<div class="dong-cot-ngang">' +
          '<div class="nhan-cot-ngang">' + thoat(layNhan(ds[j])) + '</div>' +
-         '<div class="thanh-cot-ngang"><div class="lap" style="width:' + pct + '%;background:' + mau + '"></div></div>' +
+         '<div class="thanh-cot-ngang"><div class="lap" style="width:' + pct + '%;background:' + layMau(ds[j]) + '"></div></div>' +
          '<div class="gt-cot-ngang">' + thoat(dinhDang(v)) + '</div></div>';
   }
   el.innerHTML = h;
 }
 
-/** Top 5 tổ dẫn đầu và 5 tổ thấp nhất theo sản lượng — dsTo đã sắp xếp giảm dần từ backend. */
+/** Top 5 tổ dẫn đầu và 5 tổ thấp nhất theo sản lượng QUY KHÔ (tươi cộng lẫn mủ chén + mủ dây thì
+ *  tổ nhiều mủ dây bị đẩy lên sai). */
 function veTopTo(el, dsTo) {
   if (!dsTo.length) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
+  dsTo = dsTo.slice().sort(function (a, b) { return b.quyKho - a.quyKho; });
   var top = dsTo.slice(0, 5);
   var cuoi = dsTo.slice(-5).reverse();
   // Ít hơn 10 tổ thì hai danh sách sẽ trùng nhau — bớt phần cuối cho khỏi lặp.
@@ -1526,13 +1587,50 @@ function veTopTo(el, dsTo) {
     var s = '<ol>';
     for (var i = 0; i < ds.length; i++) {
       s += '<li><span class="ma">' + (i + 1) + '. ' + thoat(ds[i].to) + '</span>' +
-           '<span class="gt">' + soVN(ds[i].kg, 0) + ' kg</span></li>';
+           '<span class="gt">' + soVN(ds[i].quyKho, 0) + ' kg khô</span></li>';
     }
     return s + '</ol>';
   }
   el.innerHTML = '<div class="top-to">' +
     '<div><h4>Dẫn đầu</h4>' + dsHtml(top) + '</div>' +
     '<div><h4>Thấp nhất</h4>' + dsHtml(cuoi) + '</div></div>';
+}
+
+/** 10 công nhân NSBQ (kg/nhát) cao nhất / thấp nhất — backend đã lọc người quá ít nhát. */
+function veTopCn(el, d) {
+  var dau = d.cnDauBang || [], cuoi = d.cnCuoiBang || [];
+  if (!dau.length) { el.innerHTML = '<div class="rong">Không có dòng nào ghi số nhát cạo.</div>'; return; }
+  function dsHtml(ds) {
+    if (!ds.length) return '<div class="rong" style="padding:12px 0">—</div>';
+    return '<ol>' + ds.map(function (x, i) {
+      return '<li title="' + thoat(x.to + ' · ' + soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.nhat, 0) + ' nhát · ' + x.soNgay + ' ngày') + '">' +
+        '<span class="ma">' + (i + 1) + '. ' + thoat(x.maCn) + '</span>' +
+        '<span class="gt">' + soVN(x.nsbq, 3) + ' kg/nhát</span></li>';
+    }).join('') + '</ol>';
+  }
+  el.innerHTML = '<div class="top-to">' +
+    '<div><h4>Cao nhất</h4>' + dsHtml(dau) + '</div>' +
+    '<div><h4>Thấp nhất</h4>' + dsHtml(cuoi) + '</div></div>' +
+    '<div class="goi-y" style="margin:10px 0 0">Xếp ' + soVN(d.soCnXepHang || 0, 0) + ' công nhân có từ ' +
+    soVN(Math.ceil(d.nguongNhat || 0), 0) + ' nhát trở lên (½ trung vị) — rê chuột vào tên để xem chi tiết.</div>';
+}
+
+/** Thanh ngang theo ký hiệu công (tỷ lệ số dòng) — dùng ở tab Chấm công và Tổng quan. */
+function veKyHieuCong(el, ds) {
+  var tongD = 0, hk = '';
+  for (var i = 0; i < ds.length; i++) tongD += ds[i].soDong;
+  for (var j = 0; j < ds.length; j++) {
+    var x = ds[j];
+    var tl = tongD ? (x.soDong / tongD * 100) : 0;
+    hk += '<div style="margin-bottom:10px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">' +
+        '<span><b>' + thoat(x.ma) + '</b> · ' + thoat(x.ten) + '</span>' +
+        '<span class="num">' + soVN(x.soDong, 0) + ' · ' + soVN(tl, 1) + '%</span></div>' +
+      '<div style="height:8px;background:var(--line);border-radius:2px;overflow:hidden">' +
+        '<div style="height:100%;width:' + tl + '%;background:' +
+          (x.soCong > 0 ? 'var(--leaf)' : 'var(--clay)') + '"></div></div></div>';
+  }
+  el.innerHTML = hk || '<div class="rong">Không có dữ liệu.</div>';
 }
 
 function baoLoi(nut, thong) {
@@ -1782,38 +1880,26 @@ function taiTongQuan() {
   dangTai($('kpis'), true);
   $('bdNgay').innerHTML = skKhoi(); $('bdLoai').innerHTML = skKhoi();
   $('bdChatLuong').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
-  if (S.toanCongTy) {
-    $('bdXepDoi').innerHTML = skKhoi();
-    $('bdNsbqDoi').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
-  }
+  $('bangPhien').innerHTML = skBang(3); $('bangTopCn').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
+  if (S.toanCongTy) { $('bdXepDoi').innerHTML = skKhoi(); $('bdNsbqDoi').innerHTML = skKhoi(); }
 
   var blTQ = layBoLoc();
+  var moTaPham = moTaPhamViTQ(blTQ);
+  $('phuNhomSL').textContent = moTaPham;
+  $('phuNhomSS').textContent = S.toanCongTy && !blTQ.doi ? 'giữa các đội, trong kỳ đang lọc'
+    : (S.toanCongTy || S.coNhieuTo) ? 'giữa các tổ, trong kỳ đang lọc' : 'giữa các công nhân trong tổ, trong kỳ đang lọc';
   goiCache('tongQuan', blTQ).then(function (d) {
-    var k = d.kpi;
-    // Quy khô tách riêng mủ chén (MU_DONG) / mủ dây (MU_DAY) — 2 loại mủ chính, thay cho
-    // 1 thẻ "Quy khô" gộp chung trước đây (DRC hai loại khác hẳn nhau, gộp lại không nói lên gì).
-    var quyKhoTheoLoai = {};
-    (d.theoLoaiMu || []).forEach(function (x) { quyKhoTheoLoai[x.ma] = x; });
-    var muChen = quyKhoTheoLoai.MU_DONG || { kg: 0, quyKho: 0 };
-    var muDay = quyKhoTheoLoai.MU_DAY || { kg: 0, quyKho: 0 };
-    $('kpis').innerHTML =
-      the_kpi('Tổng sản lượng tươi', soVN(k.tongKg, 2), 'kg', k.soDong + ' dòng ghi nhận') +
-      the_kpi('Quy khô mủ chén', soVN(muChen.quyKho, 2), 'kg',
-              muChen.kg ? 'DRC ' + soVN(muChen.quyKho / muChen.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
-      the_kpi('Quy khô mủ dây', soVN(muDay.quyKho, 2), 'kg',
-              muDay.kg ? 'DRC ' + soVN(muDay.quyKho / muDay.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
-      the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', 'Trên toàn bộ dòng đã lọc') +
-      the_kpi('Phạm vi', soVN(k.soCongNhan, 0), 'công nhân', k.soNgay + ' ngày có sản lượng') +
-      // Ban lãnh đạo đọc thẳng BigQuery — vốn chỉ có dòng đã duyệt — nên
-      // không còn khái niệm "chờ duyệt" để hiện (số này với họ luôn là 0,
-      // dễ hiểu lầm là "không có gì đang chờ" trong khi thực ra có, chỉ là
-      // họ không xem qua nguồn này).
-      (chiCoDaDuyet() ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
-              soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt'));
+    _tqHienTai = d;
+    veKpiTQ(d, null);
+    // So với kỳ liền trước cùng độ dài (vd 01–30/09 so với 02–31/08) — gọi sau, không chặn trang.
+    var kt = kyTruocTQ(blTQ);
+    if (kt) goiCache('tongQuan', kt).then(function (dt) { if (_tqHienTai === d) veKpiTQ(d, dt); }).catch(function () {});
 
     veCot($('bdNgay'), d.theoNgay);
     veDonut($('bdLoai'), d.theoLoaiMu);
     veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
+    veBangPhienTQ(d.theoPhien || []);
+    veTopCn($('bangTopCn'), d);
 
     // Tổ trưởng chỉ quản 1 tổ — không có gì để "so sánh", ẩn hẳn khối này
     // thay vì hiện một bảng chỉ có đúng 1 dòng (chính họ).
@@ -1836,8 +1922,9 @@ function taiTongQuan() {
       ds.forEach(function (x) {
         for (var ma in (x.loai || {})) {
           var v = x.loai[ma];
-          if (!tongLoai[ma]) tongLoai[ma] = { kg: 0, quyKho: 0, nhat: 0 };
+          if (!tongLoai[ma]) tongLoai[ma] = { kg: 0, quyKho: 0, nhat: 0, kgNhat: 0 };
           tongLoai[ma].kg += v.kg; tongLoai[ma].quyKho += v.quyKho; tongLoai[ma].nhat += v.nhat;
+          tongLoai[ma].kgNhat += kgCoNhat(v);
         }
       });
       var dsLoai = Object.keys(tongLoai).filter(function (ma) { return tongLoai[ma].kg > 0; })
@@ -1850,7 +1937,7 @@ function taiTongQuan() {
         return '<td class="p num">' + (v.kg ? soVN(v.kg, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
                '<td class="p num">' + (v.quyKho ? soVN(v.quyKho, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
                '<td class="p num">' + (tong && tong.kg && v.kg ? soVN(v.kg / tong.kg * 100, 1) + '%' : '<span class="nhan-mo">—</span>') + '</td>' +
-               (tong && tong.nhat ? '<td class="p num">' + (v.nhat ? soVN(v.kg / v.nhat, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '');
+               (tong && tong.nhat ? '<td class="p num">' + (v.nhat ? soVN(kgCoNhat(v) / v.nhat, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '');
       };
       // Loại mủ không ghi số nhát (mủ dây, mủ đất...) thì bỏ hẳn cột NSBQ của loại đó.
       var soCotLoai = function (ma) { return tongLoai[ma].nhat ? 4 : 3; };
@@ -1882,73 +1969,186 @@ function taiTongQuan() {
              dsLoai.map(function (ma) {
                var v = tongLoai[ma];
                return '<td class="p num"><b>' + soVN(v.kg, 2) + '</b></td><td class="p num"><b>' + soVN(v.quyKho, 2) + '</b></td>' +
-                      '<td class="p num"><b>100%</b></td>' + (v.nhat ? '<td class="p num"><b>' + soVN(v.kg / v.nhat, 3) + '</b></td>' : '');
+                      '<td class="p num"><b>100%</b></td>' + (v.nhat ? '<td class="p num"><b>' + soVN(v.kgNhat / v.nhat, 3) + '</b></td>' : '');
              }).join('') +
              '<td class="p num"><b>' + soVN(tongCn, 0) + '</b></td></tr></tfoot>';
       }
       $('bangTo').innerHTML = h;
     }
 
-    // Khối riêng cho ban lãnh đạo: tình trạng duyệt, chất lượng, xếp hạng đội,
-    // năng suất theo đội, tổ dẫn đầu/cần chú ý. Đội trưởng/tổ trưởng không
-    // cần vì phạm vi của họ đã nhỏ (1 đội/1 tổ), so sánh không có nhiều ý nghĩa.
-    if (S.toanCongTy) {
-      $('khoiLanhDao').style.display = '';
-
-      veCotNgang($('bdXepDoi'), d.theoDoi,
-        function (x) { return x.doi; }, function (x) { return x.kg; },
-        function (v) { return soVN(v, 0) + ' kg'; });
-
-      var theoNsbq = d.theoDoi.slice().sort(function (a, b) { return b.nsbq - a.nsbq; });
-      veCotNgang($('bdNsbqDoi'), theoNsbq,
+    // Đơn vị so sánh theo vai trò: lãnh đạo theo đội (xếp hạng + NSBQ đội), lãnh đạo/đội trưởng có
+    // top tổ; tổ trưởng chỉ 1 tổ nên thay bằng top công nhân chiếm trọn hàng.
+    $('khoiXepDoi').style.display = S.toanCongTy && !blTQ.doi && d.theoDoi.length > 1 ? '' : 'none';
+    if (S.toanCongTy && !blTQ.doi) {
+      veCotNgang($('bdXepDoi'), d.theoDoi.slice().sort(function (a, b) { return b.quyKho - a.quyKho; }),
+        function (x) { return x.doi; }, function (x) { return x.quyKho; },
+        function (v) { return soVN(v, 0) + ' kg khô'; });
+      veCotNgang($('bdNsbqDoi'), d.theoDoi.slice().sort(function (a, b) { return b.nsbq - a.nsbq; }),
         function (x) { return x.doi; }, function (x) { return x.nsbq; },
         function (v) { return soVN(v, 3); }, 'var(--sky)');
-
-      veTopTo($('bangTopTo'), d.theoTo);
-      taiKhoiLanhDaoMoRong();
-    } else {
-      $('khoiLanhDao').style.display = 'none';
     }
+    var coTopTo = d.theoTo.length > 1;
+    $('theTopTo').style.display = coTopTo ? '' : 'none';
+    $('khoiTopTq').className = 'luoi-2 ' + (coTopTo ? 'deu' : 'mot');
+    if (coTopTo) veTopTo($('bangTopTo'), d.theoTo);
 
     baoLoi('thongBao', '');
+    taiTongQuanPhu(blTQ);
   }).catch(function (e) {
     $('kpis').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
 }
 
+var _tqHienTai = null;
+
+/** kg của các dòng CÓ ghi số nhát (backend cũ chưa trả kgNhat thì dùng tạm kg). */
+function kgCoNhat(v) { return v.kgNhat !== undefined ? v.kgNhat : v.kg; }
+
+/** "Đ1 · 01/09/2026 – 30/09/2026" — nhắc phạm vi đang xem cạnh tiêu đề hạng mục. */
+function moTaPhamViTQ(bl) {
+  var pham = bl.maCn || bl.to || bl.doi || (S.toanCongTy ? 'Toàn công ty' : S.maDonVi);
+  var dn = function (s) { return s ? s.split('-').reverse().join('/') : '…'; };
+  return pham + (bl.tuNgay || bl.denNgay ? ' · ' + dn(bl.tuNgay) + ' – ' + dn(bl.denNgay) : ' · toàn bộ thời gian');
+}
+
+/** Bộ lọc của kỳ liền trước cùng số ngày; không có đủ từ/đến ngày thì không so sánh. */
+function kyTruocTQ(bl) {
+  if (!bl.tuNgay || !bl.denNgay) return null;
+  var tu = new Date(bl.tuNgay + 'T00:00:00Z'), den = new Date(bl.denNgay + 'T00:00:00Z');
+  var soNgay = Math.round((den - tu) / 86400000) + 1;
+  if (!(soNgay > 0)) return null;
+  var denT = new Date(tu.getTime() - 86400000), tuT = new Date(tu.getTime() - soNgay * 86400000);
+  var kt = Object.assign({}, bl);
+  kt.tuNgay = tuT.toISOString().substring(0, 10); kt.denNgay = denT.toISOString().substring(0, 10);
+  return kt;
+}
+
+/** Dòng phụ "▲ 12,3% so với kỳ trước" (HTML) — trống nếu kỳ trước không có số. */
+function chenhLechTQ(nay, truoc) {
+  if (truoc === null || truoc === undefined || !truoc) return '';
+  var pt = (nay - truoc) / truoc * 100;
+  if (Math.abs(pt) < 0.05) return ' · <span>= kỳ trước</span>';
+  return ' · <span class="' + (pt > 0 ? 'tang' : 'giam') + '">' + (pt > 0 ? '▲ ' : '▼ ') + soVN(Math.abs(pt), 1) + '%</span> so với kỳ trước';
+}
+
+function veKpiTQ(d, dt) {
+  var k = d.kpi, kt = dt ? dt.kpi : null;
+  // Quy khô tách riêng mủ chén (MU_DONG) / mủ dây (MU_DAY) — DRC hai loại khác hẳn nhau.
+  var theoLoai = function (x) {
+    var m = {};
+    ((x && x.theoLoaiMu) || []).forEach(function (l) { m[l.ma] = l; });
+    return m;
+  };
+  var ql = theoLoai(d), qlt = dt ? theoLoai(dt) : null;
+  var muChen = ql.MU_DONG || { kg: 0, quyKho: 0 }, muDay = ql.MU_DAY || { kg: 0, quyKho: 0 };
+  var sosanh = function (nay, lay) { return kt ? chenhLechTQ(nay, lay()) : ''; };
+  $('kpis').innerHTML =
+    the_kpi('Tổng sản lượng tươi', soVN(k.tongKg, 2), 'kg', '', thoat(soVN(k.soDong, 0) + ' dòng') + sosanh(k.tongKg, function () { return kt.tongKg; })) +
+    the_kpi('Quy khô mủ chén', soVN(muChen.quyKho, 2), 'kg', '',
+            (muChen.kg ? 'DRC ' + soVN(muChen.quyKho / muChen.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
+            sosanh(muChen.quyKho, function () { return (qlt.MU_DONG || {}).quyKho; })) +
+    the_kpi('Quy khô mủ dây', soVN(muDay.quyKho, 2), 'kg', '',
+            (muDay.kg ? 'DRC ' + soVN(muDay.quyKho / muDay.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
+            sosanh(muDay.quyKho, function () { return (qlt.MU_DAY || {}).quyKho; })) +
+    the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', '', 'Trên dòng đã lọc' + sosanh(k.nsbq, function () { return kt.nsbq; })) +
+    the_kpi('Công nhân có sản lượng', soVN(k.soCongNhan, 0), 'người', '',
+            soVN(k.soNgay, 0) + ' ngày có sản lượng' + sosanh(k.soCongNhan, function () { return kt.soCongNhan; })) +
+    the_kpi('Bình quân/người', soVN(k.soCongNhan ? k.tongQuyKho / k.soCongNhan : 0, 1), 'kg khô', '',
+            'Quy khô mọi loại mủ' + sosanh(k.soCongNhan ? k.tongQuyKho / k.soCongNhan : 0,
+              function () { return kt.soCongNhan ? kt.tongQuyKho / kt.soCongNhan : 0; })) +
+    // Lãnh đạo đọc BigQuery (chỉ có dòng đã duyệt) — không hiện "chờ duyệt" (luôn 0, dễ hiểu lầm).
+    (chiCoDaDuyet() ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
+            soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt'));
+}
+
+function veBangPhienTQ(ds) {
+  var coPhien = ds.filter(function (x) { return x.phien !== '?'; });
+  if (!ds.length) { $('bangPhien').innerHTML = '<tbody><tr><td><div class="rong">Không có dữ liệu.</div></td></tr></tbody>'; return; }
+  var tongQk = ds.reduce(function (s, x) { return s + x.quyKho; }, 0);
+  var h = '<thead><tr><th>Phiên</th><th class="p">CN</th><th class="p">Quy khô (kg)</th><th class="p">Tỷ trọng</th>' +
+          '<th class="p">kg/nhát</th></tr></thead><tbody>';
+  ds.forEach(function (x) {
+    h += '<tr><td><b>' + (x.phien === '?' ? '<span class="nhan-mo">Không ghi phiên</span>' : thoat(x.phien)) + '</b></td>' +
+         '<td class="p num">' + soVN(x.soCn, 0) + '</td>' +
+         '<td class="p num">' + soVN(x.quyKho, 1) + '</td>' +
+         '<td class="p num">' + (tongQk ? soVN(x.quyKho / tongQk * 100, 1) + '%' : '—') + '</td>' +
+         '<td class="p num">' + (x.nhat ? soVN(x.nsbq, 3) : '<span class="nhan-mo">—</span>') + '</td></tr>';
+  });
+  h += '</tbody>';
+  if (!coPhien.length) h += '<caption class="goi-y" style="caption-side:bottom;text-align:left;padding-top:8px">Dòng sản lượng trong kỳ chưa ghi phiên cạo.</caption>';
+  $('bangPhien').innerHTML = h;
+}
+
 /**
- * 4 khối mở rộng riêng cho Ban lãnh đạo trong tab Tổng quan: xu hướng nhiều tháng, nhân sự tổng
- * hợp, hiệu suất giao khoán + chuyên cần theo đội. Mỗi khối tự bắt lỗi riêng — một khối lỗi
- * không kéo hỏng các khối còn lại.
- * (Đã bỏ khối "Chi phí lương theo tháng" — quá nặng: mỗi lần tải phải tính lương cho tới 12 kỳ,
- * mỗi kỳ lại quét toàn bộ vài bảng lớn, là khối tốn nhất trong cả trang Tổng quan.)
+ * Hạng mục phụ của Tổng quan (xu hướng tháng, giao khoán, chấm công, nhân sự) — mọi vai trò, theo
+ * đúng đội/tổ đang lọc. Gọi TUẦN TỰ (đỡ dồn nhiều truy vấn nặng cùng lúc), mỗi khối tự bắt lỗi riêng.
+ * (Đã bỏ khối "Chi phí lương theo tháng" — quá nặng: mỗi lần tải phải tính lương cho tới 12 kỳ.)
  */
-function taiKhoiLanhDaoMoRong() {
-  var bl = { vaiTro: S.vaiTro, maDonVi: S.maDonVi };
-  ['bdXuHuong', 'bdHieuSuatGK', 'bdChuyenCanDoi']
-    .forEach(function (id) { $(id).innerHTML = skKhoi(); });
-  $('kpisNhanSuTH').innerHTML = skKpis(4);
+function taiTongQuanPhu(blTQ) {
+  var bl = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: blTQ.doi, to: blTQ.to };
+  ['bdXuHuong', 'bdHieuSuatGK', 'bdChuyenCanDoi', 'bdKyHieuTQ'].forEach(function (id) { $(id).innerHTML = skKhoi(); });
+  ['kpisGKTQ', 'kpisCCTQ', 'kpisNhanSuTH'].forEach(function (id) { $(id).innerHTML = skKpis(4); });
+  // Đơn vị so sánh: lãnh đạo chưa chọn đội -> theo đội; còn lại -> theo tổ (1 tổ thì ẩn biểu đồ).
+  var theoDoi = S.toanCongTy && !blTQ.doi;
+  var blCC = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: blTQ.tuNgay, denNgay: blTQ.denNgay, doi: blTQ.doi, to: blTQ.to,
+               maCn: blTQ.maCn, trangThai: blTQ.trangThai, docSheet: blTQ.docSheet, moiTrang: 20 };
+  $('phuNhomCC').textContent = moTaPhamViTQ(blCC);
+  $('phuNhomNS').textContent = (blTQ.to || blTQ.doi || (S.toanCongTy ? 'Toàn công ty' : S.maDonVi)) + ' · hiện tại';
+  var loiKhoi = function (id) { return function (e) { $(id).innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; }; };
 
-  // "Chuyên cần theo đội" chỉ cần vài chục ngày gần nhất để có ý nghĩa — gọi cả lịch sử chấm công
-  // của toàn công ty (có thể hàng năm) vừa nặng vừa không cần thiết cho một con số snapshot.
-  var k30 = khoangCuaMoc('30');
-  var blCC = k30 ? Object.assign({}, bl, { tuNgay: k30.tu, denNgay: k30.den }) : bl;
-
-  // 5 khối này chỉ là thông tin phụ (đã có bóng mờ chờ, không chặn phần chính) — gọi TUẦN TỰ thay
-  // vì đồng loạt, đỡ dồn cùng lúc nhiều truy vấn nặng (BigQuery/Cloud Run), giảm lag chung của trang.
   [
     function () {
-      return goiCache('xuHuongThang', bl).then(function (d) {
+      return goiCache('xuHuongThang', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: blTQ.doi, to: blTQ.to, loaiMu: blTQ.loaiMu }).then(function (d) {
         veCotThang($('bdXuHuong'), d.theoThang,
           function (x) { return x.quyKho; },
           function (x) { return 'Tháng ' + x.thang + ': ' + soVN(x.quyKho, 0) + ' kg quy khô / ' +
-                 soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân'; },
+                 soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân · ' + soVN(x.nsbq, 3) + ' kg/nhát'; },
           'var(--leaf)');
-      }).catch(function (e) { $('bdXuHuong').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+      }).catch(loiKhoi('bdXuHuong'));
     },
     function () {
-      return nsGoi('nhanSuTongQuan').then(function (d) {
+      return goiCache('giaoKhoan', Object.assign({ moiTrang: 10 }, bl)).then(function (d) {
+        var k = d.kpi || {};
+        $('phuNhomGK').textContent = (d.muaVu ? 'mùa vụ ' + d.muaVu : '') + (d.tuNgay ? ' · lũy kế từ ' + d.tuNgay.split('-').reverse().join('/') : '');
+        $('kpisGKTQ').innerHTML =
+          the_kpi('Hoàn thành', soVN(k.tyLe || 0, 1), '%', '',
+                  'Thời gian mùa vụ đã qua ' + soVN(d.tyLeThoiGian || 0, 1) + '%' +
+                  (d.tyLeThoiGian ? ' · <span class="' + ((k.tyLe || 0) >= d.tyLeThoiGian ? 'tang' : 'giam') + '">' +
+                    ((k.tyLe || 0) >= d.tyLeThoiGian ? 'đúng/vượt tiến độ' : 'chậm tiến độ') + '</span>' : '')) +
+          the_kpi('Kế hoạch', soVN(k.tongKh || 0, 0), 'kg', 'Thực hiện ' + soVN(k.tongTh || 0, 0) + ' kg') +
+          the_kpi('Phần cạo đã giao', soVN(k.soGiaoKhoan || 0, 0), 'phần', soVN(k.tongCay || 0, 0) + ' cây cạo') +
+          the_kpi('Chậm tiến độ', soVN(k.soCham || 0, 0), 'phần', 'Kém thời gian hơn 10 điểm %') +
+          the_kpi('Chưa giao khoán', soVN(k.soChuaGiao || 0, 0), 'phần', 'Đang khai thác, chưa có giao khoán');
+        var ds = theoDoi ? (d.theoDoi || []) : (d.theoTo || []);
+        $('theGKTQ').style.display = ds.length > 1 ? '' : 'none';
+        $('tieuDeGKTQ').textContent = '% hoàn thành giao khoán theo ' + (theoDoi ? 'đội' : 'tổ');
+        veCotNgangGK($('bdHieuSuatGK'), ds, theoDoi, d.tyLeThoiGian);
+      }).catch(function (e) { loiKhoi('kpisGKTQ')(e); $('bdHieuSuatGK').innerHTML = ''; });
+    },
+    function () {
+      return goiCache('chamCong', blCC).then(function (d) {
+        var k = d.kpi || {};
+        $('kpisCCTQ').innerHTML =
+          the_kpi('Tổng công', soVN(k.tongCong || 0, 1), 'công', soVN(k.soNgay || 0, 0) + ' ngày có chấm công') +
+          the_kpi('Công nhân', soVN(k.soCongNhan || 0, 0), 'người', 'Có dòng chấm công trong kỳ') +
+          the_kpi('Bình quân', soVN(k.soCongNhan ? k.tongCong / k.soCongNhan : 0, 2), 'công/người', 'Chuyên cần trong kỳ') +
+          the_kpi('Dòng nghỉ', soVN(k.soDongNghi || 0, 0), 'dòng',
+                  k.soDong ? soVN((k.soDongNghi || 0) / k.soDong * 100, 1) + '% số dòng (số công = 0)' : 'Chưa có dữ liệu') +
+          (chiCoDaDuyet() ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng', 'Chấm công chưa được duyệt'));
+        var ds = theoDoi ? (d.theoDoi || []) : (d.theoTo || []);
+        var coSs = ds.length > 1;
+        $('theChuyenCanTQ').style.display = coSs ? '' : 'none';
+        $('luoiCCTQ').className = 'luoi-2 ' + (coSs ? 'deu' : 'mot');
+        $('tieuDeChuyenCan').textContent = 'Công bình quân/người theo ' + (theoDoi ? 'đội' : 'tổ');
+        veCotNgang($('bdChuyenCanDoi'), ds.slice().sort(function (a, b) { return b.congBqNguoi - a.congBqNguoi; }),
+          function (x) { return theoDoi ? x.doi : x.to; }, function (x) { return x.congBqNguoi; },
+          function (v) { return soVN(v, 1) + ' công/người'; }, 'var(--sky)');
+        veKyHieuCong($('bdKyHieuTQ'), d.theoKyHieu || []);
+      }).catch(function (e) { loiKhoi('kpisCCTQ')(e); $('bdChuyenCanDoi').innerHTML = ''; $('bdKyHieuTQ').innerHTML = ''; });
+    },
+    function () {
+      return nsGoi('nhanSuTongQuan', { doi: blTQ.doi, to: blTQ.to }).then(function (d) {
         var k = d.kpi || {};
         // Biến động của tháng gần nhất có ghi nhận (tuyển mới/giao mã/chuyển tổ/nghỉ) — không
         // tính mốc khởi tạo dữ liệu, nên "Chưa có biến động" là bình thường nếu tháng đó yên ắng.
@@ -1956,7 +2156,7 @@ function taiKhoiLanhDaoMoRong() {
         var phuBd = bd0.ky ? 'Tháng ' + bd0.ky : 'Chưa có biến động';
         $('kpisNhanSuTH').innerHTML =
           the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
-                  k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Toàn công ty') +
+                  k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Chưa gán mã: ' + soVN(k.chuaGanMa || 0, 0) + ' người') +
           the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo || 0, 0), 'cảnh báo',
                   'Thiếu NSSF: ' + soVN(k.thieuNssf || 0, 0) + ' người') +
           the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
@@ -1966,34 +2166,42 @@ function taiKhoiLanhDaoMoRong() {
           the_kpi('Tuyển mới', soVN(bd0.tuyenMoi || 0, 0), 'người', phuBd) +
           the_kpi('Nghỉ việc', soVN(bd0.nghi || 0, 0), 'người', phuBd) +
           the_kpi('Chuyển tổ', soVN(bd0.chuyenTo || 0, 0), 'người', phuBd);
-      }).catch(function (e) { $('kpisNhanSuTH').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
-    },
-    function () {
-      return goiCache('giaoKhoan', bl).then(function (d) {
-        veCotNgang($('bdHieuSuatGK'), d.theoDoi || [],
-          function (x) { return x.doi; }, function (x) { return x.tyLe; },
-          function (v) { return soVN(v, 1) + '%'; }, 'var(--leaf)');
-      }).catch(function (e) { $('bdHieuSuatGK').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
-    },
-    function () {
-      return goiCache('chamCong', blCC).then(function (d) {
-        veCotNgang($('bdChuyenCanDoi'), d.theoDoi || [],
-          function (x) { return x.doi; }, function (x) { return x.congBqNguoi; },
-          function (v) { return soVN(v, 1) + ' công/người'; }, 'var(--sky)');
-      }).catch(function (e) { $('bdChuyenCanDoi').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; });
+      }).catch(loiKhoi('kpisNhanSuTH'));
     }
   ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
 }
 
-function the_kpi(ten, so, dv, phu) {
+/** phuHtml (tuỳ chọn): dòng phụ đã là HTML an toàn (vd mũi tên tăng/giảm có màu) thay cho phu. */
+function the_kpi(ten, so, dv, phu, phuHtml) {
   return '<div class="the kpi"><div class="ten">' + thoat(ten) + '</div>' +
     '<div class="so num">' + so + '<span class="dv">' + thoat(dv) + '</span></div>' +
-    '<div class="phu2">' + thoat(phu) + '</div></div>';
+    '<div class="phu2">' + (phuHtml !== undefined ? phuHtml : thoat(phu)) + '</div></div>';
+}
+
+/** Thẻ KPI tô màu cảnh báo (số > 0 là việc cần xử lý). */
+function the_kpi_canh(coCanh, ten, so, dv, phu) {
+  var h = the_kpi(ten, so, dv, phu);
+  return coCanh ? h.replace('class="the kpi"', 'class="the kpi canh"') : h;
 }
 
 /* =====================================================================
    Tab: Sản lượng chi tiết
    ===================================================================== */
+/** Thẻ tóm tắt tab Sản lượng: số liệu + kiểm tra dòng mủ đông thiếu phiên/phần cạo/số nhát. */
+function veKpiSanLuong(tk) {
+  if (!tk) { $('kpisSL').innerHTML = ''; return; }
+  var pt = function (n) { return tk.soDongDong ? soVN(n / tk.soDongDong * 100, 1) + '% dòng mủ đông' : ''; };
+  $('kpisSL').innerHTML =
+    the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(tk.soNgay, 0) + ' ngày có sản lượng') +
+    the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo') +
+    (chiCoDaDuyet() ? '' : the_kpi_canh(tk.soChoDuyet > 0, 'Chờ duyệt', soVN(tk.soChoDuyet, 0), 'dòng', soVN(tk.kgChoDuyet, 2) + ' kg')) +
+    the_kpi_canh(tk.thieuPhien > 0, 'Mủ đông thiếu phiên', soVN(tk.thieuPhien, 0), 'dòng',
+                 tk.thieuPhien ? soVN(tk.kgThieuPhien, 0) + ' kg · ' + pt(tk.thieuPhien) : 'Đủ phiên cạo') +
+    the_kpi_canh(tk.thieuPc > 0, 'Mủ đông thiếu phần cạo', soVN(tk.thieuPc, 0), 'dòng',
+                 tk.thieuPc ? pt(tk.thieuPc) + ' — giao khoán/sổ KTNN phải ước tính' : 'Đủ phần cạo') +
+    the_kpi_canh(tk.thieuNhat > 0, 'Mủ đông thiếu số nhát', soVN(tk.thieuNhat, 0), 'dòng',
+                 tk.thieuNhat ? pt(tk.thieuNhat) + ' — không tính được NSBQ' : 'Đủ số nhát');
+}
 var COT_SL = [
   { k: 'ngay', t: 'Ngày', sx: true },
   { k: 'maCn', t: 'Mã công nhân', sx: true },
@@ -2063,6 +2271,7 @@ function taiSanLuong() {
     }
     h += '</tbody>';
     $('bangSL').innerHTML = h;
+    veKpiSanLuong(d.thongKe);
 
     // Gắn sắp xếp
     var ths = $('bangSL').querySelectorAll('th[data-sx]');
@@ -2230,6 +2439,70 @@ function moPhieu(ma) {
 /* =====================================================================
    Tab: Xếp hạng
    ===================================================================== */
+/** Trung vị của mảng số (đã hoặc chưa sắp xếp). */
+function trungVi(a) {
+  if (!a.length) return 0;
+  var s = a.slice().sort(function (x, y) { return x - y; }), m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/**
+ * Tóm tắt tab Xếp hạng (tính từ chính các dòng xếp hạng): chênh lệch nhóm đầu/cuối, người dưới 70%
+ * trung vị (cần kèm cặp kỹ thuật), phân bố NSBQ, và năng suất theo tổ.
+ */
+function veTomTatXepHang(rows) {
+  var coNhat = rows.filter(function (r) { return r.nhat > 0 && r.nsbq > 0; });
+  if (!rows.length) { $('kpisXH').innerHTML = ''; $('luoiXH').style.display = 'none'; return; }
+  $('luoiXH').style.display = '';
+  var ns = coNhat.map(function (r) { return r.nsbq; }).sort(function (a, b) { return b - a; });
+  var tv = trungVi(ns), n10 = Math.max(1, Math.round(ns.length / 10));
+  var bq = function (a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : 0; };
+  var dau = bq(ns.slice(0, n10)), cuoi = bq(ns.slice(-n10));
+  var duoi70 = coNhat.filter(function (r) { return r.nsbq < tv * 0.7; }).length;
+  var tongQk = rows.reduce(function (s, r) { return s + r.quyKho; }, 0);
+  // kg của dòng có ghi nhát = nsbq × nhát (backend tính NSBQ chỉ trên các dòng đó)
+  var tongKgN = coNhat.reduce(function (s, r) { return s + r.nsbq * r.nhat; }, 0), tongN = coNhat.reduce(function (s, r) { return s + r.nhat; }, 0);
+  $('kpisXH').innerHTML =
+    the_kpi('Công nhân', soVN(rows.length, 0), 'người', soVN(coNhat.length, 0) + ' người có ghi số nhát') +
+    the_kpi('NSBQ chung', soVN(tongN ? tongKgN / tongN : 0, 3), 'kg/nhát', 'Trung vị ' + soVN(tv, 3) + ' kg/nhát') +
+    the_kpi('10% cao nhất', soVN(dau, 3), 'kg/nhát', 'Gấp ' + soVN(cuoi ? dau / cuoi : 0, 1) + ' lần 10% thấp nhất (' + soVN(cuoi, 3) + ')') +
+    the_kpi_canh(duoi70 > 0, 'Dưới 70% trung vị', soVN(duoi70, 0), 'người', 'Nên xem lại kỹ thuật cạo / phần cạo') +
+    the_kpi('Quy khô BQ/người', soVN(rows.length ? tongQk / rows.length : 0, 1), 'kg', 'Tổng ' + soVN(tongQk, 0) + ' kg quy khô');
+
+  // Phân bố: 8 khoảng đều giữa min–max NSBQ; khoảng dưới 70% trung vị tô đỏ.
+  if (ns.length > 1) {
+    var mn = ns[ns.length - 1], mx = ns[0], soKhoang = Math.min(8, ns.length), buoc = (mx - mn) / soKhoang || 1;
+    var khoang = [];
+    for (var k = 0; k < soKhoang; k++) khoang.push({ tu: mn + k * buoc, den: mn + (k + 1) * buoc, n: 0 });
+    ns.forEach(function (v) { khoang[Math.min(soKhoang - 1, Math.floor((v - mn) / buoc))].n++; });
+    veCotNgang($('bdPhanBoXH'), khoang.reverse(),
+      function (x) { return soVN(x.tu, 2) + '–' + soVN(x.den, 2); }, function (x) { return x.n; },
+      function (v) { return soVN(v, 0) + ' người'; },
+      function (x) { return x.den <= tv * 0.7 ? 'var(--clay)' : 'var(--sky)'; });
+  } else {
+    $('bdPhanBoXH').innerHTML = '<div class="rong">Chưa đủ người có số nhát để vẽ phân bố.</div>';
+  }
+
+  // Theo tổ: số người, NSBQ (tổng kg/tổng nhát), trung vị, quy khô BQ/người.
+  var theoTo = {};
+  rows.forEach(function (r) {
+    var t = theoTo[r.to] = theoTo[r.to] || { to: r.to, n: 0, kg: 0, nhat: 0, qk: 0, ns: [] };
+    t.n++; t.qk += r.quyKho;
+    if (r.nhat > 0 && r.nsbq > 0) { t.kg += r.nsbq * r.nhat; t.nhat += r.nhat; t.ns.push(r.nsbq); }
+  });
+  var dsTo = Object.keys(theoTo).map(function (k) { return theoTo[k]; })
+    .sort(function (a, b) { return (b.nhat ? b.kg / b.nhat : 0) - (a.nhat ? a.kg / a.nhat : 0); });
+  $('theXHTo').style.display = dsTo.length > 1 ? '' : 'none';
+  $('luoiXH').className = 'luoi-2 ' + (dsTo.length > 1 ? 'deu' : 'mot');
+  $('bangXHTo').innerHTML = '<thead><tr><th>Tổ</th><th class="p">Người</th><th class="p">NSBQ</th><th class="p">Trung vị</th>' +
+    '<th class="p">QK BQ/người</th></tr></thead><tbody>' + dsTo.map(function (t) {
+      return '<tr><td><b>' + thoat(t.to) + '</b></td><td class="p num">' + soVN(t.n, 0) + '</td>' +
+        '<td class="p num">' + (t.nhat ? soVN(t.kg / t.nhat, 3) : '—') + '</td>' +
+        '<td class="p num">' + (t.ns.length ? soVN(trungVi(t.ns), 3) : '—') + '</td>' +
+        '<td class="p num">' + soVN(t.qk / t.n, 1) + '</td></tr>';
+    }).join('') + '</tbody>';
+}
+
 function taiXepHang() {
   $('bangXH').innerHTML = skBang();
 
@@ -2259,11 +2532,22 @@ function taiXepHang() {
     }
     h += '</tbody>';
     $('bangXH').innerHTML = h;
+    veTomTatXepHang(d.rows);
     baoLoi('thongBao', '');
   }).catch(function (e) {
     $('bangXH').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
+}
+
+/** % hoàn thành giao khoán theo đội/tổ — thanh đỏ khi chậm hơn tiến độ thời gian quá 10 điểm %. */
+function veCotNgangGK(el, ds, theoDoi, tyLeThoiGian) {
+  veCotNgang(el, ds.slice().sort(function (a, b) { return b.tyLe - a.tyLe; }),
+    function (x) { return theoDoi ? x.doi : x.to; }, function (x) { return x.tyLe; },
+    function (v) { return soVN(v, 1) + '%'; },
+    function (x) { return x.tyLe < (tyLeThoiGian || 0) - 10 ? 'var(--clay)' : 'var(--leaf)'; });
+  if (tyLeThoiGian) el.insertAdjacentHTML('beforeend', '<div class="goi-y" style="margin:8px 0 0">Thời gian mùa vụ đã qua <b>' +
+    soVN(tyLeThoiGian, 1) + '%</b> — thanh đỏ: đạt thấp hơn tiến độ thời gian trên 10 điểm %.</div>');
 }
 
 /* =====================================================================
@@ -2283,8 +2567,20 @@ function taiGiaoKhoan() {
       the_kpi('Phần cạo chưa giao', soVN(k.soChuaGiao, 0), 'phần', 'Đang khai thác nhưng chưa có người nhận') +
       the_kpi('Kế hoạch mùa vụ', soVN(k.tongKh / 1000, 1), 'tấn', 'Cộng kế hoạch mủ chén + mủ dây') +
       the_kpi('Thực hiện lũy kế (đã duyệt)', soVN(k.tongTh / 1000, 1), 'tấn', 'Đạt ' + soVN(k.tyLe, 1) + '% kế hoạch · thời gian đã qua ' + soVN(d.tyLeThoiGian, 1) + '%') +
-      the_kpi('Chậm kế hoạch', soVN(k.soCham, 0), 'dòng', 'Đạt thấp hơn tỷ lệ thời gian trên 10 điểm %');
+      the_kpi_canh(k.soCham > 0, 'Chậm kế hoạch', soVN(k.soCham, 0), 'dòng', 'Đạt thấp hơn tỷ lệ thời gian trên 10 điểm %') +
+      // Dự báo cuối mùa vụ nếu giữ nhịp hiện tại = thực hiện ÷ tỷ lệ thời gian đã qua.
+      // Chỉ là ước tính thô: chưa tính mùa cao điểm / nghỉ cạo nên đầu mùa vụ thường báo thấp.
+      (d.tyLeThoiGian ? the_kpi('Ước tính cuối mùa vụ', soVN(k.tongTh / (d.tyLeThoiGian / 100) / 1000, 1), 'tấn',
+        '~' + soVN(k.tongKh ? k.tongTh / (d.tyLeThoiGian / 100) / k.tongKh * 100 : 0, 0) + '% KH · tính thô theo thời gian, chưa tính mùa cao điểm') : '');
     $('tomTatGK').textContent = (chua ? 'Phần cạo chưa giao: ' : 'Giao khoán: ') + soVN(d.tong, 0) + ' dòng';
+    // So sánh: lãnh đạo chưa chọn đội -> theo đội, còn lại theo tổ; 1 dòng thì ẩn.
+    var gkTheoDoi = S.toanCongTy && !bl.doi && (d.theoDoi || []).length > 1;
+    var dsSs = gkTheoDoi ? d.theoDoi : (d.theoTo || []);
+    $('theGKSoSanh').style.display = dsSs.length > 1 ? '' : 'none';
+    if (dsSs.length > 1) {
+      $('tieuDeGKSoSanh').textContent = '% hoàn thành kế hoạch theo ' + (gkTheoDoi ? 'đội' : 'tổ');
+      veCotNgangGK($('bdGKSoSanh'), dsSs, gkTheoDoi, d.tyLeThoiGian);
+    }
 
     var h;
     if (chua) {
@@ -4375,6 +4671,41 @@ function xtXuatFileLuong() {
   });
 }
 
+/** Thẻ "Lương theo tổ" + "Cơ cấu thu nhập" của tab Lương (backend tính trên mọi dòng đã lọc). */
+function veTongHopLuong(d) {
+  var dsTo = d.theoTo || [], cc = d.coCau;
+  if (!cc || !cc.tong) { $('luoiLuongTH').style.display = 'none'; return; }
+  $('luoiLuongTH').style.display = '';
+  var coTo = dsTo.length > 1;
+  $('theLuongTo').style.display = coTo ? '' : 'none';
+  $('luoiLuongTH').className = 'luoi-2 ' + (coTo ? '' : 'mot');
+  var tr = function (v) { return soVN(v / 1000000, 2) + ' tr'; };
+  if (coTo) {
+    var tong = { soNguoi: 0, thucNhan: 0, soVuot: 0, soChuaXl: 0 };
+    $('bangLuongTo').innerHTML = '<thead><tr><th>Tổ</th><th class="p">Người</th><th class="p">Thực nhận</th><th class="p">BQ/người</th>' +
+      '<th class="p">Thấp nhất</th><th class="p">Cao nhất</th><th class="p">Lương vượt</th><th class="p">Chưa xếp loại</th></tr></thead><tbody>' +
+      dsTo.map(function (t) {
+        tong.soNguoi += t.soNguoi; tong.thucNhan += t.thucNhan; tong.soVuot += t.soVuot; tong.soChuaXl += t.soChuaXl;
+        return '<tr><td><b>' + thoat(t.to) + '</b></td><td class="p num">' + soVN(t.soNguoi, 0) + '</td>' +
+          '<td class="p num">' + tr(t.thucNhan) + '</td><td class="p num">' + soVN(t.soNguoi ? t.thucNhan / t.soNguoi : 0, 0) + '</td>' +
+          '<td class="p num">' + soVN(t.min || 0, 0) + '</td><td class="p num">' + soVN(t.max, 0) + '</td>' +
+          '<td class="p num">' + (t.soVuot ? soVN(t.soVuot, 0) + ' người' : '—') + '</td>' +
+          '<td class="p num"' + (t.soChuaXl ? ' style="color:var(--clay);font-weight:600"' : '') + '>' + (t.soChuaXl ? soVN(t.soChuaXl, 0) : '—') + '</td></tr>';
+      }).join('') + '</tbody><tfoot><tr><td><b>Tổng</b></td><td class="p num"><b>' + soVN(tong.soNguoi, 0) + '</b></td>' +
+      '<td class="p num"><b>' + tr(tong.thucNhan) + '</b></td><td class="p num"><b>' + soVN(tong.soNguoi ? tong.thucNhan / tong.soNguoi : 0, 0) + '</b></td>' +
+      '<td></td><td></td><td class="p num"><b>' + soVN(tong.soVuot, 0) + '</b></td><td class="p num"><b>' + soVN(tong.soChuaXl, 0) + '</b></td></tr></tfoot>';
+  }
+  var phan = [
+    { ten: 'Lương công', v: cc.luongCong }, { ten: 'SP mủ chén', v: cc.luongChen }, { ten: 'SP mủ dây', v: cc.luongDay },
+    { ten: 'Lương vượt', v: cc.luongVuot }, { ten: 'Hỗ trợ khô miệng', v: cc.hoTroKhoTien }, { ten: 'Chuyên cần', v: cc.chuyenCan }
+  ];
+  var khac = cc.tong - phan.reduce(function (s, x) { return s + x.v; }, 0);
+  if (Math.abs(khac) >= 1) phan.push({ ten: 'Khác', v: khac });
+  veCotNgang($('bdCoCauLuong'), phan.filter(function (x) { return x.v; }),
+    function (x) { return x.ten; }, function (x) { return x.v; },
+    function (v) { return tr(v) + ' · ' + soVN(v / cc.tong * 100, 1) + '%'; }, 'var(--sky)');
+}
+
 function taiLuong() {
   $('bangLuong').innerHTML = skBang();
   var bl = layBoLoc();
@@ -4401,6 +4732,7 @@ function taiLuong() {
               (k.soChuaGiao ? soVN(k.soChuaGiao, 0) + ' người chưa có mức giao SL' : 'Tạm tính 100%')) +
       the_kpi('Đơn giá kỳ', soVN(d.donGia ? d.donGia.chen : 0, 0) + ' / ' + soVN(d.donGia ? d.donGia.day : 0, 0), 'riel/kg', 'Mủ chén / mủ dây (quy khô)');
     $('tomTatLuong').textContent = 'Bảng lương kỳ ' + d.ky + ': ' + soVN(d.tong, 0) + ' người';
+    veTongHopLuong(d);
     $('giaDinhLuong').innerHTML = d.giaDinh && d.giaDinh.length
       ? '<b>Lưu ý cách tính</b><ul style="margin:6px 0 0 18px;padding:0">' + d.giaDinh.map(function (g) { return '<li>' + thoat(g) + '</li>'; }).join('') + '</ul>'
       : '';
@@ -4511,21 +4843,20 @@ function taiChamCong() {
             the_kpi('Chuyển tổ', soVN(bd.soChuyenTo, 0), 'người', 'Trong khoảng đang lọc' + (toBd ? ' · tổ ' + toBd : '')) : '');
 
     // Cơ cấu ký hiệu
-    var tongD = 0;
-    for (var i = 0; i < d.theoKyHieu.length; i++) tongD += d.theoKyHieu[i].soDong;
-    var hk = '';
-    for (var j = 0; j < d.theoKyHieu.length; j++) {
-      var x = d.theoKyHieu[j];
-      var tl = tongD ? (x.soDong / tongD * 100) : 0;
-      hk += '<div style="margin-bottom:10px">' +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">' +
-          '<span><b>' + thoat(x.ma) + '</b> · ' + thoat(x.ten) + '</span>' +
-          '<span class="num">' + soVN(x.soDong, 0) + ' · ' + soVN(tl, 1) + '%</span></div>' +
-        '<div style="height:8px;background:var(--line);border-radius:2px;overflow:hidden">' +
-          '<div style="height:100%;width:' + tl + '%;background:' +
-            (x.soCong > 0 ? 'var(--leaf)' : 'var(--clay)') + '"></div></div></div>';
+    veKyHieuCong($('bdKyHieu'), d.theoKyHieu);
+
+    var nghi = d.cnNghiNhieu || [];
+    $('theNghiNhieu').style.display = nghi.length ? '' : 'none';
+    if (nghi.length) {
+      veCotNgang($('bdNghiNhieu'), nghi,
+        function (x) { return x.maCn; }, function (x) { return x.soNghi; },
+        function (v) { return soVN(v, 0) + ' ngày'; }, 'var(--clay)');
+      // Ghi chú ký hiệu nghỉ (P, Ô, KL...) ngay dưới tên — rê chuột xem.
+      var dongs = $('bdNghiNhieu').querySelectorAll('.dong-cot-ngang');
+      nghi.forEach(function (x, i) {
+        if (dongs[i]) dongs[i].title = x.to + ' · ' + Object.keys(x.kyHieu).map(function (k) { return k + ': ' + x.kyHieu[k]; }).join(', ');
+      });
     }
-    $('bdKyHieu').innerHTML = hk || '<div class="rong">Không có dữ liệu.</div>';
 
     // Theo tổ — tổ trưởng chỉ quản 1 tổ nên ẩn hẳn, không có gì để so sánh.
     // Cơ cấu ký hiệu công thì chiếm trọn hàng cho đỡ trống.
