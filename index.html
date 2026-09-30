@@ -201,9 +201,25 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 }
 
 /* ---------- Bộ lọc ---------- */
-.bo-loc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:12px;padding:16px;margin-bottom:20px}
+.bo-loc{margin-bottom:20px}
+.bo-loc-noidung{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;padding:16px}
 .bo-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
+/* Nút thu gọn/xổ ra: chỉ hiện trên màn hẹp (điện thoại) — màn rộng vẫn hiện đủ bộ lọc như cũ,
+   không đụng gì. Trên màn hẹp, mặc định THU GỌN (chỉ 1 dòng tóm tắt) để đỡ che hết màn hình;
+   bấm vào mới xổ ra đủ các ô như trước. */
+.bo-loc-dau{display:none}
+@media (max-width:900px){
+  .bo-loc-dau{display:flex;align-items:center;gap:8px;width:100%;padding:14px 16px;
+    border:none;background:none;color:var(--ink);font-weight:600;font-size:14px;
+    text-align:left;cursor:pointer}
+  .bo-loc-dau .tom-tat{color:var(--ink-2);font-weight:400;font-size:12.5px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bo-loc-dau .chevron{margin-left:auto;flex:none;color:var(--ink-3);
+    transition:transform .15s ease;font-size:11px}
+  .bo-loc.mo .bo-loc-dau .chevron{transform:rotate(180deg)}
+  .bo-loc:not(.mo) .bo-loc-noidung{display:none}
+}
 .nhanh{display:flex;gap:6px;flex-wrap:wrap;margin-right:auto}
 .gat{display:flex;gap:6px;flex-wrap:wrap}
 .chip{padding:5px 11px;border:1px solid var(--line-2);background:var(--card);
@@ -425,6 +441,14 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
     <!-- Bộ lọc -->
     <div class="the bo-loc" id="khungBoLocChung">
+      <!-- Chỉ hiện trên điện thoại (xem CSS .bo-loc-dau) — bấm để thu gọn/xổ ra, đỡ che hết
+           màn hình như trước. Màn rộng bỏ qua nút này, luôn hiện đủ bộ lọc. -->
+      <button class="bo-loc-dau" id="nutThuGonLoc" type="button">
+        <span>Bộ lọc</span>
+        <span class="tom-tat" id="tomTatBoLoc"></span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="bo-loc-noidung" id="boLocNoiDung">
       <div id="khungLocTuNgay">
         <label class="nhan" for="fTuNgay">Từ ngày</label>
         <input class="o" type="date" id="fTuNgay">
@@ -483,6 +507,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div class="nhanh" id="locNhanh"></div>
         <button class="btn" id="nutXoaLoc">Xoá lọc</button>
         <button class="btn chinh" id="nutLoc">Áp dụng</button>
+      </div>
       </div>
     </div>
 
@@ -4670,6 +4695,7 @@ function luuSuaSanLuong() {
 function taiTab() {
   luuChoDangXem();
   luuLocTab(S.tab);   // làm mới mốc 2 phút mỗi khi tải lại (kể cả đổi bộ lọc mà không đổi tab)
+  veTomTatBoLoc();
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
@@ -4762,6 +4788,26 @@ function khoiPhucLocTab(tab) {
   var luu = S.locTheoTab[tab];
   var loc = (luu && Date.now() - luu.luc < LOC_TTL_MS) ? luu : macDinhChoTab(tab);
   apDungLoc(loc);
+}
+
+/**
+ * Dòng tóm tắt hiện trên nút "Bộ lọc" khi đang thu gọn (điện thoại) — để biết đang lọc gì mà
+ * không cần xổ ra xem cả khối. Chỉ nêu vài phần chính (khoảng ngày/kỳ, đội, tổ), không liệt kê
+ * hết mọi ô cho khỏi rối.
+ */
+function veTomTatBoLoc() {
+  var el = $('tomTatBoLoc');
+  if (!el) return;
+  var phan = [];
+  if ($('khungLocTuNgay').style.display !== 'none' && $('fTuNgay').value && $('fDenNgay').value) {
+    phan.push(ngayVN($('fTuNgay').value) + '–' + ngayVN($('fDenNgay').value));
+  } else if ($('khungLocKy').style.display !== 'none') {
+    var oKy = $('lgKy').style.display !== 'none' ? $('lgKy') : $('slKy');
+    if (oKy.value) phan.push('Kỳ ' + oKy.value);
+  }
+  if ($('fDoi').value) phan.push('Đội ' + $('fDoi').value);
+  if ($('fTo').value) phan.push('Tổ ' + $('fTo').value);
+  el.textContent = phan.join(' · ');
 }
 
 /**
@@ -5937,6 +5983,12 @@ $('nutLoc').onclick = function () {
   dongBoChip();
   taiTab();
 };
+
+// Thu gọn/xổ ra bộ lọc trên điện thoại (xem CSS .bo-loc-dau) — bấm "Áp dụng" cũng tự thu gọn
+// lại cho đỡ phải tự tay đóng, đúng thao tác "chọn xong rồi xem kết quả".
+$('nutThuGonLoc').onclick = function () { $('khungBoLocChung').classList.toggle('mo'); };
+var _nutLocGoc = $('nutLoc').onclick;
+$('nutLoc').onclick = function () { _nutLocGoc(); $('khungBoLocChung').classList.remove('mo'); };
 
 $('nutXoaLoc').onclick = function () {
   $('fDoi').value = ''; $('fLoaiMu').value = ''; $('fPhien').value = '';
