@@ -283,8 +283,6 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .bd-loc{flex-basis:100%;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding-top:12px;margin-top:2px;border-top:1px dashed var(--line)}
 .bd-loc[hidden]{display:none}
 /* Lô cao nhất / thấp nhất (mode sản lượng) */
-.bd-ghim span{display:inline-block;transform:translate(-50%,-50%);white-space:nowrap;background:rgba(15,25,20,.88);color:#fff;
-  font-size:11.5px;line-height:1.3;padding:3px 7px;border-radius:4px;border:2px solid;cursor:pointer;text-align:center}
 .bd-mm{display:grid;grid-template-columns:auto 1fr;gap:0 8px;width:100%;text-align:left;padding:7px 10px;margin:0 0 6px;
   background:var(--paper);border:1px solid var(--line);border-left:5px solid;border-radius:2px;cursor:pointer;font:inherit;color:var(--ink);font-size:13px}
 .bd-mm span:first-child{grid-row:span 2;font-weight:700;color:var(--ink-2);align-self:center}
@@ -4074,7 +4072,6 @@ function _bdDinhDang(v, chiSo) {
 /** Mode liên quan sản lượng: làm nổi bật lô cao nhất / thấp nhất trong phạm vi đang lọc. */
 var BD_MODE_SAN_LUONG = { qkDay: 1, qkChen: 1, qk: 1, kgHa: 1, kgTuoi: 1, nsbq: 1, gk: 1 };
 var BD_MAU_MAX = '#00e5ff', BD_MAU_MIN = '#ff1744';
-var _bdGhim = null;
 
 function _bdTimMaxMin(ds, chiSo) {
   if (!BD_MODE_SAN_LUONG[chiSo]) return null;
@@ -4104,7 +4101,6 @@ function veBanDoLo(canVua) {
   var chiSo = $('bdMau').value, ds = _bdLoc(), thang = _bdThang(ds, chiSo), mm = _bdTimMaxMin(ds, chiSo);
   var laMax = function (x) { return mm && mm.max.x.maLo === x.maLo; }, laMin = function (x) { return mm && mm.min.x.maLo === x.maLo && mm.min.x !== mm.max.x; };
   if (_bdLop) _bdMap.removeLayer(_bdLop);
-  if (_bdGhim) { _bdMap.removeLayer(_bdGhim); _bdGhim = null; }
   _bdLop = L.geoJSON({ type: 'FeatureCollection', features: ds.map(function (x) {
     return { type: 'Feature', properties: { maLo: x.maLo }, geometry: x.g };
   }) }, {
@@ -4124,20 +4120,13 @@ function veBanDoLo(canVua) {
   }).addTo(_bdMap);
   if (canVua && ds.length) _bdMap.fitBounds(_bdLop.getBounds(), { padding: [20, 20] });
 
-  // Lô cao nhất / thấp nhất: viền dày + ghim nhãn tại tâm lô, đưa lên trên cùng
+  // Lô cao nhất / thấp nhất: chỉ tô viền nổi bật (không ghim nhãn — che các lô bên cạnh), đưa lên trên cùng
   var dongMm = '';
   if (mm) {
-    _bdGhim = L.layerGroup().addTo(_bdMap);
     [['max', '▲ Cao nhất', BD_MAU_MAX], ['min', '▼ Thấp nhất', BD_MAU_MIN]].forEach(function (k) {
       var o = mm[k[0]];
       if (k[0] === 'min' && o.x === mm.max.x) return;
-      _bdLop.eachLayer(function (l) {
-        if (l.feature.properties.maLo !== o.x.maLo) return;
-        l.bringToFront();
-        L.marker(l.getBounds().getCenter(), { icon: L.divIcon({ className: 'bd-ghim', iconSize: null,
-          html: '<span style="border-color:' + k[2] + '">' + k[1] + '<br><b>' + thoat('lô ' + o.x.tenLo) + '</b> ' + thoat(_bdDinhDang(o.v, chiSo)) + '</span>' }) })
-          .on('click', function () { bdToiLo(o.x.maLo); }).addTo(_bdGhim);
-      });
+      _bdLop.eachLayer(function (l) { if (l.feature.properties.maLo === o.x.maLo) l.bringToFront(); });
       dongMm += '<button type="button" class="bd-mm" data-lo="' + thoat(o.x.maLo) + '" style="border-left-color:' + k[2] + '">' +
         '<span>' + k[1] + '</span><b>' + thoat(o.x.doi + ' · lô ' + o.x.tenLo) + '</b><span class="num">' + thoat(_bdDinhDang(o.v, chiSo)) + '</span></button>';
     });
