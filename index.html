@@ -1294,6 +1294,9 @@ function cauDaLuuSheet() {
    Lệnh ghi từng dòng của tổ trưởng thì gửi kèm quyenAdmin=1 (backend cho qua).
    ===================================================================== */
 function quyenToTruong() { return S.vaiTro === 'TO_TRUONG' || !!S.laAdmin; }
+/** Trợ lý (vai trò tạm, backend nhận là Đội trưởng) — riêng Trợ lý được sửa sản lượng chờ duyệt, Đội trưởng thì không. */
+function laTroLy() { return S.vaiTroHienThi === 'TRO_LY'; }
+function quyenSuaSanLuong() { return quyenToTruong() || laTroLy(); }
 function quyenDoiTruong() { return S.vaiTro === 'DOI_TRUONG' || !!S.laAdmin; }
 
 var LENH_ADMIN_DOI_TRUONG = {
@@ -2264,7 +2267,7 @@ function taiSanLuong() {
         '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
         '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
         '<td>' + viTrangThai(r.trangThai) + '</td>' +
-        '<td>' + (r.trangThai === 'CHO_DUYET' && quyenToTruong()
+        '<td>' + (r.trangThai === 'CHO_DUYET' && quyenSuaSanLuong()
             ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button>'
             : '<span class="nhan-mo" title="Đã duyệt thì khoá">—</span>') + '</td>' +
         '</tr>';
@@ -6544,6 +6547,7 @@ function luuSuaSanLuong() {
 
   goiAPI('suaSanLuong', {
     vaiTro: S.vaiTro, maDonVi: S.maDonVi,
+    troLy: laTroLy() ? 1 : '',
     ma: _dangSua.ma,
     kg: $('sKg').value,
     nhat: $('sNhat').value,
