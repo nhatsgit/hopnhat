@@ -837,6 +837,50 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </section>
 
     <!-- Tab: Nhân sự — người lao động, biến động, vị trí, cảnh báo đối chiếu -->
+    <!-- Tab: Năng suất vườn cây — theo lô × tháng, kiểu "Tổng hợp năng suất vườn cây KD" của phòng NN.
+         Bộ lọc riêng (năm, đội, tổ, giống, năm mở cạo, mặt cạo), không dùng khung lọc chung. -->
+    <section id="pNangSuatVuon" style="display:none">
+      <div class="the" style="margin-bottom:16px;padding:14px 16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div><label class="nhan" for="nsvNam">Năm</label><select class="o" id="nsvNam" style="width:auto"></select></div>
+        <div id="khungNsvDoi"><label class="nhan" for="nsvDoi">Đội</label><select class="o" id="nsvDoi" style="width:auto"></select></div>
+        <div id="khungNsvTo"><label class="nhan" for="nsvTo">Tổ</label><select class="o" id="nsvTo" style="width:auto"></select></div>
+        <div><label class="nhan" for="nsvGiong">Giống</label><select class="o" id="nsvGiong" style="width:auto"></select></div>
+        <div><label class="nhan" for="nsvMoCao">Năm mở cạo</label><select class="o" id="nsvMoCao" style="width:auto"></select></div>
+        <div><label class="nhan" for="nsvMatCao">Mặt cạo</label><select class="o" id="nsvMatCao" style="width:auto"></select></div>
+        <div><label class="nhan" for="nsvQ">Tìm lô</label><input class="o" id="nsvQ" placeholder="Tên lô / mã lô rừng" style="width:160px"></div>
+      </div>
+      <div class="kpis" id="kpisNsv"></div>
+      <div id="nsvGhiChu" class="goi-y" style="margin:-6px 0 14px"></div>
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Năng suất theo tháng (kg quy khô/ha)</h3>
+          <div id="bdNsvThang"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <h3 class="tieude-muc" style="margin:0;margin-right:auto">So sánh theo</h3>
+            <select class="o" id="nsvNhom" style="width:auto">
+              <option value="doi">Đội</option><option value="to">Tổ</option><option value="giong">Giống</option>
+              <option value="namMoCao">Năm mở cạo</option><option value="matCao">Mặt cạo</option>
+            </select>
+          </div>
+          <div class="cuon" style="max-height:300px"><table id="bangNsvNhom"></table></div>
+        </div>
+      </div>
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatNsv">Năng suất theo lô</h3>
+          <label class="nhan" for="nsvChiSo" style="margin:0">Cột tháng hiện</label>
+          <select class="o" id="nsvChiSo" style="width:auto">
+            <option value="kgHa">kg/ha</option><option value="qk">Quy khô (kg)</option><option value="kgCay">kg/cây</option>
+            <option value="gcc">g/cây/lần cạo</option><option value="lanCao">Lần cạo</option>
+          </select>
+          <button class="btn nho" id="nutCsvNsv">Xuất Excel</button>
+        </div>
+        <div class="cuon cuon-doc"><table id="bangNsv"></table></div>
+      </div>
+    </section>
+
     <!-- Tab: Xuất biểu mẫu — gom các file Excel đúc theo đúng mẫu giấy tờ đội đang dùng (bìa, phông,
          khổ in...). Có ô chọn tháng/phạm vi riêng, không dùng khung bộ lọc chung. Danh sách biểu mẫu
          dựng từ BAO_CAO (script). -->
@@ -1081,7 +1125,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
@@ -3236,6 +3280,224 @@ function xlLuu() {
 }
 
 /* =====================================================================
+   Tab NĂNG SUẤT VƯỜN CÂY — lô × tháng (backend nangSuatVuon). Lọc giống/năm
+   mở cạo/mặt cạo/đội/tổ ngay trên trình duyệt; đổi năm mới gọi lại backend.
+   Chỉ số: kg/ha = QK/diện tích; kg/cây = QK/cây cạo; g/cây/lần cạo =
+   QK×1000/(cây cạo × lần cạo) chỉ tính trên các tháng có số lần cạo.
+   ===================================================================== */
+var _nsv = null;
+
+function taiNangSuatVuon() {
+  $('bangNsv').innerHTML = skBang();
+  $('kpisNsv').innerHTML = skKpis(6);
+  goiCache('nangSuatVuon', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, nam: $('nsvNam').value }).then(function (d) {
+    _nsv = d;
+    _nsvNapLoc();
+    veNangSuatVuon();
+  }).catch(function (e) { $('bangNsv').innerHTML = ''; $('kpisNsv').innerHTML = ''; baoLoi('thongBao', e.message); });
+}
+
+function _nsvChon(el, ds, tatCa, giuCu) {
+  var cu = giuCu ? el.value : '';
+  el.innerHTML = (tatCa ? '<option value="">' + tatCa + '</option>' : '') +
+    ds.map(function (x) { return '<option value="' + thoat(x) + '">' + thoat(x) + '</option>'; }).join('');
+  if (cu && ds.indexOf(cu) > -1) el.value = cu;
+}
+
+function _nsvDsKhac(rows, lay) {
+  var m = {};
+  rows.forEach(function (r) { var v = lay(r); if (v !== '' && v !== null && v !== undefined) m[v] = 1; });
+  return Object.keys(m).sort(function (a, b) { return isNaN(a) || isNaN(b) ? (a < b ? -1 : 1) : a - b; });
+}
+
+function _nsvGiong(r) { return r.giongTen || r.giong || ''; }
+
+function _nsvNapLoc() {
+  var d = _nsv;
+  _nsvChon($('nsvNam'), (d.dsNam || []).slice().reverse(), '', false);
+  $('nsvNam').value = d.nam;
+  var dsDoi = _nsvDsKhac(d.rows, function (r) { return r.doi; });
+  _nsvChon($('nsvDoi'), dsDoi, 'Tất cả đội', true);
+  $('khungNsvDoi').style.display = dsDoi.length > 1 ? '' : 'none';
+  _nsvDungTo();
+  _nsvChon($('nsvGiong'), _nsvDsKhac(d.rows, _nsvGiong), 'Tất cả', true);
+  _nsvChon($('nsvMoCao'), _nsvDsKhac(d.rows, function (r) { return r.namMoCao; }), 'Tất cả', true);
+  _nsvChon($('nsvMatCao'), _nsvDsKhac(d.rows, function (r) { return r.matCao; }), 'Tất cả', true);
+}
+
+function _nsvDungTo() {
+  var doi = $('nsvDoi').value;
+  var ds = _nsvDsKhac(_nsv.rows.filter(function (r) { return !doi || r.doi === doi; }), function (r) { return r.to; });
+  _nsvChon($('nsvTo'), ds, ds.length > 1 ? 'Tất cả tổ' : '', true);
+  $('khungNsvTo').style.display = ds.length > 1 ? '' : 'none';
+}
+
+function _nsvLoc() {
+  var doi = $('nsvDoi').value, to = $('nsvTo').value, g = $('nsvGiong').value, mc = $('nsvMoCao').value,
+      mat = $('nsvMatCao').value, q = $('nsvQ').value.trim().toLowerCase();
+  return _nsv.rows.filter(function (r) {
+    if (doi && r.doi !== doi) return false;
+    if (to && r.to !== to) return false;
+    if (g && _nsvGiong(r) !== g) return false;
+    if (mc && String(r.namMoCao) !== mc) return false;
+    if (mat && r.matCao !== mat) return false;
+    if (q && String(r.tenLo).toLowerCase().indexOf(q) < 0 && String(r.maLoRung).toLowerCase().indexOf(q) < 0 &&
+        String(r.idLoMoi || '').toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
+
+/** Cộng dồn chỉ số cho 1 nhóm lô, trên các tháng cho trước (mặc định mọi tháng có số). */
+function _nsvCong(ds, chiThang) {
+  var a = { soLo: ds.length, dt: 0, cay: 0, qk: 0, qkPB: 0, qkCoLan: 0, cayLan: 0, lan: 0, ns25: 0, dt25: 0 };
+  ds.forEach(function (r) {
+    a.dt += r.dienTich || 0; a.cay += r.cayCao || 0;
+    if (r.nsNam && r.nsNam[2025]) { a.ns25 += r.nsNam[2025] * (r.dienTich || 0); a.dt25 += r.dienTich || 0; }
+    for (var t in r.thang) {
+      if (chiThang && String(t) !== String(chiThang)) continue;
+      var x = r.thang[t];
+      a.qk += x.qk; a.qkPB += x.qkPhanBo;
+      if (x.lanCao) { a.qkCoLan += x.qk; a.cayLan += (r.cayCao || 0) * x.lanCao; a.lan += x.lanCao; }
+    }
+  });
+  a.kgHa = a.dt ? a.qk / a.dt : 0;
+  a.kgCay = a.cay ? a.qk / a.cay : 0;
+  a.gcc = a.cayLan ? a.qkCoLan * 1000 / a.cayLan : 0;
+  a.nsTruoc = a.dt25 ? a.ns25 / a.dt25 : 0;
+  return a;
+}
+
+function _nsvThangCo(ds) {
+  var m = {};
+  ds.forEach(function (r) { for (var t in r.thang) if (r.thang[t].qk > 0) m[t] = 1; });
+  return Object.keys(m).map(Number).sort(function (a, b) { return a - b; });
+}
+
+function _nsvGiaTri(chiSo, r, t) {
+  var x = r.thang[t];
+  if (!x) return null;
+  if (chiSo === 'qk') return x.qk;
+  if (chiSo === 'kgHa') return r.dienTich ? x.qk / r.dienTich : null;
+  if (chiSo === 'kgCay') return r.cayCao ? x.qk / r.cayCao : null;
+  if (chiSo === 'lanCao') return x.lanCao;
+  if (chiSo === 'gcc') return x.lanCao && r.cayCao ? x.qk * 1000 / (r.cayCao * x.lanCao) : null;
+  return null;
+}
+var NSV_SO_LE = { qk: 0, kgHa: 1, kgCay: 2, lanCao: 1, gcc: 1 };
+
+function veNangSuatVuon() {
+  var d = _nsv, ds = _nsvLoc(), thangs = _nsvThangCo(ds), tong = _nsvCong(ds);
+  var o = function (v, n) { return v ? soVN(v, n) : '<span class="nhan-mo">—</span>'; };
+
+  $('kpisNsv').innerHTML =
+    the_kpi('Diện tích', soVN(tong.dt, 2), 'ha', soVN(tong.soLo, 0) + ' lô') +
+    the_kpi('Cây cạo', soVN(tong.cay, 0), 'cây', tong.dt ? 'Mật độ ' + soVN(tong.cay / tong.dt, 0) + ' cây/ha' : '') +
+    the_kpi('Sản lượng quy khô', soVN(tong.qk, 0), 'kg', 'Năm ' + d.nam + (d.ngayMax ? ' · tới ' + ngayVN(d.ngayMax) : '')) +
+    the_kpi('Năng suất', soVN(tong.kgHa, 1), 'kg/ha', soVN(tong.kgCay, 2) + ' kg/cây') +
+    the_kpi('Mỗi lần cạo', tong.gcc ? soVN(tong.gcc, 1) : '—', 'g/cây', 'Trên các tháng có số lần cạo') +
+    the_kpi('Năng suất 2025', tong.nsTruoc ? soVN(tong.nsTruoc, 0) : '—', 'kg/ha', 'Theo hồ sơ kiểm kê');
+  $('nsvGhiChu').innerHTML = 'Thông tin lô theo kiểm kê ' + (d.ngayKiemKe ? ngayVN(d.ngayKiemKe) : '—') +
+    '; sản lượng quy khô đã duyệt, mọi loại mủ.' +
+    (tong.qkPB > 0 ? ' <b>*</b> ' + soVN(tong.qkPB / tong.qk * 100, 1) + '% sản lượng là <b>phân bổ ước tính</b> theo giao khoán ' +
+      '(dòng sản lượng không ghi phần cạo — chia cho các phần cạo của công nhân theo số cây).' : '');
+
+  veCotThang($('bdNsvThang'), thangs.map(function (t) {
+    var a = _nsvCong(ds, t);
+    return { thang: d.nam + '-' + (t < 10 ? '0' : '') + t, kgHa: a.kgHa, qk: a.qk, pb: a.qkPB };
+  }), function (x) { return x.kgHa; }, function (x) {
+    return 'Tháng ' + x.thang + ': ' + soVN(x.kgHa, 1) + ' kg/ha · ' + soVN(x.qk, 0) + ' kg quy khô' +
+      (x.pb ? ' (' + soVN(x.pb / x.qk * 100, 0) + '% phân bổ ước tính)' : '');
+  }, 'var(--leaf)');
+
+  // So sánh theo nhóm
+  var kieu = $('nsvNhom').value, nhom = {};
+  var layKhoa = { doi: function (r) { return r.doi; }, to: function (r) { return r.to; }, giong: _nsvGiong,
+                  namMoCao: function (r) { return r.namMoCao || '—'; }, matCao: function (r) { return r.matCao || '—'; } }[kieu];
+  ds.forEach(function (r) { var k = layKhoa(r) || '—'; (nhom[k] = nhom[k] || []).push(r); });
+  var dsNhom = Object.keys(nhom).map(function (k) { var a = _nsvCong(nhom[k]); a.ten = k; return a; })
+    .sort(function (a, b) { return b.kgHa - a.kgHa; });
+  var hn = '<thead><tr><th>' + thoat($('nsvNhom').selectedOptions[0].text) + '</th><th class="p">Số lô</th><th class="p">DT (ha)</th>' +
+           '<th class="p">QK (kg)</th><th class="p">kg/ha</th><th class="p">kg/cây</th><th class="p">g/cây/lần</th><th class="p">NS 2025</th></tr></thead><tbody>';
+  dsNhom.forEach(function (a) {
+    hn += '<tr><td><b>' + thoat(a.ten) + '</b></td><td class="p num">' + soVN(a.soLo, 0) + '</td><td class="p num">' + soVN(a.dt, 2) + '</td>' +
+          '<td class="p num">' + soVN(a.qk, 0) + '</td><td class="p num"><b>' + soVN(a.kgHa, 1) + '</b></td>' +
+          '<td class="p num">' + soVN(a.kgCay, 2) + '</td><td class="p num">' + o(a.gcc, 1) + '</td><td class="p num">' + o(a.nsTruoc, 0) + '</td></tr>';
+  });
+  $('bangNsvNhom').innerHTML = hn + '</tbody>';
+
+  // Bảng chi tiết theo lô
+  var chiSo = $('nsvChiSo').value, soLe = NSV_SO_LE[chiSo];
+  var maxO = 0;
+  ds.forEach(function (r) { thangs.forEach(function (t) { var v = _nsvGiaTri(chiSo, r, t); if (v > maxO) maxO = v; }); });
+  var h = '<thead><tr><th>Đội</th><th>Tổ</th><th>Phiên</th><th>Mã lô rừng</th><th>Lô</th><th>Giống</th><th class="p">Năm trồng</th>' +
+          '<th>Mở cạo</th><th class="p">Tuổi cạo</th><th class="p">DT (ha)</th><th class="p">Cây cạo</th><th class="p">Mật độ</th>' +
+          '<th>Mặt cạo</th><th>Miệng · nhịp</th><th class="p">Lần cạo</th><th class="p">QK (kg)</th><th class="p">kg/ha</th>' +
+          '<th class="p">kg/cây</th><th class="p">g/cây/lần</th><th class="p">NS 2025</th>' +
+          thangs.map(function (t) { return '<th class="p">T' + t + '</th>'; }).join('') + '</tr></thead><tbody>';
+  if (!ds.length) h += '<tr><td colspan="' + (20 + thangs.length) + '"><div class="rong">Không có lô nào khớp bộ lọc.</div></td></tr>';
+  ds.forEach(function (r) {
+    var a = _nsvCong([r]);
+    h += '<tr><td>' + thoat(r.doi) + '</td><td>' + thoat(r.to) + '</td><td>' + thoat(r.phien || '') + '</td>' +
+      '<td class="nhan-mo">' + thoat(r.maLoRung || '') + '</td><td><b>' + thoat(r.tenLo) + '</b></td><td>' + thoat(_nsvGiong(r)) + '</td>' +
+      '<td class="p num">' + (r.namTrong || '') + '</td><td>' + thoat(r.thangMoCao || '') + '</td><td class="p num">' + (r.tuoiCao || '') + '</td>' +
+      '<td class="p num">' + soVN(r.dienTich || 0, 2) + '</td><td class="p num">' + soVN(r.cayCao || 0, 0) + '</td>' +
+      '<td class="p num">' + (r.matDo ? soVN(r.matDo, 0) : (r.dienTich ? soVN(r.cayCao / r.dienTich, 0) : '')) + '</td>' +
+      '<td>' + thoat(r.matCao || '') + '</td><td>' + thoat([r.mieng, r.nhip].filter(Boolean).join(' · ')) + '</td>' +
+      '<td class="p num">' + o(a.lan, 1) + '</td><td class="p num">' + o(a.qk, 0) + '</td><td class="p num"><b>' + o(a.kgHa, 1) + '</b></td>' +
+      '<td class="p num">' + o(a.kgCay, 2) + '</td><td class="p num">' + o(a.gcc, 1) + '</td>' +
+      '<td class="p num">' + o(r.nsNam && r.nsNam[2025], 0) + '</td>' +
+      thangs.map(function (t) {
+        var v = _nsvGiaTri(chiSo, r, t), x = r.thang[t];
+        if (v === null || v === undefined) return '<td class="p num"><span class="nhan-mo">—</span></td>';
+        var pb = x && x.qkPhanBo > 0 && x.qk ? x.qkPhanBo / x.qk : 0;
+        var dam = maxO ? Math.round(v / maxO * 45) : 0;
+        return '<td class="p num" style="background:color-mix(in srgb, var(--leaf) ' + dam + '%, transparent)"' +
+          (pb ? ' title="' + soVN(pb * 100, 0) + '% phân bổ ước tính theo giao khoán"' : '') + '>' +
+          soVN(v, soLe) + (pb ? '<sup>*</sup>' : '') + '</td>';
+      }).join('') + '</tr>';
+  });
+  h += '</tbody>';
+  if (ds.length > 1) {
+    h += '<tfoot><tr><td colspan="9"><b>Tổng / bình quân</b></td><td class="p num"><b>' + soVN(tong.dt, 2) + '</b></td>' +
+      '<td class="p num"><b>' + soVN(tong.cay, 0) + '</b></td><td class="p num">' + (tong.dt ? soVN(tong.cay / tong.dt, 0) : '') + '</td>' +
+      '<td></td><td></td><td></td><td class="p num"><b>' + soVN(tong.qk, 0) + '</b></td><td class="p num"><b>' + soVN(tong.kgHa, 1) + '</b></td>' +
+      '<td class="p num"><b>' + soVN(tong.kgCay, 2) + '</b></td><td class="p num"><b>' + o(tong.gcc, 1) + '</b></td>' +
+      '<td class="p num"><b>' + o(tong.nsTruoc, 0) + '</b></td>' +
+      thangs.map(function (t) {
+        var a2 = _nsvCong(ds, t);
+        var v2 = { qk: a2.qk, kgHa: a2.kgHa, kgCay: a2.kgCay, gcc: a2.gcc, lanCao: null }[chiSo];
+        return '<td class="p num"><b>' + (v2 ? soVN(v2, soLe) : '') + '</b></td>';
+      }).join('') + '</tr></tfoot>';
+  }
+  $('bangNsv').innerHTML = h;
+  $('tomTatNsv').textContent = 'Năng suất theo lô — ' + soVN(ds.length, 0) + ' lô';
+}
+
+/** Xuất Excel đủ chỉ số từng tháng như file tổng hợp của phòng NN (QK, lần cạo, kg/ha, kg/cây, g/cây/lần). */
+function xuatNangSuatVuon(ds, nam) {
+  if (!ds) { if (!_nsv) return; ds = _nsvLoc(); nam = _nsv.nam; }
+  var thangs = _nsvThangCo(ds);
+  var nhan = ['Đội', 'Tổ', 'Phiên', 'Mã lô rừng', 'ID lô (2 cấp)', 'Tên lô', 'Giống', 'Năm trồng', 'Năm mở cạo', 'Tháng mở cạo',
+              'Tuổi cạo', 'Diện tích (ha)', 'Cây cạo', 'Mật độ (cây/ha)', 'Mặt cạo', 'Miệng cạo', 'Nhịp độ', 'Tổng lần cạo',
+              'Sản lượng QK (kg)', 'kg/ha', 'kg/cây', 'g/cây/lần cạo', 'NS 2025 (kg/ha)'];
+  thangs.forEach(function (t) { nhan.push('QK T' + t, 'Lần cạo T' + t, 'kg/ha T' + t, 'kg/cây T' + t, 'g/cc T' + t); });
+  var lam = function (v, n) { return v || v === 0 ? Math.round(v * Math.pow(10, n)) / Math.pow(10, n) : null; };
+  var dong = ds.map(function (r) {
+    var a = _nsvCong([r]);
+    var x = [r.doi, r.to, r.phien || '', r.maLoRung || '', r.idLoMoi || '', r.tenLo, _nsvGiong(r), r.namTrong || null, r.namMoCao || null,
+             r.thangMoCao || '', r.tuoiCao || null, lam(r.dienTich, 2), r.cayCao || null,
+             lam(r.matDo || (r.dienTich ? r.cayCao / r.dienTich : 0), 0), r.matCao || '', r.mieng || '', r.nhip || '',
+             lam(a.lan, 1), lam(a.qk, 2), lam(a.kgHa, 1), lam(a.kgCay, 3), lam(a.gcc, 1), lam(r.nsNam && r.nsNam[2025], 0)];
+    thangs.forEach(function (t) {
+      x.push(lam(_nsvGiaTri('qk', r, t), 2), lam(_nsvGiaTri('lanCao', r, t), 1), lam(_nsvGiaTri('kgHa', r, t), 1),
+             lam(_nsvGiaTri('kgCay', r, t), 3), lam(_nsvGiaTri('gcc', r, t), 1));
+    });
+    return x;
+  });
+  xuatBangExcel('nang_suat_vuon_cay_' + nam + '.xlsx', nhan, dong);
+}
+
+/* =====================================================================
    Tab XUẤT BIỂU MẪU — mỗi biểu mẫu 1 thẻ. Thêm biểu mẫu mới: thêm 1 mục
    vào BAO_CAO (ten, moTa, gồm, phamVi 'doiTo' | 'doi', duocXuat, xuat).
    ===================================================================== */
@@ -3262,6 +3524,20 @@ var BAO_CAO = [
     duocXuat: function () { return quyenDoiTruong(); },
     lyDoKhoa: 'Chỉ đội trưởng (hoặc Admin) xuất được — file có họ tên và số CCCD đầy đủ.',
     xuat: function (ch, nut) { xuatHoSoLuong(ch.thang, ch.doi, nut); return Promise.resolve(); }
+  },
+  {
+    id: 'nangSuatVuon', ten: 'Tổng hợp năng suất vườn cây',
+    moTa: 'Theo từng lô (kiểu bảng tổng hợp năng suất vườn cây KD của phòng Nông nghiệp): thông tin lô theo kiểm kê, ' +
+          'sản lượng quy khô, lần cạo, kg/ha, kg/cây, g/cây/lần cạo cả năm và từng tháng — năm lấy theo ô Tháng/kỳ.',
+    gom: '1 sheet, mỗi lô 1 dòng', phamVi: 'doiTo',
+    duocXuat: function () { return true; },
+    xuat: function (ch, nut) {
+      nut.disabled = true; nut.textContent = 'Đang lấy số liệu…';
+      return goiCache('nangSuatVuon', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, nam: ch.thang.substring(0, 4) }).then(function (d) {
+        nut.disabled = false; nut.textContent = 'Xuất Excel';
+        xuatNangSuatVuon(d.rows.filter(function (r) { return (!ch.doi || r.doi === ch.doi) && (!ch.to || r.to === ch.to); }), d.nam);
+      });
+    }
   }
 ];
 
@@ -5238,7 +5514,8 @@ var LOC_THEO_TAB = {
   khoMieng: ['doi', 'to'],
   xepLoai: ['doi', 'to'],
   luong: ['doi', 'to'],
-  baoCao: []            // có ô chọn tháng/đội/tổ riêng, ẩn khung lọc chung
+  baoCao: [],           // có ô chọn tháng/đội/tổ riêng, ẩn khung lọc chung
+  nangSuatVuon: []      // bộ lọc riêng (năm, giống, năm mở cạo...)
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -5253,7 +5530,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -5428,6 +5705,7 @@ function taiTab() {
   else if (S.tab === 'xepLoai') taiXepLoai();
   else if (S.tab === 'luong') taiLuong();
   else if (S.tab === 'baoCao') taiBaoCao();
+  else if (S.tab === 'nangSuatVuon') taiNangSuatVuon();
 }
 
 /**
@@ -5538,7 +5816,7 @@ function veTomTatBoLoc() {
  */
 var NHOM_TAB = [
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['tongQuan'] },
-  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan'] },
+  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
   { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] }
@@ -5547,7 +5825,7 @@ var TEN_TAB = {
   tongQuan: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
-  khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu'
+  khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -5688,6 +5966,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pXepLoai').style.display = (ten === 'xepLoai') ? '' : 'none';
   $('pLuong').style.display = (ten === 'luong') ? '' : 'none';
   $('pBaoCao').style.display = (ten === 'baoCao') ? '' : 'none';
+  $('pNangSuatVuon').style.display = (ten === 'nangSuatVuon') ? '' : 'none';
   veTuyChonDoi();
   dungLocTo();
   capNhatHienBoLoc();
@@ -6819,6 +7098,11 @@ $('fileKhoMieng').onchange = kmXuLyFile;
 $('nutKmLuu').onclick = kmLuu;
 $('nutXuatSoCC').onclick = function () { xuatSoChamCong(); };
 $('bcDoi').onchange = _bcDungTo;
+$('nsvNam').onchange = taiNangSuatVuon;
+$('nsvDoi').onchange = function () { _nsvDungTo(); veNangSuatVuon(); };
+['nsvTo', 'nsvGiong', 'nsvMoCao', 'nsvMatCao', 'nsvNhom', 'nsvChiSo'].forEach(function (id) { $(id).onchange = veNangSuatVuon; });
+$('nsvQ').oninput = veNangSuatVuon;
+$('nutCsvNsv').onclick = xuatNangSuatVuon;
 $('nutXlDienA').onclick = xlDienA;
 $('nutXlTaiMau').onclick = xlTaiMauExcel;
 $('nutXlNhapFile').onclick = xlNhapFile;
