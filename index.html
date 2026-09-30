@@ -1104,7 +1104,7 @@ function capNhatChoDay(ds) {
   _choDayBq = ds;
   var k = $('khungChoDayBq');
   if (!ds.length) { k.style.display = 'none'; k.innerHTML = ''; return; }
-  var laDT = S.vaiTro === 'DOI_TRUONG';
+  var laDT = quyenDoiTruong();
   k.style.display = '';
   k.innerHTML = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
     '<div style="flex:1;min-width:220px"><b>Đã lưu vào Sheet, chưa đẩy lên BigQuery:</b> ' +
@@ -1139,7 +1139,44 @@ function cauDaLuuSheet() {
   return ' <b>Đã ghi vào Sheet, chưa đẩy lên BigQuery</b> — kiểm tra lại rồi bấm "Đẩy lên BigQuery" ở thanh phía trên.';
 }
 
+/* =====================================================================
+   Admin toàn quyền: thấy mọi giao diện nhập/tính. Lệnh "ghi đè cả đội + kỳ"
+   (và phần đọc đi kèm để dựng lưới nhập) gửi dưới vai ĐỘI TRƯỞNG của đội đang
+   chọn — phạm vi toàn công ty mà ghi đè thì sẽ xoá dữ liệu kỳ đó của mọi đội.
+   Lệnh ghi từng dòng của tổ trưởng thì gửi kèm quyenAdmin=1 (backend cho qua).
+   ===================================================================== */
+function quyenToTruong() { return S.vaiTro === 'TO_TRUONG' || !!S.laAdmin; }
+function quyenDoiTruong() { return S.vaiTro === 'DOI_TRUONG' || !!S.laAdmin; }
+
+var LENH_ADMIN_DOI_TRUONG = {
+  slTheoCn: 1, tinhGiaoSl: 1, luong: 1, chotLuong: 1, hoSoLuong: 1,
+  hoTroKhoDs: 1, hoTroKhoLuu: 1, xepLoaiDs: 1, xepLoaiLuu: 1, dieuChinhQkDs: 1, dieuChinhQkLuu: 1, dayBq: 1
+};
+var LENH_ADMIN_TO_TRUONG = {
+  suaSanLuong: 1, themSanLuong: 1, nhapHangLoatSanLuong: 1, suaChamCong: 1, themChamCong: 1, nhapHangLoatChamCong: 1
+};
+
+function thamSoAdmin(action, thamSo) {
+  if (!S.laAdmin) return thamSo;
+  if (LENH_ADMIN_DOI_TRUONG[action] || LENH_GHI_NHAN_SU[action]) {
+    var doi = LENH_GHI_NHAN_SU[action] ? $('nsDoi').value
+      : ($('fDoi').value || (action === 'dayBq' ? S.dsDoi[0] : ''));
+    if (!doi || doi === 'NMCB') throw new Error('Admin: chọn 1 đội ở bộ lọc trước khi làm thao tác này.');
+    return Object.assign({}, thamSo, { vaiTro: 'DOI_TRUONG', maDonVi: doi });
+  }
+  if (LENH_ADMIN_TO_TRUONG[action]) return Object.assign({}, thamSo, { quyenAdmin: 1 });
+  return thamSo;
+}
+
+/** Danh sách công nhân cho "Nhập cả tổ": tổ trưởng = cả tổ mình; Admin = tổ đang chọn ở bộ lọc. */
+function dsCnNhapTo() {
+  if (!S.laAdmin) return S.dsCn.slice().sort();
+  var to = $('fTo').value;
+  return S.dsCn.filter(function (ma) { return toCuaMaCn(ma) === to; }).sort();
+}
+
 function goiApiMotLan(action, thamSo, msCho) {
+  try { thamSo = thamSoAdmin(action, thamSo); } catch (e) { return Promise.reject(e); }
   var vuaGhiNS = LENH_DOC_NHAN_SU[action] && (Date.now() - _nsGhiLuc < 120000);
   var vuaGhiGiao = LENH_DOC_GIAO_SL[action] && _choDayBq.length > 0;
   if (LENH_DOC[action] && S.apiDoc && !vuaGhiNS && !vuaGhiGiao) {
@@ -1613,9 +1650,17 @@ function layBoLoc() {
     phien: $('fPhien').value,
     chatLuong: $('fChatLuong').value,
     trangThai: S.trangThai,
-    maCn: $('fMaCn').value
+    maCn: $('fMaCn').value,
+    // Admin xem cả dòng chờ duyệt: BigQuery chỉ có dòng đã duyệt -> bảo Cloud Run đọc Sheet.
+    docSheet: (S.laAdmin && S.trangThai !== 'DA_DUYET') ? 1 : ''
   };
 }
+
+/** Admin mặc định "Đã duyệt" (đọc BigQuery, nhanh); tổ trưởng/đội trưởng mặc định "Tất cả". */
+function trangThaiMacDinh() { return S.laAdmin ? 'DA_DUYET' : ''; }
+
+/** Nguồn dữ liệu đang xem chỉ có dòng đã duyệt (lãnh đạo đọc BigQuery) — ẩn các số "chờ duyệt". */
+function chiCoDaDuyet() { return S.toanCongTy && !(S.laAdmin && S.trangThai !== 'DA_DUYET'); }
 
 /* =====================================================================
    Cache phía trình duyệt — đổi qua đổi lại giữa các tab với cùng bộ lọc
@@ -1667,7 +1712,7 @@ function taiTongQuan() {
       // không còn khái niệm "chờ duyệt" để hiện (số này với họ luôn là 0,
       // dễ hiểu lầm là "không có gì đang chờ" trong khi thực ra có, chỉ là
       // họ không xem qua nguồn này).
-      (S.toanCongTy ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
+      (chiCoDaDuyet() ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
               soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt'));
 
     veCot($('bdNgay'), d.theoNgay);
@@ -1883,7 +1928,7 @@ function taiSanLuong() {
         '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
         '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
         '<td>' + viTrangThai(r.trangThai) + '</td>' +
-        '<td>' + (r.trangThai === 'CHO_DUYET' && S.vaiTro === 'TO_TRUONG'
+        '<td>' + (r.trangThai === 'CHO_DUYET' && quyenToTruong()
             ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button>'
             : '<span class="nhan-mo" title="Đã duyệt thì khoá">—</span>') + '</td>' +
         '</tr>';
@@ -2844,7 +2889,7 @@ function veBangKhoMieng() {
       '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td>' + (r.cccd ? thoat(r.cccd) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td class="p"><input class="o kmSoCong" type="number" min="0" max="31" step="1" style="width:90px" value="' +
-      (r.soCong || 0) + '"' + (S.vaiTro === 'DOI_TRUONG' ? '' : ' disabled') + '></td></tr>';
+      (r.soCong || 0) + '"' + (quyenDoiTruong() ? '' : ' disabled') + '></td></tr>';
   }
   $('bangKhoMieng').innerHTML = h + '</tbody>';
   veTongKhoMieng();
@@ -2998,7 +3043,7 @@ function veBangXepLoai() {
     h += '<tr data-ma="' + thoat(r.maCn) + '"><td>' + (i + 1) + '</td><td><b>' + thoat(r.maCn) + '</b></td>' +
       '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
       '<td>' + (r.cccd ? thoat(r.cccd) : '<span class="nhan-mo">—</span>') + '</td>' +
-      '<td><select class="o xlChon" style="width:110px"' + (S.vaiTro === 'DOI_TRUONG' ? '' : ' disabled') + '>' + chon + '</select></td></tr>';
+      '<td><select class="o xlChon" style="width:110px"' + (quyenDoiTruong() ? '' : ' disabled') + '>' + chon + '</select></td></tr>';
   }
   $('bangXepLoai').innerHTML = h + '</tbody>';
   var tr = $('bangXepLoai').querySelectorAll('tbody tr[data-ma]');
@@ -3570,7 +3615,7 @@ function taiChamCong() {
       the_kpi('Bình quân', soVN(k.soCongNhan ? k.tongCong / k.soCongNhan : 0, 2), 'công/người', 'Trên toàn bộ kỳ đã lọc') +
       the_kpi('Dòng nghỉ', soVN(k.soDongNghi || 0, 0), 'dòng',
               k.soDong ? soVN((k.soDongNghi || 0) / k.soDong * 100, 1) + '% số dòng (số công = 0)' : 'Chưa có dữ liệu') +
-      (S.toanCongTy ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt')) +
+      (chiCoDaDuyet() ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet, 0), 'dòng', 'Chưa được duyệt')) +
       (bd ? the_kpi('Nghỉ việc', soVN(bd.soNghi, 0), 'người', 'Trong khoảng đang lọc' + (toBd ? ' · tổ ' + toBd : '')) +
             the_kpi('Chuyển tổ', soVN(bd.soChuyenTo, 0), 'người', 'Trong khoảng đang lọc' + (toBd ? ' · tổ ' + toBd : '')) : '');
 
@@ -3633,7 +3678,7 @@ function taiChamCong() {
         '<td>' + (w.phien ? thoat(w.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="nhan-mo">' + (w.phanCao ? thoat(w.phanCao) : '—') + '</td>' +
         '<td>' + viTrangThai(w.trangThai) + '</td>' +
-        '<td>' + (w.trangThai === 'CHO_DUYET' && S.vaiTro === 'TO_TRUONG'
+        '<td>' + (w.trangThai === 'CHO_DUYET' && quyenToTruong()
             ? '<button class="btn nho" data-suacc="' + thoat(w.ma) + '">Sửa</button>'
             : '<span class="nhan-mo">—</span>') + '</td></tr>';
     }
@@ -4289,7 +4334,7 @@ function luuThemSanLuong() {
    ===================================================================== */
 var NT_HAN_MS = 6 * 60 * 60 * 1000;      // bản lưu tạm giữ 6 giờ
 
-function ntKhoa() { return 'crck2_nhapto_' + S.maDonVi; }
+function ntKhoa() { return 'crck2_nhapto_' + (S.laAdmin ? $('fTo').value : S.maDonVi); }
 
 function ntDocTam() {
   var raw = docLS(ntKhoa());
@@ -4342,10 +4387,11 @@ function ntTongKet() {
 }
 
 function moNhapCaTo() {
-  if (S.vaiTro !== 'TO_TRUONG') { baoLoi('thongBao', 'Chỉ tổ trưởng nhập sản lượng.'); return; }
+  if (!quyenToTruong()) { baoLoi('thongBao', 'Chỉ tổ trưởng nhập sản lượng.'); return; }
+  if (S.laAdmin && !$('fTo').value) { baoLoi('thongBao', 'Admin: chọn 1 tổ ở bộ lọc trước khi nhập cả tổ.'); return; }
   if (!S.dsCn.length || !S.meta) { baoLoi('thongBao', 'Chưa có danh sách công nhân của tổ.'); return; }
   var tam = ntDocTam();
-  var ds = S.dsCn.slice().sort();
+  var ds = dsCnNhapTo();
   var m = S.meta;
   var chon = function (giaTri, dsMa, macDinh) {
     for (var i = 0; i < dsMa.length; i++) if (dsMa[i].ma === giaTri) return giaTri;
@@ -4425,7 +4471,7 @@ function moNhapCaTo() {
 function ntTaiMau() {
   var d = ntThuThap();
   var dong = [['Mã công nhân', 'Sản lượng kg', 'Số nhát cạo', 'Ghi chú']];
-  var ds = S.dsCn.slice().sort();
+  var ds = dsCnNhapTo();
   for (var i = 0; i < ds.length; i++) {
     var x = d.dong[ds[i]] || {};
     dong.push([ds[i], x.kg === undefined || x.kg === '' ? '' : Number(x.kg), x.nhat === undefined || x.nhat === '' ? '' : Number(x.nhat), x.gc || '']);
@@ -4849,7 +4895,7 @@ function capNhatHienBoLoc() {
   $('khungLocKy').style.display = theoThang ? '' : 'none';
   $('slKy').style.display = S.tab === 'slTheoCn' ? '' : 'none';
   $('lgKy').style.display = (S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai') ? '' : 'none';
-  $('gatTrangThai').style.display = (laNS || S.toanCongTy) ? 'none' : '';
+  $('gatTrangThai').style.display = (laNS || (S.toanCongTy && !S.laAdmin)) ? 'none' : '';
   for (var k in KHUNG_LOC) {
     var el = $(KHUNG_LOC[k]);
     if (!el) continue;
@@ -4863,8 +4909,8 @@ function capNhatHienBoLoc() {
 
 /**
  * Nút gạt trạng thái đầu trang — thay cho ô dropdown "Trạng thái" cũ.
- * Chỉ tổ trưởng/đội trưởng thấy: ban lãnh đạo đọc BigQuery, vốn chỉ có
- * dòng đã duyệt nên gạt không có ý nghĩa gì.
+ * Tổ trưởng/đội trưởng và Admin thấy. Ban lãnh đạo/Phòng KTNN đọc BigQuery, vốn chỉ có dòng đã
+ * duyệt nên không cần. Admin gạt khác "Đã duyệt" thì đọc Sheet (xem layBoLoc, tham số nguon).
  */
 var TRANG_THAI_GAT = [
   { id: '', ten: 'Tất cả' },
@@ -5067,13 +5113,13 @@ function apDungLoc(loc) {
   if ($('fKyHieu')) $('fKyHieu').value = loc.kyHieu || '';
   if ($('slKy')) $('slKy').value = loc.slKy || '';
   if ($('lgKy')) $('lgKy').value = loc.lgKy || '';
-  S.trangThai = loc.trangThai || ''; veGatTrangThai();
+  S.trangThai = loc.trangThai !== undefined ? loc.trangThai : trangThaiMacDinh(); veGatTrangThai();
   dongBoChip();
 }
 
 /** Bộ lọc mặc định ban đầu của 1 tab — Tổng quan là "Tháng này", còn lại trống trơn. */
 function macDinhChoTab(tab) {
-  var rong = { tuNgay: '', denNgay: '', doi: '', to: '', maCn: '', loaiMu: '', phien: '', chatLuong: '', kyHieu: '', trangThai: '', slKy: '', lgKy: '' };
+  var rong = { tuNgay: '', denNgay: '', doi: '', to: '', maCn: '', loaiMu: '', phien: '', chatLuong: '', kyHieu: '', trangThai: trangThaiMacDinh(), slKy: '', lgKy: '' };
   if (tab !== 'tongQuan') return rong;
   var mocDen = (S.meta && S.meta.ngayMax) ? new Date(S.meta.ngayMax + 'T00:00:00') : new Date();
   mocDen.setHours(0, 0, 0, 0);
@@ -5555,6 +5601,7 @@ function vaoApp(d, vtChon) {
   S.dsCn = d.dsCn || [];
   // Nhãn hiển thị (Trợ lý/Phòng KTNN) khác vaiTro thật gửi backend (Đội trưởng/Ban lãnh đạo).
   S.vaiTroHienThi = vtChon || d.vaiTro;
+  S.laAdmin = S.vaiTroHienThi === 'ADMIN';
 
   ghiLS('crck2_dangnhap', JSON.stringify({ vaiTro: S.vaiTroHienThi, maDonVi: d.maDonVi }));
 
@@ -5586,20 +5633,20 @@ function vaoApp(d, vtChon) {
   // Chỉ tổ trưởng được nhập/sửa số liệu. Ban lãnh đạo chỉ xem — dashboard
   // của họ đọc thẳng BigQuery (chỉ đã duyệt), không đọc/ghi Sheet. Đội
   // trưởng cũng chỉ xem — quản lý nhiều tổ nên không trực tiếp nhập liệu.
-  var chiXem = d.vaiTro !== 'TO_TRUONG';
+  var chiXem = !quyenToTruong();
   $('nutThemSL').style.display = chiXem ? 'none' : '';
   $('nutNhapTo').style.display = chiXem ? 'none' : '';
   $('nutThemCC').style.display = chiXem ? 'none' : '';
   $('nutHangLoatSL').style.display = chiXem ? 'none' : '';
   $('nutHangLoatCC').style.display = chiXem ? 'none' : '';
   // Khô miệng cạo / Xếp loại: chỉ đội trưởng được nhập (backend cũng chặn) — vai trò khác chỉ xem.
-  var laDT = d.vaiTro === 'DOI_TRUONG';
+  var laDT = quyenDoiTruong();
   ['nutKmLuu', 'nutKmNhapFile', 'nutXlLuu', 'nutXlNhapFile', 'nutXlDienA'].forEach(function (id) {
     $(id).style.display = laDT ? '' : 'none';
   });
   // Tải mẫu thì không ghi gì — không cần ẩn, ban lãnh đạo tải xem cũng vô hại.
-  $('gatTrangThai').style.display = d.toanCongTy ? 'none' : '';
-  S.trangThai = '';
+  $('gatTrangThai').style.display = (d.toanCongTy && !S.laAdmin) ? 'none' : '';
+  S.trangThai = trangThaiMacDinh();
   veGatTrangThai();
 
   hien('app');
@@ -5692,7 +5739,7 @@ var NS_LOAI_BD = [
 ];
 var NS_MUC_DO = { CAO: 'vi canh', TRUNG: 'vi dong', THAP: 'vi tap' };
 
-function nsGhiDuoc() { return S.vaiTro === 'TO_TRUONG' || S.vaiTro === 'DOI_TRUONG'; }
+function nsGhiDuoc() { return S.vaiTro === 'TO_TRUONG' || S.vaiTro === 'DOI_TRUONG' || S.laAdmin; }
 
 function nsHomNay() {
   var d = new Date();
@@ -6318,7 +6365,7 @@ $('nutXoaLoc').onclick = function () {
   veTuyChonDoi();   // tab bắt buộc chọn đội thì "" không hợp lệ — rơi về đội đầu tiên
   dungLocTo();
   if (S.meta) { $('fTuNgay').value = S.meta.ngayMin; $('fDenNgay').value = S.meta.ngayMax; }
-  S.trangThai = '';
+  S.trangThai = trangThaiMacDinh();
   veGatTrangThai();
   S.trang = 1;
   dongBoChip();
