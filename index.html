@@ -327,6 +327,12 @@ th.sx.giam::after{content:'▼';opacity:.9}
 td.p{text-align:right}
 th.p{text-align:right}
 tbody tr:hover{background:var(--leaf-soft)}
+/* Tab Xuất biểu mẫu: mỗi biểu mẫu 1 thẻ */
+.luoi-bc{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px}
+.the-bc{padding:16px;display:flex;flex-direction:column;gap:8px}
+.the-bc .tieude-muc{margin:0}
+.the-bc .goi-y{margin:0;flex:1}
+.the-bc .hang-nut{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
 tbody tr.dong-dang-loc{background:var(--leaf-soft);box-shadow:inset 3px 0 0 var(--leaf)}
 tbody tr.dong-dang-loc td{font-weight:600}
 tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line-2)}
@@ -831,6 +837,23 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </section>
 
     <!-- Tab: Nhân sự — người lao động, biến động, vị trí, cảnh báo đối chiếu -->
+    <!-- Tab: Xuất biểu mẫu — gom các file Excel đúc theo đúng mẫu giấy tờ đội đang dùng (bìa, phông,
+         khổ in...). Có ô chọn tháng/phạm vi riêng, không dùng khung bộ lọc chung. Danh sách biểu mẫu
+         dựng từ BAO_CAO (script). -->
+    <section id="pBaoCao" style="display:none">
+      <div class="the" style="margin-bottom:16px;padding:14px 16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div><label class="nhan" for="bcThang">Tháng / kỳ</label>
+          <input class="o" id="bcThang" type="month" style="width:auto"></div>
+        <div id="khungBcDoi"><label class="nhan" for="bcDoi">Đội</label>
+          <select class="o" id="bcDoi" style="width:auto"></select></div>
+        <div id="khungBcTo"><label class="nhan" for="bcTo">Tổ</label>
+          <select class="o" id="bcTo" style="width:auto"></select></div>
+        <div class="goi-y" style="flex:1;min-width:220px;margin:0">Chọn tháng và phạm vi rồi bấm xuất ở từng biểu mẫu.
+          File giữ đúng bố cục, phông, khổ in của mẫu giấy tờ đội đang dùng.</div>
+      </div>
+      <div class="luoi-bc" id="dsBaoCao"></div>
+    </section>
+
     <section id="pNhanSu" style="display:none">
       <div class="kpis" id="kpisNS"></div>
       <div class="luoi-2">
@@ -1162,10 +1185,13 @@ var LENH_ADMIN_TO_TRUONG = {
 };
 
 function thamSoAdmin(action, thamSo) {
+  // doiAdmin: nơi gọi chỉ định sẵn đội (vd trang Xuất biểu mẫu có ô Đội riêng) — không gửi lên backend.
+  var doiChiDinh = thamSo && thamSo.doiAdmin;
+  if (thamSo && 'doiAdmin' in thamSo) { thamSo = Object.assign({}, thamSo); delete thamSo.doiAdmin; }
   if (!S.laAdmin) return thamSo;
   if (LENH_ADMIN_DOI_TRUONG[action] || LENH_GHI_NHAN_SU[action]) {
-    var doi = LENH_GHI_NHAN_SU[action] ? $('nsDoi').value
-      : ($('fDoi').value || (action === 'dayBq' ? S.dsDoi[0] : ''));
+    var doi = doiChiDinh || (LENH_GHI_NHAN_SU[action] ? $('nsDoi').value
+      : ($('fDoi').value || (action === 'dayBq' ? S.dsDoi[0] : '')));
     if (!doi || doi === 'NMCB') throw new Error('Admin: chọn 1 đội ở bộ lọc trước khi làm thao tác này.');
     return Object.assign({}, thamSo, { vaiTro: 'DOI_TRUONG', maDonVi: doi });
   }
@@ -2742,11 +2768,14 @@ function ghiChotLuong() {
    ===================================================================== */
 var _mauHoSoLuong = null;
 
-function xuatHoSoLuong() {
-  var ky = $('lgKy').value;
+/** ky/doi/nut mặc định theo tab Lương (ô Kỳ, đội đang lọc, nút "Xuất hồ sơ lương đầy đủ"). */
+function xuatHoSoLuong(ky, doi, nut) {
+  ky = ky || $('lgKy').value;
+  doi = doi || $('fDoi').value || '';
+  nut = nut || $('nutHoSoLuong');
   if (!ky) { baoLoi('thongBao', 'Chưa chọn kỳ.'); return; }
   if (!window.ExcelJS || !window.HoSoLuong) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
-  var nut = $('nutHoSoLuong'), chu = nut.textContent;
+  var chu = nut.textContent;
   var xong = function () { nut.disabled = false; nut.textContent = chu; };
   nut.disabled = true; nut.textContent = 'Đang lấy số liệu…';
   baoLoi('thongBao', '');
@@ -2757,14 +2786,14 @@ function xuatHoSoLuong() {
         return r.json();
       }).then(function (j) { _mauHoSoLuong = j; return j; });
 
-  Promise.all([mau, goiAPI('hoSoLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 180000)])
+  Promise.all([mau, goiAPI('hoSoLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, doiAdmin: doi }, 180000)])
     .then(function (kq) {
       nut.textContent = 'Đang dựng file…';
       var wb = HoSoLuong.xayDung(ExcelJS, kq[0], kq[1]);
       return wb.xlsx.writeBuffer().then(function (buf) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
-        a.download = 'ho_so_luong_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + ky + '.xlsx';
+        a.download = 'ho_so_luong_' + (S.laAdmin && doi ? doi : S.maDonVi).replace(/[\\/:*?"<>|]/g, '_') + '_' + ky + '.xlsx';
         a.click();
         $('thongBao').innerHTML = '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
           'Đã xuất hồ sơ lương kỳ ' + thoat(ky) + ' cho <b>' + soVN(kq[1].nguoi.length, 0) + '</b> công nhân (số ĐÃ DUYỆT). ' +
@@ -3168,6 +3197,92 @@ function xlLuu() {
       nut.disabled = false; nut.textContent = 'Lưu vào Sheet';
       baoLoi('thongBao', e.message);
     });
+}
+
+/* =====================================================================
+   Tab XUẤT BIỂU MẪU — mỗi biểu mẫu 1 thẻ. Thêm biểu mẫu mới: thêm 1 mục
+   vào BAO_CAO (ten, moTa, gồm, phamVi 'doiTo' | 'doi', duocXuat, xuat).
+   ===================================================================== */
+var BAO_CAO = [
+  {
+    id: 'soChamCong', ten: 'Sổ theo dõi chấm công',
+    moTa: 'Đúng mẫu "Sổ theo dõi chấm công" của đội: trang bìa + bảng chấm công tháng (công nhân × ngày), ' +
+          'tổng công là công thức sống, ghi chú ký hiệu song ngữ, khối chữ ký đội trưởng.',
+    gom: 'Bìa sổ · Bảng tháng', phamVi: 'doiTo',
+    duocXuat: function () { return true; },
+    xuat: function (ch, nut) {
+      nut.disabled = true; nut.textContent = 'Đang lấy số liệu…';
+      return layDuLieuSoCC(ch.thang, ch.doi, ch.to).then(function (dl) {
+        nut.disabled = false; nut.textContent = 'Xuất Excel';
+        return xuatSoChamCong(dl, nut);
+      });
+    }
+  },
+  {
+    id: 'hoSoLuong', ten: 'Hồ sơ lương công nhân khai thác',
+    moTa: 'Cả bộ hồ sơ lương tháng của đội theo mẫu ĐSX: chấm công, tổng hợp sản lượng, giao SL, xếp loại, ' +
+          'thanh toán, thuế TNCN, kế hoạch cạo bù — số ĐÃ DUYỆT, mọi ô tính lương là công thức.',
+    gom: 'Nhiều sheet (đúng mẫu ĐSX1)', phamVi: 'doi',
+    duocXuat: function () { return quyenDoiTruong(); },
+    lyDoKhoa: 'Chỉ đội trưởng (hoặc Admin) xuất được — file có họ tên và số CCCD đầy đủ.',
+    xuat: function (ch, nut) { xuatHoSoLuong(ch.thang, ch.doi, nut); return Promise.resolve(); }
+  }
+];
+
+function _bcChon() {
+  var doi = S.dsDoi.length > 1 ? $('bcDoi').value : (S.dsDoi[0] || '');
+  return { thang: $('bcThang').value, doi: doi, to: $('bcTo').value };
+}
+
+function _bcDungTo() {
+  var doi = S.dsDoi.length > 1 ? $('bcDoi').value : (S.dsDoi[0] || '');
+  var ds = S.dsTo.filter(function (t) { return doiCuaTo(t.ma) === doi; });
+  var cu = $('bcTo').value;
+  $('bcTo').innerHTML = (ds.length > 1 ? '<option value="">Cả đội</option>' : '') +
+    ds.map(function (t) { return '<option value="' + thoat(t.ma) + '">' + thoat(t.ma) + '</option>'; }).join('');
+  if (cu && ds.some(function (t) { return t.ma === cu; })) $('bcTo').value = cu;
+  $('khungBcTo').style.display = ds.length > 1 ? '' : 'none';
+}
+
+function taiBaoCao() {
+  if (!$('bcThang').value) $('bcThang').value = thangMacDinhCC();
+  if (!$('bcDoi').options.length) {
+    $('bcDoi').innerHTML = S.dsDoi.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(d) + '</option>'; }).join('');
+    if ($('fDoi').value) $('bcDoi').value = $('fDoi').value;
+  }
+  $('khungBcDoi').style.display = S.dsDoi.length > 1 ? '' : 'none';
+  _bcDungTo();
+
+  var h = '';
+  BAO_CAO.forEach(function (bc) {
+    var duoc = bc.duocXuat();
+    h += '<div class="the the-bc">' +
+      '<h3 class="tieude-muc">' + thoat(bc.ten) + '</h3>' +
+      '<p class="goi-y">' + thoat(bc.moTa) + '</p>' +
+      '<div class="nhan-mo" style="font-size:12.5px">Gồm: ' + thoat(bc.gom) + ' · Phạm vi: ' +
+        (bc.phamVi === 'doiTo' ? 'cả đội hoặc 1 tổ' : 'cả đội') + '</div>' +
+      '<div class="hang-nut">' +
+        '<button class="btn chinh nho" data-bc="' + bc.id + '"' + (duoc ? '' : ' disabled') + '>Xuất Excel</button>' +
+        (duoc ? '' : '<span class="nhan-mo" style="font-size:12.5px">' + thoat(bc.lyDoKhoa || '') + '</span>') +
+      '</div></div>';
+  });
+  $('dsBaoCao').innerHTML = h;
+  var nuts = $('dsBaoCao').querySelectorAll('button[data-bc]');
+  for (var i = 0; i < nuts.length; i++) {
+    nuts[i].onclick = function () {
+      var id = this.getAttribute('data-bc'), nut = this;
+      var bc = BAO_CAO.filter(function (x) { return x.id === id; })[0];
+      var ch = _bcChon();
+      if (!ch.thang) { baoLoi('thongBao', 'Chọn tháng trước khi xuất.'); return; }
+      if (!ch.doi) { baoLoi('thongBao', 'Chọn đội trước khi xuất.'); return; }
+      if (bc.phamVi === 'doi') ch.to = '';
+      baoLoi('thongBao', '');
+      bc.xuat(ch, nut).catch(function (e) {
+        nut.disabled = false; nut.textContent = 'Xuất Excel';
+        baoLoi('thongBao', e.message);
+      });
+    };
+  }
 }
 
 /* =====================================================================
@@ -3833,25 +3948,47 @@ function _cotChu(n) { var s = ''; while (n > 0) { var m = (n - 1) % 26; s = Stri
 function _saoKieu(st) { return JSON.parse(JSON.stringify(st || {})); }
 
 /** Tên công nhân (không bắt buộc) — mượn danh sách của tab Xếp loại, lỗi thì để trống cột tên như mẫu. */
-function _tenCnChoSo(thang) {
-  return goiAPI('xepLoaiDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: thang }, 60000)
+function _tenCnChoSo(thang, doi) {
+  return goiAPI('xepLoaiDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: thang, doiAdmin: doi || '' }, 60000)
     .then(function (d) { var m = {}; (d.rows || []).forEach(function (r) { m[r.maCn] = r.ten || ''; }); return m; })
     .catch(function () { return {}; });
 }
 
-function xuatSoChamCong() {
-  var dl = _ccThangDL;
-  if (!dl || !dl.dsCn.length) { baoLoi('thongBao', 'Sổ chấm công tháng chưa có dữ liệu để xuất.'); return; }
-  if (!window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
-  var nut = $('nutXuatSoCC');
+/**
+ * Số liệu Sổ chấm công của 1 tháng cho đúng phạm vi đội/tổ — dùng ở trang Xuất biểu mẫu (không
+ * phụ thuộc tab Chấm công đang lọc gì). Cùng cách dựng với taiBangChamCongThang.
+ */
+function layDuLieuSoCC(thang, doi, to) {
+  var kt = ngayTrongThang(thang);
+  var bl = layBoLoc();
+  bl.doi = doi || ''; bl.to = to || ''; bl.maCn = ''; bl.phien = ''; bl.loaiMu = ''; bl.chatLuong = '';
+  bl.tuNgay = kt.dau; bl.denNgay = kt.cuoi; bl.layHet = 1;
+  return goiCache('chamCong', bl).then(function (d) {
+    var dsCn = S.dsCn.filter(function (cn) {
+      var toCua = toCuaMaCn(cn);
+      return to ? toCua === to : (!doi || doiCuaTo(toCua) === doi);
+    }).sort();
+    var o = {};
+    (d.rows || []).forEach(function (w) { o[w.maCn + '|' + w.ngay] = { kyHieu: w.kyHieu, soCong: w.soCong }; });
+    return { thang: thang, soNgay: kt.soNgay, dsCn: dsCn, o: o, doi: doi || '', to: to || '' };
+  });
+}
+
+/** dl: số liệu tháng (mặc định = Sổ chấm công đang hiện ở tab Chấm công); nut: nút đang bấm. */
+function xuatSoChamCong(dl, nut) {
+  dl = dl || _ccThangDL;
+  nut = nut || $('nutXuatSoCC');
+  if (!dl || !dl.dsCn.length) { baoLoi('thongBao', 'Sổ chấm công tháng chưa có dữ liệu để xuất.'); return Promise.resolve(); }
+  if (!window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return Promise.resolve(); }
+  var chu = nut.textContent;
   nut.disabled = true; nut.textContent = 'Đang xuất…';
-  var xong = function () { nut.disabled = false; nut.textContent = 'Xuất Excel (mẫu sổ)'; };
+  var xong = function () { nut.disabled = false; nut.textContent = chu; };
 
   var tai = fetch('mau/so_cham_cong.xlsx').then(function (r) {
     if (!r.ok) throw new Error('Không tải được file mẫu sổ chấm công (HTTP ' + r.status + ').');
     return r.arrayBuffer();
   });
-  Promise.all([tai, _tenCnChoSo(dl.thang)]).then(function (kq) {
+  return Promise.all([tai, _tenCnChoSo(dl.thang, dl.doi || doiCuaTo(dl.to))]).then(function (kq) {
     var wb = new ExcelJS.Workbook();
     return wb.xlsx.load(kq[0]).then(function () { return dungSoChamCong(wb, dl, kq[1]); });
   }).then(function (wb) {
@@ -5064,7 +5201,8 @@ var LOC_THEO_TAB = {
   slTheoCn: ['doi', 'to'],
   khoMieng: ['doi', 'to'],
   xepLoai: ['doi', 'to'],
-  luong: ['doi', 'to']
+  luong: ['doi', 'to'],
+  baoCao: []            // có ô chọn tháng/đội/tổ riêng, ẩn khung lọc chung
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -5079,8 +5217,10 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
+  var anLoc = laNS || S.tab === 'baoCao';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
-  $('khungBoLocChung').style.display = laNS ? 'none' : '';
+  $('khungBoLocChung').style.display = anLoc ? 'none' : '';
+  $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
   $('khungLocTuNgay').style.display = theoThang ? 'none' : '';
   $('khungLocDenNgay').style.display = theoThang ? 'none' : '';
   $('khungLocThangCuThe').style.display = (theoThang || laNS) ? 'none' : '';
@@ -5251,6 +5391,7 @@ function taiTab() {
   else if (S.tab === 'khoMieng') taiKhoMieng();
   else if (S.tab === 'xepLoai') taiXepLoai();
   else if (S.tab === 'luong') taiLuong();
+  else if (S.tab === 'baoCao') taiBaoCao();
 }
 
 /**
@@ -5363,20 +5504,22 @@ var NHOM_TAB = [
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['tongQuan'] },
   { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan'] },
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
-  { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] }
+  { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
+  { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] }
 ];
 var TEN_TAB = {
   tongQuan: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
-  khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương'
+  khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
   tongQuan: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg>',
   sanLuong: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="4" y1="17" x2="4" y2="10"/><line x1="10" y1="17" x2="10" y2="5"/><line x1="16" y1="17" x2="16" y2="12"/></svg>',
   nhanSu: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="6" r="2.6"/><path d="M2.5 17c0-3 2-4.8 4.5-4.8s4.5 1.8 4.5 4.8"/><circle cx="14.5" cy="7" r="2.1"/><path d="M12.8 12.6c.5-.2 1.1-.3 1.7-.3 2.2 0 3.8 1.5 3.8 4"/></svg>',
-  luong: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="2.5" y="5.5" width="15" height="10" rx="1.5"/><path d="M2.5 8.5h15"/><circle cx="14" cy="12" r="1"/></svg>'
+  luong: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="2.5" y="5.5" width="15" height="10" rx="1.5"/><path d="M2.5 8.5h15"/><circle cx="14" cy="12" r="1"/></svg>',
+  baoCao: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H5.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M11.5 2.5V7H16"/><path d="M10 9.5v5M7.8 12.3 10 14.5l2.2-2.2"/></svg>'
 };
 
 function timNhom(id) {
@@ -5508,6 +5651,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pKhoMieng').style.display = (ten === 'khoMieng') ? '' : 'none';
   $('pXepLoai').style.display = (ten === 'xepLoai') ? '' : 'none';
   $('pLuong').style.display = (ten === 'luong') ? '' : 'none';
+  $('pBaoCao').style.display = (ten === 'baoCao') ? '' : 'none';
   veTuyChonDoi();
   dungLocTo();
   capNhatHienBoLoc();
@@ -6628,7 +6772,7 @@ $('nutXacNhanChotLuong').onclick = ghiChotLuong;
 $('nutXtLuongXuatFile').onclick = xtXuatFileLuong;
 $('nenXemTruocLuong').onclick = function (e) { if (e.target === this) dongXemTruocLuong(); };
 
-$('nutHoSoLuong').onclick = xuatHoSoLuong;
+$('nutHoSoLuong').onclick = function () { xuatHoSoLuong(); };
 $('nutMoDieuChinh').onclick = moDieuChinh;
 $('nutDcHuy').onclick = function () { dongDieuChinh(); baoLoi('thongBao', ''); };
 $('nutDcLuu').onclick = luuDieuChinh;
@@ -6637,7 +6781,8 @@ $('nutKmTaiMau').onclick = kmTaiMauExcel;
 $('nutKmNhapFile').onclick = kmNhapFile;
 $('fileKhoMieng').onchange = kmXuLyFile;
 $('nutKmLuu').onclick = kmLuu;
-$('nutXuatSoCC').onclick = xuatSoChamCong;
+$('nutXuatSoCC').onclick = function () { xuatSoChamCong(); };
+$('bcDoi').onchange = _bcDungTo;
 $('nutXlDienA').onclick = xlDienA;
 $('nutXlTaiMau').onclick = xlTaiMauExcel;
 $('nutXlNhapFile').onclick = xlNhapFile;
