@@ -773,6 +773,23 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       </div>
     </section>
 
+    <!-- Tab: Xếp loại — đội trưởng xếp loại A/B/C từng công nhân mỗi tháng (tỷ lệ hưởng lương
+         sản phẩm theo DIM_XEP_LOAI); dùng chung ô "Kỳ" với tab Lương (#lgKy). -->
+    <section id="pXepLoai" style="display:none">
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto">Xếp loại công nhân</h3>
+          <input type="file" id="fileXepLoai" accept=".xlsx" style="display:none">
+          <button class="btn nho" id="nutXlDienA" title="Điền xếp loại A cho những người còn để trống">Người chưa xếp → A</button>
+          <button class="btn nho" id="nutXlTaiMau">Tải mẫu Excel</button>
+          <button class="btn nho" id="nutXlNhapFile">Nhập từ Excel</button>
+          <button class="btn chinh nho" id="nutXlLuu">Lưu</button>
+        </div>
+        <div id="xlTomTat" style="padding:0 16px 10px;font-size:13px"></div>
+        <div class="cuon cuon-doc"><table id="bangXepLoai"></table></div>
+      </div>
+    </section>
+
     <!-- Tab: Lương — tính từ chấm công và sản lượng quy khô của kỳ -->
     <section id="pLuong" style="display:none">
       <div class="kpis" id="kpisLuong"></div>
@@ -1030,7 +1047,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, dieuChinhQkDs: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
@@ -1042,7 +1059,7 @@ var LENH_GHI_NHAN_SU = { deXuatBienDong: 1, xuLyCanhBaoNS: 1, capNhatNguoiNS: 1 
 var _nsGhiLuc = 0;
 // Tương tự cho bảng giao sản lượng tháng: vừa bấm "Tính giao sản lượng" thì 2 phút
 // kế tiếp đọc thẳng Apps Script, vì BigQuery chưa kịp nhận bảng mới.
-var LENH_DOC_GIAO_SL = { slTheoCn: 1, luong: 1, hoTroKhoDs: 1, dieuChinhQkDs: 1 };   // cũng dùng cho khô miệng cạo: vừa lưu mà BigQuery chưa kịp thì đọc thẳng Apps Script
+var LENH_DOC_GIAO_SL = { slTheoCn: 1, luong: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1 };   // cũng dùng cho khô miệng cạo: vừa lưu mà BigQuery chưa kịp thì đọc thẳng Apps Script
 var _giaoSlGhiLuc = 0;
 
 /* =====================================================================
@@ -2821,14 +2838,34 @@ function kmXuLyFile(e) {
   reader.readAsArrayBuffer(file);
 }
 
+/**
+ * Lưu kiểu "ghi đè cả đội + kỳ" theo nhiều lô: cả đội ~400 người nhét vào 1 URL JSONP ~25KB,
+ * Apps Script từ chối (giới hạn ~8KB). Lô 1 xoá dữ liệu cũ, lô sau ghi thêm, lô cuối đẩy
+ * BigQuery (xem _loGhi trong Code.gs). Trả về kết quả từng lô theo thứ tự.
+ */
+function luuTheoLo(action, ky, dong, nut) {
+  var lo = chiaLoTheoDoDai(dong, 5000), kq = [];
+  if (!lo.length) lo = [[]];
+  function guiLo(i) {
+    if (i >= lo.length) return Promise.resolve(kq);
+    nut.textContent = lo.length > 1 ? 'Đang lưu ' + (i + 1) + '/' + lo.length + '…' : 'Đang lưu…';
+    return goiAPI(action, { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, dong: JSON.stringify(lo[i]),
+                            phan: i + 1, soPhan: lo.length }, 120000)
+      .then(function (d) { kq.push(d); return guiLo(i + 1); });
+  }
+  return guiLo(0);
+}
+
 function kmLuu() {
   if (!_kmDuLieu) return;
   var theoMa = _kmDocLuoi();
   var dong = _kmDuLieu.rows.map(function (r) { return { maCn: r.maCn, soCong: theoMa[r.maCn] || 0 }; });
   var nut = $('nutKmLuu');
-  nut.disabled = true; nut.textContent = 'Đang lưu…';
-  goiAPI('hoTroKhoLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: _kmDuLieu.ky, dong: JSON.stringify(dong) }, 120000)
-    .then(function (d) {
+  nut.disabled = true;
+  luuTheoLo('hoTroKhoLuu', _kmDuLieu.ky, dong, nut)
+    .then(function (ds) {
+      var d = { ky: ds[0].ky, soDong: 0, soCoCong: 0, tongTien: 0, bq: ds[ds.length - 1].bq };
+      ds.forEach(function (x) { d.soDong += x.soDong; d.soCoCong += x.soCoCong; d.tongTien += x.tongTien; });
       nut.disabled = false; nut.textContent = 'Lưu';
       _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
       _cacheFE = {};   // bảng Lương (Công KM/Tiền KM) phụ thuộc số vừa lưu — bỏ cache cũ
@@ -2841,6 +2878,161 @@ function kmLuu() {
                            ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
         '</div>';
       taiKhoMieng();
+    })
+    .catch(function (e) {
+      nut.disabled = false; nut.textContent = 'Lưu';
+      baoLoi('thongBao', e.message);
+    });
+}
+
+/* =====================================================================
+   Xep loai cong nhan theo thang — cung khuon voi kho mieng cao: luoi chon
+   A/B/C (hoac de trong = chua xep), mau Excel, luu ghi de ca doi + ky.
+   ===================================================================== */
+var _xlDuLieu = null;   // { ky, dsLoai: [{ma, tyLe, moTa}], soDaXep, tong, rows: [{maCn, ten, cccd, to, xepLoai}] }
+
+function taiXepLoai() {
+  $('bangXepLoai').innerHTML = skBang();
+  $('xlTomTat').innerHTML = '';
+  napDsKyNeuChua().then(function () {
+    var ky = $('lgKy').value;
+    if (!ky) { $('bangXepLoai').innerHTML = '<tbody><tr><td><div class="rong">Chưa có kỳ lương nào.</div></td></tr></tbody>'; return; }
+    return goiAPI('xepLoaiDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky }, 60000)
+      .then(function (d) { _xlDuLieu = d; veBangXepLoai(); });
+  }).catch(function (e) { baoLoi('thongBao', e.message); });
+}
+
+function veBangXepLoai() {
+  var d = _xlDuLieu;
+  var chon = '<option value="">—</option>' + d.dsLoai.map(function (x) {
+    return '<option value="' + thoat(x.ma) + '">' + thoat(x.ma) + ' (' + soVN(x.tyLe * 100, 0) + '%)</option>';
+  }).join('');
+  var h = '<thead><tr><th>STT</th><th>Mã CN</th><th>Họ và tên</th><th>Số CCCD</th><th>Xếp loại</th></tr></thead><tbody>';
+  if (!d.rows.length) h += '<tr><td colspan="5"><div class="rong">Đội chưa có công nhân nào.</div></td></tr>';
+  for (var i = 0; i < d.rows.length; i++) {
+    var r = d.rows[i];
+    h += '<tr data-ma="' + thoat(r.maCn) + '"><td>' + (i + 1) + '</td><td><b>' + thoat(r.maCn) + '</b></td>' +
+      '<td>' + (r.ten ? thoat(r.ten) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td>' + (r.cccd ? thoat(r.cccd) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td><select class="o xlChon" style="width:110px">' + chon + '</select></td></tr>';
+  }
+  $('bangXepLoai').innerHTML = h + '</tbody>';
+  var tr = $('bangXepLoai').querySelectorAll('tbody tr[data-ma]');
+  for (var j = 0; j < tr.length; j++) tr[j].querySelector('.xlChon').value = d.rows[j].xepLoai || '';
+  veTomTatXepLoai();
+}
+
+/** Đếm lại theo lưới đang chọn (chưa lưu) để đội trưởng thấy ngay tỷ lệ A/B/C. */
+function veTomTatXepLoai() {
+  var d = _xlDuLieu, theoMa = _xlDocLuoi(), dem = {}, chua = 0;
+  for (var ma in theoMa) { if (theoMa[ma]) dem[theoMa[ma]] = (dem[theoMa[ma]] || 0) + 1; else chua++; }
+  var phan = d.dsLoai.map(function (x) { return 'Loại <b>' + thoat(x.ma) + '</b>: ' + soVN(dem[x.ma] || 0, 0); });
+  phan.push(chua ? '<b style="color:var(--warn,#c77700)">Chưa xếp: ' + soVN(chua, 0) + '</b> (bảng lương tạm tính 100%)' : 'Đã xếp đủ');
+  $('xlTomTat').innerHTML = 'Kỳ <b>' + thoat(d.ky) + '</b> · ' + soVN(d.tong, 0) + ' công nhân · ' + phan.join(' · ') +
+    (d.soDaXep ? '' : ' · <span class="nhan-mo">chưa ai được xếp loại cho kỳ này</span>');
+}
+
+function _xlDocLuoi() {
+  var tr = $('bangXepLoai').querySelectorAll('tbody tr[data-ma]');
+  var theoMa = {};
+  for (var i = 0; i < tr.length; i++) theoMa[tr[i].getAttribute('data-ma')] = tr[i].querySelector('.xlChon').value;
+  return theoMa;
+}
+
+function xlDienA() {
+  var o = $('bangXepLoai').querySelectorAll('.xlChon'), n = 0;
+  for (var i = 0; i < o.length; i++) if (!o[i].value) { o[i].value = 'A'; n++; }
+  veTomTatXepLoai();
+  if (n) $('xlTomTat').innerHTML += ' · <b>Vừa điền A cho ' + soVN(n, 0) + ' người</b> — bấm Lưu để ghi.';
+}
+
+function xlTaiMauExcel() {
+  if (!_xlDuLieu || !window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
+  var hienTai = _xlDocLuoi();
+  var wb = new ExcelJS.Workbook();
+  var ws = wb.addWorksheet('XEP LOAI');
+  ws.columns = [
+    { header: 'STT', width: 6 }, { header: 'Mã CN', width: 14 },
+    { header: 'Họ và tên', width: 24 }, { header: 'Số CCCD', width: 14 },
+    { header: 'Xếp loại (' + _xlDuLieu.dsLoai.map(function (x) { return x.ma; }).join('/') + ')', width: 16 }
+  ];
+  ws.getRow(1).font = { bold: true };
+  var ds = _xlDuLieu.rows;
+  for (var i = 0; i < ds.length; i++) {
+    var r = ds[i];
+    ws.addRow([i + 1, r.maCn, r.ten || '', r.cccd || '', hienTai[r.maCn] || '']);
+  }
+  var ten = 'mau_xep_loai_' + S.maDonVi.replace(/[\\/:*?"<>|]/g, '_') + '_' + _xlDuLieu.ky + '.xlsx';
+  wb.xlsx.writeBuffer().then(function (buf) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.download = ten; a.click();
+  });
+}
+
+function xlNhapFile() { $('fileXepLoai').value = ''; $('fileXepLoai').click(); }
+
+function xlXuLyFile(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file || !_xlDuLieu || !window.ExcelJS) return;
+  var hopLe = {};
+  _xlDuLieu.dsLoai.forEach(function (x) { hopLe[x.ma] = 1; });
+  var reader = new FileReader();
+  reader.onload = function () {
+    var wb = new ExcelJS.Workbook();
+    wb.xlsx.load(reader.result).then(function () {
+      var ws = wb.worksheets[0];
+      var theoMa = {}, sai = [];
+      ws.eachRow(function (row, soHang) {
+        if (soHang === 1) return;
+        var maCn = String(row.getCell(2).value || '').trim();
+        var xl = String(row.getCell(5).value || '').trim().toUpperCase();
+        if (!maCn) return;
+        if (xl && !hopLe[xl]) { sai.push(maCn + ' "' + xl + '"'); return; }
+        theoMa[maCn] = xl;
+      });
+      var soKhop = 0;
+      var tr = $('bangXepLoai').querySelectorAll('tbody tr[data-ma]');
+      for (var i = 0; i < tr.length; i++) {
+        var ma = tr[i].getAttribute('data-ma');
+        if (theoMa[ma] === undefined) continue;
+        tr[i].querySelector('.xlChon').value = theoMa[ma];
+        soKhop++;
+      }
+      baoLoi('thongBao', sai.length ? 'Bỏ qua ' + sai.length + ' dòng xếp loại không hợp lệ: ' + sai.slice(0, 5).join(', ') + (sai.length > 5 ? '…' : '') : '');
+      veTomTatXepLoai();
+      $('xlTomTat').innerHTML += ' · <b>Đã nhập từ file:</b> khớp ' + soVN(soKhop, 0) + ' / ' + soVN(Object.keys(theoMa).length, 0) + ' mã CN trong file.';
+    }).catch(function (err) { baoLoi('thongBao', 'Không đọc được file Excel: ' + err.message); });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function xlLuu() {
+  if (!_xlDuLieu) return;
+  var theoMa = _xlDocLuoi();
+  var dong = _xlDuLieu.rows.map(function (r) { return { maCn: r.maCn, xepLoai: theoMa[r.maCn] || '' }; });
+  var nut = $('nutXlLuu');
+  nut.disabled = true;
+  luuTheoLo('xepLoaiLuu', _xlDuLieu.ky, dong, nut)
+    .then(function (ds) {
+      var d = { ky: ds[0].ky, soDong: 0, soDaXep: 0, dem: {}, bq: ds[ds.length - 1].bq };
+      ds.forEach(function (x) {
+        d.soDong += x.soDong; d.soDaXep += x.soDaXep;
+        for (var k in x.dem) d.dem[k] = (d.dem[k] || 0) + x.dem[k];
+      });
+      nut.disabled = false; nut.textContent = 'Lưu';
+      _giaoSlGhiLuc = (d.bq && d.bq.ok) ? 0 : Date.now();
+      _cacheFE = {};   // bảng Lương (tỷ lệ xếp loại) phụ thuộc số vừa lưu — bỏ cache cũ
+      var dem = Object.keys(d.dem || {}).sort().map(function (x) { return x + ': ' + d.dem[x]; }).join(', ');
+      $('thongBao').innerHTML =
+        '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+        'Đã lưu xếp loại kỳ ' + thoat(d.ky) + ': ' + soVN(d.soDaXep, 0) + ' / ' + soVN(d.soDong, 0) + ' người' +
+        (dem ? ' (' + thoat(dem) + ')' : '') + '. ' +
+        (d.bq ? (d.bq.ok ? 'Đồng bộ BigQuery: ' + thoat(d.bq.thongBao) + '.'
+                         : '<b>Chưa lên được BigQuery</b> — ' + thoat(d.bq.thongBao) +
+                           ' Số liệu vẫn nằm an toàn trong Sheet, hệ thống sẽ tự thử đẩy lại sau 30 giây.') : '') +
+        '</div>';
+      taiXepLoai();
     })
     .catch(function (e) {
       nut.disabled = false; nut.textContent = 'Lưu';
@@ -4544,6 +4736,7 @@ var LOC_THEO_TAB = {
   giaoKhoan: ['doi', 'to', 'phien'],
   slTheoCn: ['doi', 'to'],
   khoMieng: ['doi', 'to'],
+  xepLoai: ['doi', 'to'],
   luong: ['doi', 'to']
 };
 
@@ -4559,7 +4752,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng';    // tab tính theo tháng: bỏ lọc khoảng ngày
+  var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = laNS ? 'none' : '';
   $('khungLocTuNgay').style.display = theoThang ? 'none' : '';
   $('khungLocDenNgay').style.display = theoThang ? 'none' : '';
@@ -4568,7 +4761,7 @@ function capNhatHienBoLoc() {
   $('locNhanh').style.display = theoThang ? 'none' : '';
   $('khungLocKy').style.display = theoThang ? '' : 'none';
   $('slKy').style.display = S.tab === 'slTheoCn' ? '' : 'none';
-  $('lgKy').style.display = (S.tab === 'luong' || S.tab === 'khoMieng') ? '' : 'none';
+  $('lgKy').style.display = (S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai') ? '' : 'none';
   $('gatTrangThai').style.display = (laNS || S.toanCongTy) ? 'none' : '';
   for (var k in KHUNG_LOC) {
     var el = $(KHUNG_LOC[k]);
@@ -4729,6 +4922,7 @@ function taiTab() {
   else if (S.tab === 'giaoKhoan') taiGiaoKhoan();
   else if (S.tab === 'slTheoCn') taiSlTheoCn();
   else if (S.tab === 'khoMieng') taiKhoMieng();
+  else if (S.tab === 'xepLoai') taiXepLoai();
   else if (S.tab === 'luong') taiLuong();
 }
 
@@ -4737,7 +4931,7 @@ function taiTab() {
  * dữ liệu chi tiết theo từng dòng/từng người, xem "Tất cả" cùng lúc quá nặng và khó đọc.
  * Tổng quan/Xếp hạng/Giao khoán vẫn xem được "Tất cả" vì đã có sẵn bảng tổng hợp theo đội.
  */
-var TAB_CHI_DOI = { sanLuong: 1, phieu: 1, chamCong: 1, doiChieu: 1, nhanSu: 1, slTheoCn: 1, khoMieng: 1, luong: 1 };
+var TAB_CHI_DOI = { sanLuong: 1, phieu: 1, chamCong: 1, doiChieu: 1, nhanSu: 1, slTheoCn: 1, khoMieng: 1, xepLoai: 1, luong: 1 };
 
 /** Tab đang ẩn khỏi thanh tab — không cho phục hồi/URL đưa thẳng vào, rơi về Tổng quan. */
 var TAB_AN = { doiChieu: 1 };
@@ -4841,14 +5035,14 @@ function veTomTatBoLoc() {
 var NHOM_TAB = [
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['tongQuan'] },
   { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan'] },
-  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang'] },
-  { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'luong'] }
+  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
+  { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] }
 ];
 var TEN_TAB = {
   tongQuan: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
-  khoMieng: 'Khô miệng cạo', luong: 'Lương'
+  khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -4969,6 +5163,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pGiaoKhoan').style.display = (ten === 'giaoKhoan') ? '' : 'none';
   $('pSlTheoCn').style.display = (ten === 'slTheoCn') ? '' : 'none';
   $('pKhoMieng').style.display = (ten === 'khoMieng') ? '' : 'none';
+  $('pXepLoai').style.display = (ten === 'xepLoai') ? '' : 'none';
   $('pLuong').style.display = (ten === 'luong') ? '' : 'none';
   veTuyChonDoi();
   dungLocTo();
@@ -6088,6 +6283,12 @@ $('nutKmTaiMau').onclick = kmTaiMauExcel;
 $('nutKmNhapFile').onclick = kmNhapFile;
 $('fileKhoMieng').onchange = kmXuLyFile;
 $('nutKmLuu').onclick = kmLuu;
+$('nutXlDienA').onclick = xlDienA;
+$('nutXlTaiMau').onclick = xlTaiMauExcel;
+$('nutXlNhapFile').onclick = xlNhapFile;
+$('fileXepLoai').onchange = xlXuLyFile;
+$('nutXlLuu').onclick = xlLuu;
+$('bangXepLoai').onchange = function (e) { if (e.target.classList.contains('xlChon')) veTomTatXepLoai(); };
 $('nutHuyXemTruoc').onclick = function () { dongXemTruoc(); baoLoi('thongBao', ''); };
 $('nutXacNhanGhi').onclick = ghiBangGiao;
 $('nutXtXuatFile').onclick = xtXuatFile;
