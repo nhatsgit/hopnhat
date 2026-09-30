@@ -269,6 +269,17 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   border-top:2px solid var(--line-2);font-size:17px;font-weight:700;letter-spacing:-.01em}
 .nhom-tq:first-child{margin-top:0;padding-top:0;border-top:none}
 .nhom-tq small{font-size:12.5px;font-weight:400;color:var(--ink-3)}
+/* Tab Bản đồ lô */
+.luoi-bd{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;margin-bottom:20px}
+@media (max-width:900px){.luoi-bd{grid-template-columns:1fr}}
+#banDo{height:620px;width:100%;background:#1c2a22}
+@media (max-width:900px){#banDo{height:460px}}
+.ct-bd{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0}
+.ct-bd i{display:inline-block;width:16px;height:12px;border-radius:2px;flex:none;border:1px solid rgba(0,0,0,.15)}
+.bd-bang{width:100%;font-size:13px}
+.bd-bang td{padding:3px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.bd-bang td:first-child{color:var(--ink-3);padding-right:8px;white-space:nowrap}
+.leaflet-tooltip.bd-tip{font-size:12.5px;font-family:inherit}
 /* Trang Phân quyền */
 .thanh-pq{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px;margin-bottom:16px}
 .dau-the-pq{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px}
@@ -977,6 +988,42 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="luoi-bc" id="dsBaoCao"></div>
     </section>
 
+    <!-- Tab Bản đồ lô: ranh lô (DIM_LO_BAN_DO, action banDoLo) trên nền vệ tinh, tô màu theo năng suất /
+         xếp hạng / giống / năm trồng / tổ / lệch diện tích (số liệu lấy từ nangSuatVuon). Leaflet nạp khi mở tab. -->
+    <section id="pBanDoLo" style="display:none">
+      <div class="the thanh-pq">
+        <div><label class="nhan" for="bdMau">Tô màu theo</label>
+          <select class="o" id="bdMau" style="width:auto">
+            <option value="kgHa">Năng suất năm (kg quy khô/ha)</option>
+            <option value="ns2025">Năng suất 2025 theo kiểm kê (kg/ha)</option>
+            <option value="xepHang">Xếp hạng vườn cây (Q1–Q4)</option>
+            <option value="giong">Giống</option>
+            <option value="namTrong">Năm trồng</option>
+            <option value="to">Tổ</option>
+            <option value="lech">Lệch diện tích bản đồ – kiểm kê</option>
+          </select></div>
+        <div><label class="nhan" for="bdNam">Năm</label><select class="o" id="bdNam" style="width:auto"></select></div>
+        <div id="khungBdDoi"><label class="nhan" for="bdDoi">Đội</label><select class="o" id="bdDoi" style="width:auto"></select></div>
+        <div id="khungBdTo"><label class="nhan" for="bdTo">Tổ</label><select class="o" id="bdTo" style="width:auto"></select></div>
+        <div><label class="nhan" for="bdQ">Tìm lô</label><input class="o" id="bdQ" placeholder="Tên lô / mã lô rừng" style="width:160px"></div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end" id="khungBdNap">
+          <input type="file" id="bdFile" accept=".geojson,.json" style="display:none">
+          <button class="btn nho" id="bdNapFile" title="Nạp file GeoJSON ranh lô mới (thay hình các lô có trong file)">Nạp file bản đồ</button>
+        </div>
+      </div>
+      <div id="bdLoi"></div>
+      <div class="kpis" id="kpisBd"></div>
+      <div class="luoi-bd">
+        <div class="the" style="padding:0;overflow:hidden"><div id="banDo"></div></div>
+        <div class="the o-bieu-do" style="min-width:0">
+          <h3 class="tieude-muc" id="bdTieuDeChuThich">Chú thích</h3>
+          <div id="bdChuThich"></div>
+          <h3 class="tieude-muc" style="margin-top:18px">Lô đang chọn</h3>
+          <div id="bdChiTiet" class="goi-y">Bấm vào một lô trên bản đồ để xem chi tiết.</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Tab Quản trị → Phân quyền (chỉ Admin): quản lý 3 bảng DIM_VAI_TRO / DIM_CHUC_NANG / PHAN_QUYEN
          (PhanQuyen.gs). Tick Xem / Thêm / Sửa / Xoá từng chức năng cho từng vai trò, thêm vai trò mới. -->
     <section id="pPhanQuyen" style="display:none">
@@ -1274,7 +1321,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
@@ -1402,6 +1449,7 @@ function coQuyenCu(ma, tt) {
   if (ma === 'sanLuong' || ma === 'chamCong') return vt === 'TO_TRUONG' || (ma === 'sanLuong' && tt === 'SUA' && S.vaiTroHienThi === 'TRO_LY');
   if (ma === 'nhanSu') return vt === 'TO_TRUONG' || vt === 'DOI_TRUONG';
   if (ma === 'canhBaoNS') return true;
+  if (ma === 'banDoLo') return false;         // nạp bản đồ: chỉ Admin
   return vt === 'DOI_TRUONG';
 }
 
@@ -3794,6 +3842,308 @@ function _nsvDsKhac(rows, lay) {
 }
 
 function _nsvGiong(r) { return r.giongTen || r.giong || ''; }
+
+/* =====================================================================
+   Tab BẢN ĐỒ LÔ — hình lô (banDoLo) ghép số liệu lô (nangSuatVuon) theo MA_LO.
+   Leaflet chỉ nạp khi mở tab lần đầu. Nền: vệ tinh Esri / bản đồ OpenStreetMap.
+   ===================================================================== */
+var _bdMap = null, _bdLop = null, _bd = null, _bdChon = null;
+
+function napLeaflet() {
+  if (window.L) return Promise.resolve();
+  return new Promise(function (ok, loi) {
+    var css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(css);
+    var js = document.createElement('script');
+    js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    js.onload = function () { ok(); };
+    js.onerror = function () { loi(new Error('Không tải được thư viện bản đồ (Leaflet) — kiểm tra mạng rồi thử lại.')); };
+    document.head.appendChild(js);
+  });
+}
+
+function taiBanDoLo() {
+  $('khungBdNap').style.display = coQuyen('banDoLo', 'SUA') ? '' : 'none';
+  $('kpisBd').innerHTML = skKpis(4);
+  var nam = $('bdNam').value || String(new Date().getFullYear());
+  Promise.all([napLeaflet(), goiCache('banDoLo', { vaiTro: S.vaiTro, maDonVi: S.maDonVi }),
+               goiCache('nangSuatVuon', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, nam: nam })]).then(function (kq) {
+    var soLieu = {};
+    kq[2].rows.forEach(function (r) { soLieu[r.maLo] = r; });
+    _bd = { hinh: kq[1], nsv: kq[2], soLieu: soLieu };
+    _nsvChon($('bdNam'), (kq[2].dsNam || []).slice().reverse(), '', false);
+    $('bdNam').value = kq[2].nam;
+    var dsDoi = _nsvDsKhac(kq[1].lo, function (x) { return x.doi; });
+    _nsvChon($('bdDoi'), dsDoi, 'Tất cả đội', true);
+    $('khungBdDoi').style.display = dsDoi.length > 1 ? '' : 'none';
+    _bdDungTo();
+    if (!_bdMap) _bdTaoBanDo();
+    veBanDoLo(true);
+    baoLoi('bdLoi', '');
+  }).catch(function (e) { $('kpisBd').innerHTML = ''; baoLoi('bdLoi', e.message); });
+}
+
+function _bdDungTo() {
+  var doi = $('bdDoi').value;
+  var ds = _nsvDsKhac(_bd.hinh.lo.filter(function (x) { return !doi || x.doi === doi; }), function (x) { return x.to; });
+  _nsvChon($('bdTo'), ds, 'Tất cả tổ', true);
+  $('khungBdTo').style.display = ds.length > 1 ? '' : 'none';
+}
+
+function _bdTaoBanDo() {
+  _bdMap = L.map('banDo', { preferCanvas: true, zoomControl: true });
+  var veTinh = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Ảnh vệ tinh © Esri' });
+  var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+  veTinh.addTo(_bdMap);
+  L.control.layers({ 'Vệ tinh': veTinh, 'Bản đồ': osm }, null, { position: 'topright' }).addTo(_bdMap);
+  L.control.scale({ imperial: false }).addTo(_bdMap);
+  _bdMap.setView([13.19, 104.62], 12);
+}
+
+function _bdLoc() {
+  var doi = $('bdDoi').value, to = $('bdTo').value, q = $('bdQ').value.trim().toLowerCase();
+  return _bd.hinh.lo.filter(function (x) {
+    if (doi && x.doi !== doi) return false;
+    if (to && x.to !== to) return false;
+    if (q && (x.tenLo + ' ' + x.maLoRung + ' ' + x.plotNo).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
+
+/** Giá trị của lô theo chỉ số đang tô màu (null = không có số liệu). */
+function _bdGiaTri(x, chiSo) {
+  var r = _bd.soLieu[x.maLo];
+  if (chiSo === 'to') return x.to;
+  if (!r) return null;
+  if (chiSo === 'kgHa') { var c = _nsvCong([r]); return c.qk ? c.kgHa : null; }
+  if (chiSo === 'ns2025') return (r.nsNam && r.nsNam[2025]) || null;
+  if (chiSo === 'xepHang') return r.xepHang || null;
+  if (chiSo === 'giong') return _nsvGiong(r) || null;
+  if (chiSo === 'namTrong') return r.namTrong || null;
+  if (chiSo === 'lech') return r.dienTich ? (x.dtBanDo - r.dienTich) / r.dienTich * 100 : null;
+  return null;
+}
+
+var BD_MAU_LIEN = ['#f2e7c9', '#c9dd9b', '#8fc27a', '#4e9a5d', '#1f6b45'];   // thấp -> cao
+var BD_MAU_ROI = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d', '#1f78b4', '#b15928', '#6a3d9a', '#999999'];
+var BD_MAU_Q = { Q1: '#1f6b45', Q2: '#8fc27a', Q3: '#e6ab02', Q4: '#c0392b' };
+
+/** Thang màu cho chỉ số: trả { mau(v), chuThich: [[màu, nhãn]] }. */
+function _bdThang(ds, chiSo) {
+  var vals = ds.map(function (x) { return _bdGiaTri(x, chiSo); }).filter(function (v) { return v !== null && v !== undefined && v !== ''; });
+  if (chiSo === 'xepHang') {
+    return { mau: function (v) { return BD_MAU_Q[v] || '#999'; },
+             chuThich: ['Q1', 'Q2', 'Q3', 'Q4'].map(function (q) { return [BD_MAU_Q[q], q + ' (' + vals.filter(function (v) { return v === q; }).length + ' lô)']; }) };
+  }
+  if (chiSo === 'giong' || chiSo === 'to') {
+    var dem = {};
+    vals.forEach(function (v) { dem[v] = (dem[v] || 0) + 1; });
+    var ds2 = Object.keys(dem).sort(function (a, b) { return dem[b] - dem[a]; });
+    var m = {};
+    ds2.forEach(function (v, i) { m[v] = BD_MAU_ROI[Math.min(i, BD_MAU_ROI.length - 1)]; });
+    return { mau: function (v) { return m[v] || '#999'; },
+             chuThich: ds2.slice(0, 10).map(function (v) { return [m[v], v + ' (' + dem[v] + ' lô)']; })
+               .concat(ds2.length > 10 ? [[BD_MAU_ROI[10], (ds2.length - 10) + ' nhóm khác']] : []) };
+  }
+  if (chiSo === 'lech') {
+    var nac = [[-Infinity, -10, '#c0392b', 'Bản đồ nhỏ hơn > 10%'], [-10, -5, '#e59866', 'Nhỏ hơn 5–10%'], [-5, 5, '#f2f2e6', 'Lệch dưới 5%'],
+               [5, 10, '#7fb3d5', 'Lớn hơn 5–10%'], [10, Infinity, '#1f618d', 'Bản đồ lớn hơn > 10%']];
+    return { mau: function (v) { for (var i = 0; i < nac.length; i++) if (v >= nac[i][0] && v < nac[i][1]) return nac[i][2]; return '#999'; },
+             chuThich: nac.map(function (n) { return [n[2], n[3] + ' (' + vals.filter(function (v) { return v >= n[0] && v < n[1]; }).length + ' lô)']; }) };
+  }
+  if (chiSo === 'namTrong') {           // ít năm khác nhau: mỗi năm 1 màu, cũ (đậm) -> mới (nhạt)
+    var dsNam = Object.keys(vals.reduce(function (m, v) { m[v] = 1; return m; }, {})).map(Number).sort(function (a, b) { return a - b; });
+    var mauNam = {};
+    dsNam.forEach(function (y, i) { mauNam[y] = BD_MAU_LIEN[BD_MAU_LIEN.length - 1 - Math.round(i * (BD_MAU_LIEN.length - 1) / Math.max(1, dsNam.length - 1))]; });
+    return { mau: function (v) { return mauNam[v] || '#999'; },
+             chuThich: dsNam.map(function (y) { return [mauNam[y], y + ' (' + vals.filter(function (v) { return v === y; }).length + ' lô)']; }) };
+  }
+  // Liên tục: 5 khoảng theo phân vị (mỗi màu ~ số lô bằng nhau)
+  var s = vals.slice().sort(function (a, b) { return a - b; });
+  if (!s.length) return { mau: function () { return '#999'; }, chuThich: [] };
+  var moc = [1, 2, 3, 4].map(function (k) { return s[Math.floor(s.length * k / 5)]; });
+  var nhan = function (a, b) { return soVN(a, 0) + '–' + soVN(b, 0); };
+  var bien = [s[0]].concat(moc).concat([s[s.length - 1]]);
+  return { mau: function (v) { var i = 0; while (i < 4 && v >= moc[i]) i++; return BD_MAU_LIEN[i]; },
+           chuThich: BD_MAU_LIEN.map(function (c, i) { return [c, nhan(bien[i], bien[i + 1])]; }) };
+}
+
+var BD_TEN_CHI_SO = { kgHa: 'kg quy khô/ha', ns2025: 'kg/ha (2025)', xepHang: 'Xếp hạng', giong: 'Giống', namTrong: 'Năm trồng', to: 'Tổ', lech: 'Lệch diện tích' };
+
+function _bdDinhDang(v, chiSo) {
+  if (v === null || v === undefined) return '—';
+  if (chiSo === 'kgHa' || chiSo === 'ns2025') return soVN(v, 0) + ' kg/ha';
+  if (chiSo === 'lech') return (v > 0 ? '+' : '') + soVN(v, 1) + '%';
+  return String(v);
+}
+
+function veBanDoLo(canVua) {
+  if (!_bd || !_bdMap) return;
+  var chiSo = $('bdMau').value, ds = _bdLoc(), thang = _bdThang(ds, chiSo);
+  if (_bdLop) _bdMap.removeLayer(_bdLop);
+  _bdLop = L.geoJSON({ type: 'FeatureCollection', features: ds.map(function (x) {
+    return { type: 'Feature', properties: { maLo: x.maLo }, geometry: x.g };
+  }) }, {
+    style: function (f) {
+      var x = _bdTimLo(f.properties.maLo), v = _bdGiaTri(x, chiSo);
+      var chon = _bdChon === x.maLo;
+      return { color: chon ? '#ffd400' : '#ffffff', weight: chon ? 3 : 1, opacity: .9,
+               fillColor: v === null ? '#9e9e9e' : thang.mau(v), fillOpacity: v === null ? .25 : .6 };
+    },
+    onEachFeature: function (f, lop) {
+      var x = _bdTimLo(f.properties.maLo);
+      lop.bindTooltip('<b>' + thoat(x.doi + ' · lô ' + x.tenLo) + '</b> (' + thoat(x.to) + ')<br>' +
+        thoat(BD_TEN_CHI_SO[chiSo] + ': ' + _bdDinhDang(_bdGiaTri(x, chiSo), chiSo)), { sticky: true, className: 'bd-tip' });
+      lop.on('click', function () { _bdChon = x.maLo; veChiTietLo(x); _bdLop.setStyle(_bdLop.options.style); });
+    }
+  }).addTo(_bdMap);
+  if (canVua && ds.length) _bdMap.fitBounds(_bdLop.getBounds(), { padding: [20, 20] });
+
+  $('bdTieuDeChuThich').textContent = 'Chú thích — ' + BD_TEN_CHI_SO[chiSo];
+  $('bdChuThich').innerHTML = thang.chuThich.map(function (c) {
+    return '<div class="ct-bd"><i style="background:' + c[0] + '"></i>' + thoat(c[1]) + '</div>';
+  }).join('') + '<div class="ct-bd"><i style="background:#9e9e9e;opacity:.5"></i>Chưa có số liệu</div>';
+
+  // Thẻ tổng hợp (phạm vi đang lọc)
+  var soLoPv = _bd.nsv.rows.filter(function (r) {
+    return (!$('bdDoi').value || r.doi === $('bdDoi').value) && (!$('bdTo').value || r.to === $('bdTo').value);
+  });
+  var coHinh = {}; _bd.hinh.lo.forEach(function (x) { coHinh[x.maLo] = 1; });
+  var thieu = soLoPv.filter(function (r) { return !coHinh[r.maLo]; });
+  var dtBd = ds.reduce(function (a, x) { return a + (x.dtBanDo || 0); }, 0);
+  var dtKk = ds.reduce(function (a, x) { var r = _bd.soLieu[x.maLo]; return a + ((r && r.dienTich) || 0); }, 0);
+  var lech10 = ds.filter(function (x) { var v = _bdGiaTri(x, 'lech'); return v !== null && Math.abs(v) > 10; }).length;
+  $('kpisBd').innerHTML =
+    the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
+    the_kpi('Diện tích bản đồ', soVN(dtBd, 2), 'ha', 'Kiểm kê ' + soVN(dtKk, 2) + ' ha · lệch ' + (dtKk ? soVN((dtBd - dtKk) / dtKk * 100, 2) : '0') + '%') +
+    the_kpi_canh(lech10 > 0, 'Lệch diện tích > 10%', soVN(lech10, 0), 'lô', 'Bản đồ so với kiểm kê — tô màu "Lệch diện tích" để xem') +
+    the_kpi('Cập nhật bản đồ', _bdNgay(_bd.hinh.capNhat), '', 'Nạp từ file GeoJSON đã làm sạch');
+  if (_bdChon) { var xc = _bdTimLo(_bdChon); if (xc) veChiTietLo(xc); }
+}
+
+function _bdTimLo(ma) {
+  for (var i = 0; i < _bd.hinh.lo.length; i++) if (_bd.hinh.lo[i].maLo === ma) return _bd.hinh.lo[i];
+  return null;
+}
+
+/** Ngày cập nhật: chuỗi 'yyyy-mm-dd…' hoặc số seri ngày của Sheet (Cloud Run đọc thô). */
+function _bdNgay(v) {
+  if (v === '' || v === null || v === undefined) return '—';
+  var n = Number(v);
+  if (!isNaN(n) && n > 20000) { var d = new Date(Date.UTC(1899, 11, 30) + n * 86400000); return ngayVN(d.toISOString().substring(0, 10)); }
+  return ngayVN(String(v).substring(0, 10));
+}
+
+function veChiTietLo(x) {
+  var r = _bd.soLieu[x.maLo] || {}, c = r.thang ? _nsvCong([r]) : null, lech = _bdGiaTri(x, 'lech');
+  var dong = function (a, b) { return '<tr><td>' + thoat(a) + '</td><td>' + b + '</td></tr>'; };
+  $('bdChiTiet').className = '';
+  $('bdChiTiet').innerHTML = '<table class="bd-bang">' +
+    dong('Lô', '<b>' + thoat(x.doi + ' · lô ' + x.tenLo) + '</b>') + dong('Tổ', thoat(x.to)) +
+    dong('Mã lô rừng', thoat(x.maLoRung || '—')) + dong('ID lô mới', thoat(r.idLoMoi || '—')) +
+    dong('Giống', thoat(_nsvGiong(r) || '—')) + dong('Năm trồng', thoat(String(r.namTrong || '—'))) +
+    dong('Mở cạo', thoat(String(r.thangMoCao || r.namMoCao || '—'))) + dong('Xếp hạng', thoat(r.xepHang || '—')) +
+    dong('DT kiểm kê', r.dienTich ? soVN(r.dienTich, 2) + ' ha' : '—') +
+    dong('DT bản đồ', soVN(x.dtBanDo, 2) + ' ha' + (x.soManh > 1 ? ' (' + x.soManh + ' mảnh)' : '')) +
+    dong('Lệch', lech === null ? '—' : '<b style="color:' + (Math.abs(lech) > 10 ? 'var(--clay)' : 'inherit') + '">' + _bdDinhDang(lech, 'lech') + '</b>') +
+    dong('Cây cạo', r.cayCao ? soVN(r.cayCao, 0) : '—') +
+    dong('Quy khô ' + (_bd.nsv.nam || ''), c && c.qk ? soVN(c.qk, 0) + ' kg' : '—') +
+    dong('Năng suất', c && c.qk ? soVN(c.kgHa, 0) + ' kg/ha' : '—') +
+    dong('NS 2025', r.nsNam && r.nsNam[2025] ? soVN(r.nsNam[2025], 0) + ' kg/ha' : '—') +
+    '</table><div style="margin-top:10px"><button class="btn nho" id="bdMoNsv">Xem ở Năng suất vườn cây</button></div>';
+  $('bdMoNsv').onclick = function () {
+    chuyenTab('nangSuatVuon', 'sanLuong');
+    setTimeout(function () { $('nsvQ').value = x.maLoRung || x.tenLo; if (_nsv) veNangSuatVuon(); }, 1500);
+  };
+}
+
+/* ---- Admin nạp file GeoJSON ----
+   Đọc file (UTF-8, hoặc bảng mã tiếng Việt Windows-1258 như file xuất từ phần mềm GIS cũ), ghép lô theo
+   (đội, tên lô) từ thuộc tính DOI + TEN_LO, hoặc PLOT_NO dạng "Đ1-KV2-15". Nhiều feature cùng lô gộp thành
+   MultiPolygon. Nên dùng file đã làm sạch (hình tự cắt không được sửa ở trình duyệt). */
+function _bdDienTichHa(g) {
+  var mot = function (poly) {
+    var tong = 0;
+    poly.forEach(function (ring, i) {
+      var lat = ring.reduce(function (a, p) { return a + p[1]; }, 0) / ring.length, rad = lat * Math.PI / 180;
+      var mx = 111412.84 * Math.cos(rad) - 93.5 * Math.cos(3 * rad), my = 111132.92 - 559.82 * Math.cos(2 * rad);
+      var s = 0;
+      for (var k = 0; k < ring.length - 1; k++) s += ring[k][0] * mx * ring[k + 1][1] * my - ring[k + 1][0] * mx * ring[k][1] * my;
+      tong += (i === 0 ? 1 : -1) * Math.abs(s / 2);
+    });
+    return tong / 10000;
+  };
+  return g.type === 'MultiPolygon' ? g.coordinates.reduce(function (a, p) { return a + mot(p); }, 0) : mot(g.coordinates);
+}
+
+function bdNapFile(file) {
+  baoLoi('bdLoi', '');
+  var rd = new FileReader();
+  rd.onload = function () {
+    var buf = rd.result, txt;
+    try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) { txt = new TextDecoder('windows-1258').decode(buf); }
+    var gj;
+    try { gj = JSON.parse(txt); } catch (e) { baoLoi('bdLoi', 'File không phải GeoJSON hợp lệ: ' + e.message); return; }
+    var theoKhoa = {};
+    _bd.nsv.rows.forEach(function (r) { theoKhoa[r.doi + '|' + String(r.tenLo).toUpperCase().replace(/-/g, '')] = r; });
+    var gom = {}, khongKhop = [], saiHinh = [];
+    (gj.features || []).forEach(function (f) {
+      var p = f.properties || {}, doi = p.DOI, lo = p.TEN_LO;
+      if (!doi || lo === undefined) { var t = String(p.PLOT_NO || '').split('-'); doi = t[0]; lo = t.slice(2).join('-'); }
+      var r = theoKhoa[doi + '|' + String(lo).toUpperCase().replace(/-/g, '')];
+      var ten = p.PLOT_NO || (doi + ' lô ' + lo);
+      if (!r) { khongKhop.push(ten); return; }
+      var g = f.geometry || {};
+      if (g.type !== 'Polygon' && g.type !== 'MultiPolygon') { saiHinh.push(ten); return; }
+      var polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+      var x = gom[r.maLo] = gom[r.maLo] || { r: r, plotNo: p.PLOT_NO || '', polys: [] };
+      polys.forEach(function (poly) {
+        x.polys.push(poly.map(function (ring) { return ring.map(function (pt) { return [Math.round(pt[0] * 1e6) / 1e6, Math.round(pt[1] * 1e6) / 1e6]; }); }));
+      });
+    });
+    var lo = Object.keys(gom).map(function (ma) {
+      var x = gom[ma], g = x.polys.length > 1 ? { type: 'MultiPolygon', coordinates: x.polys } : { type: 'Polygon', coordinates: x.polys[0] };
+      return { maLo: ma, to: x.r.to, tenLo: x.r.tenLo, plotNo: x.plotNo, maLoRung: x.r.maLoRung || '',
+               dtBanDo: Math.round(_bdDienTichHa(g) * 100) / 100, soManh: x.polys.length, g: g };
+    });
+    if (!lo.length) { baoLoi('bdLoi', 'Không lô nào trong file khớp danh sách lô của hệ thống (cần thuộc tính DOI + TEN_LO hoặc PLOT_NO dạng Đ1-KV2-15).'); return; }
+    var hoi = 'Nạp ' + lo.length + ' lô từ "' + file.name + '"? Hình các lô này trên hệ thống sẽ được thay.' +
+      (khongKhop.length ? ' Bỏ qua ' + khongKhop.length + ' feature không khớp lô: ' + khongKhop.slice(0, 8).join(', ') + (khongKhop.length > 8 ? '…' : '') + '.' : '') +
+      (saiHinh.length ? ' Bỏ qua ' + saiHinh.length + ' hình không phải đa giác.' : '');
+    $('bdLoi').innerHTML = '<div class="bao-loi" style="background:var(--paper);border-color:var(--line-2);color:var(--ink)">' + thoat(hoi) +
+      '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn chinh nho" id="bdXacNhanNap">Nạp lên hệ thống</button>' +
+      '<button class="btn nho" id="bdHuyNap">Huỷ</button></div></div>';
+    $('bdHuyNap').onclick = function () { baoLoi('bdLoi', ''); };
+    $('bdXacNhanNap').onclick = function () {
+      var nut = this; nut.disabled = true; nut.textContent = 'Đang nạp…';
+      fetch(S.api + '?action=banDoLoLuu', { method: 'POST', body: JSON.stringify({
+        vaiTro: S.vaiTro, maDonVi: S.maDonVi, vaiTroHien: S.vaiTroHienThi, nguon: file.name,
+        nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi), lo: lo }) })
+        .then(function (r) { return r.json(); })
+        .then(function (kq) {
+          if (!kq.ok) throw new Error(kq.loi);
+          _cacheFE = {};
+          nsBaoOkChung('Đã nạp hình ' + kq.data.daNap + ' lô từ ' + file.name + (kq.data.loi.length ? '; ' + kq.data.loi.length + ' lô lỗi: ' + kq.data.loi.slice(0, 5).join('; ') : '') + '.');
+          baoLoi('bdLoi', '');
+          taiBanDoLo();
+        }).catch(function (e) { nut.disabled = false; nut.textContent = 'Nạp lên hệ thống'; baoLoi('bdLoi', 'Không nạp được: ' + e.message); });
+    };
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+function ganSuKienBanDo() {
+  $('bdMau').onchange = function () { veBanDoLo(false); };
+  $('bdDoi').onchange = function () { _bdDungTo(); veBanDoLo(true); };
+  $('bdTo').onchange = function () { veBanDoLo(true); };
+  $('bdQ').oninput = function () { clearTimeout(this._h); this._h = setTimeout(function () { veBanDoLo(true); }, 400); };
+  $('bdNam').onchange = function () { taiBanDoLo(); };
+  $('bdNapFile').onclick = function () { $('bdFile').click(); };
+  $('bdFile').onchange = function () { if (this.files && this.files[0]) bdNapFile(this.files[0]); this.value = ''; };
+}
 
 function _nsvNapLoc() {
   var d = _nsv;
@@ -6880,7 +7230,8 @@ var LOC_THEO_TAB = {
   luong: ['doi', 'to'],
   baoCao: [],           // có ô chọn tháng/đội/tổ riêng, ẩn khung lọc chung
   nangSuatVuon: [],     // bộ lọc riêng (năm, giống, năm mở cạo...)
-  phanQuyen: []         // trang quản trị, không lọc
+  phanQuyen: [],        // trang quản trị, không lọc
+  banDoLo: []           // bộ lọc riêng trên bản đồ
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -6895,7 +7246,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -7073,6 +7424,7 @@ function taiTab() {
   else if (S.tab === 'baoCao') taiBaoCao();
   else if (S.tab === 'nangSuatVuon') taiNangSuatVuon();
   else if (S.tab === 'phanQuyen') taiPhanQuyen();
+  else if (S.tab === 'banDoLo') taiBanDoLo();
 }
 
 /**
@@ -7183,7 +7535,7 @@ function veTomTatBoLoc() {
  */
 var NHOM_TAB = [
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['tongQuan'] },
-  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
+  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon', 'banDoLo'] },
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
   { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
@@ -7194,7 +7546,7 @@ var TEN_TAB = {
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
-  phanQuyen: 'Phân quyền'
+  phanQuyen: 'Phân quyền', banDoLo: 'Bản đồ lô'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -7340,6 +7692,8 @@ function chuyenTab(ten, nhomMoi) {
   $('pBaoCao').style.display = (ten === 'baoCao') ? '' : 'none';
   $('pNangSuatVuon').style.display = (ten === 'nangSuatVuon') ? '' : 'none';
   $('pPhanQuyen').style.display = (ten === 'phanQuyen') ? '' : 'none';
+  $('pBanDoLo').style.display = (ten === 'banDoLo') ? '' : 'none';
+  if (ten === 'banDoLo' && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
   veTuyChonDoi();
   dungLocTo();
   capNhatHienBoLoc();
@@ -8578,6 +8932,7 @@ $('doiApi').onclick = function (ev) {
 
 $('oVaiTro').onchange = capNhatGoiY;
 ganSuKienPhanQuyen();
+ganSuKienBanDo();
 
 $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').click(); };
 
