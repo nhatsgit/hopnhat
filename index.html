@@ -283,9 +283,17 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .bd-loc{flex-basis:100%;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding-top:12px;margin-top:2px;border-top:1px dashed var(--line)}
 .bd-loc[hidden]{display:none}
 /* Lô cao nhất / thấp nhất (mode sản lượng) */
-.bd-mm{display:grid;grid-template-columns:auto 1fr;gap:0 8px;width:100%;text-align:left;padding:7px 10px;margin:0 0 6px;
-  background:var(--paper);border:1px solid var(--line);border-left:5px solid;border-radius:2px;cursor:pointer;font:inherit;color:var(--ink);font-size:13px}
-.bd-mm span:first-child{grid-row:span 2;font-weight:700;color:var(--ink-2);align-self:center}
+/* Dải ngang trên bản đồ: cao nhất / thấp nhất + chú thích */
+.bd-dai{display:flex;gap:14px 20px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin-bottom:10px}
+.bd-dai-mm{display:flex;gap:8px;flex-wrap:wrap}
+.bd-dai-ct{flex:1;min-width:260px}
+.bd-dai-tieude{font-size:12.5px;margin-bottom:4px}
+.bd-dai-tieude b{text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);font-size:12px}
+.bd-dai-mau{display:flex;gap:4px 14px;flex-wrap:wrap}
+.bd-dai-mau .ct-bd{margin:0;white-space:nowrap}
+.bd-mm{display:flex;gap:8px;align-items:baseline;text-align:left;padding:6px 10px;margin:0;
+  background:var(--paper);border:1px solid var(--line);border-left:5px solid;border-radius:2px;cursor:pointer;font:inherit;color:var(--ink);font-size:13px;white-space:nowrap}
+.bd-mm span:first-child{font-weight:700;color:var(--ink-2)}
 .bd-mm .num{color:var(--ink-2)}
 .bd-mm:hover,.bd-mm:focus-visible{border-color:var(--leaf);outline:none}
 /* Trang Phân quyền */
@@ -1049,12 +1057,19 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div id="bdLoi"></div>
       <div class="kpis" id="kpisBd"></div>
       <div class="luoi-bd">
-        <div class="the" style="padding:0;overflow:hidden"><div id="banDo"></div></div>
+        <div style="min-width:0">
+          <!-- Chú thích + cao nhất/thấp nhất: 1 dải ngang trên bản đồ, để cột phải dành cho thông tin lô -->
+          <div class="the bd-dai">
+            <div id="bdMaxMin" class="bd-dai-mm" style="display:none"></div>
+            <div class="bd-dai-ct">
+              <div class="bd-dai-tieude"><b id="bdTieuDeChuThich">Chú thích</b> <span id="bdGhiChuChuThich" class="nhan-mo"></span></div>
+              <div id="bdChuThich" class="bd-dai-mau"></div>
+            </div>
+          </div>
+          <div class="the" style="padding:0;overflow:hidden"><div id="banDo"></div></div>
+        </div>
         <div class="the o-bieu-do" style="min-width:0">
-          <div id="bdMaxMin" style="display:none;margin-bottom:14px"></div>
-          <h3 class="tieude-muc" id="bdTieuDeChuThich">Chú thích</h3>
-          <div id="bdChuThich"></div>
-          <h3 class="tieude-muc" style="margin-top:18px">Lô đang chọn</h3>
+          <h3 class="tieude-muc">Lô đang chọn</h3>
           <div id="bdChiTiet" class="goi-y">Bấm vào một lô trên bản đồ để xem chi tiết.</div>
         </div>
       </div>
@@ -4134,12 +4149,13 @@ function veBanDoLo(canVua) {
   $('bdMaxMin').innerHTML = dongMm;
   $('bdMaxMin').style.display = dongMm ? '' : 'none';
 
-  $('bdTieuDeChuThich').textContent = 'Chú thích — ' + BD_TEN_CHI_SO[chiSo];
-  $('bdChuThich').innerHTML = (BD_SAN_LUONG[chiSo] || chiSo === 'nsbq' || chiSo === 'kgHa'
-      ? '<div class="goi-y" style="margin:0 0 6px">' + thoat(ngayVN(_bd.sl.tuNgay) + ' – ' + ngayVN(_bd.sl.denNgay) + ' · số đã duyệt · mỗi màu ~ số lô bằng nhau') + '</div>' : '') +
-    thang.chuThich.map(function (c) {
-      return c[0] === 'transparent' ? '<div class="goi-y" style="margin:0 0 6px">' + thoat(c[1]) + '</div>'
-        : '<div class="ct-bd"><i style="background:' + c[0] + '"></i>' + thoat(c[1]) + '</div>';
+  $('bdTieuDeChuThich').textContent = BD_TEN_CHI_SO[chiSo];
+  var ghiChu = [];
+  if (BD_SAN_LUONG[chiSo] || chiSo === 'nsbq' || chiSo === 'kgHa') ghiChu.push(ngayVN(_bd.sl.tuNgay) + ' – ' + ngayVN(_bd.sl.denNgay), 'số đã duyệt', 'mỗi màu ~ số lô bằng nhau');
+  thang.chuThich.forEach(function (c) { if (c[0] === 'transparent') ghiChu.push(c[1]); });
+  $('bdGhiChuChuThich').textContent = ghiChu.length ? '· ' + ghiChu.join(' · ') : '';
+  $('bdChuThich').innerHTML = thang.chuThich.filter(function (c) { return c[0] !== 'transparent'; }).map(function (c) {
+      return '<div class="ct-bd"><i style="background:' + c[0] + '"></i>' + thoat(c[1]) + '</div>';
     }).join('') + '<div class="ct-bd"><i style="background:#9e9e9e;opacity:.5"></i>Chưa có số liệu</div>';
   _bdTomTatLoc();
 
