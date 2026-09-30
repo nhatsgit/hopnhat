@@ -1009,7 +1009,8 @@ var S = {
   sapXep: 'ngay', chieu: 'giam', trang: 1,
   locNhanhDangChon: '',
   trangThai: '',          // '' = Tất cả. Nút gạt đầu trang, chỉ tổ trưởng/đội trưởng thấy.
-  thamSoURL: null
+  thamSoURL: null,
+  locTheoTab: {}          // { [tab]: {luc, tuNgay, denNgay, doi, to, ...} } — xem khoiPhucLocTab()
 };
 
 /* =====================================================================
@@ -4668,6 +4669,7 @@ function luuSuaSanLuong() {
    ===================================================================== */
 function taiTab() {
   luuChoDangXem();
+  luuLocTab(S.tab);   // làm mới mốc 2 phút mỗi khi tải lại (kể cả đổi bộ lọc mà không đổi tab)
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
@@ -4706,23 +4708,60 @@ function veTuyChonDoi() {
 }
 
 /**
- * Tổng quan là trang "ảnh chụp nhanh" — mỗi lần vào lại (kể cả từ tab khác chuyển sang) đều
- * reset về mặc định 7 ngày gần nhất + mọi đội/tổ..., không kế thừa bộ lọc đang dùng ở tab khác.
- * Vừa đỡ nhầm ("ơ sao tổng quan lại đang lọc đúng 1 đội/1 tháng cũ") vừa nhẹ hơn hẳn so với lọc
- * "Tháng này" hay "Toàn bộ" — đỡ lag khi vào tab này.
+ * Mỗi tab tự nhớ bộ lọc riêng của mình trong 2 phút (LOC_TTL_MS) — đổi qua tab khác rồi quay
+ * lại trong 2 phút thì thấy đúng bộ lọc lúc nãy; quá 2 phút (hoặc lần đầu vào tab đó) thì dùng
+ * bộ lọc mặc định ban đầu của tab đó, không kế thừa bộ lọc đang dùng ở tab khác. Tổng quan có
+ * mặc định riêng là "Tháng này" (theo ngày CÓ DỮ LIỆU mới nhất, không phải hôm nay theo lịch —
+ * đội thường nhập trễ vài ngày, lấy mốc hôm nay dễ ra toàn 0 nhìn như trang bị hỏng); các tab
+ * còn lại mặc định trống (Tất cả đội/tổ/loại mủ...).
  */
-function vaoTongQuanMacDinh() {
-  // "Tháng này" tính theo tháng của ngày CÓ DỮ LIỆU mới nhất (ngayMax), không phải hôm nay theo lịch —
-  // đội thường nhập trễ vài ngày, lấy mốc hôm nay dễ ra toàn 0 (nhìn như trang bị hỏng).
+var LOC_TTL_MS = 2 * 60 * 1000;
+
+function locHienTai() {
+  return {
+    tuNgay: $('fTuNgay').value, denNgay: $('fDenNgay').value,
+    doi: $('fDoi').value, to: $('fTo').value, maCn: $('fMaCn').value,
+    loaiMu: $('fLoaiMu').value, phien: $('fPhien').value, chatLuong: $('fChatLuong').value,
+    kyHieu: $('fKyHieu') ? $('fKyHieu').value : '', trangThai: S.trangThai,
+    slKy: $('slKy') ? $('slKy').value : '', lgKy: $('lgKy') ? $('lgKy').value : ''
+  };
+}
+
+function apDungLoc(loc) {
+  $('fTuNgay').value = loc.tuNgay || ''; $('fDenNgay').value = loc.denNgay || '';
+  $('fDoi').value = loc.doi || ''; dungLocTo();
+  $('fTo').value = loc.to || ''; dungLocCn();
+  $('fMaCn').value = loc.maCn || '';
+  $('fLoaiMu').value = loc.loaiMu || ''; $('fPhien').value = loc.phien || '';
+  $('fChatLuong').value = loc.chatLuong || '';
+  if ($('fKyHieu')) $('fKyHieu').value = loc.kyHieu || '';
+  if ($('slKy')) $('slKy').value = loc.slKy || '';
+  if ($('lgKy')) $('lgKy').value = loc.lgKy || '';
+  S.trangThai = loc.trangThai || ''; veGatTrangThai();
+  dongBoChip();
+}
+
+/** Bộ lọc mặc định ban đầu của 1 tab — Tổng quan là "Tháng này", còn lại trống trơn. */
+function macDinhChoTab(tab) {
+  var rong = { tuNgay: '', denNgay: '', doi: '', to: '', maCn: '', loaiMu: '', phien: '', chatLuong: '', kyHieu: '', trangThai: '', slKy: '', lgKy: '' };
+  if (tab !== 'tongQuan') return rong;
   var mocDen = (S.meta && S.meta.ngayMax) ? new Date(S.meta.ngayMax + 'T00:00:00') : new Date();
   mocDen.setHours(0, 0, 0, 0);
   var dauThang = new Date(mocDen.getFullYear(), mocDen.getMonth(), 1);
-  $('fTuNgay').value = dinhDangISO(dauThang);
-  $('fDenNgay').value = dinhDangISO(mocDen);
-  $('fDoi').value = ''; $('fTo').value = ''; $('fLoaiMu').value = '';
-  $('fPhien').value = ''; $('fChatLuong').value = ''; $('fMaCn').value = '';
-  S.trangThai = ''; veGatTrangThai();
-  dongBoChip();
+  return Object.assign({}, rong, { tuNgay: dinhDangISO(dauThang), denNgay: dinhDangISO(mocDen) });
+}
+
+/** Chụp lại bộ lọc hiện có của 1 tab, kèm mốc thời gian — gọi mỗi khi rời tab hoặc tải lại dữ liệu. */
+function luuLocTab(tab) {
+  if (!tab) return;
+  S.locTheoTab[tab] = Object.assign({ luc: Date.now() }, locHienTai());
+}
+
+/** Vào 1 tab: còn nhớ (dưới 2 phút) thì khôi phục, không thì về mặc định ban đầu của tab đó. */
+function khoiPhucLocTab(tab) {
+  var luu = S.locTheoTab[tab];
+  var loc = (luu && Date.now() - luu.luc < LOC_TTL_MS) ? luu : macDinhChoTab(tab);
+  apDungLoc(loc);
 }
 
 /**
@@ -4837,6 +4876,8 @@ function chuyenNhom(id) {
  * (bấm nhóm/tab con), bỏ trống thì tự suy ra nhóm đầu tiên chứa tab đó (khôi phục phiên/URL).
  */
 function chuyenTab(ten, nhomMoi) {
+  // Chụp lại bộ lọc của tab VỪA RỜI trước khi đổi sang tab mới (xem luuLocTab/khoiPhucLocTab).
+  if (S.tab && S.tab !== ten) luuLocTab(S.tab);
   S.tab = ten;
   if (nhomMoi) {
     S.nhom = nhomMoi;
@@ -4846,7 +4887,7 @@ function chuyenTab(ten, nhomMoi) {
     var nhHienTai = timNhom(S.nhom);
     if (!nhHienTai || nhHienTai.tabs.indexOf(ten) === -1) S.nhom = timNhomCuaTab(ten);
   }
-  if (ten === 'tongQuan') vaoTongQuanMacDinh();
+  khoiPhucLocTab(ten);
   veNhomTab();
   veTabCon();
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
@@ -5251,6 +5292,9 @@ function vaoApp(d, vtChon) {
     // URL có tham số thì ưu tiên, không thì lấy lại chỗ xem lần trước —
     // cả hai đều GHI ĐÈ mặc định tháng hiện tại ở trên nếu có giá trị riêng
     if (!apThamSoURL()) khoiPhucChoDangXem();
+    // Chụp lại NGAY bộ lọc vừa khôi phục cho đúng tab đang vào — không thì chuyenTab() bên dưới
+    // tưởng chưa có gì nhớ cho tab này, lại ghi đè về mặc định trống trước khi kịp dùng.
+    luuLocTab(S.tab || 'tongQuan');
     chuyenTab(S.tab || 'tongQuan');
   }).catch(function (e) {
     baoLoi('thongBao', 'Không nạp được danh mục: ' + e.message);
