@@ -109,6 +109,10 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 
 /* ---------- Màn hình mở đầu (cấu hình / đăng nhập) ---------- */
 .man-hinh{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+/* Màn đăng nhập: ảnh toàn cảnh công ty + lớp phủ xanh lá mờ để khung đăng nhập nổi rõ */
+#manDangNhap{background:linear-gradient(rgba(20,72,44,.66),rgba(12,48,28,.72)),url('bg_dang_nhap.jpg') center/cover no-repeat;
+  background-color:#1f5a3a}
+#manDangNhap .hop{box-shadow:0 12px 40px rgba(0,0,0,.35)}
 .hop{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);
   border-radius:2px;padding:28px;box-shadow:var(--shadow)}
 .hop h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
@@ -470,8 +474,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 <!-- ===================== MÀN HÌNH ĐĂNG NHẬP ===================== -->
 <div class="man-hinh" id="manDangNhap" style="display:none">
   <div class="hop">
-    <h1>Theo dõi sản lượng</h1>
-    <p class="phu">Cao su Chư Sê – Kampong Thom (CRCK2)</p>
+    <h1>Hệ thống quản trị hợp nhất</h1>
+    <p class="phu">Cao su Chư Sê – Kampong Thom</p>
     <div class="truong">
       <label class="nhan" for="oVaiTro">Bạn là</label>
       <select class="o" id="oVaiTro">
@@ -489,10 +493,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <p class="goi-y" id="goiYMa">Tổ trưởng nhập mã tổ, ví dụ <b>Đ1-KV1</b>.</p>
     </div>
     <div id="loiDangNhap"></div>
-    <button class="btn chinh" id="nutVao" style="width:100%">Xem sản lượng</button>
-    <p class="goi-y" style="margin-top:14px;text-align:center">
-      <a href="#" id="doiApi">Đổi địa chỉ backend</a>
-    </p>
+    <button class="btn chinh" id="nutVao" style="width:100%">Đăng nhập</button>
   </div>
 </div>
 
@@ -1364,7 +1365,8 @@ if (window.matchMedia) {
 }
 
 /* Địa chỉ Web App mặc định — dùng ngay khi mở trang, không cần nhập tay.
-   Muốn đổi: bấm "Đổi địa chỉ backend" ở màn hình đăng nhập. */
+   (Đã bỏ liên kết "Đổi địa chỉ backend" ở màn đăng nhập theo yêu cầu 2026-09-30; màn cấu hình vẫn tự hiện
+   khi trang không có địa chỉ backend nào.) */
 var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7WIzfMllW1sYvX5QNq82tmhzb6PfA49zmK2QszMUu61RV3C7j/exec';
 
 /* Backend ĐỌC trên Cloud Run (.../api/exec). Để trống thì mọi lệnh đi Apps
@@ -4020,6 +4022,16 @@ var BD_MAU_LIEN = ['#f2e7c9', '#c9dd9b', '#8fc27a', '#4e9a5d', '#1f6b45'];   // 
 var BD_MAU_ROI = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d', '#1f78b4', '#b15928', '#6a3d9a', '#999999'];
 var BD_MAU_Q = { Q1: '#1f6b45', Q2: '#8fc27a', Q3: '#e6ab02', Q4: '#c0392b' };
 
+/**
+ * Màu phân loại thứ i trong n nhóm: ≤ 10 nhóm dùng bảng màu cố định; nhiều hơn (vd 33 tổ) thì trải đều vòng
+ * màu theo góc vàng (137,5°) — 2 nhóm liền nhau luôn khác hẳn sắc — và xen kẽ 3 mức sáng để càng dễ phân biệt.
+ */
+function bdMauPhanLoai(i, n) {
+  if (n <= 10) return BD_MAU_ROI[i];
+  var sac = Math.round((i * 137.508) % 360), sang = [42, 58, 72][i % 3];
+  return 'hsl(' + sac + ',' + (sang > 65 ? 55 : 68) + '%,' + sang + '%)';
+}
+
 /** Thang màu cho chỉ số: trả { mau(v), chuThich: [[màu, nhãn]] }. */
 function _bdThang(ds, chiSo) {
   var vals = ds.map(function (x) { return _bdGiaTri(x, chiSo); }).filter(function (v) { return v !== null && v !== undefined && v !== ''; });
@@ -4030,12 +4042,14 @@ function _bdThang(ds, chiSo) {
   if (chiSo === 'giong' || chiSo === 'to') {
     var dem = {};
     vals.forEach(function (v) { dem[v] = (dem[v] || 0) + 1; });
-    var ds2 = Object.keys(dem).sort(function (a, b) { return dem[b] - dem[a]; });
+    // Tổ: xếp theo mã (Đ1-KV1, Đ1-KV2 … Đ1-KV10); giống: nhiều lô trước. Mỗi nhóm 1 màu riêng, không gộp "nhóm khác".
+    var ds2 = Object.keys(dem).sort(chiSo === 'to'
+      ? function (a, b) { return a.localeCompare(b, 'vi', { numeric: true }); }
+      : function (a, b) { return dem[b] - dem[a]; });
     var m = {};
-    ds2.forEach(function (v, i) { m[v] = BD_MAU_ROI[Math.min(i, BD_MAU_ROI.length - 1)]; });
+    ds2.forEach(function (v, i) { m[v] = bdMauPhanLoai(i, ds2.length); });
     return { mau: function (v) { return m[v] || '#999'; },
-             chuThich: ds2.slice(0, 10).map(function (v) { return [m[v], v + ' (' + dem[v] + ' lô)']; })
-               .concat(ds2.length > 10 ? [[BD_MAU_ROI[10], (ds2.length - 10) + ' nhóm khác']] : []) };
+             chuThich: ds2.map(function (v) { return [m[v], v + ' (' + dem[v] + ' lô)']; }) };
   }
   if (chiSo === 'lech') {
     var nac = [[-Infinity, -10, '#c0392b', 'Bản đồ nhỏ hơn > 10%'], [-10, -5, '#e59866', 'Nhỏ hơn 5–10%'], [-5, 5, '#f2f2e6', 'Lệch dưới 5%'],
@@ -9113,11 +9127,6 @@ $('nutLuuApi').onclick = function () {
   });
 };
 
-$('doiApi').onclick = function (ev) {
-  ev.preventDefault();
-  $('oApi').value = S.api;
-  hien('manCauHinh');
-};
 
 $('oVaiTro').onchange = capNhatGoiY;
 ganSuKienPhanQuyen();
@@ -9138,11 +9147,11 @@ $('nutVao').onclick = function () {
   var coSan = !!_pq;
   Promise.all([goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }), coSan ? Promise.resolve(_pq) : napPhanQuyen()]).then(function (kq) {
     var d = kq[0];
-    nut.disabled = false; nut.textContent = 'Xem sản lượng';
+    nut.disabled = false; nut.textContent = 'Đăng nhập';
     vaoApp(d, vtChon);
     if (coSan) napPhanQuyen();
   }).catch(function (e) {
-    nut.disabled = false; nut.textContent = 'Xem sản lượng';
+    nut.disabled = false; nut.textContent = 'Đăng nhập';
     baoLoi('loiDangNhap', e.message);
   });
 };
