@@ -882,19 +882,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </section>
 
     <!-- Tab: Xuất biểu mẫu — gom các file Excel đúc theo đúng mẫu giấy tờ đội đang dùng (bìa, phông,
-         khổ in...). Có ô chọn tháng/phạm vi riêng, không dùng khung bộ lọc chung. Danh sách biểu mẫu
-         dựng từ BAO_CAO (script). -->
+         khổ in...). Không có bộ lọc chung: bấm "Xuất Excel" ở thẻ nào thì hiện popup bộ lọc riêng của
+         biểu mẫu đó (nenXuatBc). Danh sách biểu mẫu dựng từ BAO_CAO (script). -->
     <section id="pBaoCao" style="display:none">
-      <div class="the" style="margin-bottom:16px;padding:14px 16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-        <div><label class="nhan" for="bcThang">Tháng / kỳ</label>
-          <input class="o" id="bcThang" type="month" style="width:auto"></div>
-        <div id="khungBcDoi"><label class="nhan" for="bcDoi">Đội</label>
-          <select class="o" id="bcDoi" style="width:auto"></select></div>
-        <div id="khungBcTo"><label class="nhan" for="bcTo">Tổ</label>
-          <select class="o" id="bcTo" style="width:auto"></select></div>
-        <div class="goi-y" style="flex:1;min-width:220px;margin:0">Chọn tháng và phạm vi rồi bấm xuất ở từng biểu mẫu.
-          File giữ đúng bố cục, phông, khổ in của mẫu giấy tờ đội đang dùng.</div>
-      </div>
       <div class="luoi-bc" id="dsBaoCao"></div>
     </section>
 
@@ -1038,6 +1028,33 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <div class="than-hop">
       <div id="dcTomTat" style="margin-bottom:10px;font-size:13px"></div>
       <div class="cuon cuon-doc"><table id="bangDieuChinh"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup bộ lọc riêng của từng biểu mẫu ở tab Xuất biểu mẫu (chỉ hiện ô biểu mẫu đó cần) -->
+<div class="nen-mo" id="nenXuatBc">
+  <div class="hop-thoai" style="max-width:560px;margin-top:8vh">
+    <div class="dau-hop">
+      <h2 id="xbTen"></h2>
+      <button class="btn nho" id="nutXbDong">Đóng</button>
+    </div>
+    <div class="than-hop">
+      <p class="goi-y" id="xbMoTa" style="margin-top:0"></p>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div id="khungXbThang"><label class="nhan" for="xbThang">Tháng / kỳ</label>
+          <input class="o" id="xbThang" type="month" style="width:auto"></div>
+        <div id="khungXbNam"><label class="nhan" for="xbNam">Năm</label>
+          <select class="o" id="xbNam" style="width:auto"></select></div>
+        <div id="khungXbDoi"><label class="nhan" for="xbDoi">Đội</label>
+          <select class="o" id="xbDoi" style="width:auto"></select></div>
+        <div id="khungXbTo"><label class="nhan" for="xbTo">Tổ</label>
+          <select class="o" id="xbTo" style="width:auto"></select></div>
+      </div>
+      <div id="xbLoi" style="margin-top:12px"></div>
+      <div style="display:flex;margin-top:16px;justify-content:flex-end">
+        <button class="btn chinh" id="nutXbXuat">Xuất Excel</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2866,7 +2883,7 @@ function xuatHoSoLuong(ky, doi, nut) {
         return r.json();
       }).then(function (j) { _mauHoSoLuong = j; return j; });
 
-  Promise.all([mau, goiAPI('hoSoLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, doiAdmin: doi }, 180000)])
+  return Promise.all([mau, goiAPI('hoSoLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: ky, doiAdmin: doi }, 180000)])
     .then(function (kq) {
       nut.textContent = 'Đang dựng file…';
       var wb = HoSoLuong.xayDung(ExcelJS, kq[0], kq[1]);
@@ -3891,7 +3908,8 @@ function _xuatSoTheoMau(tenMau, dung, tenFile, ch, nut) {
 
 /* =====================================================================
    Tab XUẤT BIỂU MẪU — mỗi biểu mẫu 1 thẻ. Thêm biểu mẫu mới: thêm 1 mục
-   vào BAO_CAO (ten, moTa, gồm, phamVi 'doiTo' | 'doi', duocXuat, xuat).
+   vào BAO_CAO (ten, moTa, gồm, phamVi 'doiTo' | 'doi', loc 'nam' nếu chọn năm
+   thay vì tháng, duocXuat, xuat). Bấm "Xuất Excel" mở popup bộ lọc riêng (moXuatBc).
    ===================================================================== */
 var BAO_CAO = [
   {
@@ -3915,7 +3933,7 @@ var BAO_CAO = [
     gom: 'Nhiều sheet (đúng mẫu ĐSX1)', phamVi: 'doi',
     duocXuat: function () { return quyenDoiTruong(); },
     lyDoKhoa: 'Chỉ đội trưởng (hoặc Admin) xuất được — file có họ tên và số CCCD đầy đủ.',
-    xuat: function (ch, nut) { xuatHoSoLuong(ch.thang, ch.doi, nut); return Promise.resolve(); }
+    xuat: function (ch, nut) { return Promise.resolve(xuatHoSoLuong(ch.thang, ch.doi, nut)); }
   },
   {
     id: 'soToTruong', ten: 'Sổ ghi chép sản lượng của Tổ trưởng',
@@ -3936,12 +3954,12 @@ var BAO_CAO = [
   {
     id: 'nangSuatVuon', ten: 'Tổng hợp năng suất vườn cây',
     moTa: 'Theo từng lô (kiểu bảng tổng hợp năng suất vườn cây KD của phòng Nông nghiệp): thông tin lô theo kiểm kê, ' +
-          'sản lượng quy khô, lần cạo, kg/ha, kg/cây, g/cây/lần cạo cả năm và từng tháng — năm lấy theo ô Tháng/kỳ.',
-    gom: '1 sheet, mỗi lô 1 dòng', phamVi: 'doiTo',
+          'sản lượng quy khô, lần cạo, kg/ha, kg/cây, g/cây/lần cạo cả năm và từng tháng.',
+    gom: '1 sheet, mỗi lô 1 dòng', phamVi: 'doiTo', loc: 'nam',
     duocXuat: function () { return true; },
     xuat: function (ch, nut) {
       nut.disabled = true; nut.textContent = 'Đang lấy số liệu…';
-      return goiCache('nangSuatVuon', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, nam: ch.thang.substring(0, 4) }).then(function (d) {
+      return goiCache('nangSuatVuon', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, nam: ch.nam }).then(function (d) {
         nut.disabled = false; nut.textContent = 'Xuất Excel';
         xuatNangSuatVuon(d.rows.filter(function (r) { return (!ch.doi || r.doi === ch.doi) && (!ch.to || r.to === ch.to); }), d.nam);
       });
@@ -3949,30 +3967,72 @@ var BAO_CAO = [
   }
 ];
 
-function _bcChon() {
-  var doi = S.dsDoi.length > 1 ? $('bcDoi').value : (S.dsDoi[0] || '');
-  return { thang: $('bcThang').value, doi: doi, to: $('bcTo').value };
-}
+// Popup bộ lọc riêng từng biểu mẫu: _bcDangMo là biểu mẫu đang mở; mỗi biểu mẫu nhớ lựa chọn lần
+// trước của nó (bc._ch), lần đầu lấy mặc định từ lựa chọn gần nhất ở biểu mẫu khác.
+var _bcDangMo = null, _bcGanNhat = null;
+
+function _bcDoi() { return S.dsDoi.length > 1 ? $('xbDoi').value : (S.dsDoi[0] || ''); }
 
 function _bcDungTo() {
-  var doi = S.dsDoi.length > 1 ? $('bcDoi').value : (S.dsDoi[0] || '');
+  var doi = _bcDoi();
   var ds = S.dsTo.filter(function (t) { return doiCuaTo(t.ma) === doi; });
-  var cu = $('bcTo').value;
-  $('bcTo').innerHTML = (ds.length > 1 ? '<option value="">Cả đội</option>' : '') +
+  var cu = $('xbTo').value;
+  $('xbTo').innerHTML = (ds.length > 1 ? '<option value="">Cả đội</option>' : '') +
     ds.map(function (t) { return '<option value="' + thoat(t.ma) + '">' + thoat(t.ma) + '</option>'; }).join('');
-  if (cu && ds.some(function (t) { return t.ma === cu; })) $('bcTo').value = cu;
-  $('khungBcTo').style.display = ds.length > 1 ? '' : 'none';
+  if (cu && ds.some(function (t) { return t.ma === cu; })) $('xbTo').value = cu;
+  $('khungXbTo').style.display = (ds.length > 1 && _bcDangMo && _bcDangMo.phamVi === 'doiTo') ? '' : 'none';
+}
+
+function moXuatBc(bc) {
+  _bcDangMo = bc;
+  var ch = bc._ch || _bcGanNhat || { thang: thangMacDinhCC(), doi: $('fDoi').value || S.dsDoi[0] || '', to: '' };
+  var laNam = bc.loc === 'nam';
+  $('xbTen').textContent = bc.ten;
+  $('xbMoTa').textContent = bc.moTa;
+  $('xbThang').value = ch.thang || thangMacDinhCC();
+  var namMax = Number(thangMacDinhCC().substring(0, 4)), nam = (ch.thang || '').substring(0, 4) || String(namMax);
+  var dsNam = [];
+  for (var y = namMax; y >= namMax - 3; y--) dsNam.push(y);
+  $('xbNam').innerHTML = dsNam.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('');
+  $('xbNam').value = nam;
+  $('xbDoi').innerHTML = S.dsDoi.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(d) + '</option>'; }).join('');
+  if (ch.doi) $('xbDoi').value = ch.doi;
+  $('xbTo').innerHTML = '';
+  _bcDungTo();
+  if (ch.to && bc.phamVi === 'doiTo') $('xbTo').value = ch.to;
+  $('khungXbThang').style.display = laNam ? 'none' : '';
+  $('khungXbNam').style.display = laNam ? '' : 'none';
+  $('khungXbDoi').style.display = S.dsDoi.length > 1 ? '' : 'none';
+  $('xbLoi').innerHTML = '';
+  $('nutXbXuat').disabled = false; $('nutXbXuat').textContent = 'Xuất Excel';
+  $('nenXuatBc').classList.add('hien');
+}
+
+function dongXuatBc() {
+  $('nenXuatBc').classList.remove('hien');
+  _bcDangMo = null;
+}
+
+function xuatBcDangMo() {
+  var bc = _bcDangMo, nut = $('nutXbXuat');
+  if (!bc) return;
+  var laNam = bc.loc === 'nam';
+  var ch = { thang: laNam ? $('xbNam').value + '-01' : $('xbThang').value, nam: $('xbNam').value, doi: _bcDoi(),
+             to: bc.phamVi === 'doiTo' ? $('xbTo').value : '' };
+  if (!laNam && !ch.thang) { baoLoi('xbLoi', 'Chọn tháng trước khi xuất.'); return; }
+  if (!ch.doi) { baoLoi('xbLoi', 'Chọn đội trước khi xuất.'); return; }
+  bc._ch = ch;
+  if (!laNam) _bcGanNhat = ch;
+  baoLoi('xbLoi', ''); baoLoi('thongBao', '');
+  bc.xuat(ch, nut).then(function () {
+    if (_bcDangMo === bc) dongXuatBc();
+  }).catch(function (e) {
+    nut.disabled = false; nut.textContent = 'Xuất Excel';
+    baoLoi('xbLoi', e.message);
+  });
 }
 
 function taiBaoCao() {
-  if (!$('bcThang').value) $('bcThang').value = thangMacDinhCC();
-  if (!$('bcDoi').options.length) {
-    $('bcDoi').innerHTML = S.dsDoi.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(d) + '</option>'; }).join('');
-    if ($('fDoi').value) $('bcDoi').value = $('fDoi').value;
-  }
-  $('khungBcDoi').style.display = S.dsDoi.length > 1 ? '' : 'none';
-  _bcDungTo();
-
   var h = '';
   BAO_CAO.forEach(function (bc) {
     var duoc = bc.duocXuat();
@@ -3990,17 +4050,8 @@ function taiBaoCao() {
   var nuts = $('dsBaoCao').querySelectorAll('button[data-bc]');
   for (var i = 0; i < nuts.length; i++) {
     nuts[i].onclick = function () {
-      var id = this.getAttribute('data-bc'), nut = this;
-      var bc = BAO_CAO.filter(function (x) { return x.id === id; })[0];
-      var ch = _bcChon();
-      if (!ch.thang) { baoLoi('thongBao', 'Chọn tháng trước khi xuất.'); return; }
-      if (!ch.doi) { baoLoi('thongBao', 'Chọn đội trước khi xuất.'); return; }
-      if (bc.phamVi === 'doi') ch.to = '';
-      baoLoi('thongBao', '');
-      bc.xuat(ch, nut).catch(function (e) {
-        nut.disabled = false; nut.textContent = 'Xuất Excel';
-        baoLoi('thongBao', e.message);
-      });
+      var id = this.getAttribute('data-bc');
+      moXuatBc(BAO_CAO.filter(function (x) { return x.id === id; })[0]);
     };
   }
 }
@@ -7599,7 +7650,10 @@ $('nutKmNhapFile').onclick = kmNhapFile;
 $('fileKhoMieng').onchange = kmXuLyFile;
 $('nutKmLuu').onclick = kmLuu;
 $('nutXuatSoCC').onclick = function () { xuatSoChamCong(); };
-$('bcDoi').onchange = _bcDungTo;
+$('xbDoi').onchange = _bcDungTo;
+$('nutXbXuat').onclick = xuatBcDangMo;
+$('nutXbDong').onclick = dongXuatBc;
+$('nenXuatBc').onclick = function (e) { if (e.target === this && !$('nutXbXuat').disabled) dongXuatBc(); };
 $('nsvNam').onchange = taiNangSuatVuon;
 $('nsvDoi').onchange = function () { _nsvDungTo(); veNangSuatVuon(); };
 ['nsvTo', 'nsvGiong', 'nsvMoCao', 'nsvMatCao', 'nsvNhom', 'nsvChiSo'].forEach(function (id) { $(id).onchange = veNangSuatVuon; });
