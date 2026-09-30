@@ -5125,7 +5125,7 @@ function veChipNhanh() {
       $('fDenNgay').value = k.den;
       dongBoChip();
       S.trang = 1;
-      taiTab();
+      // Không tự tải lại — chờ bấm "Áp dụng" (nhất quán với các ô lọc dùng chung khác).
     };
   }
 }
@@ -6031,12 +6031,14 @@ $('nutXoaLoc').onclick = function () {
   veGatTrangThai();
   S.trang = 1;
   dongBoChip();
-  taiTab();
+  // Không tự tải lại nữa — bấm "Áp dụng" mới thật sự lọc (xem ghi chú ở các ô bên dưới).
 };
 
-// Đổi đội thì dựng lại danh sách tổ rồi tải lại ngay — các ô lọc khác cũng
-// áp dụng ngay khi chọn, cho nhất quán với chip lọc nhanh.
-// Đội -> dựng lại Tổ -> dựng lại Công nhân; Tổ -> dựng lại Công nhân
+// Các ô lọc DÙNG CHUNG (khung bộ lọc chính) không còn tự tải lại mỗi lần đổi — chỉ cập nhật các
+// ô phụ thuộc (dựng lại Tổ/Công nhân, đồng bộ chip) và chờ bấm "Áp dụng" mới thật sự gọi dữ liệu.
+// Đỡ gọi API liên tục khi đang chọn nhiều ô một lúc (nhất là lúc bộ lọc mở dạng tấm trên điện
+// thoại — chọn xong hết mới bấm Áp dụng 1 lần). Các ô lọc RIÊNG của từng bảng (gkLoc/gkQ,
+// lgLoc/lgQ, slLoc/slQ, fTheo...) KHÔNG đổi, vẫn tự tải lại ngay như trước.
 $('fThangCuThe').onchange = function () {
   var v = this.value;
   if (!v) return;
@@ -6046,7 +6048,6 @@ $('fThangCuThe').onchange = function () {
   $('fDenNgay').value = denChuan > homNay ? homNay : denChuan;
   dongBoChip();
   S.trang = 1;
-  taiTab();
 };
 $('fNamCuThe').onchange = function () {
   var v = this.value;
@@ -6057,19 +6058,18 @@ $('fNamCuThe').onchange = function () {
   $('fDenNgay').value = denChuan > homNay ? homNay : denChuan;
   dongBoChip();
   S.trang = 1;
-  taiTab();
 };
-$('fDoi').onchange = function () { dungLocTo(); S.trang = 1; taiTab(); };
-$('fTo').onchange = function () { dungLocCn(); S.trang = 1; taiTab(); };
-$('fMaCn').onchange = function () { S.trang = 1; taiTab(); };
-$('fLoaiMu').onchange = function () { S.trang = 1; taiTab(); };
-$('fPhien').onchange = function () { S.trang = 1; taiTab(); };
+$('fDoi').onchange = function () { dungLocTo(); S.trang = 1; };
+$('fTo').onchange = function () { dungLocCn(); S.trang = 1; };
+$('fMaCn').onchange = function () { S.trang = 1; };
+$('fLoaiMu').onchange = function () { S.trang = 1; };
+$('fPhien').onchange = function () { S.trang = 1; };
 $('gkLoc').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
 $('gkQ').onchange = function () { S.trang = 1; taiGiaoKhoan(); };
-$('lgKy').onchange = function () { S.trang = 1; if (S.tab === 'khoMieng') taiKhoMieng(); else taiLuong(); };
+$('lgKy').onchange = function () { S.trang = 1; };
 $('lgLoc').onchange = function () { S.trang = 1; taiLuong(); };
 $('lgQ').onchange = function () { S.trang = 1; taiLuong(); };
-$('slKy').onchange = function () { S.trang = 1; taiSlTheoCn(); };
+$('slKy').onchange = function () { S.trang = 1; };
 $('slLoc').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('slQ').onchange = function () { S.trang = 1; taiSlTheoCn(); };
 $('nutTinhGiao').onclick = tinhGiaoSl;
@@ -6092,12 +6092,12 @@ $('nutHuyXemTruoc').onclick = function () { dongXemTruoc(); baoLoi('thongBao', '
 $('nutXacNhanGhi').onclick = ghiBangGiao;
 $('nutXtXuatFile').onclick = xtXuatFile;
 $('nenXemTruoc').onclick = function (e) { if (e.target === this) dongXemTruoc(); };
-$('fChatLuong').onchange = function () { S.trang = 1; taiTab(); };
-$('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
-$('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; taiTab(); };
+$('fChatLuong').onchange = function () { S.trang = 1; };
+$('fTuNgay').onchange = function () { dongBoChip(); S.trang = 1; };
+$('fDenNgay').onchange = function () { dongBoChip(); S.trang = 1; };
 
 $('fTheo').onchange = function () { taiXepHang(); };
-$('fKyHieu').onchange = function () { S.trang = 1; taiTab(); };
+$('fKyHieu').onchange = function () { S.trang = 1; };
 $('nutThemCC').onclick = moThemChamCong;
 $('nutCsvCC').onclick = csvChamCong;
 $('nutMauCC').onclick = function () { taiMauExcel('chamCong'); };
