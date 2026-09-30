@@ -3498,6 +3498,398 @@ function xuatNangSuatVuon(ds, nam) {
 }
 
 /* =====================================================================
+   SỔ GHI CHÉP SẢN LƯỢNG CỦA TỔ TRƯỞNG + SỔ THEO DÕI SẢN LƯỢNG HẰNG NGÀY (KTNN)
+   Số liệu: backend soSanLuong (1 tháng, đội/tổ, đã duyệt). Mẫu: mau/so_to_truong.xlsx,
+   mau/so_ktnn.xlsx (bản sạch). Sổ tổ trưởng dựng lại từng khối (mỗi tổ/phiên) từ khối
+   đầu của mẫu vì số công nhân mỗi tổ khác nhau.
+   ===================================================================== */
+var PHIEN_4 = ['A', 'B', 'C', 'D'];
+
+function _chuanSoLieuSo(d) {
+  var iC = {};
+  d.cot.forEach(function (c, i) { iC[c] = i; });
+  var loCuaCn = {};
+  Object.keys(d.gk || {}).forEach(function (cn) {
+    d.gk[cn].forEach(function (mp) {
+      var p = d.pc[mp];
+      if (p) (loCuaCn[cn] = loCuaCn[cn] || {})[p.phien] = Object.assign({ ma: mp }, p);
+    });
+  });
+  var dong = d.dong.map(function (x) {
+    var pcI = d.pc[x[iC.pc]];
+    return { ngay: x[iC.ngay], maCn: x[iC.maCn], pc: x[iC.pc], phien: x[iC.phien] || (pcI && pcI.phien) || '',
+             loai: x[iC.loai], kg: x[iC.kg], nhat: x[iC.nhat], cl: x[iC.chatLuong] };
+  });
+  var cnCuaTo = {}, ten = {};
+  d.dsCn.forEach(function (c) { (cnCuaTo[c.to] = cnCuaTo[c.to] || []).push(c); ten[c.maCn] = c.ten; });
+  return { loCuaCn: loCuaCn, dong: dong, cnCuaTo: cnCuaTo, ten: ten };
+}
+
+/** Gom dòng sản lượng: ngày có số (tăng dần) và ô[maCn][ngày] = {kg, kg2 (loại II), nhat}. */
+function _gomNgay(dong) {
+  var o = {}, ngay = {};
+  dong.forEach(function (x) {
+    ngay[x.ngay] = 1;
+    var c = (o[x.maCn] = o[x.maCn] || {})[x.ngay] = (o[x.maCn] || {})[x.ngay] || { kg: 0, kg2: 0, nhat: 0 };
+    c.kg += x.kg; c.nhat += x.nhat || 0; if (x.cl === 'LOAI_II') c.kg2 += x.kg;
+  });
+  return { ngays: Object.keys(ngay).map(Number).sort(function (a, b) { return a - b; }), o: o };
+}
+
+/** Chia các ngày vào n ô ngày của mẫu; thừa ngày thì dồn vào ô cuối. */
+function _chiaONgay(ngays, n) {
+  var ra = [];
+  for (var i = 0; i < n; i++) ra.push(i < n - 1 ? (ngays[i] !== undefined ? [ngays[i]] : []) : ngays.slice(i));
+  return ra;
+}
+
+function _soTo(ma) { var m = /KV(\d+)/.exec(ma || ''); return m ? Number(m[1]) : 0; }
+function _hai(n) { return (n < 10 ? '0' : '') + n; }
+
+/** Sửa các ô chữ trong vùng tiêu đề của 1 khối: tháng, ngày bốc, phiên, số ngày. */
+function _suaDauKhoi(ws, tu, den, soCot, thg, nam, oNgay, phien) {
+  var k = 0, dsNgay = [].concat.apply([], oNgay);
+  for (var r = tu; r <= den; r++) {
+    for (var c = 1; c <= soCot; c++) {
+      var ce = ws.getRow(r).getCell(c), v = ce.value;
+      if (ce.isMerged && ce.master && ce.master.address !== ce.address) continue;   // ô phụ của vùng gộp trả về giá trị ô chính
+      if (typeof v !== 'string') continue;
+      if (/Yield for the month/i.test(v)) ce.value = _doiThangTieuDe(v, thg, nam);
+      else if (/Date\s*\/\s*Ngày/i.test(v)) {
+        var o = oNgay[k++] || [];
+        ce.value = 'Date / Ngày ' + (o.length ? o.join(', ') : '...........');
+      } else if (/Phiên cạo/i.test(v) && phien) ce.value = v.replace(/Phiên cạo.*$/i, 'Phiên cạo ' + phien);
+      else if (/TỔNG\s*….*NGÀY/i.test(v)) ce.value = 'TỔNG ' + dsNgay.length + ' NGÀY';
+      else if (/Từ ngày/i.test(v)) ce.value = dsNgay.length ? '(Từ ngày ' + dsNgay[0] + ' đến ngày ' + dsNgay[dsNgay.length - 1] + ')' : v;
+    }
+  }
+}
+
+function _khuonKhoi(ws, soDongDau, soCot) {
+  var tong = timDongA(ws, 2, _laDongTong);
+  var tieu2 = timDongA(ws, tong + 1, _laTieuDeKhoi);
+  var tongSau = tieu2 ? 0 : timDongA(ws, tong + 1, _laDongTong);
+  var cuoiHet = tieu2 ? tieu2 - 1 : (tongSau ? tongSau - 1 : tong + 12);
+  return { dau: chupVung(ws, 1, soDongDau, soCot), dong: chupVung(ws, soDongDau + 1, soDongDau + 1, soCot),
+           tong: chupVung(ws, tong, tong, soCot), cuoi: chupVung(ws, tong + 1, cuoiHet, soCot, true), soDongDau: soDongDau };   // ảnh cuối khối là logo của khối KẾ TIẾP
+}
+
+function dungSoToTruong(wb, d) {
+  var p = d.thang.split('-'), nam = p[0], thg = Number(p[1]);
+  var sl = _chuanSoLieuSo(d), boPhien = 0;
+  var SC_T = 22, SC_D = 14, SC_TG = 16;
+  var drcD = d.drc.MU_DONG || 0.49, drcY = d.drc.MU_DAY || 0.6, drcT = d.drc.MU_DAT || 0.22;
+
+  var bia = [], tSh = [];
+  wb.worksheets.forEach(function (w) {
+    if (/^BÌA SỔ SL/.test(w.name)) bia.push(w);
+    else if (/^T\d+\s*$/.test(w.name)) tSh.push(w);
+  });
+  var soSo = function (w, re) { var m = re.exec(w.name); return m ? Number(m[1]) : 1; };
+  bia.sort(function (a, b) { return soSo(a, /\((\d+)\)/) - soSo(b, /\((\d+)\)/); });
+  tSh.sort(function (a, b) { return soSo(a, /T(\d+)/) - soSo(b, /T(\d+)/); });
+  if (d.dsTo.length > tSh.length) throw new Error('Mẫu sổ chỉ có ' + tSh.length + ' tổ, phạm vi đang chọn có ' + d.dsTo.length + ' tổ.');
+  var wDay = wb.getWorksheet('Mủ dây'), wDat = wb.getWorksheet('Mủ đất'), wTong = wb.getWorksheet('TỔNG');
+  var kT = _khuonKhoi(tSh[0], 7, SC_T), kY = _khuonKhoi(wDay, 7, SC_D), kR = _khuonKhoi(wDat, 7, SC_D), kG = _khuonKhoi(wTong, 8, SC_TG);
+
+  for (var j = d.dsTo.length; j < tSh.length; j++) { wb.removeWorksheet(tSh[j].id); if (bia[j]) wb.removeWorksheet(bia[j].id); }
+  var soDoi = _hai(Number(String(doiCuaTo(d.dsTo[0] ? d.dsTo[0].ma : '')).replace(/\D/g, '')) || 0);
+
+  var viTri = {};   // maTo -> { tenT, dongT: {phien: {maCn: row}}, dongY: {maCn: row}, dongR: {...}, tongG }
+  d.dsTo.forEach(function (to, j) {
+    var n = _soTo(to.ma), cns = sl.cnCuaTo[to.ma] || [], vt = viTri[to.ma] = { dongT: {}, dongY: {}, dongR: {} };
+
+    // Bìa của tổ
+    var b = bia[j];
+    if (b) {
+      b.eachRow(function (row) {
+        row.eachCell(function (ce) {
+          var v = ce.value;
+          if (v && typeof v === 'object' && v.richText) v = v.richText.map(function (x) { return x.text; }).join('');   // ô chữ nhiều định dạng
+          if (typeof v !== 'string') return;
+          v = v.normalize('NFC');   // chữ trong mẫu có thể là dấu tách rời (NFD)
+          if (/ĐỘI SẢN XUẤT/i.test(v)) ce.value = v.replace(/:.*$/, ': ' + soDoi);
+          else if (/Area|Diện tích/i.test(v)) ce.value = v.replace(/:.*$/, ': ' + (to.dienTich ? Number(to.dienTich).toFixed(2) : ''));
+          else if (/Khu vực/i.test(v)) ce.value = v.replace(/:.*$/, ': ' + _hai(n));
+          else if (/SỔ THEO DÕI SẢN LƯỢNG NĂM/i.test(v)) ce.value = v.replace(/\d{4}/, nam);
+          else if (/Month/i.test(v)) ce.value = 'Kampong Thom, Month  ' + thg + ' Year ' + nam;
+          else if (/Tháng/i.test(v) && /năm/i.test(v)) ce.value = 'Kampong Thom, Tháng ' + thg + ' năm ' + nam;
+        });
+      });
+    }
+
+    // Mủ đông: sheet T{n}, 4 khối phiên
+    var w = tSh[j];
+    w.name = 'T' + n;
+    vt.tenT = w.name;
+    xoaTuDong(w, 1, SC_T + 8);
+    var dich = 1;
+    PHIEN_4.forEach(function (ph) {
+      var dongPh = sl.dong.filter(function (x) {
+        if (x.loai !== 'MU_DONG' || toCuaMaCn(x.maCn) !== to.ma) return false;
+        var xp = x.phien || 'A';
+        if (!x.phien && ph === 'A') boPhien += x.kg;
+        return xp === ph;
+      });
+      var g = _gomNgay(dongPh), oNgay = _chiaONgay(g.ngays, 8);
+      var dau = dich;
+      dich = danVung(w, kT.dau, dich, SC_T);
+      _suaDauKhoi(w, dau, dich - 1, SC_T, thg, nam, oNgay, ph);
+      var dau1 = dich, dongCn = vt.dongT[ph] = {};
+      cns.forEach(function (cn, i) {
+        var r = danVung(w, kT.dong, dich, SC_T) - 1, row = w.getRow(r), lo = (sl.loCuaCn[cn.maCn] || {})[ph] || {};
+        dongCn[cn.maCn] = r;
+        row.getCell(1).value = i + 1; row.getCell(2).value = lo.maLoRung || null; row.getCell(3).value = lo.tenLo || null;
+        row.getCell(4).value = cn.ten || null; row.getCell(5).value = cn.maCn;
+        for (var s = 0; s < 8; s++) {
+          var kg = 0, kg2 = 0;
+          oNgay[s].forEach(function (ng) { var c = ((g.o[cn.maCn] || {})[ng]) || {}; kg += c.kg || 0; kg2 += c.kg2 || 0; });
+          row.getCell(6 + 2 * s).value = kg ? Math.round(kg * 100) / 100 : null;
+          row.getCell(7 + 2 * s).value = kg ? (kg2 > kg / 2 ? 'KĐ' : 'Đ') : null;
+        }
+        row.getCell(22).value = { formula: 'SUM(F' + r + ':U' + r + ')' };
+        dich = r + 1;
+      });
+      var cuoi1 = Math.max(dau1, dich - 1);
+      var rTong = danVung(w, kT.tong, dich, SC_T) - 1;
+      for (var s2 = 0; s2 < 8; s2++) { var cl = _cotChu(6 + 2 * s2); w.getCell(cl + rTong).value = { formula: 'SUM(' + cl + dau1 + ':' + cl + cuoi1 + ')' }; }
+      w.getCell('V' + rTong).value = { formula: 'SUBTOTAL(9,V' + dau1 + ':V' + cuoi1 + ')' };
+      dich = danVung(w, kT.cuoi, rTong + 1, SC_T);
+    });
+  });
+
+  // Mủ dây / Mủ đất: mỗi tổ 1 khối
+  function khoiPhu(ws, k, loai, khoaDong) {
+    xoaTuDong(ws, 1, SC_D + 6);
+    var dich = 1;
+    d.dsTo.forEach(function (to) {
+      var vt = viTri[to.ma], cns = sl.cnCuaTo[to.ma] || [];
+      var g = _gomNgay(sl.dong.filter(function (x) { return x.loai === loai && toCuaMaCn(x.maCn) === to.ma; })), oNgay = _chiaONgay(g.ngays, 5);
+      var dau = dich;
+      dich = danVung(ws, k.dau, dich, SC_D);
+      _suaDauKhoi(ws, dau, dich - 1, SC_D, thg, nam, oNgay, null);
+      var dau1 = dich, dongCn = vt[khoaDong];
+      cns.forEach(function (cn, i) {
+        var r = danVung(ws, k.dong, dich, SC_D) - 1, row = ws.getRow(r), rT = vt.dongT.A[cn.maCn];
+        dongCn[cn.maCn] = r;
+        row.getCell(1).value = i + 1;
+        row.getCell(2).value = { formula: "'" + vt.tenT + "'!D" + rT, result: cn.ten || '' };
+        row.getCell(3).value = { formula: "'" + vt.tenT + "'!E" + rT, result: cn.maCn };
+        for (var s = 0; s < 5; s++) {
+          var kg = 0, kg2 = 0;
+          oNgay[s].forEach(function (ng) { var c = ((g.o[cn.maCn] || {})[ng]) || {}; kg += c.kg || 0; kg2 += c.kg2 || 0; });
+          row.getCell(4 + 2 * s).value = kg ? Math.round(kg * 100) / 100 : null;
+          row.getCell(5 + 2 * s).value = kg ? (kg2 > kg / 2 ? 'KĐ' : 'Đ') : null;
+        }
+        row.getCell(14).value = { formula: 'SUM(D' + r + ':M' + r + ')' };
+        dich = r + 1;
+      });
+      var cuoi1 = Math.max(dau1, dich - 1);
+      var rTong = danVung(ws, k.tong, dich, SC_D) - 1;
+      ['D', 'F', 'H', 'J', 'L', 'N'].forEach(function (cl) { ws.getCell(cl + rTong).value = { formula: 'SUM(' + cl + dau1 + ':' + cl + cuoi1 + ')' }; });
+      dich = danVung(ws, k.cuoi, rTong + 1, SC_D);
+    });
+  }
+  khoiPhu(wDay, kY, 'MU_DAY', 'dongY');
+  khoiPhu(wDat, kR, 'MU_DAT', 'dongR');
+
+  // TỔNG: mỗi tổ 1 khối + bảng tổng các tổ ở cuối
+  xoaTuDong(wTong, 1, SC_TG + 4);
+  var dich = 1, dongTongTo = [];
+  var pt = function (x) { return Math.round(x * 1000) / 10; };
+  d.dsTo.forEach(function (to) {
+    var vt = viTri[to.ma], cns = sl.cnCuaTo[to.ma] || [], n = _soTo(to.ma);
+    var dau = dich;
+    dich = danVung(wTong, kG.dau, dich, SC_TG);
+    for (var r0 = dau; r0 < dich; r0++) {
+      wTong.getRow(r0).eachCell(function (ce) {
+        var v = ce.value;
+        if (v && typeof v === 'object' && v.formula && /!A1/.test(v.formula)) ce.value = _doiThangTieuDe(tSh[0].getCell('A1').value || '', thg, nam);
+        if (typeof v !== 'string') return;
+        if (/Yield for the month/i.test(v)) ce.value = _doiThangTieuDe(v, thg, nam);
+        else if (/DRC Cup Lump/i.test(v)) ce.value = v.replace(/:.*$/, ': ' + pt(drcD) + ' %');
+        else if (/DRC Tree Lace/i.test(v)) ce.value = v.replace(/:.*$/, ': ' + pt(drcY) + ' %');
+      });
+    }
+    var dau1 = dich;
+    var loai2 = {};
+    sl.dong.forEach(function (x) { if (x.loai === 'MU_DONG' && x.cl === 'LOAI_II') loai2[x.maCn] = (loai2[x.maCn] || 0) + x.kg; });
+    cns.forEach(function (cn, i) {
+      var r = danVung(wTong, kG.dong, dich, SC_TG) - 1, row = wTong.getRow(r), rT = vt.dongT.A[cn.maCn];
+      var tongDong = PHIEN_4.map(function (ph) { return "'" + vt.tenT + "'!V" + vt.dongT[ph][cn.maCn]; }).join('+');
+      row.getCell(1).value = i + 1;
+      row.getCell(2).value = { formula: "'" + vt.tenT + "'!D" + rT, result: cn.ten || '' };
+      row.getCell(3).value = { formula: "'" + vt.tenT + "'!E" + rT, result: cn.maCn };
+      row.getCell(4).value = { formula: tongDong + '-E' + r };
+      row.getCell(5).value = loai2[cn.maCn] ? Math.round(loai2[cn.maCn] * 100) / 100 : null;
+      row.getCell(6).value = { formula: '(D' + r + '+E' + r + ')*' + drcD };
+      row.getCell(7).value = { formula: 'F' + r };
+      row.getCell(8).value = { formula: "'Mủ dây'!N" + vt.dongY[cn.maCn] };
+      row.getCell(9).value = { formula: 'H' + r + '*' + drcY };
+      row.getCell(10).value = { formula: 'I' + r };
+      row.getCell(11).value = { formula: "'Mủ đất'!N" + vt.dongR[cn.maCn] };
+      row.getCell(12).value = { formula: 'K' + r + '*' + drcT };
+      row.getCell(13).value = { formula: 'L' + r };
+      row.getCell(14).value = { formula: 'G' + r + '+J' + r + '+M' + r };
+      dich = r + 1;
+    });
+    var cuoi1 = Math.max(dau1, dich - 1);
+    var rTong = danVung(wTong, kG.tong, dich, SC_TG) - 1;
+    'DEFGHIJKLMN'.split('').forEach(function (cl) { wTong.getCell(cl + rTong).value = { formula: 'SUM(' + cl + dau1 + ':' + cl + cuoi1 + ')' }; });
+    dongTongTo.push({ n: n, r: rTong });
+    var dauCuoi = rTong + 1;
+    dich = danVung(wTong, kG.cuoi, dauCuoi, SC_TG);
+    var sauKhu = false;
+    for (var r1 = dauCuoi; r1 < dich; r1++) {
+      wTong.getRow(r1).eachCell(function (ce) {
+        var v = ce.value;
+        if (typeof v === 'string' && /^KHU VỰC/i.test(v)) { ce.value = 'KHU VỰC ' + n; sauKhu = r1; }
+        else if (sauKhu && r1 > sauKhu && typeof v === 'string' && !/Zone|Manager|ĐỘI SẢN XUẤT|GHI CHÚ|…/i.test(v)) ce.value = null;  // tên người ký: để trống
+      });
+    }
+  });
+  if (dongTongTo.length > 1) {
+    var r2 = dich + 2, dau2 = r2;
+    dongTongTo.forEach(function (x) {
+      var row = wTong.getRow(r2);
+      row.getCell(3).value = x.n;
+      row.getCell(4).value = { formula: 'D' + x.r }; row.getCell(6).value = { formula: 'D' + r2 + '-E' + r2 };
+      row.getCell(8).value = { formula: 'H' + x.r }; row.getCell(10).value = { formula: 'H' + r2 + '-I' + r2 };
+      row.getCell(12).value = { formula: 'K' + x.r }; row.getCell(14).value = { formula: 'N' + x.r };
+      r2++;
+    });
+    'DEFGHIJLN'.split('').forEach(function (cl) { wTong.getCell(cl + r2).value = { formula: 'SUM(' + cl + dau2 + ':' + cl + (r2 - 1) + ')' }; });
+  }
+  return { boPhien: boPhien };
+}
+
+var KTNN_TONG = {   // công thức tổng cột CX..DE của mẫu (đầu tháng = ngày 1–15, cuối tháng = 16–31)
+  CX: 'SUMIF($I$9:$AZ$9,$CR$9,$I{r}:$AZ{r})', CY: 'SUMIF($I$9:$AZ$9,$CV$9,$I{r}:$AZ{r})',
+  CZ: 'SUMIF($BB$9:$CV$9,$CU$9,$BB{r}:$CV{r})', DA: 'SUMIF($BB$9:$CV$9,$CV$9,$BB{r}:$CV{r})',
+  DB: 'CX{r}*$DB$8', DC: 'CZ{r}*$DB$8', DD: 'DB{r}+DC{r}', DE: 'CY{r}+DA{r}',
+  DF: 'IF(AND(G{r}>0,DE{r}>0),ROUND(DD{r}*1000/(G{r}*DE{r}),1),"")'
+};
+
+function dungSoKtnn(wb, d) {
+  var p = d.thang.split('-'), nam = p[0], thg = Number(p[1]);
+  var sl = _chuanSoLieuSo(d), SC = 110, drcD = d.drc.MU_DONG || 0, boQua = 0;
+  var doi = d.dsTo[0] ? doiCuaTo(d.dsTo[0].ma) : '';
+  var dsCn = d.dsCn.slice().sort(function (a, b) { return a.to < b.to ? -1 : a.to > b.to ? 1 : (a.maCn < b.maCn ? -1 : 1); });
+  var dongDuLieu = [];
+  sl.dong.forEach(function (x) { if (x.loai === 'MU_DONG' && !x.phien) boQua += x.kg; });
+  var gomTH = { to: {}, lo: {} };
+
+  PHIEN_4.forEach(function (ph) {
+    var w = wb.getWorksheet(ph);
+    if (!w) return;
+    var kDong = chupVung(w, 10, 10, SC);
+    xoaTuDong(w, 10, SC + 2);
+    w.getCell('B3').value = thg + '/' + nam; w.getCell('B4').value = doi; w.getCell('B5').value = ph;
+    w.getCell('DB8').value = drcD;
+    var g = _gomNgay(sl.dong.filter(function (x) { return x.loai === 'MU_DONG' && x.phien === ph; }));
+    var r = 10, stt = 0;
+    dsCn.forEach(function (cn) {
+      var lo = (sl.loCuaCn[cn.maCn] || {})[ph], oCn = g.o[cn.maCn];
+      if (!lo && !oCn) return;
+      danVung(w, kDong, r, SC);
+      var row = w.getRow(r);
+      row.getCell(1).value = ++stt; row.getCell(2).value = cn.to; row.getCell(3).value = cn.maCn;
+      row.getCell(4).value = lo ? lo.tenLo : null; row.getCell(5).value = lo ? lo.maPcGoc : null;
+      row.getCell(6).value = lo ? lo.matCao : null; row.getCell(7).value = lo ? lo.cay : null; row.getCell(8).value = lo ? lo.giong : null;
+      var dauT = 0, cuoiT = 0, latT = 0;
+      for (var ng = 1; ng <= 31; ng++) {
+        var c = (oCn || {})[ng], cot = 9 + (ng - 1) * 3;
+        for (var z = 0; z < 3; z++) row.getCell(cot + z).value = null;
+        if (!c || !c.kg) continue;
+        row.getCell(cot).value = Math.round(c.kg * 100) / 100;
+        if (c.nhat) {
+          row.getCell(cot + 1).value = c.nhat;
+          row.getCell(cot + 2).value = { formula: 'ROUND(' + _cotChu(cot) + r + '/' + _cotChu(cot + 1) + r + ',0)' };
+        }
+        if (ng <= 15) dauT += c.kg; else cuoiT += c.kg;
+        latT += c.nhat || 0;
+      }
+      for (var cl in KTNN_TONG) w.getCell(cl + r).value = { formula: KTNN_TONG[cl].replace(/\{r\}/g, r) };
+      dongDuLieu.push({ ph: ph, r: r, to: cn.to, maCn: cn.maCn });
+      var tT = gomTH.to[cn.to] = gomTH.to[cn.to] || { dau: 0, cuoi: 0, lat: 0 };
+      tT.dau += dauT; tT.cuoi += cuoiT; tT.lat += latT;
+      var k = lo ? lo.tenLo : '(không rõ lô)', tL = gomTH.lo[k] = gomTH.lo[k] || { dau: 0, cuoi: 0, lat: 0, soDong: 0 };
+      tL.dau += dauT; tL.cuoi += cuoiT; tL.lat += latT; tL.soDong++;
+      r++;
+    });
+  });
+
+  var wd = wb.getWorksheet('Du lieu');
+  if (wd) {
+    var kD = chupVung(wd, 2, 2, 20);
+    xoaTuDong(wd, 2, 22);
+    var map = { D: 'D', E: 'E', F: 'F', G: 'G', H: 'H', I: 'CX', J: 'CY', K: 'CZ', L: 'DA', M: 'DB', N: 'DC', O: 'DD', P: 'DE', Q: 'DF' };
+    dongDuLieu.forEach(function (x, i) {
+      var r = 2 + i;
+      danVung(wd, kD, r, 20);
+      wd.getCell('A' + r).value = x.ph; wd.getCell('B' + r).value = x.to.replace('-', '.'); wd.getCell('C' + r).value = x.maCn;
+      for (var cl in map) wd.getCell(cl + r).value = { formula: x.ph + '!' + map[cl] + x.r };
+      wd.getCell('R' + r).value = { formula: 'N' + r + '-O' + r };
+    });
+  }
+
+  var wt = wb.getWorksheet('TH');
+  if (wt) {
+    for (var rr = 5; rr <= Math.max(wt.rowCount, 120); rr++) {
+      ['A', 'B', 'C', 'D', 'I', 'J', 'K', 'L', 'M', 'O', 'P'].forEach(function (cl) { wt.getCell(cl + rr).value = null; });
+    }
+    wt.getCell('E15').value = drcD;
+    var r3 = 5;
+    Object.keys(gomTH.to).sort().forEach(function (t) {
+      var x = gomTH.to[t];
+      wt.getCell('A' + r3).value = t.replace('-', '.'); wt.getCell('B' + r3).value = Math.round(x.dau * 100) / 100;
+      wt.getCell('C' + r3).value = Math.round(x.cuoi * 100) / 100; wt.getCell('D' + r3).value = x.lat; r3++;
+    });
+    wt.getCell('I5').value = 'Lô'; wt.getCell('J5').value = 'Sum of Sản lượng đầu tháng (kg)';
+    wt.getCell('K5').value = 'Sum of Sản lượng cuối tháng (kg)'; wt.getCell('L5').value = 'Average of Tổng lát';
+    wt.getCell('O4').value = 'Lô'; wt.getCell('P4').value = 'Count of Mã phần cạo';
+    var dsLo = Object.keys(gomTH.lo).sort(function (a, b) { return (Number(a) || 1e9) - (Number(b) || 1e9) || (a < b ? -1 : 1); });
+    var r4 = 6, r5 = 5, demPc = 0;
+    dsLo.forEach(function (k) {
+      var x = gomTH.lo[k];
+      wt.getCell('I' + r4).value = k; wt.getCell('J' + r4).value = Math.round(x.dau * 100) / 100;
+      wt.getCell('K' + r4).value = Math.round(x.cuoi * 100) / 100; wt.getCell('L' + r4).value = x.soDong ? Math.round(x.lat / x.soDong * 100) / 100 : 0;
+      wt.getCell('M' + r4).value = { formula: 'ROUND((J' + r4 + '+K' + r4 + ')*$E$15,2)' };
+      wt.getCell('O' + r5).value = k; wt.getCell('P' + r5).value = x.soDong; demPc += x.soDong;
+      r4++; r5++;
+    });
+    wt.getCell('O' + r5).value = 'Grand Total'; wt.getCell('P' + r5).value = demPc;
+  }
+  return { boQua: boQua };
+}
+
+function _xuatSoTheoMau(tenMau, dung, tenFile, ch, nut) {
+  nut.disabled = true; nut.textContent = 'Đang lấy số liệu…';
+  var tai = fetch(tenMau).then(function (r) { if (!r.ok) throw new Error('Không tải được file mẫu (HTTP ' + r.status + ').'); return r.arrayBuffer(); });
+  var soLieu = goiCache('soSanLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, thang: ch.thang, doi: ch.doi, to: ch.to });
+  return Promise.all([tai, soLieu]).then(function (kq) {
+    nut.textContent = 'Đang dựng file…';
+    if (!kq[1].dsCn.length) throw new Error('Phạm vi đang chọn không có công nhân nào.');
+    var wb = new ExcelJS.Workbook();
+    return wb.xlsx.load(kq[0]).then(function () {
+      var tt = dung(wb, kq[1]);
+      return wb.xlsx.writeBuffer().then(function (buf) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+        a.download = tenFile + '_' + String(ch.to || ch.doi || S.maDonVi).replace(/[\\/:*?"<>|]/g, '_') + '_' + ch.thang + '.xlsx';
+        a.click();
+        var sot = (tt && (tt.boPhien || tt.boQua)) || 0;
+        $('thongBao').innerHTML = '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+          'Đã xuất ' + thoat(a.download) + ' (số liệu đã duyệt tháng ' + thoat(ch.thang) + ').' +
+          (sot ? ' <b>Lưu ý:</b> ' + soVN(sot, 0) + ' kg mủ đông không ghi phiên/phần cạo — ' +
+                 (tt.boPhien ? 'tạm xếp vào khối phiên A.' : 'không đưa vào sổ theo phần cạo.') : '') + '</div>';
+        nut.disabled = false; nut.textContent = 'Xuất Excel';
+      });
+    });
+  });
+}
+
+/* =====================================================================
    Tab XUẤT BIỂU MẪU — mỗi biểu mẫu 1 thẻ. Thêm biểu mẫu mới: thêm 1 mục
    vào BAO_CAO (ten, moTa, gồm, phamVi 'doiTo' | 'doi', duocXuat, xuat).
    ===================================================================== */
@@ -3524,6 +3916,22 @@ var BAO_CAO = [
     duocXuat: function () { return quyenDoiTruong(); },
     lyDoKhoa: 'Chỉ đội trưởng (hoặc Admin) xuất được — file có họ tên và số CCCD đầy đủ.',
     xuat: function (ch, nut) { xuatHoSoLuong(ch.thang, ch.doi, nut); return Promise.resolve(); }
+  },
+  {
+    id: 'soToTruong', ten: 'Sổ ghi chép sản lượng của Tổ trưởng',
+    moTa: 'Đúng mẫu sổ tổ trưởng (bản tháng 8): bìa từng tổ; mủ đông mỗi tổ 1 sheet, 4 khối phiên A–D theo ngày bốc ' +
+          '(kg + chất lượng Đ/KĐ, mã lô rừng, tên lô); mủ dây; mủ đất; bảng TỔNG quy khô từng công nhân (công thức sống).',
+    gom: 'Bìa · T1…Tn · Mủ đất · Mủ dây · TỔNG', phamVi: 'doiTo',
+    duocXuat: function () { return true; },
+    xuat: function (ch, nut) { return _xuatSoTheoMau('mau/so_to_truong.xlsx', dungSoToTruong, 'So_ghi_chep_SL_to_truong', ch, nut); }
+  },
+  {
+    id: 'soKtnn', ten: 'Sổ theo dõi quản lý sản lượng hằng ngày (KTNN)',
+    moTa: 'Đúng mẫu sổ KTNN: mỗi phiên A–D 1 sheet, mỗi dòng 1 công nhân × phần cạo (lô, mặt cạo, số cây, giống), ' +
+          '31 ngày × sản lượng/số nhát/NSBQ, tổng đầu – cuối tháng, quy khô, tổng lát; sheet Du lieu và TH tổng hợp.',
+    gom: 'A · B · C · D · Du lieu · TH', phamVi: 'doiTo',
+    duocXuat: function () { return true; },
+    xuat: function (ch, nut) { return _xuatSoTheoMau('mau/so_ktnn.xlsx', dungSoKtnn, 'So_theo_doi_SL_KTNN', ch, nut); }
   },
   {
     id: 'nangSuatVuon', ten: 'Tổng hợp năng suất vườn cây',
@@ -4258,6 +4666,100 @@ var KY_HIEU_EN = {
 
 function _cotChu(n) { var s = ''; while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
 function _saoKieu(st) { return JSON.parse(JSON.stringify(st || {})); }
+
+/* ---------------------------------------------------------------------
+   Bộ máy CHÉP KHỐI từ file mẫu (ExcelJS): chụp một vùng dòng của sheet mẫu
+   (giá trị tĩnh, kiểu ô, chiều cao dòng, ô gộp, ảnh/logo) rồi dán lại ở vị trí
+   khác (cùng sheet hoặc sheet khác cùng workbook). Dùng cho các sổ xếp nhiều
+   khối lặp lại (mỗi tổ / mỗi phiên 1 khối, số dòng công nhân thay đổi).
+   --------------------------------------------------------------------- */
+function _giaTriMau(v) {
+  if (v && typeof v === 'object') {
+    if (v.sharedFormula) return null;              // công thức dùng chung: chỉ đúng tại chỗ cũ
+    if (v.formula) return { formula: v.formula };
+  }
+  return v === undefined ? null : v;
+}
+
+function chupVung(ws, tu, den, soCot, khongAnh) {
+  var k = { rows: [], merges: [], images: [] };
+  for (var r = tu; r <= den; r++) {
+    var row = ws.getRow(r), o = [];
+    for (var c = 1; c <= soCot; c++) { var ce = row.getCell(c); o[c] = { v: _giaTriMau(ce.value), st: _saoKieu(ce.style) }; }
+    k.rows.push({ cao: row.height, o: o });
+  }
+  Object.keys(ws._merges || {}).forEach(function (key) {
+    var m = ws._merges[key];
+    if (m && m.top >= tu && m.bottom <= den && m.left <= soCot) k.merges.push({ t: m.top - tu, l: m.left, b: m.bottom - tu, r: Math.min(m.right, soCot) });
+  });
+  if (!khongAnh) ws.getImages().forEach(function (im) {
+    var tl = im.range.tl, hang = tl.nativeRow + 1;
+    if (hang < tu || hang > den) return;
+    var br = im.range.br;
+    k.images.push({ id: im.imageId, tl: { col: tl.col, row: tl.row - (tu - 1) },
+                    br: br ? { col: br.col, row: br.row - (tu - 1) } : null, ext: im.range.ext });
+  });
+  return k;
+}
+
+/** Dán vùng đã chụp, dòng đầu tại `dich`. Trả về dòng kế tiếp sau vùng. */
+function danVung(ws, k, dich, soCot) {
+  k.rows.forEach(function (rr, i) {
+    var row = ws.getRow(dich + i);
+    if (rr.cao) row.height = rr.cao;
+    for (var c = 1; c <= soCot; c++) { var ce = row.getCell(c); ce.style = _saoKieu(rr.o[c].st); ce.value = rr.o[c].v; }
+  });
+  k.merges.forEach(function (m) { ws.mergeCells(dich + m.t, m.l, dich + m.b, m.r); });
+  // Gộp ô chép kiểu ô chính đè lên ô phụ -> mất viền riêng của ô phụ (vd viền phải vùng gộp): gán lại.
+  k.merges.forEach(function (m) {
+    for (var r = m.t; r <= m.b; r++) for (var c = m.l; c <= m.r; c++) {
+      if (r === m.t && c === m.l) continue;
+      ws.getRow(dich + r).getCell(c).style = _saoKieu(k.rows[r].o[c].st);
+    }
+  });
+  var lech = dich - 1;
+  k.images.forEach(function (im) {
+    ws.addImage(im.id, im.br ? { tl: { col: im.tl.col, row: im.tl.row + lech }, br: { col: im.br.col, row: im.br.row + lech }, editAs: 'oneCell' }
+                             : { tl: { col: im.tl.col, row: im.tl.row + lech }, ext: im.ext, editAs: 'oneCell' });
+  });
+  return dich + k.rows.length;
+}
+
+/** Xoá trắng từ dòng `tu` tới hết sheet: giá trị, kiểu, ô gộp, ảnh nằm trong vùng. */
+function xoaTuDong(ws, tu, soCot) {
+  Object.keys(ws._merges || {}).forEach(function (key) {
+    var m = ws._merges[key];
+    if (m && m.bottom >= tu) ws.unMergeCells(m.range);
+  });
+  ws._media = (ws._media || []).filter(function (im) {
+    return im.type !== 'image' || !im.range || !im.range.tl || im.range.tl.nativeRow + 1 < tu;
+  });
+  var het = Math.max(ws.rowCount, ws.actualRowCount || 0);
+  for (var r = tu; r <= het; r++) {
+    var row = ws.getRow(r);
+    for (var c = 1; c <= soCot; c++) { var ce = row.getCell(c); ce.value = null; ce.style = {}; }
+    row.height = undefined;
+  }
+}
+
+/** Dòng đầu tiên từ `tu` có cột A thoả `thu(giá trị dạng chữ)`. */
+function timDongA(ws, tu, thu) {
+  var het = Math.max(ws.rowCount, ws.actualRowCount || 0);
+  for (var r = tu; r <= het; r++) {
+    var v = ws.getRow(r).getCell(1).value;
+    var s = v && typeof v === 'object' ? (v.formula || v.sharedFormula || v.richText && v.richText.map(function (x) { return x.text; }).join('') || '') : String(v == null ? '' : v);
+    if (thu(String(s))) return r;
+  }
+  return 0;
+}
+function _laTieuDeKhoi(s) { return /Yield for the month/i.test(s) || /^\$?A\$?1(:|$)/.test(s.replace(/^=/, '')) || /!A1(:|$)/.test(s); }
+function _laDongTong(s) { return /^\s*Total/i.test(s); }
+
+/** Đổi tháng/năm trong chuỗi tiêu đề mẫu ("... month 8/2026 / SẢN LƯỢNG THÁNG 8 NĂM 2026"). */
+function _doiThangTieuDe(s, thg, nam) {
+  return String(s).replace(/(\d{1,2})\/(\d{4})/, Number(thg) + '/' + nam)
+                  .replace(/THÁNG\s+\d{1,2}\s+NĂM\s+\d{4}/i, 'THÁNG ' + Number(thg) + ' NĂM ' + nam);
+}
 
 /** Tên công nhân (không bắt buộc) — mượn danh sách của tab Xếp loại, lỗi thì để trống cột tên như mẫu. */
 function _tenCnChoSo(thang, doi) {
