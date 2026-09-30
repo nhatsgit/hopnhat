@@ -298,6 +298,9 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .nt-bang tr.nt-loi td{background:var(--clay-soft)}
 .nt-bang tr.nt-co td{background:var(--leaf-soft)}
 .nt-bang select.o{padding:5px 8px;min-width:0}
+.cc-chip{display:inline-flex;gap:4px;flex-wrap:nowrap}
+.nt-bang .cc-chip .chip{padding:3px 9px;min-width:0}
+.nt-bang td.cc-pc{font-size:12.5px;white-space:nowrap}
 .nt-bang tr.cc-da-co:not(.nt-co) td{background:var(--paper)}
 .the-nho{display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:2px;font-size:11px;
   background:var(--line);color:var(--ink-2);white-space:nowrap}
@@ -6158,15 +6161,59 @@ function ccDocTam() {
   } catch (e) { return null; }
 }
 
-/** Đọc bảng đang gõ → object lưu tạm (chỉ lưu người khác mặc định để bản tạm gọn). */
+/* Phiên cạo chọn bằng nút A/B/C/D (không gõ tay), tối đa 2 phiên (cạo đúp). Giá trị gửi đi ("A" hoặc
+   "A,B", theo thứ tự danh mục) nằm ở data-v; data-thu giữ thứ tự bấm để chọn phiên thứ 3 thì bỏ phiên
+   chọn sớm nhất. _ccBangPc: phần cạo giao khoán của cả tổ { maCn: { A: 'PC..', B: ... } }. */
+var _ccBangPc = null;
+
+function ccChipPhien(v, lop, id) {
+  var ds = String(v || '').split(',').filter(Boolean);
+  return '<div class="gat cc-chip ' + (lop || '') + '"' + (id ? ' id="' + id + '"' : '') + ' data-v="' + thoat(ds.join(',')) +
+    '" data-thu="' + thoat(ds.join(',')) + '">' + ((S.meta && S.meta.phien) || []).map(function (p) {
+      return '<button type="button" class="chip' + (ds.indexOf(p.ma) > -1 ? ' on' : '') + '" data-p="' + thoat(p.ma) + '">' + thoat(p.ma) + '</button>';
+    }).join('') + '</div>';
+}
+
+function ccDatChip(box, thu) {
+  var thuTu = ((S.meta && S.meta.phien) || []).map(function (p) { return p.ma; });
+  var v = thu.slice().sort(function (a, b) { return thuTu.indexOf(a) - thuTu.indexOf(b); });
+  box.setAttribute('data-thu', thu.join(','));
+  box.setAttribute('data-v', v.join(','));
+  var nut = box.querySelectorAll('button[data-p]');
+  for (var i = 0; i < nut.length; i++) nut[i].classList.toggle('on', thu.indexOf(nut[i].getAttribute('data-p')) > -1);
+}
+
+function ccBamChip(box, ma) {
+  var thu = (box.getAttribute('data-thu') || '').split(',').filter(Boolean);
+  var i = thu.indexOf(ma);
+  if (i > -1) thu.splice(i, 1);
+  else { thu.push(ma); if (thu.length > 2) thu.shift(); }
+  ccDatChip(box, thu);
+}
+
+/** Ô "Phần cạo" của 1 dòng theo phiên đang chọn; phiên chưa giao khoán cho người đó thì báo đỏ. */
+function ccVePc(tr) {
+  var o = tr.querySelector('.cc-pc'), box = tr.querySelector('.cc-ph');
+  if (!o || !box) return;
+  var ds = (box.getAttribute('data-v') || '').split(',').filter(Boolean);
+  if (!ds.length) { o.innerHTML = '<span class="nhan-mo">—</span>'; return; }
+  if (!_ccBangPc) { o.innerHTML = '<span class="nhan-mo">đang tải…</span>'; return; }
+  var cua = _ccBangPc[tr.getAttribute('data-cn')] || {};
+  o.innerHTML = ds.map(function (p) {
+    return cua[p] ? '<b>' + thoat(cua[p]) + '</b>' : '<span style="color:var(--clay)" title="Công nhân chưa được giao khoán phần cạo ở phiên này">' +
+      thoat(p) + ': chưa giao</span>';
+  }).join('<br>');
+}
+
+/** Đọc bảng đang gõ → object lưu tạm. */
 function ccThuThap() {
   var dong = {}, tr = $('bangCCTo').querySelectorAll('tr[data-cn]');
   for (var i = 0; i < tr.length; i++) {
     if (tr[i].classList.contains('cc-da-co')) continue;
-    dong[tr[i].getAttribute('data-cn')] = { kh: tr[i].querySelector('.cc-kh').value, ph: tr[i].querySelector('.cc-ph').value,
+    dong[tr[i].getAttribute('data-cn')] = { kh: tr[i].querySelector('.cc-kh').value, ph: tr[i].querySelector('.cc-ph').getAttribute('data-v'),
                                             gc: tr[i].querySelector('.cc-gc').value };
   }
-  return { ngay: $('ccNgay').value, kh: $('ccKhMd').value, ph: $('ccPhMd').value, dong: dong };
+  return { ngay: $('ccNgay').value, kh: $('ccKhMd').value, ph: $('ccPhMd').getAttribute('data-v'), dong: dong };
 }
 
 function ccLuuTam() {
@@ -6214,16 +6261,16 @@ function moChamCongCaTo() {
   var h = '<div class="bo-loc the" style="margin-bottom:10px">' +
     '<div><label class="nhan" for="ccNgay">Ngày</label><input class="o" id="ccNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ccKhMd">Ký hiệu mặc định</label><select class="o" id="ccKhMd">' + optKh(khMd) + '</select></div>' +
-    '<div><label class="nhan" for="ccPhMd">Phiên cạo mặc định</label><select class="o" id="ccPhMd"><option value="">(không)</option>' +
-      dsPh.map(function (x) { return '<option value="' + thoat(x.ma) + '"' + (x.ma === phMd ? ' selected' : '') + '>' + thoat(x.ten || x.ma) + '</option>'; }).join('') +
-    '</select></div>' +
+    '<div><label class="nhan">Phiên cạo mặc định <span class="nhan-mo">(tối đa 2 nếu cạo đúp)</span></label>' +
+      ccChipPhien(phMd, '', 'ccPhMd') + '</div>' +
     '<div style="display:flex;align-items:flex-end"><button class="btn nho" id="ccApMd" title="Đặt lại ký hiệu + phiên mặc định cho mọi người chưa chấm">Áp mặc định cho cả bảng</button></div></div>' +
     '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
       '<span id="ccTongKet" style="margin-right:auto"></span><span class="nhan-mo" id="ccTrangThaiLuu"></span></div>' +
     '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangCCTo"><thead><tr><th>#</th><th>Mã công nhân</th>' +
-    '<th>Ký hiệu công</th><th>Phiên cạo</th><th>Ghi chú</th></tr></thead><tbody></tbody></table></div><div id="ccLoi"></div>' +
+    '<th>Ký hiệu công</th><th>Phiên cạo</th><th>Phần cạo</th><th>Ghi chú</th></tr></thead><tbody></tbody></table></div><div id="ccLoi"></div>' +
     '<p class="goi-y">Mọi người được điền sẵn ký hiệu mặc định — chỉ cần sửa người nghỉ / khác (chọn "— bỏ qua —" để không gửi). ' +
-    'Phiên cạo: gõ nhiều phiên nếu cạo đúp (vd <b>AB</b>). Người <span class="nhan-mo">đã có chấm công ngày này</span> bị khoá, muốn đổi thì sửa ở danh sách chấm công. ' +
+    'Phiên cạo: bấm chọn, tối đa <b>2 phiên</b> nếu cạo đúp (bấm lại để bỏ); phần cạo theo giao khoán hiện ngay bên cạnh. ' +
+    'Người <span class="nhan-mo">đã có chấm công ngày này</span> bị khoá, muốn đổi thì sửa ở danh sách chấm công. ' +
     'Bảng tự lưu tạm ' + (NT_HAN_MS / 3600000) + ' giờ trong trình duyệt này.</p>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
       nsNut('ccXoaTam', 'Xoá bản tạm', false) + nsNut('ccDong', 'Đóng', false) + nsNut('ccGui', 'Gửi xử lý', true) + '</div>';
@@ -6232,26 +6279,52 @@ function moChamCongCaTo() {
   var dsCn = dsCnNhapTo();
   var veBang = function (daCo) {
     var cu = $('bangCCTo').querySelector('tbody').children.length ? ccThuThap().dong : (tam && tam.ngay === $('ccNgay').value ? tam.dong : {});
-    var kh0 = $('ccKhMd').value, ph0 = $('ccPhMd').value, b = '';
+    var kh0 = $('ccKhMd').value, ph0 = $('ccPhMd').getAttribute('data-v'), b = '';
     for (var i = 0; i < dsCn.length; i++) {
       var ma = dsCn[i], co = daCo[ma], x = cu[ma];
       if (co) {
         b += '<tr data-cn="' + thoat(ma) + '" class="cc-da-co"><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(ma) + '</b></td>' +
-          '<td colspan="3" class="nhan-mo">Đã chấm: <b>' + thoat(co.kyHieu) + '</b>' + (co.phien ? ' · phiên ' + thoat(co.phien) : '') +
+          '<td colspan="4" class="nhan-mo">Đã chấm: <b>' + thoat(co.kyHieu) + '</b>' + (co.phien ? ' · phiên ' + thoat(co.phien) : '') +
+          (co.phanCao ? ' · phần cạo ' + thoat(co.phanCao) : '') +
           ' · ' + (co.trangThai === 'DA_DUYET' ? 'đã duyệt' : 'chờ duyệt') + ' (' + thoat(co.ma) + ')</td></tr>';
         continue;
       }
       var kh = x ? x.kh : kh0, ph = x ? x.ph : ph0;
       b += '<tr data-cn="' + thoat(ma) + '"><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(ma) + '</b></td>' +
         '<td><select class="o cc-kh">' + optKh(kh) + '</select></td>' +
-        '<td><input class="o cc-ph" maxlength="4" style="width:70px;text-transform:uppercase" value="' + thoat(ph || '') + '"></td>' +
+        '<td>' + ccChipPhien(ph, 'cc-ph') + '</td><td class="cc-pc"></td>' +
         '<td><input class="o cc-gc" maxlength="200" value="' + thoat(x ? x.gc : '') + '"></td></tr>';
     }
     $('bangCCTo').querySelector('tbody').innerHTML = b;
     var o = $('bangCCTo').querySelectorAll('select,input');
     for (var k = 0; k < o.length; k++) o[k].onchange = o[k].oninput = thayDoi;
+    var dongs = $('bangCCTo').querySelectorAll('tr[data-cn]:not(.cc-da-co)');
+    for (var z = 0; z < dongs.length; z++) ccVePc(dongs[z]);
     ccTongKet();
   };
+  // Bấm nút phiên trong bảng (uỷ quyền sự kiện cho cả bảng): đổi phiên dòng đó + vẽ lại phần cạo.
+  $('bangCCTo').onclick = function (ev) {
+    var nut = ev.target.closest('button[data-p]');
+    if (!nut) return;
+    ccBamChip(nut.parentNode, nut.getAttribute('data-p'));
+    ccVePc(nut.closest('tr'));
+    thayDoi();
+  };
+  $('ccPhMd').onclick = function (ev) {
+    var nut = ev.target.closest('button[data-p]');
+    if (!nut) return;
+    ccBamChip(this, nut.getAttribute('data-p'));
+    ccLuuTam();
+  };
+  // Phần cạo giao khoán của cả tổ — 1 lần gọi, dùng cho mọi dòng.
+  _ccBangPc = null;
+  goiAPI('phanCaoTheoCN', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: S.laAdmin ? $('fTo').value : S.maDonVi })
+    .then(function (d) { _ccBangPc = d.bang || {}; })
+    .catch(function () { _ccBangPc = {}; })
+    .then(function () {
+      var dongs = $('bangCCTo') ? $('bangCCTo').querySelectorAll('tr[data-cn]:not(.cc-da-co)') : [];
+      for (var z = 0; z < dongs.length; z++) ccVePc(dongs[z]);
+    });
   var hen = null;
   var thayDoi = function () { ccTongKet(); clearTimeout(hen); hen = setTimeout(ccLuuTam, 600); };
 
@@ -6273,12 +6346,14 @@ function moChamCongCaTo() {
   $('ccTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
 
   $('ccNgay').onchange = function () { napDaCo().then(ccLuuTam); };
-  $('ccKhMd').onchange = $('ccPhMd').onchange = function () { ccLuuTam(); };
+  $('ccKhMd').onchange = function () { ccLuuTam(); };
   $('ccApMd').onclick = function () {
     var tr = $('bangCCTo').querySelectorAll('tr[data-cn]:not(.cc-da-co)');
+    var phMdV = ($('ccPhMd').getAttribute('data-v') || '').split(',').filter(Boolean);
     for (var i = 0; i < tr.length; i++) {
       tr[i].querySelector('.cc-kh').value = $('ccKhMd').value;
-      tr[i].querySelector('.cc-ph').value = $('ccPhMd').value;
+      ccDatChip(tr[i].querySelector('.cc-ph'), phMdV);
+      ccVePc(tr[i]);
     }
     thayDoi();
   };
@@ -6301,7 +6376,7 @@ async function ccGui() {
     var kh = tr[i].querySelector('.cc-kh').value;
     if (!kh) continue;
     dsDong.push({ ngay: ngay, maCn: tr[i].getAttribute('data-cn'), kyHieu: kh,
-                  phien: tr[i].querySelector('.cc-ph').value.trim().toUpperCase(), ghiChu: tr[i].querySelector('.cc-gc').value });
+                  phien: tr[i].querySelector('.cc-ph').getAttribute('data-v') || '', ghiChu: tr[i].querySelector('.cc-gc').value });
   }
   if (!dsDong.length) { baoLoi('ccLoi', 'Không có ai để gửi.'); return; }
   if (!confirm('Gửi chấm công ' + dsDong.length + ' người, ngày ' + ngayVN(ngay) + '?')) return;
@@ -6329,10 +6404,12 @@ async function ccGui() {
   for (i2 = 0; i2 < tr.length; i2++) {
     var cnI = tr[i2].getAttribute('data-cn');
     if (xong[cnI]) {
-      var khI = tr[i2].querySelector('.cc-kh').value, phI = tr[i2].querySelector('.cc-ph').value;
+      var khI = tr[i2].querySelector('.cc-kh').value, phI = tr[i2].querySelector('.cc-ph').getAttribute('data-v');
+      var pcI = tr[i2].querySelector('.cc-pc').textContent;
       tr[i2].className = 'cc-da-co nt-co';
       tr[i2].innerHTML = tr[i2].children[0].outerHTML + tr[i2].children[1].outerHTML +
-        '<td colspan="3" class="nhan-mo">Vừa gửi: <b>' + thoat(khI) + '</b>' + (phI ? ' · phiên ' + thoat(phI) : '') + ' · chờ duyệt</td>';
+        '<td colspan="4" class="nhan-mo">Vừa gửi: <b>' + thoat(khI) + '</b>' + (phI ? ' · phiên ' + thoat(phI) : '') +
+        (pcI && pcI !== '—' ? ' · ' + thoat(pcI) : '') + ' · chờ duyệt</td>';
     } else if (bao[cnI] !== undefined) tr[i2].classList.add('nt-loi');
   }
   if (!loi.length) {
