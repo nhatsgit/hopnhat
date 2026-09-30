@@ -282,6 +282,14 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .leaflet-tooltip.bd-tip{font-size:12.5px;font-family:inherit}
 .bd-loc{flex-basis:100%;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding-top:12px;margin-top:2px;border-top:1px dashed var(--line)}
 .bd-loc[hidden]{display:none}
+/* Lô cao nhất / thấp nhất (mode sản lượng) */
+.bd-ghim span{display:inline-block;transform:translate(-50%,-50%);white-space:nowrap;background:rgba(15,25,20,.88);color:#fff;
+  font-size:11.5px;line-height:1.3;padding:3px 7px;border-radius:4px;border:2px solid;cursor:pointer;text-align:center}
+.bd-mm{display:grid;grid-template-columns:auto 1fr;gap:0 8px;width:100%;text-align:left;padding:7px 10px;margin:0 0 6px;
+  background:var(--paper);border:1px solid var(--line);border-left:5px solid;border-radius:2px;cursor:pointer;font:inherit;color:var(--ink);font-size:13px}
+.bd-mm span:first-child{grid-row:span 2;font-weight:700;color:var(--ink-2);align-self:center}
+.bd-mm .num{color:var(--ink-2)}
+.bd-mm:hover,.bd-mm:focus-visible{border-color:var(--leaf);outline:none}
 /* Trang Phân quyền */
 .thanh-pq{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px;margin-bottom:16px}
 .dau-the-pq{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px}
@@ -1045,6 +1053,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="luoi-bd">
         <div class="the" style="padding:0;overflow:hidden"><div id="banDo"></div></div>
         <div class="the o-bieu-do" style="min-width:0">
+          <div id="bdMaxMin" style="display:none;margin-bottom:14px"></div>
           <h3 class="tieude-muc" id="bdTieuDeChuThich">Chú thích</h3>
           <div id="bdChuThich"></div>
           <h3 class="tieude-muc" style="margin-top:18px">Lô đang chọn</h3>
@@ -4062,18 +4071,49 @@ function _bdDinhDang(v, chiSo) {
   return String(v);
 }
 
+/** Mode liên quan sản lượng: làm nổi bật lô cao nhất / thấp nhất trong phạm vi đang lọc. */
+var BD_MODE_SAN_LUONG = { qkDay: 1, qkChen: 1, qk: 1, kgHa: 1, kgTuoi: 1, nsbq: 1, gk: 1 };
+var BD_MAU_MAX = '#00e5ff', BD_MAU_MIN = '#ff1744';
+var _bdGhim = null;
+
+function _bdTimMaxMin(ds, chiSo) {
+  if (!BD_MODE_SAN_LUONG[chiSo]) return null;
+  var mx = null, mn = null;
+  ds.forEach(function (x) {
+    var v = _bdGiaTri(x, chiSo);
+    if (v === null || v === undefined) return;
+    if (!mx || v > mx.v) mx = { x: x, v: v };
+    if (!mn || v < mn.v) mn = { x: x, v: v };
+  });
+  return mx ? { max: mx, min: mn } : null;
+}
+
+/** Phóng tới 1 lô và chọn nó (dùng cho dòng Cao nhất / Thấp nhất). */
+function bdToiLo(maLo) {
+  var lop = null;
+  _bdLop.eachLayer(function (l) { if (l.feature.properties.maLo === maLo) lop = l; });
+  if (!lop) return;
+  _bdChon = maLo;
+  _bdMap.fitBounds(lop.getBounds(), { padding: [60, 60], maxZoom: 16 });
+  _bdLop.setStyle(_bdLop.options.style);
+  veChiTietLo(_bdTimLo(maLo));
+}
+
 function veBanDoLo(canVua) {
   if (!_bd || !_bdMap) return;
-  var chiSo = $('bdMau').value, ds = _bdLoc(), thang = _bdThang(ds, chiSo);
+  var chiSo = $('bdMau').value, ds = _bdLoc(), thang = _bdThang(ds, chiSo), mm = _bdTimMaxMin(ds, chiSo);
+  var laMax = function (x) { return mm && mm.max.x.maLo === x.maLo; }, laMin = function (x) { return mm && mm.min.x.maLo === x.maLo && mm.min.x !== mm.max.x; };
   if (_bdLop) _bdMap.removeLayer(_bdLop);
+  if (_bdGhim) { _bdMap.removeLayer(_bdGhim); _bdGhim = null; }
   _bdLop = L.geoJSON({ type: 'FeatureCollection', features: ds.map(function (x) {
     return { type: 'Feature', properties: { maLo: x.maLo }, geometry: x.g };
   }) }, {
     style: function (f) {
       var x = _bdTimLo(f.properties.maLo), v = _bdGiaTri(x, chiSo);
       var chon = _bdChon === x.maLo;
-      return { color: chon ? '#ffd400' : '#ffffff', weight: chon ? 3 : 1, opacity: .9,
-               fillColor: v === null ? '#9e9e9e' : thang.mau(v), fillOpacity: v === null ? .25 : .6 };
+      var vien = laMax(x) ? BD_MAU_MAX : laMin(x) ? BD_MAU_MIN : chon ? '#ffd400' : '#ffffff';
+      return { color: vien, weight: laMax(x) || laMin(x) ? 4 : chon ? 3 : 1, opacity: laMax(x) || laMin(x) ? 1 : .9,
+               fillColor: v === null ? '#9e9e9e' : thang.mau(v), fillOpacity: v === null ? .25 : (laMax(x) || laMin(x) ? .85 : .6) };
     },
     onEachFeature: function (f, lop) {
       var x = _bdTimLo(f.properties.maLo);
@@ -4083,6 +4123,27 @@ function veBanDoLo(canVua) {
     }
   }).addTo(_bdMap);
   if (canVua && ds.length) _bdMap.fitBounds(_bdLop.getBounds(), { padding: [20, 20] });
+
+  // Lô cao nhất / thấp nhất: viền dày + ghim nhãn tại tâm lô, đưa lên trên cùng
+  var dongMm = '';
+  if (mm) {
+    _bdGhim = L.layerGroup().addTo(_bdMap);
+    [['max', '▲ Cao nhất', BD_MAU_MAX], ['min', '▼ Thấp nhất', BD_MAU_MIN]].forEach(function (k) {
+      var o = mm[k[0]];
+      if (k[0] === 'min' && o.x === mm.max.x) return;
+      _bdLop.eachLayer(function (l) {
+        if (l.feature.properties.maLo !== o.x.maLo) return;
+        l.bringToFront();
+        L.marker(l.getBounds().getCenter(), { icon: L.divIcon({ className: 'bd-ghim', iconSize: null,
+          html: '<span style="border-color:' + k[2] + '">' + k[1] + '<br><b>' + thoat('lô ' + o.x.tenLo) + '</b> ' + thoat(_bdDinhDang(o.v, chiSo)) + '</span>' }) })
+          .on('click', function () { bdToiLo(o.x.maLo); }).addTo(_bdGhim);
+      });
+      dongMm += '<button type="button" class="bd-mm" data-lo="' + thoat(o.x.maLo) + '" style="border-left-color:' + k[2] + '">' +
+        '<span>' + k[1] + '</span><b>' + thoat(o.x.doi + ' · lô ' + o.x.tenLo) + '</b><span class="num">' + thoat(_bdDinhDang(o.v, chiSo)) + '</span></button>';
+    });
+  }
+  $('bdMaxMin').innerHTML = dongMm;
+  $('bdMaxMin').style.display = dongMm ? '' : 'none';
 
   $('bdTieuDeChuThich').textContent = 'Chú thích — ' + BD_TEN_CHI_SO[chiSo];
   $('bdChuThich').innerHTML = (BD_SAN_LUONG[chiSo] || chiSo === 'nsbq' || chiSo === 'kgHa'
@@ -4237,6 +4298,7 @@ function bdNapFile(file) {
 
 function ganSuKienBanDo() {
   $('bdMau').onchange = function () { veBanDoLo(false); };
+  $('bdMaxMin').onclick = function (ev) { var nut = ev.target.closest('button[data-lo]'); if (nut) bdToiLo(nut.getAttribute('data-lo')); };
   // Đội / tổ / lô / tìm: lọc ngay trên bản đồ (không gọi lại máy chủ). Đổi khoảng ngày: bấm Áp dụng để tải số liệu.
   $('bdDoi').onchange = function () { if (_bd) { _bdDungTo(); veBanDoLo(true); } };
   $('bdTo').onchange = function () { if (_bd) { _bdDungLo(); veBanDoLo(true); } };
