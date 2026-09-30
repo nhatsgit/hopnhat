@@ -711,6 +711,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutThemSL">+ Nhập 1 người</button>
           <button class="btn nho" id="nutMauSL" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
           <button class="btn nho" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
+          <button class="btn nho" id="nutDayBase" style="display:none" title="Chọn tổ + ngày, xem dữ liệu rồi tạo phiếu duyệt trên Base">Đẩy lên Base</button>
           <button class="btn nho" id="nutCsvSL">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangSL"></table></div>
@@ -1506,7 +1507,7 @@ function coQuyenCu(ma, tt) {
   if (ma === 'sanLuong' || ma === 'chamCong') return vt === 'TO_TRUONG' || (ma === 'sanLuong' && tt === 'SUA' && S.vaiTroHienThi === 'TRO_LY');
   if (ma === 'nhanSu') return vt === 'TO_TRUONG' || vt === 'DOI_TRUONG';
   if (ma === 'canhBaoNS') return true;
-  if (ma === 'banDoLo') return false;         // nạp bản đồ: chỉ Admin
+  if (ma === 'banDoLo' || ma === 'dayBase') return false;   // nạp bản đồ, đẩy phiếu Base: chỉ Admin
   return vt === 'DOI_TRUONG';
 }
 
@@ -6647,6 +6648,120 @@ function ntTongKet() {
   $('ntGui').disabled = n === 0;
 }
 
+/* ---------------------------------------------------------------------
+   ĐẨY PHIẾU DUYỆT LÊN BASE (mặc định chỉ Admin): chọn tổ + ngày → Xem dữ liệu → Đẩy lên Base.
+   Dữ liệu đang xem gắn với đúng (tổ, ngày) đó — đổi tổ/ngày là ẩn kết quả, phải xem lại mới đẩy được.
+   --------------------------------------------------------------------- */
+var _dbXem = null;
+
+function moDayBase() {
+  if (!coQuyen('dayBase', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền đẩy phiếu lên Base.'); return; }
+  var dsTo = (S.dsTo || []).map(function (t) { return t.ma; });
+  var toMd = $('fTo').value || (S.vaiTro === 'TO_TRUONG' ? S.maDonVi : '');
+  var h = '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">' +
+    '<div><label class="nhan" for="dbTo">Tổ</label><select class="o" id="dbTo" style="width:auto"><option value="">— Chọn tổ —</option>' +
+      dsTo.map(function (t) { return '<option value="' + thoat(t) + '"' + (t === toMd ? ' selected' : '') + '>' + thoat(t) + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div><label class="nhan" for="dbNgay">Ngày</label><input class="o" id="dbNgay" type="date" style="width:auto" value="' + thoat(nsHomNay()) + '"></div>' +
+    '<div>' + nsNut('dbXem', 'Xem dữ liệu', true) + '</div></div>' +
+    '<div id="dbLoi"></div><div id="dbKetQua"></div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
+      nsNut('dbDong', 'Đóng', false) + '<button class="btn chinh" id="dbDay" style="display:none">Đẩy lên Base</button></div>';
+  nsMoModal('Đẩy phiếu duyệt sản lượng lên Base', h);
+  _dbXem = null;
+  var boKq = function () { _dbXem = null; $('dbKetQua').innerHTML = ''; $('dbDay').style.display = 'none'; baoLoi('dbLoi', ''); };
+  $('dbTo').onchange = boKq;
+  $('dbNgay').onchange = boKq;
+  $('dbXem').onclick = dbXemDuLieu;
+  $('dbDay').onclick = dbDayLen;
+  $('dbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
+}
+
+function dbXemDuLieu() {
+  var to = $('dbTo').value, ngay = $('dbNgay').value;
+  if (!to) { baoLoi('dbLoi', 'Chọn tổ.'); return; }
+  if (!ngay) { baoLoi('dbLoi', 'Chọn ngày.'); return; }
+  baoLoi('dbLoi', '');
+  $('dbDay').style.display = 'none';
+  $('dbXem').disabled = true; $('dbXem').textContent = 'Đang tải…';
+  $('dbKetQua').innerHTML = '<p class="goi-y">Đang đọc dữ liệu ' + thoat(to) + ' ngày ' + thoat(ngayVN(ngay)) + '…</p>';
+  goiAPI('xemPhieuBase', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: to, ngay: ngay }, 60000).then(function (d) {
+    // Người dùng đã đổi tổ/ngày trong lúc chờ → bỏ kết quả cũ
+    if ($('dbTo').value !== to || $('dbNgay').value !== ngay) return;
+    _dbXem = d;
+    dbVeKetQua(d);
+  }).catch(function (e) {
+    $('dbKetQua').innerHTML = '';
+    baoLoi('dbLoi', e.message);
+  }).then(function () { if ($('dbXem')) { $('dbXem').disabled = false; $('dbXem').textContent = 'Xem dữ liệu'; } });
+}
+
+function dbVeKetQua(d) {
+  var dt = d.demTrangThai || {}, tenTt = { CHO_DUYET: 'Chờ duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối' };
+  var ttChu = Object.keys(dt).map(function (k) { return (tenTt[k] || k || '(trống)') + ' ' + dt[k]; }).join(' · ');
+  var tongNhat = 0, tongQk = 0;
+  d.dong.forEach(function (x) { tongNhat += Number(x.nhat) || 0; tongQk += Number(x.qk) || 0; });
+  var h = '<div class="kpis" style="margin-bottom:10px">' +
+    the_kpi('Tổng sản lượng', soVN(d.tongKg, 2), 'kg', d.dong.length + ' dòng · ' + ttChu) +
+    the_kpi('Quy khô', soVN(tongQk, 2), 'kg', 'Số nhát ' + soVN(tongNhat, 0)) +
+    the_kpi('Công nhân', soVN(Object.keys(d.dong.reduce(function (m, x) { m[x.maCn] = 1; return m; }, {})).length, 0), 'người',
+      'Phiếu nội trạm ' + d.maPhieu) + '</div>';
+
+  if (!d.coCauHinh) h += '<div class="bao-loi">Chưa cấu hình token Base trên Apps Script (datCauHinhBase) — chưa đẩy được.</div>';
+  if (d.daTao && d.daTao.length) {
+    h += '<div class="bao-loi">Tổ này ngày này <b>đã có ' + d.daTao.length + ' phiếu Base</b>: ' +
+      d.daTao.map(function (x) { return '#' + thoat(x.ticketId) + ' (' + thoat(x.luc) + ')'; }).join(', ') +
+      '. Đẩy tiếp sẽ tạo thêm phiếu mới.</div>';
+  }
+  if (dt.DA_DUYET) h += '<div class="bao-loi">Có ' + dt.DA_DUYET + ' dòng đã duyệt — phiếu vẫn gửi đủ mọi dòng của tổ trong ngày.</div>';
+
+  h += '<h3 class="tieude-muc" style="margin:12px 0 6px">Theo loại mủ</h3><div class="cuon"><table><thead><tr>' +
+    '<th>Loại mủ</th><th class="so">Sản lượng (kg)</th><th class="so">Tỷ lệ</th></tr></thead><tbody>' +
+    d.chiTiet.map(function (c) { return '<tr><td>' + thoat(c[1]) + '</td><td class="so">' + soVN(c[2], 2) + '</td><td class="so">' + soVN(c[3], 1) + '%</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+  h += '<h3 class="tieude-muc" style="margin:12px 0 6px">Chi tiết ' + d.dong.length + ' dòng</h3>' +
+    '<div class="cuon cuon-doc" style="max-height:40vh"><table><thead><tr><th>#</th><th>Mã CN</th><th>Phần cạo</th><th>Phiên</th>' +
+    '<th>Loại mủ</th><th class="so">Kg</th><th class="so">Nhát</th><th class="so">Quy khô</th><th>Trạng thái</th></tr></thead><tbody>' +
+    d.dong.map(function (x, i) {
+      return '<tr><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(x.maCn) + '</b></td><td>' + thoat(x.pc) + '</td><td>' + thoat(x.phien) +
+        '</td><td>' + thoat(x.loai) + '</td><td class="so">' + soVN(x.kg, 2) + '</td><td class="so">' + soVN(x.nhat, 0) +
+        '</td><td class="so">' + soVN(x.qk, 2) + '</td><td>' + thoat(tenTt[x.trangThai] || x.trangThai) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  $('dbKetQua').innerHTML = h;
+
+  var nut = $('dbDay');
+  delete nut.dataset.xacNhan;
+  nut.disabled = !d.coCauHinh;
+  nut.textContent = 'Đẩy lên Base (' + d.dong.length + ' dòng · ' + soVN(d.tongKg, 2) + ' kg)';
+  nut.style.display = '';
+}
+
+function dbDayLen() {
+  var d = _dbXem, nut = $('dbDay');
+  if (!d) return;
+  // Đã có phiếu cho (tổ, ngày) này → bấm 2 lần mới tạo thêm
+  if (d.daTao && d.daTao.length && !nut.dataset.xacNhan) {
+    nut.dataset.xacNhan = '1'; nut.textContent = 'Đã có phiếu — bấm lần nữa để tạo thêm';
+    return;
+  }
+  nut.disabled = true; nut.textContent = 'Đang tạo phiếu trên Base…';
+  $('dbXem').disabled = true;
+  baoLoi('dbLoi', '');
+  // Gọi đúng 1 lần (không tự thử lại) — thử lại khi đường truyền chập chờn có thể tạo 2 phiếu.
+  goiApiMotLan('dayPhieuBase', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: d.to, ngay: d.ngay }, 120000).then(function (kq) {
+    nut.style.display = 'none';
+    $('dbKetQua').insertAdjacentHTML('afterbegin', '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+      'Đã tạo phiếu Base <b>#' + thoat(kq.ticketId) + '</b> — ' + thoat(d.to) + ' ngày ' + thoat(ngayVN(d.ngay)) + ': ' +
+      soVN(kq.tongKg, 2) + ' kg, ' + kq.soDong + ' dòng.' +
+      (kq.loiBang ? '<br><b>Lưu ý:</b> điền bảng vào phiếu có lỗi — ' + thoat(kq.dienBang) : '') + '</div>');
+    _dbXem = null;
+  }).catch(function (e) {
+    nut.disabled = false;
+    nut.textContent = 'Đẩy lên Base (' + d.dong.length + ' dòng · ' + soVN(d.tongKg, 2) + ' kg)';
+    baoLoi('dbLoi', e.message + (e.vanChuyen ? ' — Có thể phiếu đã được tạo: bấm "Xem dữ liệu" lại để kiểm tra trước khi đẩy lần nữa.' : ''));
+  }).then(function () { if ($('dbXem')) $('dbXem').disabled = false; });
+}
+
 function moNhapCaTo() {
   if (!coQuyen('sanLuong', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền nhập sản lượng.'); return; }
   if (!toNhapCaTo()) { baoLoi('thongBao', 'Chọn 1 tổ ở bộ lọc trước khi nhập cả tổ.'); return; }
@@ -8211,6 +8326,7 @@ function apDungQuyenGiaoDien() {
   var hienNeu = function (ids, co) { ids.forEach(function (id) { if ($(id)) $(id).style.display = co ? '' : 'none'; }); };
   var slThem = coQuyen('sanLuong', 'THEM'), ccThem = coQuyen('chamCong', 'THEM');
   hienNeu(['nutThemSL', 'nutNhapTo', 'nutHangLoatSL'], slThem);
+  hienNeu(['nutDayBase'], coQuyen('dayBase', 'THEM'));
   hienNeu(['nutThemCC', 'nutChamCongTo', 'nutHangLoatCC', 'thanhNhapCC'], ccThem);
   hienNeu(['nutKmLuu', 'nutKmNhapFile'], coQuyen('khoMieng', 'SUA'));
   hienNeu(['nutXlLuu', 'nutXlNhapFile', 'nutXlDienA'], coQuyen('xepLoai', 'SUA'));
@@ -9338,6 +9454,7 @@ $('nutCsvSL').onclick = csvSanLuong;
 $('nutMauSL').onclick = function () { taiMauExcel('sanLuong'); };
 $('nutHangLoatSL').onclick = function () { moNhapHangLoat('sanLuong'); };
 $('nutNhapTo').onclick = moNhapCaTo;
+$('nutDayBase').onclick = moDayBase;
 $('nutCsvPhieu').onclick = csvPhieu;
 $('nutCsvXH').onclick = csvXepHang;
 
