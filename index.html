@@ -284,7 +284,9 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .bd-bang td{padding:3px 0;border-bottom:1px solid var(--line);vertical-align:top}
 .bd-bang td:first-child{color:var(--ink-3);padding-right:8px;white-space:nowrap}
 .leaflet-tooltip.bd-tip{font-size:12.5px;font-family:inherit}
-.bd-loc{flex-basis:100%;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding-top:12px;margin-top:2px;border-top:1px dashed var(--line)}
+.bd-loc{flex-basis:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;
+  padding-top:12px;margin-top:2px;border-top:1px dashed var(--line)}
+.bd-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
 .bd-loc[hidden]{display:none}
 /* Lô cao nhất / thấp nhất (mode sản lượng) */
 /* Dải ngang trên bản đồ: cao nhất / thấp nhất + chú thích */
@@ -1028,9 +1030,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
               <option value="xepHang">Xếp hạng vườn cây (Q1–Q4)</option>
               <option value="giong">Giống</option>
               <option value="namTrong">Năm trồng</option>
-              <option value="to">Tổ</option>
-              <option value="lech">Lệch diện tích bản đồ – kiểm kê</option>
-            </optgroup>
+              <option value="to">Tổ</option>            </optgroup>
           </select></div>
         <button class="btn nho" id="bdNutLoc" aria-expanded="true" title="Ẩn / hiện bộ lọc">Bộ lọc ▴</button>
         <span class="nhan-mo" id="bdTomTatLoc" style="font-size:13px"></span>
@@ -1038,21 +1038,25 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <input type="file" id="bdFile" accept=".geojson,.json" style="display:none">
           <button class="btn nho" id="bdNapFile" title="Nạp file GeoJSON ranh lô mới (thay hình các lô có trong file)">Nạp file bản đồ</button>
         </div>
-        <!-- Bộ lọc ẩn/hiện -->
+        <!-- Bộ lọc ẩn/hiện — cùng bố cục khung lọc các trang khác: lưới ô lọc, hàng cuối chọn nhanh bên trái,
+             Xoá lọc + Áp dụng bên phải -->
         <div id="bdKhungLoc" class="bd-loc">
-          <div><label class="nhan" for="bdTu">Từ ngày</label><input class="o" id="bdTu" type="date" style="width:auto"></div>
-          <div><label class="nhan" for="bdDen">Đến ngày</label><input class="o" id="bdDen" type="date" style="width:auto"></div>
-          <div class="gat" id="bdMocNhanh" style="align-self:flex-end">
-            <button type="button" class="chip" data-moc="thang">Tháng này</button>
-            <button type="button" class="chip" data-moc="30">30 ngày</button>
-            <button type="button" class="chip" data-moc="nam">Năm nay</button>
-            <button type="button" class="chip" data-moc="muaVu">Mùa vụ</button>
+          <div><label class="nhan" for="bdTu">Từ ngày</label><input class="o" id="bdTu" type="date"></div>
+          <div><label class="nhan" for="bdDen">Đến ngày</label><input class="o" id="bdDen" type="date"></div>
+          <div id="khungBdDoi"><label class="nhan" for="bdDoi">Đội</label><select class="o" id="bdDoi"></select></div>
+          <div id="khungBdTo"><label class="nhan" for="bdTo">Tổ</label><select class="o" id="bdTo"></select></div>
+          <div><label class="nhan" for="bdLo">Lô</label><select class="o" id="bdLo"></select></div>
+          <div><label class="nhan" for="bdQ">Tìm lô</label><input class="o" id="bdQ" placeholder="Tên lô / mã lô rừng"></div>
+          <div class="hanh-dong">
+            <div class="nhanh" id="bdMocNhanh">
+              <button type="button" class="chip" data-moc="thang">Tháng này</button>
+              <button type="button" class="chip" data-moc="30">30 ngày</button>
+              <button type="button" class="chip" data-moc="nam">Năm nay</button>
+              <button type="button" class="chip" data-moc="muaVu">Mùa vụ</button>
+            </div>
+            <button class="btn" id="bdXoaLoc">Xoá lọc</button>
+            <button class="btn chinh" id="bdApDung">Áp dụng</button>
           </div>
-          <div id="khungBdDoi"><label class="nhan" for="bdDoi">Đội</label><select class="o" id="bdDoi" style="width:auto"></select></div>
-          <div id="khungBdTo"><label class="nhan" for="bdTo">Tổ</label><select class="o" id="bdTo" style="width:auto"></select></div>
-          <div><label class="nhan" for="bdLo">Lô</label><select class="o" id="bdLo" style="width:auto;max-width:190px"></select></div>
-          <div><label class="nhan" for="bdQ">Tìm lô</label><input class="o" id="bdQ" placeholder="Tên lô / mã lô rừng" style="width:150px"></div>
-          <button class="btn chinh nho" id="bdApDung" style="align-self:flex-end">Áp dụng</button>
         </div>
       </div>
       <div id="bdLoi"></div>
@@ -4014,7 +4018,6 @@ function _bdGiaTri(x, chiSo) {
   if (chiSo === 'xepHang') return r.xepHang || null;
   if (chiSo === 'giong') return _nsvGiong(r) || null;
   if (chiSo === 'namTrong') return r.namTrong || null;
-  if (chiSo === 'lech') return r.dienTich ? (x.dtBanDo - r.dienTich) / r.dienTich * 100 : null;
   return null;
 }
 
@@ -4051,12 +4054,6 @@ function _bdThang(ds, chiSo) {
     return { mau: function (v) { return m[v] || '#999'; },
              chuThich: ds2.map(function (v) { return [m[v], v + ' (' + dem[v] + ' lô)']; }) };
   }
-  if (chiSo === 'lech') {
-    var nac = [[-Infinity, -10, '#c0392b', 'Bản đồ nhỏ hơn > 10%'], [-10, -5, '#e59866', 'Nhỏ hơn 5–10%'], [-5, 5, '#f2f2e6', 'Lệch dưới 5%'],
-               [5, 10, '#7fb3d5', 'Lớn hơn 5–10%'], [10, Infinity, '#1f618d', 'Bản đồ lớn hơn > 10%']];
-    return { mau: function (v) { for (var i = 0; i < nac.length; i++) if (v >= nac[i][0] && v < nac[i][1]) return nac[i][2]; return '#999'; },
-             chuThich: nac.map(function (n) { return [n[2], n[3] + ' (' + vals.filter(function (v) { return v >= n[0] && v < n[1]; }).length + ' lô)']; }) };
-  }
   if (chiSo === 'gk') {                  // so với tiến độ thời gian mùa vụ đã qua
     var tg = (_bd.sl && _bd.sl.tyLeThoiGian) || 0;
     var nac2 = [[-Infinity, tg - 20, '#c0392b', 'Chậm > 20 điểm so tiến độ'], [tg - 20, tg - 10, '#e59866', 'Chậm 10–20 điểm'],
@@ -4085,7 +4082,7 @@ function _bdThang(ds, chiSo) {
 
 var BD_TEN_CHI_SO = { qkDay: 'Quy khô mủ dây', qkChen: 'Quy khô mủ chén', qk: 'Quy khô tổng', kgTuoi: 'Sản lượng tươi',
   nsbq: 'NSBQ kg/nhát', gk: '% hoàn thành giao khoán', kgHa: 'Năng suất kg quy khô/ha', cayCao: 'Số cây cạo', ns2025: 'Năng suất 2025 (kg/ha)',
-  xepHang: 'Xếp hạng', giong: 'Giống', namTrong: 'Năm trồng', to: 'Tổ', lech: 'Lệch diện tích' };
+  xepHang: 'Xếp hạng', giong: 'Giống', namTrong: 'Năm trồng', to: 'Tổ' };
 
 function _bdDinhDang(v, chiSo) {
   if (v === null || v === undefined) return '—';
@@ -4094,7 +4091,6 @@ function _bdDinhDang(v, chiSo) {
   if (chiSo === 'cayCao') return soVN(v, 0) + ' cây';
   if (chiSo === 'gk') return soVN(v, 1) + '%';
   if (chiSo === 'kgHa' || chiSo === 'ns2025') return soVN(v, 0) + ' kg/ha';
-  if (chiSo === 'lech') return (v > 0 ? '+' : '') + soVN(v, 1) + '%';
   return String(v);
 }
 
@@ -4179,17 +4175,16 @@ function veBanDoLo(canVua) {
   });
   var coHinh = {}; _bd.hinh.lo.forEach(function (x) { coHinh[x.maLo] = 1; });
   var thieu = soLoPv.filter(function (r) { return !coHinh[r.maLo]; });
-  var dtBd = ds.reduce(function (a, x) { return a + (x.dtBanDo || 0); }, 0);
+  // Diện tích: luôn lấy theo kiểm kê (số chính thức), không so với diện tích đo trên bản đồ.
   var dtKk = ds.reduce(function (a, x) { var r = _bd.soLieu[x.maLo]; return a + ((r && r.dienTich) || 0); }, 0);
-  var lech10 = ds.filter(function (x) { var v = _bdGiaTri(x, 'lech'); return v !== null && Math.abs(v) > 10; }).length;
+  var cay = ds.reduce(function (a, x) { var r = _bd.soLieu[x.maLo]; return a + ((r && r.cayCao) || 0); }, 0);
   var sl = function (k) { return ds.reduce(function (a, x) { var s = _bd.sl.lo[x.maLo]; return a + ((s && s[k]) || 0); }, 0); };
   var nhat = sl('nhat');
   $('kpisBd').innerHTML =
     the_kpi('Quy khô tổng', soVN(sl('qk'), 0), 'kg', 'Chén ' + soVN(sl('qkChen'), 0) + ' · dây ' + soVN(sl('qkDay'), 0) + ' kg') +
     the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát') +
     the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
-    the_kpi('Diện tích bản đồ', soVN(dtBd, 2), 'ha', 'Kiểm kê ' + soVN(dtKk, 2) + ' ha · lệch ' + (dtKk ? soVN((dtBd - dtKk) / dtKk * 100, 2) : '0') + '%') +
-    the_kpi_canh(lech10 > 0, 'Lệch diện tích > 10%', soVN(lech10, 0), 'lô', 'Bản đồ so với kiểm kê — tô màu "Lệch diện tích" để xem') +
+    the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo') +
     the_kpi('Cập nhật bản đồ', _bdNgay(_bd.hinh.capNhat), '', 'Nạp từ file GeoJSON đã làm sạch');
   if (_bdChon) { var xc = _bdTimLo(_bdChon); if (xc) veChiTietLo(xc); }
 }
@@ -4208,7 +4203,7 @@ function _bdNgay(v) {
 }
 
 function veChiTietLo(x) {
-  var r = _bd.soLieu[x.maLo] || {}, s = (_bd.sl && _bd.sl.lo[x.maLo]) || {}, lech = _bdGiaTri(x, 'lech');
+  var r = _bd.soLieu[x.maLo] || {}, s = (_bd.sl && _bd.sl.lo[x.maLo]) || {};
   var dong = function (a, b) { return '<tr><td>' + thoat(a) + '</td><td>' + b + '</td></tr>'; };
   $('bdChiTiet').className = '';
   $('bdChiTiet').innerHTML = '<table class="bd-bang">' +
@@ -4216,9 +4211,7 @@ function veChiTietLo(x) {
     dong('Mã lô rừng', thoat(x.maLoRung || '—')) + dong('ID lô mới', thoat(r.idLoMoi || '—')) +
     dong('Giống', thoat(_nsvGiong(r) || '—')) + dong('Năm trồng', thoat(String(r.namTrong || '—'))) +
     dong('Mở cạo', thoat(String(r.thangMoCao || r.namMoCao || '—'))) + dong('Xếp hạng', thoat(r.xepHang || '—')) +
-    dong('DT kiểm kê', r.dienTich ? soVN(r.dienTich, 2) + ' ha' : '—') +
-    dong('DT bản đồ', soVN(x.dtBanDo, 2) + ' ha' + (x.soManh > 1 ? ' (' + x.soManh + ' mảnh)' : '')) +
-    dong('Lệch', lech === null ? '—' : '<b style="color:' + (Math.abs(lech) > 10 ? 'var(--clay)' : 'inherit') + '">' + _bdDinhDang(lech, 'lech') + '</b>') +
+    dong('Diện tích', r.dienTich ? soVN(r.dienTich, 2) + ' ha' : '—') +
     dong('Cây cạo', r.cayCao ? soVN(r.cayCao, 0) : '—') +
     '<tr><td colspan="2" style="padding-top:8px;color:var(--ink-3);font-size:12px">' +
       thoat(ngayVN(_bd.sl.tuNgay) + ' – ' + ngayVN(_bd.sl.denNgay)) + '</td></tr>' +
@@ -4326,6 +4319,17 @@ function ganSuKienBanDo() {
   $('bdApDung').onclick = function () {
     if ($('bdTu').value && $('bdDen').value && $('bdTu').value > $('bdDen').value) { baoLoi('bdLoi', 'Từ ngày phải trước đến ngày.'); return; }
     taiBanDoLo();
+  };
+  $('bdXoaLoc').onclick = function () {
+    var m = _bdMoc('muaVu');
+    var doiNgay = $('bdTu').value !== m[0] || $('bdDen').value !== m[1];
+    $('bdTu').value = m[0]; $('bdDen').value = m[1];
+    $('bdDoi').value = ''; $('bdQ').value = '';
+    baoLoi('bdLoi', '');
+    if (!_bd) return;
+    _bdDungTo();
+    $('bdLo').value = '';
+    if (doiNgay) taiBanDoLo(); else veBanDoLo(true);
   };
   $('bdMocNhanh').onclick = function (ev) {
     var nut = ev.target.closest('button[data-moc]');
