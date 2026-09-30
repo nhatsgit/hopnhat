@@ -1400,6 +1400,10 @@ function lopLoaiMu(ma) {
   return m[ma] || 'tap';
 }
 
+/** Thứ tự + tên ngắn loại mủ cho tiêu đề bảng so sánh (mủ chén/mủ dây là 2 loại chính). */
+var THU_TU_LOAI_MU = ['MU_DONG', 'MU_DAY', 'MU_DAT', 'MU_TAP', 'MU_NUOC'];
+var TEN_NGAN_LOAI_MU = { MU_DONG: 'Mủ chén', MU_DAY: 'Mủ dây', MU_DAT: 'Mủ đất', MU_TAP: 'Mủ tạp', MU_NUOC: 'Mủ nước' };
+
 function tenLoaiMu(ma) {
   if (!S.meta) return ma;
   for (var i = 0; i < S.meta.loaiMu.length; i++) {
@@ -1765,30 +1769,62 @@ function taiTongQuan() {
       var dangLoc = gomDoi ? '' : (blTQ.to || (blTQ.maCn ? toCuaMaCn(blTQ.maCn) : ''));
       $('tieuDeSoSanh').textContent = gomDoi ? 'So sánh theo đội'
         : 'So sánh theo tổ' + (S.toanCongTy && blTQ.doi ? ' — ' + blTQ.doi : '');
-      var tongKg = 0;
-      for (var z = 0; z < ds.length; z++) tongKg += ds[z].kg;
+      // Tách riêng từng loại mủ (mủ chén, mủ dây... không cộng lẫn — DRC khác hẳn nhau): mỗi loại
+      // 1 nhóm cột Tươi / Quy khô / Tỷ trọng (trong loại đó) / NSBQ.
+      var tongLoai = {};
+      ds.forEach(function (x) {
+        for (var ma in (x.loai || {})) {
+          var v = x.loai[ma];
+          if (!tongLoai[ma]) tongLoai[ma] = { kg: 0, quyKho: 0, nhat: 0 };
+          tongLoai[ma].kg += v.kg; tongLoai[ma].quyKho += v.quyKho; tongLoai[ma].nhat += v.nhat;
+        }
+      });
+      var dsLoai = Object.keys(tongLoai).filter(function (ma) { return tongLoai[ma].kg > 0; })
+        .sort(function (a, b) {
+          var ia = THU_TU_LOAI_MU.indexOf(a), ib = THU_TU_LOAI_MU.indexOf(b);
+          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
+      var nhomCot = function (ma, v, tong) {
+        v = v || { kg: 0, quyKho: 0, nhat: 0 };
+        return '<td class="p num">' + (v.kg ? soVN(v.kg, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
+               '<td class="p num">' + (v.quyKho ? soVN(v.quyKho, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
+               '<td class="p num">' + (tong && tong.kg && v.kg ? soVN(v.kg / tong.kg * 100, 1) + '%' : '<span class="nhan-mo">—</span>') + '</td>' +
+               (tong && tong.nhat ? '<td class="p num">' + (v.nhat ? soVN(v.kg / v.nhat, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '');
+      };
+      // Loại mủ không ghi số nhát (mủ dây, mủ đất...) thì bỏ hẳn cột NSBQ của loại đó.
+      var soCotLoai = function (ma) { return tongLoai[ma].nhat ? 4 : 3; };
 
-      var h = '<thead><tr><th>' + (gomDoi ? 'Đội' : 'Tổ') + '</th>' +
-              (gomDoi ? '<th class="p">Số tổ</th>' : '') +
-              '<th class="p">Sản lượng tươi (kg)</th><th class="p">Tỷ trọng</th>' +
-              '<th class="p">Quy khô (kg)</th><th class="p">Số nhát</th>' +
-              '<th class="p">NSBQ kg/nhát</th><th class="p">Công nhân</th></tr></thead><tbody>';
-      var soCot = gomDoi ? 8 : 7;
+      var h = '<thead><tr><th rowspan="2">' + (gomDoi ? 'Đội' : 'Tổ') + '</th>' +
+              (gomDoi ? '<th rowspan="2" class="p">Số tổ</th>' : '') +
+              dsLoai.map(function (ma) { return '<th colspan="' + soCotLoai(ma) + '" style="text-align:center">' + thoat(TEN_NGAN_LOAI_MU[ma] || tenLoaiMu(ma)) + '</th>'; }).join('') +
+              '<th rowspan="2" class="p">Công nhân</th></tr><tr>' +
+              dsLoai.map(function (ma) {
+                return '<th class="p">Tươi (kg)</th><th class="p">Quy khô (kg)</th><th class="p">Tỷ trọng</th>' +
+                       (tongLoai[ma].nhat ? '<th class="p">NSBQ kg/nhát</th>' : '');
+              }).join('') + '</tr></thead><tbody>';
+      var soCot = (gomDoi ? 3 : 2) + dsLoai.reduce(function (n, ma) { return n + soCotLoai(ma); }, 0);
       if (!ds.length) {
         h += '<tr><td colspan="' + soCot + '"><div class="rong">Không có dữ liệu.</div></td></tr>';
       }
+      var tongCn = 0, tongSoTo = 0;
       for (var i = 0; i < ds.length; i++) {
         var t = ds[i];
+        tongCn += t.soCn; tongSoTo += t.soTo || 0;
         h += '<tr' + (dangLoc && t.to === dangLoc ? ' class="dong-dang-loc"' : '') + '><td><b>' + thoat(gomDoi ? t.doi : t.to) + '</b></td>' +
              (gomDoi ? '<td class="p num">' + soVN(t.soTo, 0) + '</td>' : '') +
-             '<td class="p num">' + soVN(t.kg, 2) + '</td>' +
-             '<td class="p num">' + (tongKg ? soVN(t.kg / tongKg * 100, 1) + '%' : '—') + '</td>' +
-             '<td class="p num">' + soVN(t.quyKho, 2) + '</td>' +
-             '<td class="p num">' + soVN(t.nhat, 0) + '</td>' +
-             '<td class="p num">' + soVN(t.nsbq, 3) + '</td>' +
+             dsLoai.map(function (ma) { return nhomCot(ma, (t.loai || {})[ma], tongLoai[ma]); }).join('') +
              '<td class="p num">' + soVN(t.soCn, 0) + '</td></tr>';
       }
       h += '</tbody>';
+      if (ds.length > 1) {
+        h += '<tfoot><tr><td><b>Tổng</b></td>' + (gomDoi ? '<td class="p num"><b>' + soVN(tongSoTo, 0) + '</b></td>' : '') +
+             dsLoai.map(function (ma) {
+               var v = tongLoai[ma];
+               return '<td class="p num"><b>' + soVN(v.kg, 2) + '</b></td><td class="p num"><b>' + soVN(v.quyKho, 2) + '</b></td>' +
+                      '<td class="p num"><b>100%</b></td>' + (v.nhat ? '<td class="p num"><b>' + soVN(v.kg / v.nhat, 3) + '</b></td>' : '');
+             }).join('') +
+             '<td class="p num"><b>' + soVN(tongCn, 0) + '</b></td></tr></tfoot>';
+      }
       $('bangTo').innerHTML = h;
     }
 
