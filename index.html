@@ -3370,20 +3370,14 @@ function taiBangChamCongThang() {
   $('tomTatBangCC').textContent = 'Đang tải…';
 
   var bl = layBoLoc();
-  bl.tuNgay = kt.dau; bl.denNgay = kt.cuoi; bl.moiTrang = 800; bl.trang = 1;
+  bl.tuNgay = kt.dau; bl.denNgay = kt.cuoi;
+  // Bảng ma trận cần ĐỦ MỌI DÒNG cùng lúc mới dựng đúng (thiếu 1 trang là mất cả 1 lát công
+  // nhân/ngày) — layHet bỏ hẳn giới hạn phân trang phía backend, trả về 1 lần trong 1 lệnh gọi
+  // thay vì tự gọi lặp nhiều trang như trước (xem apiChamCong, Code.gs).
+  bl.layHet = 1;
 
-  // Nhiều nhất 800 dòng/lần gọi (giới hạn backend) — 1 tổ ~50 người × 31
-  // ngày có thể vượt mốc này, nên gọi thêm trang tiếp theo nếu còn thiếu.
-  function goiTiep(trang, gomRoi) {
-    var b2 = {}; for (var k in bl) b2[k] = bl[k]; b2.trang = trang;
-    return goiCache('chamCong', b2).then(function (d) {
-      var moi = gomRoi.concat(d.rows);
-      if (trang < d.soTrang) return goiTiep(trang + 1, moi);
-      return moi;
-    });
-  }
-
-  goiTiep(1, []).then(function (rows) {
+  goiCache('chamCong', bl).then(function (d) {
+    var rows = d.rows;
     // Công nhân hiện trong bảng: đúng phạm vi Đội/Tổ đang lọc, không chỉ
     // người có dòng chấm công — để thấy rõ ai CHƯA được chấm công ngày nào.
     var doiChon = $('fDoi').value, toChon = $('fTo').value;
@@ -3689,19 +3683,15 @@ function xuatBangExcel(ten, nhan, dong) {
  * Gom TẤT CẢ các trang của một lệnh có phân trang (mỗi lần tối đa `moiTrang` dòng) — để Xuất CSV ra ĐỦ mọi dòng
  * đang lọc, không chỉ trang đang xem. `khoa` là tên mảng trong kết quả (mặc định 'rows').
  */
+/**
+ * Lấy ĐỦ MỌI DÒNG khớp bộ lọc cho 1 hành động — dùng cho "Xuất Excel" (giaoKhoan, slTheoCn,
+ * luong, chamCong: đều cần TRỌN VẸN dữ liệu để xuất, không phải xem từng trang). Trước đây tự
+ * lặp gọi nhiều trang cho tới hết; giờ gửi thẳng layHet:1 để backend trả về đủ trong 1 lần gọi
+ * (xem ghi chú "p.layHet" ở các hàm apiChamCong/apiGiaoKhoan/apiLuong/apiSlTheoCn trong Code.gs).
+ * Tham số moiTrang không còn cần thiết (giữ lại trong chữ ký để khỏi phải sửa nơi gọi).
+ */
 function layTatCaTrang(action, thamSo, moiTrang, khoa) {
-  var k = khoa || 'rows', gom = [], t = 1, dau = null;
-  function tiep() {
-    var tham = Object.assign({}, thamSo, { moiTrang: moiTrang, trang: t });
-    return goiCache(action, tham).then(function (d) {
-      if (!dau) dau = d;
-      gom = gom.concat(d[k] || []);
-      if (t < d.soTrang) { t++; return tiep(); }
-      var ra = Object.assign({}, dau); ra[k] = gom;
-      return ra;
-    });
-  }
-  return tiep();
+  return goiCache(action, Object.assign({}, thamSo, { layHet: 1 }));
 }
 
 function csvTuCot(ten, cot, nhan, ds) {
