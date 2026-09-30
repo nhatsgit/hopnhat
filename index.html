@@ -1374,12 +1374,17 @@ function cauDaLuuSheet() {
 var PQ_TEN_HE_THONG = { TO_TRUONG: 'Tổ trưởng', DOI_TRUONG: 'Đội trưởng', BAN_LANH_DAO: 'Ban lãnh đạo' };
 var _pq = (function () { try { return JSON.parse(docLS('crck2_pq') || 'null'); } catch (e) { return null; } })();
 
+var _pqLuc = 0;   // lần tải bảng quyền gần nhất — quay lại cửa sổ sau 2 phút thì tải lại (Admin vừa đổi quyền)
 function napPhanQuyen() {
   if (!S.api) return Promise.resolve(_pq);
+  _pqLuc = Date.now();
   return goiQua(S.api, 'phanQuyen', {}, 30000).then(function (d) {
+    var cua = function (x) { return JSON.stringify(x && x.cauHinh && x.cauHinh[S.vaiTroHienThi]); };
+    var doi = S.vaiTro && !S.laAdmin && cua(_pq) !== cua(d);
     _pq = d; ghiLS('crck2_pq', JSON.stringify(d));
     dungOVaiTro();
     if (S.vaiTro) apDungQuyenGiaoDien();
+    if (doi && S.meta && !tabAn(S.tab)) taiTab();     // quyền vai trò này vừa đổi: vẽ lại để nút Sửa/Xoá từng dòng theo quyền mới
     return d;
   }).catch(function () { return _pq; });
 }
@@ -8585,10 +8590,13 @@ $('nutVao').onclick = function () {
 
   var nut = this;
   nut.disabled = true; nut.textContent = 'Đang kiểm tra…';
-  Promise.all([goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }), _pq ? Promise.resolve(_pq) : napPhanQuyen()]).then(function (kq) {
+  // Chưa có bảng quyền nhớ sẵn thì chờ; có rồi thì vào ngay bằng bản nhớ và làm mới ngầm sau đó.
+  var coSan = !!_pq;
+  Promise.all([goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }), coSan ? Promise.resolve(_pq) : napPhanQuyen()]).then(function (kq) {
     var d = kq[0];
     nut.disabled = false; nut.textContent = 'Xem sản lượng';
     vaoApp(d, vtChon);
+    if (coSan) napPhanQuyen();
   }).catch(function (e) {
     nut.disabled = false; nut.textContent = 'Xem sản lượng';
     baoLoi('loiDangNhap', e.message);
@@ -8606,7 +8614,11 @@ $('nutThoat').onclick = function () {
 };
 
 // Tải lại = bỏ cache trình duyệt, lấy lại từ backend
-$('nutTai').onclick = function () { _cacheFE = {}; taiTab(); };
+$('nutTai').onclick = function () { _cacheFE = {}; napPhanQuyen(); taiTab(); };
+// Quyền do Admin đổi áp cho người đang mở trang: quay lại cửa sổ sau hơn 2 phút thì tải lại bảng quyền.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && S.vaiTro && Date.now() - _pqLuc > 120000) napPhanQuyen();
+});
 
 /* Nút đẩy sang BigQuery. Bảng/ngày nào nội dung không đổi thì backend bỏ
    qua, nên bấm nhiều lần cũng không tốn gì. */
