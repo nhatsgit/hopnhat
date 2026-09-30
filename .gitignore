@@ -11,3 +11,6 @@ appsscript.json
 
 # Mẫu cấu trúc hồ sơ lương — KHÔNG chứa dữ liệu người (đã đối chiếu tên/CCCD khi trích)
 !mau_ho_so_luong.json
+
+# Mẫu Sổ chấm công của đội — bản SẠCH (đã bỏ dòng mẫu và tên người, chỉ còn khuôn định dạng + bìa)
+!mau/so_cham_cong.xlsx

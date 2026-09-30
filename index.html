@@ -663,6 +663,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatBangCC">—</h3>
           <label class="nhan" for="ccThang" style="margin:0">Tháng</label>
           <input class="o" id="ccThang" type="month" style="width:auto">
+          <button class="btn nho" id="nutXuatSoCC" title="Xuất đúng mẫu &quot;Sổ theo dõi chấm công&quot; của đội: trang bìa + bảng tháng, công thức tổng công sống">Xuất Excel (mẫu sổ)</button>
         </div>
         <div class="bang-cc-thang" id="khungBangCC"><table id="bangCCThang"></table></div>
         <div id="chuThichCC" class="goi-y" style="padding:10px 16px"></div>
@@ -3799,6 +3800,7 @@ function taiBangChamCongThang() {
     }
     $('bangCCThang').innerHTML = h + '</tbody>';
     $('tomTatBangCC').textContent = 'Sổ chấm công tháng ' + thang + ' — ' + dsCn.length + ' công nhân';
+    _ccThangDL = { thang: thang, soNgay: kt.soNgay, dsCn: dsCn, o: o, doi: doiChon, to: toChon };
 
     var dsLC = (S.meta && S.meta.loaiCong) || [];
     var hct = dsLC.map(function (x) { return '<b>' + thoat(x.ma) + '</b> = ' + thoat(x.ten) + ' (' + soVN(x.soCong, 1) + ' công)'; }).join(' · ');
@@ -3807,6 +3809,194 @@ function taiBangChamCongThang() {
     $('bangCCThang').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
+}
+
+/* =====================================================================
+   Xuất "Sổ theo dõi chấm công" ĐÚNG MẪU của đội: nạp nguyên file mẫu
+   (mau/so_cham_cong.xlsx — bìa có ảnh nền/logo, phông, viền, khổ in, dòng
+   lặp tiêu đề khi in) rồi chỉ thay số liệu, nên định dạng giữ y hệt mẫu.
+   Sheet tháng: xoá các dòng mẫu, đổ đúng danh sách công nhân đang xem,
+   dựng lại dòng TỔNG + ghi chú ký hiệu + chữ ký theo đúng kiểu của mẫu.
+   ===================================================================== */
+var _ccThangDL = null;   // số liệu Sổ chấm công tháng đang hiện (taiBangChamCongThang)
+
+// Vị trí trong mau/so_cham_cong.xlsx (bản sạch: 1 dòng khuôn ở 12, dòng TỔNG 13, khối cuối tới 24).
+var CC_MAU = { dongDau: 12, dongTongMau: 13, dongCuoiMau: 24, cotCuoi: 35 };   // AI = cột 35
+var THU_EN_VN = ['S/CN', 'M/T2', 'T/T3', 'W/T4', 'T/T5', 'F/T6', 'S/T7'];
+var KY_HIEU_EN = {
+  '+': 'a regular workday', '++': 'double tapping (two sessions)', 'L': 'a workday on a Sunday or public holiday',
+  'L+': 'double tapping on a holiday', 'CN': 'Sunday work', 'P': 'annual leave', 'O': 'sick leave',
+  'KL': 'unpaid leave', 'M': 'a rain day off'
+};
+
+function _cotChu(n) { var s = ''; while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+function _saoKieu(st) { return JSON.parse(JSON.stringify(st || {})); }
+
+/** Tên công nhân (không bắt buộc) — mượn danh sách của tab Xếp loại, lỗi thì để trống cột tên như mẫu. */
+function _tenCnChoSo(thang) {
+  return goiAPI('xepLoaiDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: thang }, 60000)
+    .then(function (d) { var m = {}; (d.rows || []).forEach(function (r) { m[r.maCn] = r.ten || ''; }); return m; })
+    .catch(function () { return {}; });
+}
+
+function xuatSoChamCong() {
+  var dl = _ccThangDL;
+  if (!dl || !dl.dsCn.length) { baoLoi('thongBao', 'Sổ chấm công tháng chưa có dữ liệu để xuất.'); return; }
+  if (!window.ExcelJS) { baoLoi('thongBao', 'Chưa tải được thư viện xuất Excel, thử lại.'); return; }
+  var nut = $('nutXuatSoCC');
+  nut.disabled = true; nut.textContent = 'Đang xuất…';
+  var xong = function () { nut.disabled = false; nut.textContent = 'Xuất Excel (mẫu sổ)'; };
+
+  var tai = fetch('mau/so_cham_cong.xlsx').then(function (r) {
+    if (!r.ok) throw new Error('Không tải được file mẫu sổ chấm công (HTTP ' + r.status + ').');
+    return r.arrayBuffer();
+  });
+  Promise.all([tai, _tenCnChoSo(dl.thang)]).then(function (kq) {
+    var wb = new ExcelJS.Workbook();
+    return wb.xlsx.load(kq[0]).then(function () { return dungSoChamCong(wb, dl, kq[1]); });
+  }).then(function (wb) {
+    return wb.xlsx.writeBuffer().then(function (buf) {
+      var pham = (dl.to || dl.doi || S.maDonVi).replace(/[\\/:*?"<>|]/g, '_');
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+      a.download = 'So_cham_cong_' + pham + '_' + dl.thang + '.xlsx';
+      a.click();
+      xong();
+    });
+  }).catch(function (e) { xong(); baoLoi('thongBao', 'Không xuất được sổ chấm công: ' + e.message); });
+}
+
+function dungSoChamCong(wb, dl, tenCn) {
+  var p = dl.thang.split('-'), nam = p[0], thg = p[1];
+  var doi = dl.doi || doiCuaTo(dl.to || (S.dsTo[0] && S.dsTo[0].ma) || S.maDonVi);
+  var soDoi = ('0' + String(doi).replace(/\D/g, '')).slice(-2);
+
+  // ---- Bìa ----
+  var bia = wb.worksheets[0];
+  bia.getCell('A8').value = ' TRACKING RUBBER TAPPER TIMESHEET ' + nam;
+  bia.getCell('A9').value = 'SỔ THEO DÕI CHẤM CÔNG NĂM ' + nam;
+  bia.getCell('A10').value = 'FARM UNIT/ ĐỘI SẢN XUẤT: SỐ ' + soDoi + (dl.to ? ' — TỔ ' + dl.to : '');
+  var dt = S.dienTichDoi && S.dienTichDoi[doi];
+  // Không rõ diện tích thì để trống số, KHÔNG giữ số của mẫu (mẫu là số Đội 1).
+  bia.getCell('A11').value = 'Acreage/ Diện tích: ' +
+    (dt ? Number(dt).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+  bia.getCell('A18').value = 'Kampong Thom, Month   ' + Number(thg) + '   Year ' + nam;
+  bia.getCell('A19').value = 'Kampong Thom, Tháng   ' + Number(thg) + '     năm ' + nam;
+
+  // ---- Sheet tháng ----
+  var ws = wb.worksheets[1];
+  ws.name = 'T' + Number(thg);
+  var M = CC_MAU, cc = M.cotCuoi;
+
+  // Chụp kiểu của 1 dòng dữ liệu mẫu và cả khối cuối (TỔNG, ghi chú, chữ ký) trước khi xoá.
+  var kieuDong = [], caoDong = ws.getRow(M.dongDau).height;
+  for (var c = 1; c <= cc; c++) kieuDong[c] = _saoKieu(ws.getRow(M.dongDau).getCell(c).style);
+  var khoiCuoi = [];
+  for (var r0 = M.dongTongMau; r0 <= M.dongCuoiMau; r0++) {
+    var hang = ws.getRow(r0), o2 = { cao: hang.height, o: [] };
+    for (var c2 = 1; c2 <= cc; c2++) {
+      var oo = hang.getCell(c2);
+      o2.o[c2] = { v: oo.value, st: _saoKieu(oo.style) };
+    }
+    khoiCuoi.push(o2);
+  }
+  Object.keys(ws._merges || {}).forEach(function (k) {
+    var rg = ws._merges[k];
+    if (rg && rg.top >= M.dongDau) ws.unMergeCells(rg.range);
+  });
+  // Xoá trắng mọi dòng từ dòng dữ liệu đầu tới hết sheet (spliceRows của ExcelJS 4.4 không xoá thật
+  // với file này — dòng mẫu còn sót lại bên dưới khi số công nhân ít hơn số dòng mẫu).
+  var dongHet = Math.max(ws.rowCount, ws.actualRowCount || 0, M.dongCuoiMau);
+  for (var rX = M.dongDau; rX <= dongHet; rX++) {
+    var rw = ws.getRow(rX);
+    rw.eachCell({ includeEmpty: true }, function (cX) { cX.value = null; cX.style = {}; });
+    rw.height = undefined;
+  }
+
+  // Tiêu đề
+  ws.getCell('B5').value = 'Farm Unit/ ĐỘI SẢN XUẤT:' + soDoi + (dl.to ? ' - TỔ ' + dl.to : '');
+  ws.getCell('A6').value = 'TIMESHEET/ CHẤM CÔNG THÁNG ' + thg + '/' + nam;
+  for (var n = 1; n <= 31; n++) {
+    var cot = 3 + n;
+    if (n <= dl.soNgay) {
+      var thu = new Date(Number(nam), Number(thg) - 1, n).getDay();
+      ws.getRow(10).getCell(cot).value = THU_EN_VN[thu];
+      ws.getRow(11).getCell(cot).value = n;
+    } else {
+      ws.getRow(10).getCell(cot).value = null;
+      ws.getRow(11).getCell(cot).value = null;
+    }
+  }
+
+  // Công thức tổng công "sống" theo đúng danh mục ký hiệu (mẫu gốc chỉ đếm L, +, ++).
+  var dsLC = (S.meta && S.meta.loaiCong) || [];
+  var soCongMa = {};
+  dsLC.forEach(function (x) { soCongMa[x.ma] = Number(x.soCong) || 0; });
+  function congThuc(r) {
+    var vung = 'D' + r + ':AH' + r;
+    var phan = dsLC.filter(function (x) { return Number(x.soCong) > 0; }).map(function (x) {
+      var dem = 'COUNTIF(' + vung + ',"' + x.ma + '")';
+      return Number(x.soCong) === 1 ? dem : dem + '*' + x.soCong;
+    });
+    return phan.join('+') || '0';
+  }
+
+  // Dòng dữ liệu
+  var daDung = {};
+  for (var i = 0; i < dl.dsCn.length; i++) {
+    var rr = M.dongDau + i, row = ws.getRow(rr), maCn = dl.dsCn[i], tong = 0;
+    row.height = caoDong;
+    for (var c3 = 1; c3 <= cc; c3++) row.getCell(c3).style = _saoKieu(kieuDong[c3]);
+    row.getCell(1).value = i + 1;
+    row.getCell(2).value = tenCn[maCn] || null;
+    row.getCell(3).value = maCn.replace(/^([^-]+)-/, '$1');   // mẫu ghi "Đ1KV1-01"
+    for (var n2 = 1; n2 <= 31; n2++) {
+      var x = n2 <= dl.soNgay ? dl.o[maCn + '|' + dl.thang + '-' + (n2 < 10 ? '0' : '') + n2] : null;
+      row.getCell(3 + n2).value = x ? x.kyHieu : null;
+      if (x) { tong += soCongMa[x.kyHieu] !== undefined ? soCongMa[x.kyHieu] : (Number(x.soCong) || 0); daDung[x.kyHieu] = 1; }
+    }
+    row.getCell(cc).value = { formula: congThuc(rr), result: tong };
+  }
+
+  // Khối cuối: TỔNG + ghi chú + chữ ký, đúng vị trí tương đối như mẫu
+  var goc = M.dongDau + dl.dsCn.length;   // dòng TỔNG
+  var dongCuoiDL = goc - 1;
+  for (var k = 0; k < khoiCuoi.length; k++) {
+    var rowF = ws.getRow(goc + k);
+    if (khoiCuoi[k].cao) rowF.height = khoiCuoi[k].cao;
+    for (var c4 = 1; c4 <= cc; c4++) {
+      var m4 = khoiCuoi[k].o[c4];
+      rowF.getCell(c4).style = _saoKieu(m4.st);
+      var v = m4.v;
+      if (k === 0 && c4 === cc) v = { formula: 'SUM(AI' + M.dongDau + ':AI' + dongCuoiDL + ')' };
+      else if (v && typeof v === 'object' && v.formula) v = null;
+      rowF.getCell(c4).value = v;
+    }
+  }
+  ws.mergeCells('A' + goc + ':C' + goc);
+  ws.mergeCells('AB' + (goc + 1) + ':AI' + (goc + 2));
+  ws.mergeCells('AB' + (goc + 3) + ':AI' + (goc + 4));
+  ws.mergeCells('AB' + (goc + 11) + ':AI' + (goc + 11));
+  ws.getCell('AB' + (goc + 11)).value = null;   // tên đội trưởng: để trống cho người ký tự ghi
+
+  // Ghi chú ký hiệu: chỉ những ký hiệu thật sự có trong tháng, theo thứ tự danh mục
+  var kieuVN = _saoKieu(khoiCuoi[1].o[3].st), kieuEN = _saoKieu(khoiCuoi[1].o[13].st);
+  for (var z = 1; z <= 10; z++) { ws.getCell('C' + (goc + z)).value = null; ws.getCell('M' + (goc + z)).value = null; }
+  var dsGhi = dsLC.filter(function (x) { return daDung[x.ma]; });
+  if (!dsGhi.length) dsGhi = dsLC.slice(0, 1);
+  var tongCaDoi = 0;
+  for (var t2 = M.dongDau; t2 <= dongCuoiDL; t2++) tongCaDoi += Number((ws.getCell('AI' + t2).value || {}).result) || 0;
+  ws.getCell('AI' + goc).value = { formula: 'SUM(AI' + M.dongDau + ':AI' + dongCuoiDL + ')', result: tongCaDoi };
+  dsGhi.forEach(function (x, j) {
+    var r5 = goc + 1 + j;
+    ws.getCell('C' + r5).style = _saoKieu(kieuVN);
+    ws.getCell('M' + r5).style = _saoKieu(kieuEN);
+    ws.getCell('C' + r5).value = "Dấu ''" + x.ma + "'' là " + x.ten.charAt(0).toLowerCase() + x.ten.slice(1) +
+      ' — ' + soVN(x.soCong, 0) + ' công';
+    ws.getCell('M' + r5).value = "The '" + x.ma + "' sign indicates " + (KY_HIEU_EN[x.ma] || x.ten) +
+      ' — ' + soVN(x.soCong, 0) + ' working day' + (Number(x.soCong) === 1 ? '' : 's');
+  });
+  return wb;
 }
 
 function taiDoiChieu() {
@@ -5619,6 +5809,7 @@ function vaoApp(d, vtChon) {
   S.vaiTro = d.vaiTro; S.maDonVi = d.maDonVi; S.tenDonVi = d.ten;
   S.dsTo = d.dsTo; S.toanCongTy = d.toanCongTy;
   S.dsCn = d.dsCn || [];
+  S.dienTichDoi = d.dienTichDoi || {};
   // Nhãn hiển thị (Trợ lý/Phòng KTNN) khác vaiTro thật gửi backend (Đội trưởng/Ban lãnh đạo).
   S.vaiTroHienThi = vtChon || d.vaiTro;
   S.laAdmin = S.vaiTroHienThi === 'ADMIN';
@@ -6446,6 +6637,7 @@ $('nutKmTaiMau').onclick = kmTaiMauExcel;
 $('nutKmNhapFile').onclick = kmNhapFile;
 $('fileKhoMieng').onchange = kmXuLyFile;
 $('nutKmLuu').onclick = kmLuu;
+$('nutXuatSoCC').onclick = xuatSoChamCong;
 $('nutXlDienA').onclick = xlDienA;
 $('nutXlTaiMau').onclick = xlTaiMauExcel;
 $('nutXlNhapFile').onclick = xlNhapFile;
