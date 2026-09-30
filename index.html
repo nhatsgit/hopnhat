@@ -269,6 +269,13 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   border-top:2px solid var(--line-2);font-size:17px;font-weight:700;letter-spacing:-.01em}
 .nhom-tq:first-child{margin-top:0;padding-top:0;border-top:none}
 .nhom-tq small{font-size:12.5px;font-weight:400;color:var(--ink-3)}
+/* Thanh thao tác nhập liệu nổi bật ở đầu tab (Chấm công) */
+.thanh-nhap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:14px 16px;
+  background:var(--leaf-soft);border:1px solid var(--leaf);border-left:4px solid var(--leaf);border-radius:2px}
+.thanh-nhap-chu{display:flex;flex-direction:column;margin-right:auto;line-height:1.3}
+.thanh-nhap-chu b{font-size:16px;color:var(--leaf)}
+.thanh-nhap-chu span{font-size:12.5px;color:var(--ink-3)}
+.thanh-nhap .btn.chinh{font-size:14.5px;padding:10px 18px;font-weight:600}
 .kpi.canh{border-left:3px solid var(--clay)}
 .kpi.canh .so{color:var(--clay)}
 .kpi .phu2 .tang{color:var(--leaf);font-weight:600}
@@ -680,24 +687,17 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
     <!-- Tab: Chấm công -->
     <section id="pChamCong" style="display:none">
+      <!-- Thanh thao tác nhập liệu (chỉ người được nhập: tổ trưởng/Admin) — đưa lên đầu, làm nổi bật. -->
+      <div class="thanh-nhap" id="thanhNhapCC">
+        <div class="thanh-nhap-chu"><b>Chấm công</b><span>Dòng mới vào trạng thái chờ duyệt</span></div>
+        <button class="btn chinh" id="nutThemCC">+ Chấm 1 người</button>
+        <button class="btn chinh" id="nutChamCongTo" title="Chấm công cho cả tổ trong một bảng, có lưu tạm">Chấm công cả tổ</button>
+        <button class="btn chinh" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
+        <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
+      </div>
       <div class="kpis" id="kpisCC"></div>
-      <div class="luoi-2" id="luoiChamCong">
-        <div class="the o-bieu-do" id="theKyHieu">
-          <h3 class="tieude-muc">Cơ cấu theo ký hiệu công</h3>
-          <div id="bdKyHieu"></div>
-        </div>
-        <!-- Ẩn với tổ trưởng: phạm vi chỉ có 1 tổ, "theo tổ" vô nghĩa. -->
-        <div class="the o-bieu-do" id="theSoCongTheoTo">
-          <h3 class="tieude-muc">Số công theo tổ</h3>
-          <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
-        </div>
-      </div>
-      <div class="the o-bieu-do" id="theNghiNhieu" style="margin-bottom:20px;display:none">
-        <h3 class="tieude-muc">Công nhân nghỉ nhiều nhất trong kỳ <span class="nhan-mo" style="text-transform:none;font-weight:400">(số ngày có số công = 0)</span></h3>
-        <div id="bdNghiNhieu"></div>
-      </div>
       <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
-           trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". Đưa lên đầu vì đây
+           trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". Đặt trên các biểu đồ vì đây
            là dữ liệu chính đội cần xem/in mỗi tháng, danh sách chi tiết bên dưới chỉ để sửa dòng lẻ. -->
       <div class="the" id="theBangCC" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -710,13 +710,25 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div id="chuThichCC" class="goi-y" style="padding:10px 16px"></div>
       </div>
 
+      <!-- 2 biểu đồ cùng 1 hàng; "Số công theo tổ" (ẩn với tổ trưởng — chỉ 1 tổ) chiếm hàng riêng bên dưới. -->
+      <div class="luoi-2 deu" id="luoiChamCong">
+        <div class="the o-bieu-do" id="theKyHieu">
+          <h3 class="tieude-muc">Cơ cấu theo ký hiệu công</h3>
+          <div id="bdKyHieu"></div>
+        </div>
+        <div class="the o-bieu-do" id="theNghiNhieu">
+          <h3 class="tieude-muc">Công nhân nghỉ nhiều nhất trong kỳ <span class="nhan-mo" style="text-transform:none;font-weight:400">(số ngày có số công = 0)</span></h3>
+          <div id="bdNghiNhieu"></div>
+        </div>
+      </div>
+      <div class="the o-bieu-do" id="theSoCongTheoTo" style="margin-bottom:20px">
+        <h3 class="tieude-muc">Số công theo tổ</h3>
+        <div class="cuon" style="max-height:280px"><table id="bangToCC"></table></div>
+      </div>
+
       <div class="the" id="theDanhSachCC">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatCC">—</h3>
-          <button class="btn chinh nho" id="nutChamCongTo" title="Chấm công cho cả tổ trong một bảng, có lưu tạm">Chấm công cả tổ</button>
-          <button class="btn nho" id="nutThemCC">+ Chấm 1 người</button>
-          <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
-          <button class="btn nho" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutCsvCC">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangCC"></table></div>
@@ -4851,8 +4863,10 @@ function taiChamCong() {
     // Cơ cấu ký hiệu
     veKyHieuCong($('bdKyHieu'), d.theoKyHieu);
 
+    // Ký hiệu công + nghỉ nhiều nhất cùng 1 hàng; không ai nghỉ thì ký hiệu công chiếm trọn hàng.
     var nghi = d.cnNghiNhieu || [];
     $('theNghiNhieu').style.display = nghi.length ? '' : 'none';
+    $('luoiChamCong').className = 'luoi-2 ' + (nghi.length ? 'deu' : 'mot');
     if (nghi.length) {
       veCotNgang($('bdNghiNhieu'), nghi,
         function (x) { return x.maCn; }, function (x) { return x.soNghi; },
@@ -4865,13 +4879,10 @@ function taiChamCong() {
     }
 
     // Theo tổ — tổ trưởng chỉ quản 1 tổ nên ẩn hẳn, không có gì để so sánh.
-    // Cơ cấu ký hiệu công thì chiếm trọn hàng cho đỡ trống.
     if (!S.toanCongTy && !S.coNhieuTo) {
       $('theSoCongTheoTo').style.display = 'none';
-      $('theKyHieu').style.gridColumn = '1 / -1';
     } else {
       $('theSoCongTheoTo').style.display = '';
-      $('theKyHieu').style.gridColumn = '';
 
       var ht = '<thead><tr><th>Tổ</th><th class="p">Số công</th><th class="p">Người</th>' +
                '<th class="p">BQ/người</th><th class="p">Dòng nghỉ</th></tr></thead><tbody>';
@@ -7412,6 +7423,7 @@ function vaoApp(d, vtChon) {
   $('nutNhapTo').style.display = chiXem ? 'none' : '';
   $('nutThemCC').style.display = chiXem ? 'none' : '';
   $('nutChamCongTo').style.display = chiXem ? 'none' : '';
+  $('thanhNhapCC').style.display = chiXem ? 'none' : '';     // cả thanh thao tác chấm công
   $('nutHangLoatSL').style.display = chiXem ? 'none' : '';
   $('nutHangLoatCC').style.display = chiXem ? 'none' : '';
   // Khô miệng cạo / Xếp loại: chỉ đội trưởng được nhập (backend cũng chặn) — vai trò khác chỉ xem.
