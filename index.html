@@ -290,6 +290,10 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .ct-bd{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0}
 .ct-bd i{display:inline-block;width:16px;height:12px;border-radius:2px;flex:none;border:1px solid rgba(0,0,0,.15)}
 /* Cột phải chỉ 300px: chia cột cố định + cho xuống dòng (bảng chung để nowrap -> giá trị dài tràn khung) */
+/* Biểu đồ đường: ô số khi chạm / rê chuột */
+.dd-tip{position:absolute;z-index:5;pointer-events:none;padding:5px 9px;border-radius:6px;background:var(--ink);color:var(--card);
+  font-size:12px;line-height:1.35;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.dd-tip[hidden]{display:none}
 /* Báo cáo Tập đoàn */
 .bang-td td,.bang-td th{padding:6px 10px}
 .bang-td .ten-ct{white-space:normal;min-width:240px}
@@ -2158,109 +2162,129 @@ function skDong(soDong) {
 /* =====================================================================
    Biểu đồ SVG tự vẽ (không phụ thuộc thư viện ngoài)
    ===================================================================== */
-function veCot(el, dl) {
-  if (!dl.length) { el.innerHTML = '<div class="rong">Không có dữ liệu trong khoảng đã chọn.</div>'; return; }
-
-  var W = 100, H = 210, tren = 14, duoi = 30;
-  var maxV = 0;
-  for (var i = 0; i < dl.length; i++) maxV = Math.max(maxV, dl[i].kg);
-  if (maxV <= 0) maxV = 1;
-
-  var rongCot = 100 / dl.length;
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
-            'style="width:100%;height:210px;overflow:visible;display:block" role="img" aria-label="Sản lượng theo ngày">';
-
-  // Lưới ngang + nhãn trục
-  for (var g = 0; g <= 3; g++) {
-    var y = tren + (H - tren - duoi) * g / 3;
-    svg += '<line x1="0" y1="' + y + '" x2="100" y2="' + y + '" stroke="var(--line)" stroke-width=".4" vector-effect="non-scaling-stroke"/>';
-  }
-
-  for (var j = 0; j < dl.length; j++) {
-    var h = (dl[j].kg / maxV) * (H - tren - duoi);
-    var x = j * rongCot;
-    var yc = H - duoi - h;
-    svg += '<rect x="' + (x + rongCot * 0.15) + '" y="' + yc +
-           '" width="' + (rongCot * 0.7) + '" height="' + Math.max(h, 0.5) +
-           '" fill="var(--leaf)" opacity=".85"><title>' +
-           thoat(ngayVN(dl[j].ngay)) + ': ' + soVN(dl[j].kg, 2) + ' kg tươi / ' +
-           soVN(dl[j].quyKho, 2) + ' kg khô</title></rect>';
-  }
-  svg += '</svg>';
-
-  // Nhãn ngày ngắn gọn: cùng 1 tháng thì chỉ ghi ngày ("01"), tháng ghi 1 lần ở dòng trên; khác
-  // tháng thì "dd/mm". Thẻ hẹp (điện thoại) thì cách vài cột mới ghi 1 nhãn để chữ không đè/cắt.
-  var motThang = dl[0].ngay.substring(0, 7) === dl[dl.length - 1].ngay.substring(0, 7);
-  function nhanNgay(s) { return motThang ? s.substring(8, 10) : s.substring(8, 10) + '/' + s.substring(5, 7); }
-  var rongThe = el.clientWidth || 600;
-  var buoc = Math.max(1, Math.ceil(dl.length * (motThang ? 22 : 38) / rongThe));
-  var nhan = '<div style="display:flex">';
-  for (var k = 0; k < dl.length; k++) {
-    var hienNhan = k % buoc === 0 || (k === dl.length - 1 && (dl.length - 1) % buoc >= buoc / 2);
-    nhan += '<div style="flex:1;min-width:0;text-align:center;font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:visible">' +
-            (hienNhan ? thoat(nhanNgay(dl[k].ngay)) : '') + '</div>';
-  }
-  nhan += '</div>';
-
-  var dinh = '<div style="font-size:12px;color:var(--ink-3);margin-bottom:6px">' +
-    'Cao nhất: <b style="color:var(--ink)">' + soVN(maxV, 2) + ' kg</b> · ' +
-    dl.length + ' ngày có sản lượng' +
-    (motThang ? ' · Tháng ' + dl[0].ngay.substring(5, 7) + '/' + dl[0].ngay.substring(0, 4) : '') + '</div>';
-
-  el.innerHTML = dinh + svg + nhan;
-  el._duLieuCot = dl;
+/**
+ * BIỂU ĐỒ ĐƯỜNG dùng chung (thay các biểu đồ cột đứng). Vẽ theo đúng bề rộng khung (px) nên nét/chấm không méo;
+ * trục số bên trái, vùng tô mờ dưới đường; chạm / rê chuột hiện số của điểm gần nhất (title SVG không hiện trên điện thoại).
+ *   ds = [{ gt: số, nhan: nhãn trục ngang, moTa: chuỗi khi chạm }]
+ *   tuy = { mau, cao (px), dinh (HTML phía trên), ten (aria-label) }
+ * Khung tự vẽ lại khi đổi cỡ màn hình (el._veLai).
+ */
+function soRutGon(v) {
+  var a = Math.abs(v);
+  if (a >= 1e9) return soVN(v / 1e9, 1) + ' tỷ';
+  if (a >= 1e6) return soVN(v / 1e6, 1) + ' tr';
+  if (a >= 1e4) return soVN(v / 1e3, 0) + 'k';
+  if (a >= 1e3) return soVN(v / 1e3, 1) + 'k';
+  return soVN(v, a < 10 && a % 1 ? 1 : 0);
 }
 
-// Đổi cỡ cửa sổ / xoay điện thoại: vẽ lại để số nhãn ngày khớp bề rộng mới.
+function veDuong(el, ds, tuy) {
+  tuy = tuy || {};
+  var mau = tuy.mau || 'var(--leaf)', CAO = tuy.cao || 210;
+  if (!ds.length) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
+  var W = Math.max(260, el.clientWidth || 600);
+  var trai = 44, phai = 12, tren = 12, duoi = 24, rong = W - trai - phai, cao = CAO - tren - duoi;
+  var maxV = 0;
+  ds.forEach(function (x) { maxV = Math.max(maxV, x.gt || 0); });
+  if (maxV <= 0) maxV = 1;
+  // Đỉnh trục tròn số đẹp: 1, 2, 2.5, 5 × 10^n
+  var mu = Math.pow(10, Math.floor(Math.log(maxV) / Math.LN10)), dep = [1, 2, 2.5, 5, 10], dinhTruc = 10 * mu;
+  for (var q = 0; q < dep.length; q++) if (dep[q] * mu >= maxV) { dinhTruc = dep[q] * mu; break; }
+  var n = ds.length, buocX = n > 1 ? rong / (n - 1) : 0;
+  var X = function (i) { return trai + (n > 1 ? i * buocX : rong / 2); };
+  var Y = function (v) { return tren + cao - (Math.max(0, v || 0) / dinhTruc) * cao; };
+  var idGra = 'gd' + Math.random().toString(36).slice(2, 8);
+
+  var svg = '<svg width="' + W + '" height="' + CAO + '" viewBox="0 0 ' + W + ' ' + CAO + '" style="display:block;max-width:100%;overflow:visible;touch-action:pan-y" role="img" aria-label="' + thoat(tuy.ten || 'Biểu đồ') + '">' +
+    '<defs><linearGradient id="' + idGra + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + mau + '" stop-opacity=".28"/>' +
+    '<stop offset="1" stop-color="' + mau + '" stop-opacity="0"/></linearGradient></defs>';
+  for (var g = 0; g <= 4; g++) {                       // lưới + nhãn trục dọc
+    var gv = dinhTruc * g / 4, gy = Y(gv);
+    svg += '<line x1="' + trai + '" y1="' + gy + '" x2="' + (W - phai) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"' + (g ? ' stroke-dasharray="3 3"' : '') + '/>' +
+           '<text x="' + (trai - 6) + '" y="' + (gy + 3.5) + '" text-anchor="end" font-size="10.5" fill="var(--ink-3)">' + soRutGon(gv) + '</text>';
+  }
+  var diem = ds.map(function (x, i) { return X(i).toFixed(1) + ',' + Y(x.gt).toFixed(1); });
+  svg += '<path d="M' + X(0).toFixed(1) + ',' + Y(0).toFixed(1) + ' L' + diem.join(' L') + ' L' + X(n - 1).toFixed(1) + ',' + Y(0).toFixed(1) + ' Z" fill="url(#' + idGra + ')"/>' +
+         '<polyline points="' + diem.join(' ') + '" fill="none" stroke="' + mau + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+  var banKinh = n <= 31 ? 3 : (n <= 62 ? 2 : 0);
+  if (banKinh) ds.forEach(function (x, i) { svg += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.gt).toFixed(1) + '" r="' + banKinh + '" fill="var(--card)" stroke="' + mau + '" stroke-width="1.6"/>'; });
+  // Nhãn trục ngang: giãn cách để chữ không đè nhau; luôn ghi điểm cuối
+  var buocNhan = Math.max(1, Math.ceil(n * 36 / rong));
+  ds.forEach(function (x, i) {
+    if (i % buocNhan && i !== n - 1) return;
+    if (i === n - 1 && i % buocNhan && (n - 1) % buocNhan < buocNhan / 2) return;
+    svg += '<text x="' + X(i).toFixed(1) + '" y="' + (CAO - 6) + '" text-anchor="middle" font-size="10.5" fill="var(--ink-3)">' + thoat(x.nhan) + '</text>';
+  });
+  svg += '<line class="dd-vach" x1="0" y1="' + tren + '" x2="0" y2="' + (tren + cao) + '" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="2 2" visibility="hidden"/>' +
+         '<circle class="dd-cham" r="5" fill="' + mau + '" stroke="var(--card)" stroke-width="2" visibility="hidden"/></svg>';
+
+  el.innerHTML = (tuy.dinh || '') + '<div class="dd-khung" style="position:relative">' + svg +
+    '<div class="dd-tip" hidden></div></div>';
+  el._veLai = function () { veDuong(el, ds, tuy); };
+  el.setAttribute('data-ve-lai', '1');
+
+  // Chạm / rê: hiện điểm gần nhất
+  var khung = el.querySelector('.dd-khung'), s = khung.querySelector('svg'), tip = khung.querySelector('.dd-tip');
+  var vach = s.querySelector('.dd-vach'), cham = s.querySelector('.dd-cham');
+  var hien = function (ev) {
+    var r = s.getBoundingClientRect(), tl = r.width / W;
+    var mx = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / tl;
+    var i = n > 1 ? Math.round((mx - trai) / buocX) : 0;
+    i = Math.max(0, Math.min(n - 1, i));
+    var px = X(i), py = Y(ds[i].gt);
+    vach.setAttribute('x1', px); vach.setAttribute('x2', px); vach.setAttribute('visibility', 'visible');
+    cham.setAttribute('cx', px); cham.setAttribute('cy', py); cham.setAttribute('visibility', 'visible');
+    tip.textContent = ds[i].moTa || (ds[i].nhan + ': ' + soVN(ds[i].gt, 2));
+    tip.hidden = false;
+    var tx = px * tl, rongTip = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(r.width - rongTip, tx - rongTip / 2)) + 'px';
+    tip.style.top = Math.max(0, py * tl - tip.offsetHeight - 10) + 'px';
+  };
+  var an = function () { tip.hidden = true; vach.setAttribute('visibility', 'hidden'); cham.setAttribute('visibility', 'hidden'); };
+  s.addEventListener('mousemove', hien);
+  s.addEventListener('mouseleave', an);
+  s.addEventListener('touchstart', hien, { passive: true });
+  s.addEventListener('touchmove', hien, { passive: true });
+}
+
+// Đổi cỡ cửa sổ / xoay điện thoại: vẽ lại mọi biểu đồ đường theo bề rộng mới.
 var _henVeLaiCot = null;
 window.addEventListener('resize', function () {
   clearTimeout(_henVeLaiCot);
   _henVeLaiCot = setTimeout(function () {
-    var ds = document.querySelectorAll('#bdNgay');
-    for (var i = 0; i < ds.length; i++) if (ds[i]._duLieuCot && ds[i].clientWidth) veCot(ds[i], ds[i]._duLieuCot);
+    var ds = document.querySelectorAll('[data-ve-lai]');
+    for (var i = 0; i < ds.length; i++) if (ds[i]._veLai && ds[i].clientWidth) ds[i]._veLai();
   }, 200);
 });
 
+/** Sản lượng theo NGÀY (đường). dl = [{ ngay, kg, quyKho }]. */
+function veCot(el, dl) {
+  if (!dl.length) { el.innerHTML = '<div class="rong">Không có dữ liệu trong khoảng đã chọn.</div>'; return; }
+  var maxV = 0;
+  dl.forEach(function (x) { maxV = Math.max(maxV, x.kg); });
+  // Cùng 1 tháng thì nhãn chỉ ghi ngày ("01"), tháng ghi 1 lần ở dòng trên; khác tháng thì "dd/mm"
+  var motThang = dl[0].ngay.substring(0, 7) === dl[dl.length - 1].ngay.substring(0, 7);
+  var dinh = '<div style="font-size:12px;color:var(--ink-3);margin-bottom:6px">' +
+    'Cao nhất: <b style="color:var(--ink)">' + soVN(maxV, 2) + ' kg</b> · ' + dl.length + ' ngày có sản lượng' +
+    (motThang ? ' · Tháng ' + dl[0].ngay.substring(5, 7) + '/' + dl[0].ngay.substring(0, 4) : '') + '</div>';
+  veDuong(el, dl.map(function (x) {
+    return { gt: x.kg, nhan: motThang ? x.ngay.substring(8, 10) : x.ngay.substring(8, 10) + '/' + x.ngay.substring(5, 7),
+             moTa: ngayVN(x.ngay) + ': ' + soVN(x.kg, 2) + ' kg tươi / ' + soVN(x.quyKho, 2) + ' kg khô' };
+  }), { mau: 'var(--leaf)', dinh: dinh, ten: 'Sản lượng theo ngày' });
+  el._duLieuCot = dl;
+}
+
 /**
- * Biểu đồ cột theo THÁNG/KỲ (tối đa ~24 cột, ít nên hiện đủ nhãn dưới mỗi cột) — dùng chung cho
- * xu hướng sản lượng và chi phí lương của Ban lãnh đạo.
- *   dl          mảng đối tượng đã sắp xếp cũ -> mới, mỗi phần tử có .thang hoặc .ky ('YYYY-MM')
- *   layGiaTri(x) -> số dùng để vẽ chiều cao cột
- *   layMoTa(x)   -> chuỗi hiện khi rê chuột
+ * Theo THÁNG/KỲ (đường) — dùng chung cho xu hướng sản lượng, năng suất vườn cây, báo cáo Tập đoàn…
+ *   dl          mảng đối tượng cũ -> mới, mỗi phần tử có .thang hoặc .ky ('YYYY-MM' hoặc nhãn sẵn)
+ *   layGiaTri(x) -> số;  layMoTa(x) -> chuỗi hiện khi chạm / rê chuột
  */
 function veCotThang(el, dl, layGiaTri, layMoTa, mau) {
   if (!dl.length) { el.innerHTML = '<div class="rong">Chưa có đủ dữ liệu nhiều tháng.</div>'; return; }
-  mau = mau || 'var(--sky)';
-  var W = 100, H = 210, tren = 14, duoi = 22;
-  var maxV = 0;
-  for (var i = 0; i < dl.length; i++) maxV = Math.max(maxV, layGiaTri(dl[i]));
-  if (maxV <= 0) maxV = 1;
-
-  var rongCot = 100 / dl.length;
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
-            'style="width:100%;height:210px;overflow:visible" role="img">';
-  for (var g = 0; g <= 3; g++) {
-    var y = tren + (H - tren - duoi) * g / 3;
-    svg += '<line x1="0" y1="' + y + '" x2="100" y2="' + y + '" stroke="var(--line)" stroke-width=".4" vector-effect="non-scaling-stroke"/>';
-  }
-  for (var j = 0; j < dl.length; j++) {
-    var v = layGiaTri(dl[j]);
-    var h = (v / maxV) * (H - tren - duoi);
-    var x = j * rongCot, yc = H - duoi - h;
-    svg += '<rect x="' + (x + rongCot * 0.15) + '" y="' + yc + '" width="' + (rongCot * 0.7) +
-           '" height="' + Math.max(h, 0.5) + '" fill="' + mau + '" opacity=".85"><title>' +
-           thoat(layMoTa(dl[j])) + '</title></rect>';
-  }
-  svg += '</svg>';
-
-  var nhan = '<div style="display:flex;font-size:11px;color:var(--ink-3);margin-top:4px;gap:2px">';
-  for (var k = 0; k < dl.length; k++) {
-    var th = String(dl[k].thang || dl[k].ky || '');
-    var ngan = th.length === 7 ? (th.substring(5, 7) + '/' + th.substring(2, 4)) : th;
-    nhan += '<span style="flex:1;text-align:center;white-space:nowrap">' + thoat(ngan) + '</span>';
-  }
-  nhan += '</div>';
-  el.innerHTML = svg + nhan;
+  veDuong(el, dl.map(function (x) {
+    var th = String(x.thang || x.ky || '');
+    return { gt: layGiaTri(x), nhan: th.length === 7 ? th.substring(5, 7) + '/' + th.substring(2, 4) : th, moTa: layMoTa(x) };
+  }), { mau: mau || 'var(--sky)', ten: 'Biểu đồ theo tháng' });
 }
 
 function veDonut(el, dl, layMau) {
