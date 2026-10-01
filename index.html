@@ -285,9 +285,8 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .bd-bang td{padding:3px 0;border-bottom:1px solid var(--line);vertical-align:top}
 .bd-bang td:first-child{color:var(--ink-3);padding-right:8px;white-space:nowrap}
 .leaflet-tooltip.bd-tip{font-size:12.5px;font-family:inherit}
-/* Ô chọn mode tô màu: tên mode dài -> chiếm 2 cột lưới lọc; màn hẹp chiếm trọn hàng */
-.bd-o-mau{grid-column:span 2}
-@media (max-width:900px){.bd-o-mau{grid-column:1/-1}}
+/* Ô chọn mode tô màu nằm ngay trên chú thích màu (thay dòng tiêu đề) */
+.bd-chon-mau{width:auto;max-width:100%;font-weight:600;padding:5px 8px;margin-right:6px}
 /* Lô cao nhất / thấp nhất (mode sản lượng) */
 /* Dải ngang trên bản đồ: cao nhất / thấp nhất + chú thích */
 .bd-dai{display:flex;gap:14px 20px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin-bottom:10px}
@@ -1025,27 +1024,6 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="nut-dong-sheet" id="bdDongLoc" type="button" aria-label="Đóng">✕</button>
         </div>
         <div class="bo-loc-noidung">
-        <div class="bd-o-mau"><label class="nhan" for="bdMau">So sánh bằng màu theo</label>
-          <select class="o" id="bdMau">
-            <optgroup label="Sản lượng trong khoảng ngày">
-              <option value="qkDay">Quy khô mủ dây (kg)</option>
-              <option value="qkChen">Quy khô mủ chén (kg)</option>
-              <option value="qk">Quy khô tổng (kg)</option>
-              <option value="kgHa">Năng suất (kg quy khô/ha)</option>
-              <option value="kgTuoi">Sản lượng tươi (kg)</option>
-              <option value="nsbq">NSBQ (kg/nhát)</option>
-            </optgroup>
-            <optgroup label="Mùa vụ">
-              <option value="gk">% hoàn thành giao khoán</option>
-            </optgroup>
-            <optgroup label="Thông tin lô">
-              <option value="cayCao">Số cây cạo</option>
-              <option value="ns2025">Năng suất 2025 theo kiểm kê (kg/ha)</option>
-              <option value="xepHang">Xếp hạng vườn cây (Q1–Q4)</option>
-              <option value="giong">Giống</option>
-              <option value="namTrong">Năm trồng</option>
-              <option value="to">Tổ</option>            </optgroup>
-          </select></div>
           <div><label class="nhan" for="bdTu">Từ ngày</label><input class="o" id="bdTu" type="date"></div>
           <div><label class="nhan" for="bdDen">Đến ngày</label><input class="o" id="bdDen" type="date"></div>
           <div id="khungBdDoi"><label class="nhan" for="bdDoi">Đội</label><select class="o" id="bdDoi"></select></div>
@@ -1076,7 +1054,28 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div class="the bd-dai">
             <div id="bdMaxMin" class="bd-dai-mm" style="display:none"></div>
             <div class="bd-dai-ct">
-              <div class="bd-dai-tieude"><b id="bdTieuDeChuThich">Chú thích</b> <span id="bdGhiChuChuThich" class="nhan-mo"></span></div>
+              <div class="bd-dai-tieude"><b id="bdTieuDeChuThich" hidden>Chú thích</b>
+              <select class="o bd-chon-mau" id="bdMau" title="So sánh bằng màu theo" aria-label="So sánh bằng màu theo">
+            <optgroup label="Sản lượng trong khoảng ngày">
+              <option value="qkDay">Quy khô mủ dây (kg)</option>
+              <option value="qkChen">Quy khô mủ chén (kg)</option>
+              <option value="qk">Quy khô tổng (kg)</option>
+              <option value="kgHa">Năng suất (kg quy khô/ha)</option>
+              <option value="kgTuoi">Sản lượng tươi (kg)</option>
+              <option value="nsbq">NSBQ (kg/nhát)</option>
+            </optgroup>
+            <optgroup label="Mùa vụ">
+              <option value="gk">% hoàn thành giao khoán</option>
+            </optgroup>
+            <optgroup label="Thông tin lô">
+              <option value="cayCao">Số cây cạo</option>
+              <option value="ns2025">Năng suất 2025 theo kiểm kê (kg/ha)</option>
+              <option value="xepHang">Xếp hạng vườn cây (Q1–Q4)</option>
+              <option value="giong">Giống</option>
+              <option value="namTrong">Năm trồng</option>
+              <option value="to">Tổ</option>            </optgroup>
+          </select>
+              <span id="bdGhiChuChuThich" class="nhan-mo"></span></div>
               <div id="bdChuThich" class="bd-dai-mau"></div>
             </div>
           </div>
