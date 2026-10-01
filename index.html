@@ -9327,15 +9327,19 @@ function vaoApp(d, vtChon) {
   // đọc khoảng ngày (ngayMin/ngayMax) từ Sheet hay từ BigQuery cho đúng
   // nguồn ban lãnh đạo đang xem.
   // Danh mục (loại mủ, phiên, ký hiệu công…) lưu trên máy: mất mạng vẫn mở được form nhập cả tổ.
-  goiAPI('meta', { vaiTro: d.vaiTro, maDonVi: d.maDonVi }).then(function (m) {
-    ghiLS('crck2_meta_offline', JSON.stringify(m));
-    return m;
-  }).catch(function (e) {
-    var c = null;
-    try { c = JSON.parse(docLS('crck2_meta_offline') || 'null'); } catch (x) { c = null; }
-    if (c && laLoiMang(e)) return c;
-    throw e;
-  }).then(function (m) {
+  var metaLuu = null;
+  try { metaLuu = JSON.parse(docLS('crck2_meta_offline') || 'null'); } catch (x) { metaLuu = null; }
+  var huaMeta = (!navigator.onLine && metaLuu) ? Promise.resolve(metaLuu)   // mất mạng: dùng ngay bản lưu, khỏi chờ
+    : goiAPI('meta', { vaiTro: d.vaiTro, maDonVi: d.maDonVi }).then(function (m) {
+        ghiLS('crck2_meta_offline', JSON.stringify(m));
+        return m;
+      }).catch(function (e) {
+        if (metaLuu && laLoiMang(e)) return metaLuu;
+        throw e;
+      });
+  // Sóng yếu: có bản lưu thì không chờ quá 8 giây
+  if (metaLuu && navigator.onLine) huaMeta = Promise.race([huaMeta, new Promise(function (ok) { setTimeout(function () { ok(metaLuu); }, 8000); })]);
+  huaMeta.then(function (m) {
     S.meta = m;
 
     var sl = $('fLoaiMu');
@@ -10013,15 +10017,28 @@ $('nutVao').onclick = function () {
     nsBaoOkChung('📴 Đang mất mạng — vào bằng dữ liệu lưu trên máy (lần đăng nhập ' + ntGio(banLuu.luc) + ' ' + ngayVN(nsHomNayTu(banLuu.luc)) +
       '). Vẫn nhập được sản lượng / chấm công cả tổ; số liệu xem sẽ cập nhật khi có sóng.');
   };
-  if (!navigator.onLine && banLuu) { vaoOffline(); return; }
+  if (!navigator.onLine) {
+    if (banLuu) { vaoOffline(); return; }
+    nut.disabled = false; nut.textContent = 'Đăng nhập';
+    baoLoi('loiDangNhap', '📴 Đang mất mạng và máy này chưa lưu dữ liệu của tài khoản ' + ma + '. Mở app MỘT LẦN khi có sóng ' +
+      '(đăng nhập xong là máy tự lưu), sau đó mất mạng vẫn vào và nhập được.');
+    return;
+  }
+  // Sóng yếu (máy báo có mạng nhưng không tải được): đã có bản lưu thì chờ tối đa 8 giây rồi vào bằng bản lưu
+  var daVao = false;
+  var henOffline = banLuu ? setTimeout(function () { if (!daVao) { daVao = true; vaoOffline(); } }, 8000) : null;
   Promise.all([goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }), coSan ? Promise.resolve(_pq) : napPhanQuyen()]).then(function (kq) {
     var d = kq[0];
-    nut.disabled = false; nut.textContent = 'Đăng nhập';
     ghiLS('crck2_dn_offline', JSON.stringify({ vt: vtChon, ma: ma, d: d, luc: Date.now() }));
+    if (daVao) return;               // đã vào bằng bản lưu vì sóng yếu — lần sau mở app sẽ dùng dữ liệu mới này
+    daVao = true; clearTimeout(henOffline);
+    nut.disabled = false; nut.textContent = 'Đăng nhập';
     vaoApp(d, vtChon);
     if (coSan) napPhanQuyen();
   }).catch(function (e) {
-    if (laLoiMang(e) && banLuu) { vaoOffline(); return; }
+    if (daVao) return;
+    clearTimeout(henOffline);
+    if (laLoiMang(e) && banLuu) { daVao = true; vaoOffline(); return; }
     nut.disabled = false; nut.textContent = 'Đăng nhập';
     baoLoi('loiDangNhap', e.message);
   });
