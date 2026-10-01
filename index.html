@@ -221,9 +221,9 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   gap:12px;padding:16px;overflow-y:auto}
 .bo-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap;
   position:sticky;bottom:0;background:var(--card);padding-top:8px;margin-top:4px}
-/* Bộ lọc mặc định THU GỌN thành nút (icon phễu + "Bộ lọc"); bấm thì khung lọc TRƯỢT LÊN TỪ DƯỚI kèm nền mờ
-   ở mọi màn (đóng bằng ✕ / nền mờ / Esc / Áp dụng). Màn rộng: nút nhỏ, tấm rộng tối đa 980px giữa màn;
-   màn hẹp (@media 900px): nút dính đầu trang, rộng hết, kèm dòng tóm tắt bộ lọc đang dùng. */
+/* Bộ lọc mặc định THU GỌN thành nút nhỏ (icon phễu + "Bộ lọc") + chip điều kiện đang lọc bên phải — giống nhau
+   ở mọi màn. Bấm thì khung lọc TRƯỢT LÊN TỪ DƯỚI kèm nền mờ (đóng bằng ✕ / nền mờ / Esc / Áp dụng); màn rộng
+   tấm rộng tối đa 980px giữa màn, điện thoại rộng hết. */
 .bo-loc-dau{display:flex;align-items:center;gap:10px;width:100%;padding:0;margin-bottom:14px;
   border:none;background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
 .bo-loc-dau .nut-loc-pill{display:inline-flex;align-items:center;gap:7px;flex:none;padding:7px 14px;
@@ -250,17 +250,7 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   border:1px solid var(--line-2);background:var(--paper);
   color:var(--ink);border-radius:50%;font-size:15px;line-height:1;cursor:pointer}
 @media (max-width:900px){
-  /* Luôn hiện khi cuộn trang (position:sticky) — khỏi phải cuộn lên đầu mới mở được bộ lọc. */
-  .bo-loc-dau{gap:8px;padding:14px 16px;background:var(--card);box-shadow:var(--shadow);
-    border:1px solid var(--line);border-radius:2px;margin-bottom:20px;
-    position:sticky;top:56px;z-index:60}   /* 56px = né hàng nút ☰/☀️ cố định góc trên (14px+36px+6px) */
-  .bo-loc-dau .nut-loc-pill{padding:0;border:none;background:none;box-shadow:none;border-radius:0;font-size:14px}
-  .bo-loc-dau .tom-tat{display:block;color:var(--ink-2);font-weight:400;font-size:12.5px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bo-loc-dau .loc-chip{padding:0;border:none;background:none;font-size:12.5px}
-  .bo-loc-dau .loc-chip + .loc-chip::before{content:' · '}
-  .bo-loc-dau .chevron{display:inline;margin-left:auto;flex:none;color:var(--ink-3);font-size:11px}
-  .bo-loc{max-width:none}
+  .bo-loc{max-width:none}   /* tấm lọc rộng hết màn điện thoại */
 }
 .nhanh{display:flex;gap:6px;flex-wrap:wrap;margin-right:auto}
 .gat{display:flex;gap:6px;flex-wrap:wrap}
