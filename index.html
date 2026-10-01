@@ -838,6 +838,36 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       </div>
     </section>
 
+    <!-- Tab: Trạm cân (nhóm Sản lượng) — phiếu cân + đối chiếu với sổ sản lượng tổ -->
+    <section id="pTramCan" style="display:none">
+      <div id="tcLoi"></div>
+      <div class="kpis" id="kpisTC"></div>
+      <div class="the o-bieu-do" style="margin-bottom:20px">
+        <h3 class="tieude-muc">Đối chiếu theo ngày <span class="nhan-mo" style="text-transform:none;font-weight:400">(trạm cân so với sổ sản lượng tổ đã duyệt, cùng loại mủ)</span></h3>
+        <div id="bdTcNgay"></div>
+      </div>
+      <div class="luoi-2 deu">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Đối chiếu theo đội</h3>
+          <div id="bdTcDoi"></div>
+        </div>
+        <div class="the">
+          <h3 class="tieude-muc" style="padding:16px 16px 0">Theo xe</h3>
+          <div class="cuon"><table id="bangTcXe"></table></div>
+        </div>
+      </div>
+      <div class="the" style="margin-top:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatTC">—</h3>
+          <button class="btn chinh nho" id="nutNapTC" style="display:none" title="Nạp file &quot;Bảng tổng hợp phiếu cân&quot; xuất từ phần mềm trạm cân (chọn được nhiều file)">Nạp file trạm cân</button>
+          <input type="file" id="fileTC" accept=".xlsx" multiple style="display:none">
+          <button class="btn nho" id="nutXuatTC">Xuất Excel</button>
+        </div>
+        <div class="cuon cuon-doc"><table id="bangTC"></table></div>
+        <div class="phan-trang" id="phanTrangTC"></div>
+      </div>
+    </section>
+
     <!-- Tab: Sản lượng chi tiết -->
     <section id="pSanLuong" style="display:none">
       <div class="kpis" id="kpisSL"></div>
@@ -1619,7 +1649,7 @@ var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
-  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1,
+  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -2820,6 +2850,197 @@ function taiTongQuanPhu(blTQ) {
       }).catch(function (e) { loiKhoi('kpisGKTQ')(e); $('bdHieuSuatGK').innerHTML = ''; });
     }
   ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
+}
+
+/* =====================================================================
+   Tab TRẠM CÂN (nhóm Sản lượng) — phiếu cân FACT_PHIEU_CAN (mỗi chuyến xe 1 phiếu) + đối chiếu với
+   sản lượng tổ đã duyệt cùng ngày/đội/loại mủ. Nạp file "BẢNG TỔNG HỢP PHIẾU CÂN" của trạm cân (quyền
+   Thêm "Trạm cân"): đọc file ngay trên máy theo TÊN CỘT tiêu đề, gửi POST napPhieuCan — nạp trùng số
+   phiếu thì thay bản cũ, không nhân đôi.
+   ===================================================================== */
+var _tc = null, _tcTrang = 1, _tcLan = 0, TC_MOI_TRANG = 50;
+var TC_COT_FILE = {
+  'SỐ PHIẾU': 'soPhieu', 'SỐ PHIẾU NT': 'soPhieuNt', 'LOẠI': 'loai', 'BIỂN SỐ XE': 'bienSo', 'HÀNG HÓA': 'hangHoa', 'HÀNG HOÁ': 'hangHoa',
+  'NGƯỜI BÁN': 'nguoiBan', 'NGƯỜI MUA': 'nguoiMua', 'TÀI XẾ': 'taiXe', 'KHO': 'kho', 'GHI CHÚ': 'ghiChu', 'LÁT CẠO': 'latCao',
+  'TÊN LÔ': 'tenLo', 'SỐ CÂN TỔNG (KG)': 'canTong', 'GIỜ CÂN TỔNG': 'gioCanTong', 'SỐ CÂN BÌ (KG)': 'canBi', 'GIỜ CÂN BÌ': 'gioCanBi',
+  'TRỌNG LƯỢNG HÀNG (KG)': 'trongLuong'
+};
+
+function taiTramCan() {
+  var lan = ++_tcLan, bl = layBoLoc();
+  $('nutNapTC').style.display = coQuyen('tramCan', 'THEM') ? '' : 'none';
+  $('nutNapTC').onclick = function () { $('fileTC').value = ''; $('fileTC').click(); };
+  $('fileTC').onchange = function () { tcDocFile(Array.prototype.slice.call(this.files || [])); };
+  $('nutXuatTC').onclick = xuatTramCan;
+  $('kpisTC').innerHTML = skKpis(4);
+  $('bdTcNgay').innerHTML = skKhoi(); $('bdTcDoi').innerHTML = skKhoi();
+  $('bangTcXe').innerHTML = skBang(3); $('bangTC').innerHTML = skBang(6); $('phanTrangTC').innerHTML = '';
+  goiCache('tramCan', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay, doi: bl.doi, to: bl.to, loaiMu: bl.loaiMu })
+    .then(function (d) {
+      if (lan !== _tcLan) return;
+      _tc = d; _tcTrang = 1;
+      veTramCan(d);
+    }).catch(function (e) {
+      if (lan !== _tcLan) return;
+      $('kpisTC').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
+      ['bdTcNgay', 'bdTcDoi', 'bangTcXe', 'bangTC'].forEach(function (id) { $(id).innerHTML = ''; });
+    });
+}
+
+function veTramCan(d) {
+  var k = d.kpi || {}, tl = k.theoLoai || {};
+  var chenh = k.kgDoiChieu - k.kgSo, pt = k.kgSo ? chenh / k.kgSo * 100 : null;
+  var phuLoai = Object.keys(tl).map(function (m) { return (TEN_NGAN_LOAI_MU[m] || tenLoaiMu(m) || m) + ' ' + soVN(tl[m] / 1000, 1) + ' t'; }).join(' · ');
+  $('kpisTC').innerHTML =
+    the_kpi_kg('Qua trạm cân', k.kgCan || 0, soVN(k.soPhieu || 0, 0) + ' phiếu · ' + soVN(k.soXe || 0, 0) + ' xe' + (phuLoai ? ' · ' + phuLoai : '')) +
+    the_kpi_kg('Sổ sản lượng tổ', k.kgSo || 0, 'Đã duyệt, cùng ngày và loại mủ') +
+    the_kpi(k.coLocTo ? 'Chênh lệch (chuyến 1 tổ)' : 'Chênh lệch cân − sổ', (chenh >= 0 ? '+' : '') + soVN(chenh, 0), 'kg', '',
+            pt === null ? 'Sổ chưa có sản lượng trong kỳ' :
+            '<span class="' + (Math.abs(pt) <= 2 ? 'tang' : 'giam') + '">' + (pt >= 0 ? '+' : '') + soVN(pt, 1) + '%</span> so với sổ' +
+            (k.coLocTo && k.soGop ? ' · không tính ' + soVN(k.soGop, 0) + ' chuyến gộp nhiều tổ' : '')) +
+    the_kpi('Chuyến gộp nhiều tổ', soVN(k.soGop || 0, 0), 'chuyến', 'Một xe chở mủ của 2 zone trở lên');
+  var tan = function (v) { return Math.round(v / 10) / 100; };
+  veCotKep($('bdTcNgay'), (d.theoNgay || []).map(function (x) {
+    return { nhan: x.ngay.substring(8, 10) + '/' + x.ngay.substring(5, 7), kh: tan(x.kgSo), th: tan(x.kgCan) };
+  }), { dv: 'tấn', tenKh: 'Sổ sản lượng tổ', tenTh: 'Trạm cân', ten: 'Đối chiếu trạm cân theo ngày' });
+  veCotKep($('bdTcDoi'), (d.theoDoi || []).map(function (x) {
+    return { nhan: tenDoiNgan(x.doi), kh: tan(x.kgSo), th: tan(x.kgCan) };
+  }), { dv: 'tấn', tenKh: 'Sổ sản lượng tổ', tenTh: 'Trạm cân', ten: 'Đối chiếu trạm cân theo đội' });
+  var hx = '<thead><tr><th>Biển số</th><th>Tài xế</th><th class="p">Số chuyến</th><th class="p">Khối lượng (kg)</th></tr></thead><tbody>';
+  (d.theoXe || []).forEach(function (x) {
+    hx += '<tr><td>' + thoat(x.xe) + '</td><td>' + thoat(x.taiXe) + '</td><td class="p num">' + soVN(x.soChuyen, 0) +
+          '</td><td class="p num">' + soVN(x.kg, 0) + '</td></tr>';
+  });
+  $('bangTcXe').innerHTML = (d.theoXe || []).length ? hx + '</tbody>' : '<tr><td><div class="rong">Không có phiếu cân.</div></td></tr>';
+  $('tomTatTC').textContent = 'Phiếu cân ' + (d.tu ? ngayVN(d.tu) : '') + ' – ' + (d.den ? ngayVN(d.den) : '') + ' · ' + soVN(k.soPhieu || 0, 0) + ' phiếu' +
+    (d.ngayMax ? ' (dữ liệu có từ ' + ngayVN(d.ngayMin) + ' đến ' + ngayVN(d.ngayMax) + ')' : '');
+  veBangTramCan();
+}
+
+function veBangTramCan() {
+  var ds = (_tc && _tc.phieu) || [];
+  if (!ds.length) {
+    $('bangTC').innerHTML = '<tr><td><div class="rong">Không có phiếu cân trong phạm vi đang lọc' +
+      (coQuyen('tramCan', 'THEM') ? ' — bấm "Nạp file trạm cân" để nạp.' : '.') + '</div></td></tr>';
+    $('phanTrangTC').innerHTML = '';
+    return;
+  }
+  var soTrang = Math.ceil(ds.length / TC_MOI_TRANG);
+  _tcTrang = Math.min(Math.max(1, _tcTrang), soTrang);
+  var h = '<thead><tr><th>Số phiếu</th><th>Giờ cân</th><th>Đội</th><th>Tổ · phiên</th><th>Lô</th><th>Phiếu nội trạm</th>' +
+          '<th>Xe</th><th>Tài xế</th><th>Hàng</th><th class="p">Cân tổng</th><th class="p">Cân bì</th><th class="p">Hàng (kg)</th></tr></thead><tbody>';
+  ds.slice((_tcTrang - 1) * TC_MOI_TRANG, _tcTrang * TC_MOI_TRANG).forEach(function (x) {
+    var zs = x.zones || [];
+    h += '<tr><td class="num">' + thoat(x.ma) + (zs.length > 1 ? ' <span class="td-nguon" title="Một chuyến chở mủ của ' + zs.length + ' tổ">gộp ' + zs.length + '</span>' : '') +
+         '</td><td>' + thoat(x.gioTong.substring(8, 10) + '/' + x.gioTong.substring(5, 7) + ' ' + x.gioTong.substring(11)) +
+         '</td><td>' + thoat(x.doi) + '</td><td>' + zs.map(function (z) { return thoat((z.to || 'Zone ' + z.zone) + (z.phien ? ' · ' + z.phien : '')); }).join('<br>') +
+         '</td><td>' + zs.map(function (z) { return thoat(z.lo); }).join('<br>') +
+         '</td><td>' + thoat(x.nt) + '</td><td>' + thoat(x.xe) + '</td><td>' + thoat(x.taiXe) +
+         '</td><td>' + thoat(TEN_NGAN_LOAI_MU[x.loaiMu] || x.hang) + '</td><td class="p num">' + soVN(x.canTong, 0) +
+         '</td><td class="p num">' + soVN(x.canBi, 0) + '</td><td class="p num"><b>' + soVN(x.kg, 0) + '</b></td></tr>';
+  });
+  $('bangTC').innerHTML = h + '</tbody>';
+  $('phanTrangTC').innerHTML = soTrang > 1
+    ? '<button class="btn nho" id="tcTruoc"' + (_tcTrang <= 1 ? ' disabled' : '') + '>← Trước</button><span>Trang ' + _tcTrang + ' / ' + soTrang +
+      '</span><button class="btn nho" id="tcSau"' + (_tcTrang >= soTrang ? ' disabled' : '') + '>Sau →</button>'
+    : '<span>Hiển thị toàn bộ ' + soVN(ds.length, 0) + ' phiếu</span>';
+  if ($('tcTruoc')) $('tcTruoc').onclick = function () { _tcTrang--; veBangTramCan(); };
+  if ($('tcSau')) $('tcSau').onclick = function () { _tcTrang++; veBangTramCan(); };
+}
+
+function xuatTramCan() {
+  var ds = (_tc && _tc.phieu) || [];
+  if (!ds.length) { baoLoi('thongBao', 'Không có phiếu cân để xuất.'); return; }
+  var nhan = ['Số phiếu', 'Giờ cân tổng', 'Giờ cân bì', 'Đội', 'Tổ', 'Phiên', 'Lô', 'Số phiếu nội trạm', 'Biển số xe', 'Tài xế',
+              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Ghi chú'];
+  var dong = ds.map(function (x) {
+    var zs = x.zones || [];
+    return [x.ma, x.gioTong, x.gioBi, x.doi, zs.map(function (z) { return z.to || 'Zone ' + z.zone; }).join('; '),
+            zs.map(function (z) { return z.phien; }).join('; '), zs.map(function (z) { return z.lo; }).join(' | '), x.nt, x.xe, x.taiXe,
+            x.hang, x.canTong, x.canBi, x.kg, x.ghiChu];
+  });
+  xuatBangExcel('tram_can_' + String(_tc.tu || '') + '_' + String(_tc.den || '') + '.xlsx', nhan, dong);
+}
+
+/** Giá trị 1 ô ExcelJS -> số / chuỗi (ngày giờ dạng dd-MM-yyyy HH:mm như file trạm cân). */
+function _tcGiaTri(v) {
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) {
+    var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p2(v.getUTCDate()) + '-' + p2(v.getUTCMonth() + 1) + '-' + v.getUTCFullYear() + ' ' + p2(v.getUTCHours()) + ':' + p2(v.getUTCMinutes());
+  }
+  if (typeof v === 'object') {
+    if (v.richText) return v.richText.map(function (x) { return x.text; }).join('');
+    if (v.result !== undefined) return _tcGiaTri(v.result);
+    if (v.text !== undefined) return v.text;
+  }
+  return v;
+}
+
+/** Đọc các file trạm cân đã chọn -> hỏi xác nhận -> nạp lần lượt từng file. */
+function tcDocFile(files) {
+  if (!files.length) return;
+  if (!window.ExcelJS) { baoLoi('tcLoi', 'Chưa tải được thư viện đọc Excel, thử lại.'); return; }
+  baoLoi('tcLoi', '');
+  Promise.all(files.map(function (f) {
+    return f.arrayBuffer().then(function (buf) {
+      var wb = new ExcelJS.Workbook();
+      return wb.xlsx.load(buf).then(function () {
+        var ws = wb.worksheets[0], hdr = null, dong = [];
+        ws.eachRow({ includeEmpty: false }, function (row) {
+          var vals = [];
+          for (var c = 1; c <= row.cellCount; c++) vals.push(_tcGiaTri(row.getCell(c).value));
+          if (!hdr) {
+            if (String(vals[0] || '').trim().toUpperCase() === 'SỐ PHIẾU') {
+              hdr = vals.map(function (h) { return TC_COT_FILE[String(h || '').trim().toUpperCase()] || ''; });
+            }
+            return;
+          }
+          if (typeof vals[0] !== 'number') return;   // dòng tổng cuối bảng / dòng trống
+          var x = {};
+          hdr.forEach(function (key, j) { if (key) x[key] = vals[j] === undefined ? '' : vals[j]; });
+          dong.push(x);
+        });
+        if (!hdr) throw new Error(f.name + ': không thấy dòng tiêu đề "SỐ PHIẾU" — không phải file Bảng tổng hợp phiếu cân?');
+        return { file: f, dong: dong };
+      });
+    });
+  })).then(function (dsFile) {
+    var tong = dsFile.reduce(function (s, x) { return s + x.dong.length; }, 0);
+    $('tcLoi').innerHTML = '<div class="bao-loi" style="background:var(--paper);border-color:var(--line-2);color:var(--ink)">Nạp ' + soVN(tong, 0) +
+      ' phiếu cân từ ' + dsFile.length + ' file: ' + dsFile.map(function (x) { return thoat(x.file.name) + ' (' + x.dong.length + ')'; }).join(', ') +
+      '? Phiếu trùng số đã có sẽ được thay bằng bản mới.' +
+      '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn chinh nho" id="tcXacNhan">Nạp lên hệ thống</button>' +
+      '<button class="btn nho" id="tcHuy">Huỷ</button></div></div>';
+    $('tcHuy').onclick = function () { baoLoi('tcLoi', ''); };
+    $('tcXacNhan').onclick = function () {
+      var nut = this, kq = [];
+      nut.disabled = true;
+      dsFile.reduce(function (chuoi, x, i) {
+        return chuoi.then(function () {
+          nut.textContent = 'Đang nạp ' + (i + 1) + '/' + dsFile.length + '…';
+          return fetch(S.api + '?action=napPhieuCan', { method: 'POST', body: JSON.stringify({
+            vaiTro: S.vaiTro, maDonVi: S.maDonVi, vaiTroHien: S.vaiTroHienThi, nguon: x.file.name,
+            nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi), dong: x.dong }) })
+            .then(function (r) { return r.json(); })
+            .then(function (r) {
+              if (!r.ok) throw new Error(x.file.name + ': ' + r.loi);
+              kq.push(x.file.name + ': ' + r.data.daNap + ' phiếu' + (r.data.thayCu ? ' (thay ' + r.data.thayCu + ' bản cũ)' : '') +
+                      (r.data.loi.length ? ', ' + r.data.loi.length + ' dòng bỏ qua: ' + r.data.loi.slice(0, 3).join('; ') : '') +
+                      (r.data.bqLoi ? ' — chưa đẩy được lên BigQuery, Admin bấm "Đồng bộ chấm công" để đẩy bù' : ''));
+            });
+        });
+      }, Promise.resolve()).then(function () {
+        _cacheFE = {};
+        baoLoi('tcLoi', '');
+        nsBaoOkChung('Đã nạp trạm cân — ' + kq.join(' · '));
+        taiTramCan();
+      }).catch(function (e) {
+        nut.disabled = false; nut.textContent = 'Nạp lên hệ thống';
+        baoLoi('tcLoi', 'Không nạp được: ' + e.message + (kq.length ? ' (đã nạp xong: ' + kq.join(' · ') + ')' : ''));
+      });
+    };
+  }).catch(function (e) { baoLoi('tcLoi', e.message); });
 }
 
 /** Tổng quan nhóm Nhân sự: nhân sự hiện tại + chấm công & chuyên cần trong kỳ đang lọc (tách từ trang tổng quan cũ). */
@@ -8641,6 +8862,7 @@ var LOC_THEO_TAB = {
   tqLuong: [],          // quỹ lương theo phạm vi tài khoản, không lọc
   sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
   phieu:    ['doi', 'to'],
+  tramCan:  ['doi', 'to', 'loaiMu'],   // trống khoảng ngày = tháng có phiếu cân mới nhất
   xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong'],
   chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien'],
   doiChieu: ['doi', 'to'],
@@ -8835,6 +9057,7 @@ function taiTab() {
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'tqNhanSu') taiTqNhanSu();
   else if (S.tab === 'tqLuong') taiTqLuong();
+  else if (S.tab === 'tramCan') taiTramCan();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
   else if (S.tab === 'chamCong') taiChamCong();
@@ -8963,14 +9186,14 @@ var NHOM_TAB = [
   // Tổng quan đầu trang = Báo cáo chỉ tiêu Tập đoàn; mỗi nhóm có trang tổng quan riêng ở đầu nhóm
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['baoCaoTD'] },
   { id: 'banDo', ten: 'Bản đồ', tabs: ['banDoLo'] },
-  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
+  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'phieu', 'tramCan', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
   { id: 'luong', ten: 'Lương', tabs: ['tqLuong', 'chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
-  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', tqLuong: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
+  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', tqLuong: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm', tramCan: 'Trạm cân',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
@@ -9111,6 +9334,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
   $('pTqNhanSu').style.display = (ten === 'tqNhanSu') ? '' : 'none';
   $('pTqLuong').style.display = (ten === 'tqLuong') ? '' : 'none';
+  $('pTramCan').style.display = (ten === 'tramCan') ? '' : 'none';
   $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
   $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
   $('pChamCong').style.display = (ten === 'chamCong') ? '' : 'none';
