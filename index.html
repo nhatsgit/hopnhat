@@ -9075,7 +9075,8 @@ function chuyenNhom(id) {
   var nh = timNhom(id);
   if (!nh) return;
   var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
-  if (dsCon.length > 1) {
+  // Nhóm đang xem: bấm chỉ đóng/mở danh sách tab con. Nhóm khác: xổ ra và mở luôn trang đầu (Tổng quan của nhóm).
+  if (dsCon.length > 1 && S.nhom === id) {
     S.nhomXo = S.nhomXo === id ? '' : id;
     veNhomTab();
     return;
