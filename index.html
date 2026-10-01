@@ -387,6 +387,13 @@ a.td-nguon:hover{background:var(--leaf-soft)}
   padding:10px 16px;border:none;border-radius:22px;background:#2f4a3a;color:#fff;font:inherit;font-size:13.5px;font-weight:600;
   box-shadow:0 6px 20px rgba(0,0,0,.3);cursor:pointer;text-align:center}
 .thanh-hang-cho[hidden]{display:none}
+.thanh-ban-moi{position:fixed;left:50%;top:58px;white-space:nowrap;transform:translateX(-50%);z-index:120;max-width:calc(100% - 24px);
+  padding:10px 16px;border:none;border-radius:22px;background:var(--leaf);color:#fff;font:inherit;font-size:14px;font-weight:700;
+  box-shadow:0 6px 20px rgba(0,0,0,.3);cursor:pointer}
+.thanh-ban-moi[hidden]{display:none}
+.nt-cap-nhat{font-size:12px;color:var(--ink-3);margin:-4px 0 8px}
+.nt-cap-nhat:empty{display:none}
+.nt-cap-nhat.cu{color:#b07d00;font-weight:600}
 .thanh-hang-cho.offline{background:#5b5b5b}
 .thanh-hang-cho.loi{background:var(--clay)}
 .hc-phieu{padding:12px;margin-bottom:10px}
@@ -712,6 +719,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </div>
     <!-- Hàng chờ gửi (nhập lúc mất mạng): nút nổi dưới màn hình -->
     <button type="button" id="thanhHangCho" class="thanh-hang-cho" hidden></button>
+    <!-- Có bản app mới (app cài trên điện thoại hay chạy ngầm nhiều ngày, không tự tải lại trang) -->
+    <button type="button" id="thanhBanMoi" class="thanh-ban-moi" hidden>🔄 Có bản mới — chạm để cập nhật</button>
 
     <!-- Tab: Tổng quan -->
     <!-- Tổng quan chia 5 hạng mục: Sản lượng · So sánh & xếp hạng · Giao khoán · Chấm công · Nhân sự.
@@ -7389,7 +7398,7 @@ function moNhapCaTo() {
   var ngay = (tam && tam.ngay) || nsHomNay();
   var nhatMd = (tam && tam.nhat) || '2';
 
-  var h = '<div id="ntOff" class="nt-off"></div><div class="nt-dau">' +
+  var h = '<div id="ntOff" class="nt-off"></div><div id="ntCapNhat" class="nt-cap-nhat"></div><div class="nt-dau">' +
     '<div><label class="nhan" for="ntNgay">Ngày</label><input class="o" id="ntNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
@@ -7415,6 +7424,7 @@ function moNhapCaTo() {
   nsMoModal('Nhập sản lượng cả tổ — ' + toNhapCaTo(), h);
   $('nenPhieu').classList.add('form-to');
   veNtOff();
+  veNtCapNhat();
   ntDanhDauCho();
   ntTongKet();
   $('ntTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
@@ -7462,6 +7472,18 @@ function veNtOff() {
   ['ntOff', 'ccOff'].forEach(function (id) {
     if (!$(id)) return;
     $(id).innerHTML = navigator.onLine ? '' : '📴 Đang mất mạng — vẫn nhập và bấm <b>Gửi</b> được: phiếu vào hàng chờ trên máy, có sóng sẽ tự gửi.';
+  });
+}
+
+/** Dòng "Danh sách công nhân cập nhật lúc …" — để biết khi nhập offline đang dùng dữ liệu của lúc nào. */
+function veNtCapNhat() {
+  var luc = S.lucDuLieu;
+  ['ntCapNhat', 'ccCapNhat'].forEach(function (id) {
+    if (!$(id) || !luc) return;
+    var cu = Date.now() - luc > 24 * 3600000;
+    $(id).className = 'nt-cap-nhat' + (cu ? ' cu' : '');
+    $(id).textContent = 'Danh sách công nhân, phần cạo, danh mục cập nhật lúc ' + ntGio(luc) + ' ' + ngayVN(nsHomNayTu(luc)) +
+      (cu ? ' — đã hơn 1 ngày, có sóng hãy mở lại app để lấy danh sách mới (người mới vào tổ chưa có ở đây).' : '');
   });
 }
 
@@ -7747,7 +7769,7 @@ function moChamCongCaTo() {
     }).join('');
   };
 
-  var h = '<div id="ccOff" class="nt-off"></div><div class="nt-dau">' +
+  var h = '<div id="ccOff" class="nt-off"></div><div id="ccCapNhat" class="nt-cap-nhat"></div><div class="nt-dau">' +
     '<div><label class="nhan" for="ccNgay">Ngày</label><input class="o" id="ccNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ccKhMd">Ký hiệu mặc định</label><select class="o" id="ccKhMd">' + optKh(khMd) + '</select></div>' +
     '<div><label class="nhan">Phiên cạo mặc định <span class="nhan-mo">(tối đa 2 nếu cạo đúp)</span></label>' +
@@ -7765,6 +7787,7 @@ function moChamCongCaTo() {
   nsMoModal('Chấm công cả tổ — ' + toNhapCaTo(), h);
   $('nenPhieu').classList.add('form-to');
   veNtOff();
+  veNtCapNhat();
 
   var dsCn = dsCnNhapTo();
   var veBang = function (daCo) {
@@ -9999,6 +10022,35 @@ setInterval(function () { if (navigator.onLine) hcGuiHet(); }, 60000);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(function (e) { try { console.warn('Không đăng ký được service worker:', e); } catch (x) {} });
 }
+// ---- Báo có bản mới: so dấu vân tay phần mã (style + script trong trang) đang chạy với bản trên mạng ----
+// Không cần đánh số phiên bản tay: đổi bất kỳ mã/giao diện nào là vân tay đổi.
+function _vanTayTrang(doc) {
+  var t = '';
+  doc.querySelectorAll('style, script:not([src])').forEach(function (x) { t += x.textContent; });
+  var h = 5381;
+  for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return t.length + ':' + h;
+}
+var _vanTayDangChay = _vanTayTrang(document), _lanKiemBanMoi = Date.now();
+function kiemBanMoi(batBuoc) {
+  if (!navigator.onLine || location.protocol === 'file:' || !$('thanhBanMoi').hidden) return;
+  if (!batBuoc && Date.now() - _lanKiemBanMoi < 30 * 60000) return;   // tối đa 30 phút kiểm 1 lần
+  _lanKiemBanMoi = Date.now();
+  fetch(location.pathname.replace(/[^\/]*$/, '') + 'index.html', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (html) {
+      if (!html || html.indexOf('_vanTayTrang') < 0) return;          // không phải trang app (vd trang lỗi giữa đường)
+      if (_vanTayTrang(new DOMParser().parseFromString(html, 'text/html')) !== _vanTayDangChay) $('thanhBanMoi').hidden = false;
+    }).catch(function () { /* mất mạng: lần sau kiểm */ });
+}
+$('thanhBanMoi').onclick = function () {
+  if (_hcDangGui) { alert('Đang gửi phiếu chờ — đợi gửi xong rồi bấm cập nhật.'); return; }
+  try { if ($('bangNhapTo')) ntLuuTam(false); if ($('bangCCTo')) ccLuuTam(); } catch (e) { /* bản nhập dở vốn đã tự lưu khi gõ */ }
+  location.reload();
+};
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') kiemBanMoi(); });
+window.addEventListener('online', function () { kiemBanMoi(true); });
+setInterval(function () { if (document.visibilityState === 'visible') kiemBanMoi(); }, 3 * 3600000);
 // Nút cài app: Android/Chrome có hộp cài sẵn; iPhone (Safari) chỉ cài được qua Chia sẻ -> Thêm vào MH chính
 var _hoiCai = null;
 var _daCai = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -10034,6 +10086,7 @@ $('nutVao').onclick = function () {
   if (banLuu && (banLuu.vt !== vtChon || String(banLuu.ma).toUpperCase() !== ma.toUpperCase())) banLuu = null;
   var vaoOffline = function () {
     nut.disabled = false; nut.textContent = 'Đăng nhập';
+    S.lucDuLieu = banLuu.luc;
     vaoApp(banLuu.d, vtChon);
     nsBaoOkChung('📴 Đang mất mạng — vào bằng dữ liệu lưu trên máy (lần đăng nhập ' + ntGio(banLuu.luc) + ' ' + ngayVN(nsHomNayTu(banLuu.luc)) +
       '). Vẫn nhập được sản lượng / chấm công cả tổ; số liệu xem sẽ cập nhật khi có sóng.');
@@ -10054,6 +10107,7 @@ $('nutVao').onclick = function () {
     if (daVao) return;               // đã vào bằng bản lưu vì sóng yếu — lần sau mở app sẽ dùng dữ liệu mới này
     daVao = true; clearTimeout(henOffline);
     nut.disabled = false; nut.textContent = 'Đăng nhập';
+    S.lucDuLieu = Date.now();
     vaoApp(d, vtChon);
     if (coSan) napPhanQuyen();
   }).catch(function (e) {
