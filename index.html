@@ -2722,10 +2722,10 @@ function taiPhieu() {
 
     var h = '<thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Tổ</th>' +
             '<th class="p">Tổng (kg)</th><th>Chi tiết theo loại mủ</th>' +
-            '<th>Trạng thái</th><th class="p">Đối chiếu</th><th></th></tr></thead><tbody>';
+            '<th>Trạng thái</th><th>Phiếu Base</th><th class="p">Đối chiếu</th><th></th></tr></thead><tbody>';
 
     if (!d.rows.length) {
-      h += '<tr><td colspan="8"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';
+      h += '<tr><td colspan="9"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';
     }
     for (var i = 0; i < d.rows.length; i++) {
       var p = d.rows[i];
@@ -2745,6 +2745,7 @@ function taiPhieu() {
         '<td>' + viTrangThai(p.trangThai) +
           (p.soDongChoDuyet ? ' <span class="nhan-mo">' + p.soDongChoDuyet + '/' +
              p.soDongSanLuong + ' dòng</span>' : '') + '</td>' +
+        '<td>' + veLinkBase(p.base) + '</td>' +
         '<td class="p">' + (p.khop
             ? '<span class="vi ok">Khớp</span>'
             : '<span class="vi canh">Lệch ' + soVN(Math.abs(p.tongChiTiet - p.kg), 2) + '</span>') + '</td>' +
@@ -4669,8 +4670,18 @@ function tdSo(v, dvt) {
 
 function tdNgayVN(s) { return s ? s.split('-').reverse().join('/') : ''; }
 
-/** Link mở phiếu trên Base (tab mới). */
+/** Link mở phiếu trên Base (tab mới) — dùng chung: báo cáo Tập đoàn, phiếu nội trạm, sau này lương… */
 function tdLinkBase(ma) { return 'https://service.base.vn/services/tickets/' + encodeURIComponent(String(ma)); }
+var TEN_TT_BASE = { DA_TAO: 'Chờ Base duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối' };
+/** Danh sách phiếu Base (liên kết FACT_LIEN_KET_BASE) thành các thẻ link. */
+function veLinkBase(ds) {
+  if (!ds || !ds.length) return '<span class="nhan-mo">—</span>';
+  return ds.map(function (b) {
+    var lop = b.trangThai === 'DA_DUYET' ? 'base' : (b.trangThai === 'TU_CHOI' ? 'sua' : 'tay');
+    return tdTheBase(b.ma, lop, 'Phiếu Base #' + b.ma + ' · ' + (TEN_TT_BASE[b.trangThai] || b.trangThai) + (b.nguoi ? ' · ' + b.nguoi : '') + (b.luc ? ' · ' + b.luc : ''),
+                     '#' + thoat(b.ma) + (b.trangThai === 'TU_CHOI' ? ' · từ chối' : b.trangThai === 'DA_TAO' ? ' · chờ duyệt' : ''));
+  }).join(' ');
+}
 function tdTheBase(ma, lop, title, chu) {
   return ma ? '<a class="td-nguon ' + lop + '" href="' + tdLinkBase(ma) + '" target="_blank" rel="noopener" title="' + thoat(title) + ' — bấm để mở phiếu trên Base">' + chu + ' ↗</a>'
             : '<span class="td-nguon ' + lop + '" title="' + thoat(title) + '">' + chu + '</span>';
@@ -7057,7 +7068,7 @@ function dbVeKetQua(d) {
   if (!d.coCauHinh) h += '<div class="bao-loi">Chưa cấu hình token Base trên Apps Script (datCauHinhBase) — chưa đẩy được.</div>';
   if (d.daTao && d.daTao.length) {
     h += '<div class="bao-loi">Tổ này ngày này <b>đã có ' + d.daTao.length + ' phiếu Base</b>: ' +
-      d.daTao.map(function (x) { return '#' + thoat(x.ticketId) + ' (' + thoat(x.luc) + ')'; }).join(', ') +
+      d.daTao.map(function (x) { return '<a href="' + tdLinkBase(x.ticketId) + '" target="_blank" rel="noopener">#' + thoat(x.ticketId) + ' ↗</a> (' + thoat(x.luc) + ')'; }).join(', ') +
       '. Đẩy tiếp sẽ tạo thêm phiếu mới.</div>';
   }
   if (dt.DA_DUYET) h += '<div class="bao-loi">Có ' + dt.DA_DUYET + ' dòng đã duyệt — phiếu vẫn gửi đủ mọi dòng của tổ trong ngày.</div>';
@@ -7098,7 +7109,7 @@ function dbDayLen() {
   goiApiMotLan('dayPhieuBase', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: d.to, ngay: d.ngay }, 120000).then(function (kq) {
     nut.style.display = 'none';
     $('dbKetQua').insertAdjacentHTML('afterbegin', '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
-      'Đã tạo phiếu Base <b>#' + thoat(kq.ticketId) + '</b> — ' + thoat(d.to) + ' ngày ' + thoat(ngayVN(d.ngay)) + ': ' +
+      'Đã tạo phiếu Base <a href="' + tdLinkBase(kq.ticketId) + '" target="_blank" rel="noopener"><b>#' + thoat(kq.ticketId) + '</b> ↗</a> — ' + thoat(d.to) + ' ngày ' + thoat(ngayVN(d.ngay)) + ': ' +
       soVN(kq.tongKg, 2) + ' kg, ' + kq.soDong + ' dòng.' +
       (kq.loiBang ? '<br><b>Lưu ý:</b> điền bảng vào phiếu có lỗi — ' + thoat(kq.dienBang) : '') + '</div>');
     _dbXem = null;
