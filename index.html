@@ -797,6 +797,13 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div id="bdHieuSuatGK"></div>
       </div>
 
+    </section>
+
+    <!-- Tab: Tổng quan nhóm Nhân sự (tách từ trang tổng quan cũ) -->
+    <section id="pTqNhanSu" style="display:none">
+      <h2 class="nhom-tq">Nhân sự <small id="phuNhomNS"></small></h2>
+      <div class="kpis" id="kpisNhanSuTH"></div>
+
       <h2 class="nhom-tq">Chấm công &amp; chuyên cần <small id="phuNhomCC"></small></h2>
       <div class="kpis" id="kpisCCTQ"></div>
       <div class="luoi-2" id="luoiCCTQ">
@@ -809,9 +816,26 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div id="bdKyHieuTQ"></div>
         </div>
       </div>
+    </section>
 
-      <h2 class="nhom-tq">Nhân sự <small id="phuNhomNS"></small></h2>
-      <div class="kpis" id="kpisNhanSuTH"></div>
+    <!-- Tab: Tổng quan nhóm Lương — quỹ lương các tháng đã có chấm công (chiPhiLuongTongHop, số đã duyệt) -->
+    <section id="pTqLuong" style="display:none">
+      <h2 class="nhom-tq">Quỹ lương <small id="phuNhomLuongTQ"></small></h2>
+      <div class="kpis" id="kpisLuongTQ"></div>
+      <div class="luoi-2 deu">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Tổng thu nhập theo tháng <span class="nhan-mo" style="text-transform:none;font-weight:400">(đã duyệt)</span></h3>
+          <div id="bdLuongThangTQ"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Thu nhập bình quân/người theo tháng</h3>
+          <div id="bdLuongBqTQ"></div>
+        </div>
+      </div>
+      <div class="the" style="margin-top:20px">
+        <h3 class="tieude-muc" style="padding:16px 16px 0" id="tieuDeLuongDoiTQ">Theo đội</h3>
+        <div class="cuon"><table id="bangLuongDoiTQ"></table></div>
+      </div>
     </section>
 
     <!-- Tab: Sản lượng chi tiết -->
@@ -1616,7 +1640,7 @@ var S = {
   apiDoc: docLS('crck2_api_doc') || API_DOC_MAC_DINH,
   vaiTro: '', maDonVi: '', tenDonVi: '', dsTo: [], dsCn: [], toanCongTy: false,
   meta: null,
-  tab: 'tongQuan', nhom: 'tongQuan',
+  tab: '', nhom: '',      // trống = lần đầu vào tab đầu tiên được xem (tabDauDuocXem)
   sapXep: 'ngay', chieu: 'giam', trang: 1,
   locNhanhDangChon: '',
   trangThai: '',          // '' = Tất cả. Nút gạt đầu trang, chỉ tổ trưởng/đội trưởng thấy.
@@ -2760,14 +2784,10 @@ function veBangPhienTQ(ds) {
  */
 function taiTongQuanPhu(blTQ) {
   var bl = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: blTQ.doi, to: blTQ.to };
-  ['bdXuHuong', 'bdHieuSuatGK', 'bdChuyenCanDoi', 'bdKyHieuTQ'].forEach(function (id) { $(id).innerHTML = skKhoi(); });
-  ['kpisGKTQ', 'kpisCCTQ', 'kpisNhanSuTH'].forEach(function (id) { $(id).innerHTML = skKpis(4); });
+  ['bdXuHuong', 'bdHieuSuatGK'].forEach(function (id) { $(id).innerHTML = skKhoi(); });
+  $('kpisGKTQ').innerHTML = skKpis(4);
   // Đơn vị so sánh: lãnh đạo chưa chọn đội -> theo đội; còn lại -> theo tổ (1 tổ thì ẩn biểu đồ).
   var theoDoi = S.toanCongTy && !blTQ.doi;
-  var blCC = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: blTQ.tuNgay, denNgay: blTQ.denNgay, doi: blTQ.doi, to: blTQ.to,
-               maCn: blTQ.maCn, trangThai: blTQ.trangThai, docSheet: blTQ.docSheet, moiTrang: 20 };
-  $('phuNhomCC').textContent = moTaPhamViTQ(blCC);
-  $('phuNhomNS').textContent = (blTQ.to || blTQ.doi || (S.toanCongTy ? 'Toàn công ty' : S.maDonVi)) + ' · hiện tại';
   var loiKhoi = function (id) { return function (e) { $(id).innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; }; };
 
   [
@@ -2798,6 +2818,42 @@ function taiTongQuanPhu(blTQ) {
         $('tieuDeGKTQ').textContent = '% hoàn thành giao khoán theo ' + (theoDoi ? 'đội' : 'tổ');
         veCotNgangGK($('bdHieuSuatGK'), ds, theoDoi, d.tyLeThoiGian);
       }).catch(function (e) { loiKhoi('kpisGKTQ')(e); $('bdHieuSuatGK').innerHTML = ''; });
+    }
+  ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
+}
+
+/** Tổng quan nhóm Nhân sự: nhân sự hiện tại + chấm công & chuyên cần trong kỳ đang lọc (tách từ trang tổng quan cũ). */
+function taiTqNhanSu() {
+  var blTQ = layBoLoc();
+  $('bdChuyenCanDoi').innerHTML = skKhoi(); $('bdKyHieuTQ').innerHTML = skKhoi();
+  ['kpisCCTQ', 'kpisNhanSuTH'].forEach(function (id) { $(id).innerHTML = skKpis(4); });
+  var theoDoi = S.toanCongTy && !blTQ.doi;
+  var blCC = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: blTQ.tuNgay, denNgay: blTQ.denNgay, doi: blTQ.doi, to: blTQ.to,
+               maCn: blTQ.maCn, trangThai: blTQ.trangThai, docSheet: blTQ.docSheet, moiTrang: 20 };
+  $('phuNhomCC').textContent = moTaPhamViTQ(blCC);
+  $('phuNhomNS').textContent = (blTQ.to || blTQ.doi || (S.toanCongTy ? 'Toàn công ty' : S.maDonVi)) + ' · hiện tại';
+  var loiKhoi = function (id) { return function (e) { $(id).innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; }; };
+  [
+    function () {
+      return nsGoi('nhanSuTongQuan', { doi: blTQ.doi, to: blTQ.to }).then(function (d) {
+        var k = d.kpi || {};
+        // Biến động của tháng gần nhất có ghi nhận (tuyển mới/giao mã/chuyển tổ/nghỉ) — không
+        // tính mốc khởi tạo dữ liệu, nên "Chưa có biến động" là bình thường nếu tháng đó yên ắng.
+        var bd0 = (d.bienDongThang || [])[0] || {};
+        var phuBd = bd0.ky ? 'Tháng ' + bd0.ky : 'Chưa có biến động';
+        $('kpisNhanSuTH').innerHTML =
+          the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
+                  k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Chưa gán mã: ' + soVN(k.chuaGanMa || 0, 0) + ' người') +
+          the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo || 0, 0), 'cảnh báo',
+                  'Thiếu NSSF: ' + soVN(k.thieuNssf || 0, 0) + ' người') +
+          the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
+                  'Dưới 18 tuổi: ' + soVN(k.duoi18 || 0, 0) + ' người') +
+          the_kpi('Vị trí còn trống', soVN(k.viTriTrong || 0, 0), 'vị trí',
+                  'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí') +
+          the_kpi('Tuyển mới', soVN(bd0.tuyenMoi || 0, 0), 'người', phuBd) +
+          the_kpi('Nghỉ việc', soVN(bd0.nghi || 0, 0), 'người', phuBd) +
+          the_kpi('Chuyển tổ', soVN(bd0.chuyenTo || 0, 0), 'người', phuBd);
+      }).catch(loiKhoi('kpisNhanSuTH'));
     },
     function () {
       return goiCache('chamCong', blCC).then(function (d) {
@@ -2819,29 +2875,58 @@ function taiTongQuanPhu(blTQ) {
           function (v) { return soVN(v, 1) + ' công/người'; }, 'var(--sky)');
         veKyHieuCong($('bdKyHieuTQ'), d.theoKyHieu || []);
       }).catch(function (e) { loiKhoi('kpisCCTQ')(e); $('bdChuyenCanDoi').innerHTML = ''; $('bdKyHieuTQ').innerHTML = ''; });
-    },
-    function () {
-      return nsGoi('nhanSuTongQuan', { doi: blTQ.doi, to: blTQ.to }).then(function (d) {
-        var k = d.kpi || {};
-        // Biến động của tháng gần nhất có ghi nhận (tuyển mới/giao mã/chuyển tổ/nghỉ) — không
-        // tính mốc khởi tạo dữ liệu, nên "Chưa có biến động" là bình thường nếu tháng đó yên ắng.
-        var bd0 = (d.bienDongThang || [])[0] || {};
-        var phuBd = bd0.ky ? 'Tháng ' + bd0.ky : 'Chưa có biến động';
-        $('kpisNhanSuTH').innerHTML =
-          the_kpi('Đang làm việc', soVN(k.dangLam || 0, 0), 'người',
-                  k.cho ? soVN(k.cho, 0) + ' người chờ xác nhận' : 'Chưa gán mã: ' + soVN(k.chuaGanMa || 0, 0) + ' người') +
-          the_kpi('Cảnh báo đang mở', soVN(k.canhBaoMo || 0, 0), 'cảnh báo',
-                  'Thiếu NSSF: ' + soVN(k.thieuNssf || 0, 0) + ' người') +
-          the_kpi('Từ 60 tuổi', soVN(k.tren60 || 0, 0), 'người',
-                  'Dưới 18 tuổi: ' + soVN(k.duoi18 || 0, 0) + ' người') +
-          the_kpi('Vị trí còn trống', soVN(k.viTriTrong || 0, 0), 'vị trí',
-                  'Chưa rõ người: ' + soVN(k.viTriChuaRo || 0, 0) + ' vị trí') +
-          the_kpi('Tuyển mới', soVN(bd0.tuyenMoi || 0, 0), 'người', phuBd) +
-          the_kpi('Nghỉ việc', soVN(bd0.nghi || 0, 0), 'người', phuBd) +
-          the_kpi('Chuyển tổ', soVN(bd0.chuyenTo || 0, 0), 'người', phuBd);
-      }).catch(loiKhoi('kpisNhanSuTH'));
     }
   ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
+}
+
+/** Tổng quan nhóm Lương: quỹ lương (số đã duyệt) 6 tháng gần nhất có chấm công, theo phạm vi tài khoản. */
+var _tqLuongLan = 0;
+function taiTqLuong() {
+  var lan = ++_tqLuongLan;
+  $('kpisLuongTQ').innerHTML = skKpis(4);
+  $('bdLuongThangTQ').innerHTML = skKhoi(); $('bdLuongBqTQ').innerHTML = skKhoi(); $('bangLuongDoiTQ').innerHTML = skBang(3);
+  $('phuNhomLuongTQ').textContent = (S.toanCongTy ? 'Toàn công ty' : S.maDonVi) + ' · 6 tháng gần nhất có chấm công';
+  goiCache('chiPhiLuongTongHop', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, soKy: 6 }).then(function (d) {
+    if (lan !== _tqLuongLan) return;
+    // Bỏ tháng chưa có thu nhập (mới chấm công thử / chưa duyệt sản lượng)
+    var ds = (d.theoThang || []).filter(function (x) { return x.tongThuNhap > 0; });
+    if (!ds.length) {
+      $('kpisLuongTQ').innerHTML = '<div class="rong">Chưa có tháng nào có lương đã duyệt.</div>';
+      ['bdLuongThangTQ', 'bdLuongBqTQ', 'bangLuongDoiTQ'].forEach(function (id) { $(id).innerHTML = ''; });
+      return;
+    }
+    var m = ds[ds.length - 1], t = ds.length > 1 ? ds[ds.length - 2] : null;
+    var kyVN = function (k) { return k.substring(5, 7) + '/' + k.substring(0, 4); };
+    var bq = function (x) { return x.soNguoi ? x.tongThuNhap / x.soNguoi : 0; };
+    var soVoiTruoc = function (a1, b1) {
+      if (!t || !b1) return '';
+      var pt = (a1 - b1) / b1 * 100;
+      return ' · <span class="' + (pt >= 0 ? 'tang' : 'giam') + '">' + (pt >= 0 ? '+' : '') + soVN(pt, 1) + '%</span> so tháng ' + kyVN(t.ky);
+    };
+    $('kpisLuongTQ').innerHTML =
+      the_kpi('Tổng thu nhập', soVN(m.tongThuNhap, 0), 'đ', 'Tháng ' + kyVN(m.ky) + soVoiTruoc(m.tongThuNhap, t && t.tongThuNhap)) +
+      the_kpi('Thực nhận', soVN(m.tongThucNhan, 0), 'đ', 'Sau bảo hiểm và thuế') +
+      the_kpi('Bình quân', soVN(bq(m), 0), 'đ/người', soVN(m.soNguoi, 0) + ' người' + soVoiTruoc(bq(m), t && bq(t))) +
+      the_kpi('Bảo hiểm', soVN(m.tongBh, 0), 'đ', 'Thuế TNCN ' + soVN(m.tongThue, 0) + ' đ');
+    veCotThang($('bdLuongThangTQ'), ds, function (x) { return x.tongThuNhap; },
+      function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(x.tongThuNhap, 0) + ' đ · ' + soVN(x.soNguoi, 0) + ' người'; }, 'var(--leaf)');
+    veCotThang($('bdLuongBqTQ'), ds, bq,
+      function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(bq(x), 0) + ' đ/người'; }, 'var(--sky)');
+    // Bảng theo đội của tháng mới nhất
+    $('tieuDeLuongDoiTQ').textContent = 'Theo đội — tháng ' + kyVN(m.ky);
+    var h = '<thead><tr><th>Đội</th><th class="p">Số người</th><th class="p">Tổng thu nhập (đ)</th><th class="p">Thực nhận (đ)</th>' +
+            '<th class="p">Bình quân (đ/người)</th><th class="p">Tỷ trọng</th></tr></thead><tbody>';
+    (m.theoDoi || []).forEach(function (x) {
+      h += '<tr><td>' + thoat(x.doi) + '</td><td class="p num">' + soVN(x.soNguoi, 0) + '</td><td class="p num">' + soVN(x.tongThuNhap, 0) +
+           '</td><td class="p num">' + soVN(x.tongThucNhan, 0) + '</td><td class="p num">' + soVN(x.soNguoi ? x.tongThuNhap / x.soNguoi : 0, 0) +
+           '</td><td class="p num">' + (m.tongThuNhap ? soVN(x.tongThuNhap / m.tongThuNhap * 100, 1) + '%' : '—') + '</td></tr>';
+    });
+    $('bangLuongDoiTQ').innerHTML = h + '</tbody>';
+  }).catch(function (e) {
+    if (lan !== _tqLuongLan) return;
+    $('kpisLuongTQ').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
+    ['bdLuongThangTQ', 'bdLuongBqTQ', 'bangLuongDoiTQ'].forEach(function (id) { $(id).innerHTML = ''; });
+  });
 }
 
 /** phuHtml (tuỳ chọn): dòng phụ đã là HTML an toàn (vd mũi tên tăng/giảm có màu) thay cho phu. */
@@ -8552,6 +8637,8 @@ function taiMauExcel(loai) {
  */
 var LOC_THEO_TAB = {
   tongQuan: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
+  tqNhanSu: ['doi', 'to'],
+  tqLuong: [],          // quỹ lương theo phạm vi tài khoản, không lọc
   sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
   phieu:    ['doi', 'to'],
   xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong'],
@@ -8582,7 +8669,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD' || S.tab === 'tqLuong';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -8746,6 +8833,8 @@ function taiTab() {
   luuLocTab(S.tab);   // làm mới mốc 2 phút mỗi khi tải lại (kể cả đổi bộ lọc mà không đổi tab)
   veTomTatBoLoc();
   if (S.tab === 'tongQuan') taiTongQuan();
+  else if (S.tab === 'tqNhanSu') taiTqNhanSu();
+  else if (S.tab === 'tqLuong') taiTqLuong();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
   else if (S.tab === 'chamCong') taiChamCong();
@@ -8825,7 +8914,7 @@ function apDungLoc(loc) {
 /** Bộ lọc mặc định ban đầu của 1 tab — Tổng quan là "Tháng này", còn lại trống trơn. */
 function macDinhChoTab(tab) {
   var rong = { tuNgay: '', denNgay: '', doi: '', to: '', maCn: '', loaiMu: '', phien: '', chatLuong: '', kyHieu: '', trangThai: trangThaiMacDinh(), slKy: '', lgKy: '' };
-  if (tab !== 'tongQuan') return rong;
+  if (tab !== 'tongQuan' && tab !== 'tqNhanSu') return rong;
   var mocDen = (S.meta && S.meta.ngayMax) ? new Date(S.meta.ngayMax + 'T00:00:00') : new Date();
   mocDen.setHours(0, 0, 0, 0);
   var dauThang = new Date(mocDen.getFullYear(), mocDen.getMonth(), 1);
@@ -8871,16 +8960,17 @@ function veTomTatBoLoc() {
  * vừa ở Lương) — chỉ là 2 lối vào khác nhau tới cùng 1 tab, không nhân đôi dữ liệu/trạng thái.
  */
 var NHOM_TAB = [
-  { id: 'tongQuan', ten: 'Tổng quan', tabs: ['tongQuan'] },
+  // Tổng quan đầu trang = Báo cáo chỉ tiêu Tập đoàn; mỗi nhóm có trang tổng quan riêng ở đầu nhóm
+  { id: 'tongQuan', ten: 'Tổng quan', tabs: ['baoCaoTD'] },
   { id: 'banDo', ten: 'Bản đồ', tabs: ['banDoLo'] },
-  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
-  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
-  { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
-  { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao', 'baoCaoTD'] },
+  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
+  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
+  { id: 'luong', ten: 'Lương', tabs: ['tqLuong', 'chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
+  { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
-  tongQuan: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
+  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', tqLuong: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
@@ -8919,6 +9009,7 @@ function veNhomTab() {
   for (var i = 0; i < NHOM_TAB.length; i++) {
     var nh = NHOM_TAB[i];
     var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
+    if (!dsCon.length) continue;
     var coCon = dsCon.length > 1;
     var xo = coCon && S.nhomXo === nh.id;
     var lop = !coCon ? (S.nhom === nh.id ? ' on' : '') : (S.nhom === nh.id ? ' chua' : '');
@@ -9017,6 +9108,8 @@ function chuyenTab(ten, nhomMoi) {
   veNhomTab();
   veTabCon();
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
+  $('pTqNhanSu').style.display = (ten === 'tqNhanSu') ? '' : 'none';
+  $('pTqLuong').style.display = (ten === 'tqLuong') ? '' : 'none';
   $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
   $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
   $('pChamCong').style.display = (ten === 'chamCong') ? '' : 'none';
@@ -9716,8 +9809,8 @@ function vaoApp(d, vtChon) {
     if (!apThamSoURL()) khoiPhucChoDangXem();
     // Chụp lại NGAY bộ lọc vừa khôi phục cho đúng tab đang vào — không thì chuyenTab() bên dưới
     // tưởng chưa có gì nhớ cho tab này, lại ghi đè về mặc định trống trước khi kịp dùng.
-    luuLocTab(S.tab || 'tongQuan');
-    chuyenTab(S.tab || 'tongQuan');
+    luuLocTab(S.tab || tabDauDuocXem());
+    chuyenTab(S.tab || tabDauDuocXem());
   }).catch(function (e) {
     baoLoi('thongBao', 'Không nạp được danh mục: ' + e.message);
   });
