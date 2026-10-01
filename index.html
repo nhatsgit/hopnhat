@@ -1196,7 +1196,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <div style="padding:14px 16px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tdTomTatBang">—</h3>
           <span class="nhan-mo" style="font-size:12.5px">Nguồn: <span class="td-nguon base">Base</span> phiếu Base ·
-            <span class="td-nguon tay">Nhập tay</span> · <span class="td-nguon sua">Sửa tay</span> sổ cái khác phiếu Base · <span class="td-nguon tinh">Tính</span> dòng tổng</span>
+            <span class="td-nguon tay">Nhập tay</span> · <span class="td-nguon sua">Sửa tay</span> sổ cái khác phiếu Base · <span class="td-nguon tinh">Công thức</span> hệ thống tính từ số nhập (rê chuột xem công thức) · <span class="td-nguon tinh">Tổng hợp</span> cộng dồn / cuối kỳ từ kỳ gốc</span>
         </div>
         <div class="cuon cuon-doc" style="max-height:70vh"><table id="bangTD" class="bang-td"></table></div>
       </div>
@@ -4986,9 +4986,23 @@ function tdBadge(x) {
   if (x.nguon === 'SUA_TAY') return tdTheBase(x.maPhieu, 'sua', 'Phiếu Base #' + x.maPhieu + ' ghi ' + tdSo(x.giaTriBase, x.dvt),
     'Sửa tay · Base ' + thoat(tdSo(x.giaTriBase, x.dvt)));
   if (x.nguon === 'NHAP_TAY') return '<span class="td-nguon tay">Nhập tay</span>';
-  if (x.nguon === 'TINH_TOAN') return '<span class="td-nguon tinh">Tính</span>';
+  if (x.loiCongThuc) return '<span class="td-nguon sua" title="' + thoat(x.loiCongThuc + ' — ' + x.congThuc) + '">Lỗi công thức</span>';
+  if (x.nguon === 'CONG_THUC' || x.nguon === 'TINH_TOAN') return '<span class="td-nguon tinh" title="' + thoat(tdCongThucDoc(x.congThuc)) + '">Công thức</span>';
+  if (x.nguon === 'TONG_HOP') return '<span class="td-nguon tinh" title="' + thoat((x.cach === 'CUOI_KY' ? 'Số cuối kỳ' : 'Cộng dồn') + ' các kỳ ' + tdTenKy(x.goc) + ' trong kỳ xem') + '">Tổng hợp</span>';
   return '';
 }
+
+/** Công thức hệ thống dạng đọc được: thay mã chỉ tiêu bằng STT + tên. */
+function tdCongThucDoc(ct) {
+  if (!ct) return '';
+  var ten = {};
+  ((_td && _td.chiTieu) || []).forEach(function (c) { ten[c.ma] = (c.stt ? c.stt + ' ' : '') + c.ten; });
+  return '= ' + String(ct).replace(/[A-Za-z_][A-Za-z0-9_]*/g, function (m) {
+    return ten[m] ? '[' + ten[m] + ']' : ({ SUM: 'Tổng', CHIA: 'Chia', TRON: 'Làm tròn', TRUOC: 'Kỳ trước' })[m] || m;
+  });
+}
+
+function tdTenKy(l) { return l === 'NGAY' ? 'ngày' : l === 'TUAN' ? 'tuần' : 'tháng'; }
 
 function tdTyLe(v) {
   if (v === null || v === undefined) return '<span class="nhan-mo">—</span>';
@@ -5238,10 +5252,11 @@ function _tdDoiKy(buoc) {
 function xuatBaoCaoTD() {
   if (!_td) return;
   var d = _td, nhan = ['STT', 'Mã chỉ tiêu', 'Chỉ tiêu', 'Phòng ban', 'Tần suất', 'ĐVT', 'Kế hoạch ' + d.nam,
-    (d.loaiKy === 'NGAY' ? 'Trong ngày' : d.loaiKy === 'TUAN' ? 'Trong tuần' : 'Trong tháng'), 'Luỹ kế / cuối kỳ', '% KH', 'Ước cả năm', '% ước', 'Nguồn', 'Mã phiếu Base', 'Link phiếu Base'];
+    (d.loaiKy === 'NGAY' ? 'Trong ngày' : d.loaiKy === 'TUAN' ? 'Trong tuần' : 'Trong tháng'), 'Luỹ kế / cuối kỳ', '% KH', 'Ước cả năm', '% ước', 'Nguồn', 'Mã phiếu Base', 'Link phiếu Base', 'Công thức hệ thống'];
   var dong = _tdLoc().map(function (x) {
     return [x.stt, x.ma, x.ten, x.phongBan, x.tanSuat, x.dvt, x.keHoach, x.kyNay, x.luyKe, x.tyLeKH, x.uoc, x.tyLeUoc,
-            { BASE: 'Base', NHAP_TAY: 'Nhập tay', SUA_TAY: 'Sửa tay', TINH_TOAN: 'Tính' }[x.nguon] || '', x.maPhieu || '', x.maPhieu ? tdLinkBase(x.maPhieu) : ''];
+            { BASE: 'Base', NHAP_TAY: 'Nhập tay', SUA_TAY: 'Sửa tay', TINH_TOAN: 'Công thức', CONG_THUC: 'Công thức', TONG_HOP: 'Tổng hợp' }[x.nguon] || '', x.maPhieu || '', x.maPhieu ? tdLinkBase(x.maPhieu) : '',
+            x.congThuc ? tdCongThucDoc(x.congThuc) : ''];
   });
   xuatBangExcel('bao_cao_tap_doan_' + d.donVi + '_' + d.loaiKy.toLowerCase() + '_' + String(d.den || d.ky) + '.xlsx', nhan, dong);
 }
