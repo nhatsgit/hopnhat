@@ -5549,7 +5549,18 @@ function dungSoToTruong(wb, d) {
     });
     'DEFGHIJLN'.split('').forEach(function (cl) { wTong.getCell(cl + r2).value = { formula: 'SUM(' + cl + dau2 + ':' + cl + (r2 - 1) + ')' }; });
   }
+  // Vùng in: mẫu gốc mang vùng in hỏng ($NaN:$NaN) và tiêu đề in lặp trỏ lung tung -> Excel báo "found a problem".
+  // Đặt lại theo nội dung thật; bỏ tiêu đề lặp (mỗi sheet nhiều khối, mỗi khối có tiêu đề riêng).
+  d.dsTo.forEach(function (to) { _datVungIn(wb.getWorksheet(viTri[to.ma].tenT), SC_T); });
+  _datVungIn(wDay, SC_D); _datVungIn(wDat, SC_D); _datVungIn(wTong, SC_TG);
   return { boPhien: boPhien };
+}
+
+function _datVungIn(ws, soCot) {
+  if (!ws) return;
+  ws.pageSetup.printArea = 'A1:' + _cotChu(soCot) + Math.max(1, ws.rowCount);
+  delete ws.pageSetup.printTitlesRow;
+  delete ws.pageSetup.printTitlesColumn;
 }
 
 var KTNN_TONG = {   // công thức tổng cột CX..DE của mẫu (đầu tháng = ngày 1–15, cuối tháng = 16–31)
@@ -5662,6 +5673,12 @@ function _xuatSoTheoMau(tenMau, dung, tenFile, ch, nut) {
     var wb = new ExcelJS.Workbook();
     return wb.xlsx.load(kq[0]).then(function () {
       var tt = dung(wb, kq[1]);
+      // Chốt chặn: vùng in / tiêu đề in hỏng (NaN) còn sót thì bỏ — Excel không mở được file có địa chỉ sai
+      wb.worksheets.forEach(function (w) {
+        var ps = w.pageSetup || {};
+        if (ps.printArea && !/^[A-Z]+\d+:[A-Z]+\d+$/.test(String(ps.printArea).replace(/\$/g, ''))) delete ps.printArea;
+        if (ps.printTitlesRow && !/^\d+:\d+$/.test(String(ps.printTitlesRow).replace(/\$/g, ''))) delete ps.printTitlesRow;
+      });
       return wb.xlsx.writeBuffer().then(function (buf) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
