@@ -285,10 +285,9 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .bd-bang td{padding:3px 0;border-bottom:1px solid var(--line);vertical-align:top}
 .bd-bang td:first-child{color:var(--ink-3);padding-right:8px;white-space:nowrap}
 .leaflet-tooltip.bd-tip{font-size:12.5px;font-family:inherit}
-.bd-loc{flex-basis:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;
-  padding-top:12px;margin-top:2px;border-top:1px dashed var(--line)}
-.bd-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
-.bd-loc[hidden]{display:none}
+/* Ô chọn mode tô màu: tên mode dài -> chiếm 2 cột lưới lọc; màn hẹp chiếm trọn hàng */
+.bd-o-mau{grid-column:span 2}
+@media (max-width:900px){.bd-o-mau{grid-column:1/-1}}
 /* Lô cao nhất / thấp nhất (mode sản lượng) */
 /* Dải ngang trên bản đồ: cao nhất / thấp nhất + chú thích */
 .bd-dai{display:flex;gap:14px 20px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin-bottom:10px}
@@ -1012,9 +1011,22 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Tab Bản đồ lô: ranh lô (DIM_LO_BAN_DO, action banDoLo) trên nền vệ tinh, tô màu theo năng suất /
          xếp hạng / giống / năm trồng / tổ / lệch diện tích (số liệu lấy từ nangSuatVuon). Leaflet nạp khi mở tab. -->
     <section id="pBanDoLo" style="display:none">
-      <div class="the thanh-pq">
-        <div><label class="nhan" for="bdMau">So sánh bằng màu theo</label>
-          <select class="o" id="bdMau" style="width:auto">
+      <!-- Bộ lọc riêng của bản đồ, cùng khuôn khung lọc chung: màn rộng luôn hiện; màn hẹp = nút dính trên đầu
+           (kèm tóm tắt) mở tấm trượt từ dưới lên -->
+      <button class="bo-loc-dau" id="bdNutMoLoc" type="button">
+        <span>Bộ lọc</span>
+        <span class="tom-tat" id="bdTomTatLoc"></span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="nen-loc" id="bdNenLoc"></div>
+      <div class="the bo-loc" id="bdKhungLoc">
+        <div class="bo-loc-dau-sheet">
+          <b>Bộ lọc bản đồ</b>
+          <button class="nut-dong-sheet" id="bdDongLoc" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <div class="bo-loc-noidung">
+        <div class="bd-o-mau"><label class="nhan" for="bdMau">So sánh bằng màu theo</label>
+          <select class="o" id="bdMau">
             <optgroup label="Sản lượng trong khoảng ngày">
               <option value="qkDay">Quy khô mủ dây (kg)</option>
               <option value="qkChen">Quy khô mủ chén (kg)</option>
@@ -1034,15 +1046,6 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
               <option value="namTrong">Năm trồng</option>
               <option value="to">Tổ</option>            </optgroup>
           </select></div>
-        <button class="btn nho" id="bdNutLoc" aria-expanded="true" title="Ẩn / hiện bộ lọc">Bộ lọc ▴</button>
-        <span class="nhan-mo" id="bdTomTatLoc" style="font-size:13px"></span>
-        <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end" id="khungBdNap">
-          <input type="file" id="bdFile" accept=".geojson,.json" style="display:none">
-          <button class="btn nho" id="bdNapFile" title="Nạp file GeoJSON ranh lô mới (thay hình các lô có trong file)">Nạp file bản đồ</button>
-        </div>
-        <!-- Bộ lọc ẩn/hiện — cùng bố cục khung lọc các trang khác: lưới ô lọc, hàng cuối chọn nhanh bên trái,
-             Xoá lọc + Áp dụng bên phải -->
-        <div id="bdKhungLoc" class="bd-loc">
           <div><label class="nhan" for="bdTu">Từ ngày</label><input class="o" id="bdTu" type="date"></div>
           <div><label class="nhan" for="bdDen">Đến ngày</label><input class="o" id="bdDen" type="date"></div>
           <div id="khungBdDoi"><label class="nhan" for="bdDoi">Đội</label><select class="o" id="bdDoi"></select></div>
@@ -1056,6 +1059,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
               <button type="button" class="chip" data-moc="nam">Năm nay</button>
               <button type="button" class="chip" data-moc="muaVu">Mùa vụ</button>
             </div>
+            <span id="khungBdNap">
+              <input type="file" id="bdFile" accept=".geojson,.json" style="display:none">
+              <button class="btn" id="bdNapFile" title="Nạp file GeoJSON ranh lô mới (thay hình các lô có trong file)">Nạp file bản đồ</button>
+            </span>
             <button class="btn" id="bdXoaLoc">Xoá lọc</button>
             <button class="btn chinh" id="bdApDung">Áp dụng</button>
           </div>
@@ -3981,9 +3988,12 @@ function _bdDungLo() {
   if (cu && ds.some(function (x) { return x.maLo === cu; })) $('bdLo').value = cu;
 }
 
-/** Dòng tóm tắt bộ lọc cạnh nút "Bộ lọc" (thấy được cả khi đã thu gọn). */
+function bdDongLoc() { $('bdKhungLoc').classList.remove('mo'); $('bdNenLoc').classList.remove('mo'); }
+
+/** Tóm tắt bộ lọc trên nút "Bộ lọc" dính đầu trang (màn hẹp). */
 function _bdTomTatLoc() {
-  var p = [ngayVN($('bdTu').value) + ' – ' + ngayVN($('bdDen').value)];
+  var o = $('bdMau').options[$('bdMau').selectedIndex];
+  var p = [(o ? o.text.replace(/\s*\(.*\)$/, '') : ''), ngayVN($('bdTu').value) + ' – ' + ngayVN($('bdDen').value)];
   if ($('bdDoi').value) p.push($('bdDoi').value);
   if ($('bdTo').value) p.push($('bdTo').value);
   if ($('bdLo').value) { var x = _bdTimLo($('bdLo').value); if (x) p.push('lô ' + x.tenLo); }
@@ -4320,7 +4330,7 @@ function bdNapFile(file) {
 }
 
 function ganSuKienBanDo() {
-  $('bdMau').onchange = function () { veBanDoLo(false); };
+  $('bdMau').onchange = function () { bdDongLoc(); veBanDoLo(false); };
   $('bdMaxMin').onclick = function (ev) { var nut = ev.target.closest('button[data-lo]'); if (nut) bdToiLo(nut.getAttribute('data-lo')); };
   // Đội / tổ / lô / tìm: lọc ngay trên bản đồ (không gọi lại máy chủ). Đổi khoảng ngày: bấm Áp dụng để tải số liệu.
   $('bdDoi').onchange = function () { if (_bd) { _bdDungTo(); veBanDoLo(true); } };
@@ -4328,10 +4338,12 @@ function ganSuKienBanDo() {
   $('bdLo').onchange = function () { if (_bd) veBanDoLo(true); };
   $('bdQ').oninput = function () { clearTimeout(this._h); this._h = setTimeout(function () { if (_bd) veBanDoLo(true); }, 400); };
   $('bdApDung').onclick = function () {
+    bdDongLoc();
     if ($('bdTu').value && $('bdDen').value && $('bdTu').value > $('bdDen').value) { baoLoi('bdLoi', 'Từ ngày phải trước đến ngày.'); return; }
     taiBanDoLo();
   };
   $('bdXoaLoc').onclick = function () {
+    bdDongLoc();
     var m = _bdMoc('muaVu');
     var doiNgay = $('bdTu').value !== m[0] || $('bdDen').value !== m[1];
     $('bdTu').value = m[0]; $('bdDen').value = m[1];
@@ -4345,18 +4357,14 @@ function ganSuKienBanDo() {
   $('bdMocNhanh').onclick = function (ev) {
     var nut = ev.target.closest('button[data-moc]');
     if (!nut) return;
+    bdDongLoc();
     var m = _bdMoc(nut.getAttribute('data-moc'));
     $('bdTu').value = m[0]; $('bdDen').value = m[1];
     taiBanDoLo();
   };
-  $('bdNutLoc').onclick = function () {
-    var an = !$('bdKhungLoc').hidden;
-    $('bdKhungLoc').hidden = an;
-    this.textContent = an ? 'Bộ lọc ▾' : 'Bộ lọc ▴';
-    this.setAttribute('aria-expanded', String(!an));
-    ghiLS('crck2_bd_anloc', an ? '1' : '');
-  };
-  if (docLS('crck2_bd_anloc') === '1') { $('bdKhungLoc').hidden = true; $('bdNutLoc').textContent = 'Bộ lọc ▾'; $('bdNutLoc').setAttribute('aria-expanded', 'false'); }
+  // Màn hẹp: tấm lọc trượt từ dưới lên (giống khung lọc chung); bấm áp dụng / chọn nhanh / đổi mode thì tự đóng
+  $('bdNutMoLoc').onclick = function () { $('bdKhungLoc').classList.add('mo'); $('bdNenLoc').classList.add('mo'); };
+  $('bdDongLoc').onclick = $('bdNenLoc').onclick = bdDongLoc;
   $('bdNapFile').onclick = function () { $('bdFile').click(); };
   $('bdFile').onchange = function () { if (this.files && this.files[0]) bdNapFile(this.files[0]); this.value = ''; };
 }
