@@ -291,6 +291,8 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .td-nguon.base{border-color:var(--leaf);color:var(--leaf)}
 .td-nguon.sua{border-color:var(--clay);color:var(--clay);font-weight:600}
 .td-nguon.tinh{border-style:dashed}
+a.td-nguon{text-decoration:none;cursor:pointer}
+a.td-nguon:hover{background:var(--leaf-soft)}
 .td-tl{display:flex;align-items:center;gap:6px;min-width:92px}
 .td-tl .vach{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden;min-width:40px}
 .td-tl .vach i{display:block;height:100%;background:var(--leaf)}
@@ -4667,10 +4669,17 @@ function tdSo(v, dvt) {
 
 function tdNgayVN(s) { return s ? s.split('-').reverse().join('/') : ''; }
 
+/** Link mở phiếu trên Base (tab mới). */
+function tdLinkBase(ma) { return 'https://service.base.vn/services/tickets/' + encodeURIComponent(String(ma)); }
+function tdTheBase(ma, lop, title, chu) {
+  return ma ? '<a class="td-nguon ' + lop + '" href="' + tdLinkBase(ma) + '" target="_blank" rel="noopener" title="' + thoat(title) + ' — bấm để mở phiếu trên Base">' + chu + ' ↗</a>'
+            : '<span class="td-nguon ' + lop + '" title="' + thoat(title) + '">' + chu + '</span>';
+}
+
 function tdBadge(x) {
-  if (x.nguon === 'BASE') return '<span class="td-nguon base" title="Phiếu Base ' + thoat(x.maPhieu) + '">Base #' + thoat(x.maPhieu) + '</span>';
-  if (x.nguon === 'SUA_TAY') return '<span class="td-nguon sua" title="Phiếu Base #' + thoat(x.maPhieu) + ' ghi ' +
-    thoat(tdSo(x.giaTriBase, x.dvt)) + '">Sửa tay · Base ' + thoat(tdSo(x.giaTriBase, x.dvt)) + '</span>';
+  if (x.nguon === 'BASE') return tdTheBase(x.maPhieu, 'base', 'Phiếu Base #' + x.maPhieu, 'Base #' + thoat(x.maPhieu));
+  if (x.nguon === 'SUA_TAY') return tdTheBase(x.maPhieu, 'sua', 'Phiếu Base #' + x.maPhieu + ' ghi ' + tdSo(x.giaTriBase, x.dvt),
+    'Sửa tay · Base ' + thoat(tdSo(x.giaTriBase, x.dvt)));
   if (x.nguon === 'NHAP_TAY') return '<span class="td-nguon tay">Nhập tay</span>';
   if (x.nguon === 'TINH_TOAN') return '<span class="td-nguon tinh">Tính</span>';
   return '';
@@ -4802,7 +4811,7 @@ function veBaoCaoTD() {
       var dvt = theoMa[z.ma] ? theoMa[z.ma].dvt : '';
       return '<tr><td>' + (z.loai === 'NGAY' ? tdNgayVN(z.ngay) : z.loai === 'THANG' ? 'Tháng ' + z.ngay.substring(5, 7) : 'Tuần đến ' + tdNgayVN(z.ngay)) +
         '</td><td style="white-space:normal">' + thoat(tenCt(z.ma)) + '</td><td class="so"><b>' + tdSo(z.gt, dvt) + '</b></td><td class="so">' +
-        tdSo(z.gtBase, dvt) + '</td><td class="nhan-mo">#' + thoat(z.phieu) + '</td></tr>';
+        tdSo(z.gtBase, dvt) + '</td><td>' + (z.phieu ? '<a href="' + tdLinkBase(z.phieu) + '" target="_blank" rel="noopener">#' + thoat(z.phieu) + ' ↗</a>' : '') + '</td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="rong">Không có ô nào khác phiếu Base.</div>';
 
   // Phiếu Base + nguồn
@@ -4814,7 +4823,7 @@ function veBaoCaoTD() {
       the_kpi('Ô số theo nguồn', soVN((dn.BASE || 0) + (dn.NHAP_TAY || 0) + (dn.SUA_TAY || 0), 0), 'ô',
               'Base ' + soVN(dn.BASE || 0, 0) + ' · nhập tay ' + soVN(dn.NHAP_TAY || 0, 0) + ' · sửa tay ' + soVN(dn.SUA_TAY || 0, 0)) + '</div>' +
     (d.phieuKy.length ? '<div class="nhan-mo" style="font-size:12.5px;margin-bottom:4px">Phiếu của kỳ đang xem:</div>' +
-      d.phieuKy.map(function (p) { return '<div style="font-size:13px;margin:2px 0"><b>#' + thoat(p.ma) + '</b> ' + thoat(p.ten) +
+      d.phieuKy.map(function (p) { return '<div style="font-size:13px;margin:2px 0"><a href="' + tdLinkBase(p.ma) + '" target="_blank" rel="noopener"><b>#' + thoat(p.ma) + '</b> ↗</a> ' + thoat(p.ten) +
         (p.trangThai ? ' <span class="nhan-mo">— ' + thoat(p.trangThai) + '</span>' : '') + '</div>'; }).join('')
       : '<div class="nhan-mo" style="font-size:13px">Kỳ này chưa có phiếu Base (số nhập tay hoặc chưa báo cáo).</div>');
 }
@@ -4841,10 +4850,10 @@ function _tdDoiKy(buoc) {
 function xuatBaoCaoTD() {
   if (!_td) return;
   var d = _td, nhan = ['STT', 'Mã chỉ tiêu', 'Chỉ tiêu', 'Phòng ban', 'Tần suất', 'ĐVT', 'Kế hoạch ' + d.nam,
-    (d.loaiKy === 'NGAY' ? 'Trong ngày' : d.loaiKy === 'TUAN' ? 'Trong tuần' : 'Trong tháng'), 'Luỹ kế / cuối kỳ', '% KH', 'Ước cả năm', '% ước', 'Nguồn', 'Mã phiếu Base'];
+    (d.loaiKy === 'NGAY' ? 'Trong ngày' : d.loaiKy === 'TUAN' ? 'Trong tuần' : 'Trong tháng'), 'Luỹ kế / cuối kỳ', '% KH', 'Ước cả năm', '% ước', 'Nguồn', 'Mã phiếu Base', 'Link phiếu Base'];
   var dong = _tdLoc().map(function (x) {
     return [x.stt, x.ma, x.ten, x.phongBan, x.tanSuat, x.dvt, x.keHoach, x.kyNay, x.luyKe, x.tyLeKH, x.uoc, x.tyLeUoc,
-            { BASE: 'Base', NHAP_TAY: 'Nhập tay', SUA_TAY: 'Sửa tay', TINH_TOAN: 'Tính' }[x.nguon] || '', x.maPhieu || ''];
+            { BASE: 'Base', NHAP_TAY: 'Nhập tay', SUA_TAY: 'Sửa tay', TINH_TOAN: 'Tính' }[x.nguon] || '', x.maPhieu || '', x.maPhieu ? tdLinkBase(x.maPhieu) : ''];
   });
   xuatBangExcel('bao_cao_tap_doan_' + d.donVi + '_' + d.loaiKy.toLowerCase() + '_' + String(d.den || d.ky) + '.xlsx', nhan, dong);
 }
