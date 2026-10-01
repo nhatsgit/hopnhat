@@ -9959,12 +9959,33 @@ ganSuKienBanDo();
 ganSuKienBaoCaoTD();
 
 // ---- Nhập offline: thanh nhập nhanh, hàng chờ gửi, theo dõi mạng ----
-function moNhanh(ham) {
-  if (!S.meta || !S.dsCn) { baoLoi('thongBao', 'Đang nạp danh mục, thử lại sau vài giây.'); return; }
-  ham();
+/**
+ * Nút nhập nhanh: danh mục (loại mủ, phiên, ký hiệu công…) chưa về thì dùng ngay bản lưu trên máy; chưa có bản lưu mà
+ * đang có mạng thì tự đợi danh mục tải xong rồi mở form (không bắt bấm lại); mất mạng + chưa từng lưu thì nói rõ.
+ */
+function moNhanh(ham, nut) {
+  if (!S.meta) {
+    try { var luu = JSON.parse(docLS('crck2_meta_offline') || 'null'); if (luu) S.meta = luu; } catch (e) { /* bỏ qua */ }
+  }
+  if (S.meta && S.dsCn && S.dsCn.length) { ham(); return; }
+  if (!navigator.onLine) {
+    baoLoi('thongBao', '📴 Máy này chưa lưu danh mục / danh sách công nhân để nhập khi mất mạng. Mở app MỘT LẦN khi có sóng ' +
+      '(vào tới trang chính là máy tự lưu), sau đó mất mạng vẫn nhập được.');
+    return;
+  }
+  var chu = nut.textContent, bd = Date.now();
+  nut.disabled = true; nut.textContent = 'Đang nạp danh mục…';
+  var cho = setInterval(function () {
+    if ((S.meta && S.dsCn && S.dsCn.length) || Date.now() - bd > 20000) {
+      clearInterval(cho);
+      nut.disabled = false; nut.textContent = chu;
+      if (S.meta && S.dsCn && S.dsCn.length) ham();
+      else baoLoi('thongBao', 'Chưa tải được danh mục (mạng yếu). Kiểm tra sóng rồi bấm lại.');
+    }
+  }, 300);
 }
-$('nnSanLuong').onclick = function () { moNhanh(moNhapCaTo); };
-$('nnChamCong').onclick = function () { moNhanh(moChamCongCaTo); };
+$('nnSanLuong').onclick = function () { moNhanh(moNhapCaTo, this); };
+$('nnChamCong').onclick = function () { moNhanh(moChamCongCaTo, this); };
 $('thanhHangCho').onclick = function () {
   var ds = hcDoc();
   if (navigator.onLine && ds.length && !ds.some(function (x) { return x.trangThai === 'loi'; })) hcGuiHet(true);
