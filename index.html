@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Cài như app trên điện thoại (PWA) + mở được khi mất mạng (sw.js) -->
+<meta name="theme-color" content="#1f5a3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CRCK2">
 <title>Quản trị hợp nhất - CRCK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -363,6 +371,72 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 .nt-bang .cc-chip .chip{padding:3px 9px;min-width:0}
 .nt-bang td.cc-pc{font-size:12.5px;white-space:nowrap}
 .nt-bang tr.cc-da-co:not(.nt-co) td{background:var(--paper)}
+.nt-bang tr.nt-cho td{background:rgba(224,182,74,.2)}
+.nt-tag{font-size:11.5px;color:#b07d00;font-weight:600}
+/* Form nhập cả tổ / chấm công cả tổ: khung chọn chung, chân form (tổng kết + nút) */
+.nt-dau{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;padding:12px;
+  border:1px solid var(--line);background:var(--card)}
+.nt-off:empty{display:none}
+.nt-off{margin-bottom:10px;padding:9px 12px;border-radius:6px;background:rgba(224,182,74,.2);border:1px solid rgba(224,182,74,.6);font-size:13.5px}
+.nt-luu{font-size:12.5px;margin-bottom:6px}
+.nt-luu:empty{display:none}
+.nt-chan{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.nt-chan .nt-tong{margin-right:auto}
+/* Hàng chờ gửi */
+.thanh-hang-cho{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;max-width:calc(100% - 24px);
+  padding:10px 16px;border:none;border-radius:22px;background:#2f4a3a;color:#fff;font:inherit;font-size:13.5px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.3);cursor:pointer;text-align:center}
+.thanh-hang-cho[hidden]{display:none}
+.thanh-hang-cho.offline{background:#5b5b5b}
+.thanh-hang-cho.loi{background:var(--clay)}
+.hc-phieu{padding:12px;margin-bottom:10px}
+.hc-phieu.hc-loi{border-left:3px solid var(--clay)}
+.hc-ds-loi{margin:6px 0 0 18px;font-size:13px;color:var(--clay)}
+.hc-nut{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+/* Tổ trưởng: 2 nút nhập nhanh */
+.thanh-nhap-nhanh{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.thanh-nhap-nhanh .btn{flex:1 1 200px;padding:12px 14px;font-size:15px}
+@media (max-width:700px){
+  .an-dt{display:none !important}
+  /* Hộp thoại form nhập cả tổ chiếm trọn màn hình điện thoại */
+  #nenPhieu.form-to{padding:0;align-items:stretch}
+  #nenPhieu.form-to .hop-thoai{max-width:none;min-height:100%;border-radius:0;box-shadow:none;display:flex;flex-direction:column}
+  #nenPhieu.form-to .dau-hop{position:sticky;top:0;z-index:3;background:var(--card);padding:10px 12px}
+  #nenPhieu.form-to .dau-hop h2{font-size:15.5px}
+  #nenPhieu.form-to .than-hop{padding:10px 10px 0;flex:1;display:flex;flex-direction:column}
+  .form-to .nt-dau{grid-template-columns:1fr 1fr;gap:8px;padding:10px}
+  .form-to .o{font-size:16px;min-height:42px}          /* 16px: iPhone không tự phóng to khi chạm ô */
+  .form-to .nt-bang{max-height:none !important;overflow:visible;flex:1}
+  .form-to .nt-bang table,.form-to .nt-bang tbody{display:block;width:100%}
+  .form-to .nt-bang thead{display:none}
+  .form-to .nt-bang tr{display:grid;gap:6px 8px;align-items:center;padding:10px;margin-bottom:8px;
+    border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  .form-to .nt-bang td{padding:0;border:0;background:none !important;white-space:normal}
+  .form-to .nt-bang td[data-nhan]::before{content:attr(data-nhan);display:block;font-size:11px;color:var(--ink-3);margin-bottom:2px}
+  .form-to .nt-bang tr.nt-loi{background:var(--clay-soft);border-color:var(--clay)}
+  .form-to .nt-bang tr.nt-co{background:var(--leaf-soft)}
+  .form-to .nt-bang tr.nt-cho{background:rgba(224,182,74,.2);border-color:#e0b64a}
+  .form-to .nt-bang tr.cc-da-co:not(.nt-co):not(.nt-cho){background:var(--paper)}
+  /* Sản lượng: số thứ tự + mã | kg (to) + số nhát | ghi chú */
+  .form-to .bang-nt-sl tr{grid-template-columns:28px 1fr 96px;grid-template-areas:"stt ma ma" "kg kg nhat" "gc gc gc"}
+  .form-to .bang-nt-sl .c-stt{grid-area:stt}.form-to .bang-nt-sl .c-ma{grid-area:ma}
+  .form-to .bang-nt-sl .c-kg{grid-area:kg}.form-to .bang-nt-sl .c-nhat{grid-area:nhat}.form-to .bang-nt-sl .c-gc{grid-area:gc}
+  .form-to .bang-nt-sl .nt-kg{font-size:20px;font-weight:700;min-height:48px}
+  .form-to .nt-gc{min-height:36px !important;font-size:14px !important;padding:6px 8px}
+  .form-to .nt-bang tr{padding:8px 10px}
+  /* Chấm công: số thứ tự + mã | ký hiệu | phiên + phần cạo | ghi chú */
+  .form-to .bang-nt-cc tr{grid-template-columns:28px 1fr;grid-template-areas:"stt ma" "kh kh" "ph ph" "pc pc" "gc gc"}
+  .form-to .bang-nt-cc .c-stt{grid-area:stt}.form-to .bang-nt-cc .c-ma{grid-area:ma}.form-to .bang-nt-cc .c-kh{grid-area:kh}
+  .form-to .bang-nt-cc .c-ph{grid-area:ph}.form-to .bang-nt-cc .c-pc{grid-area:pc}.form-to .bang-nt-cc .c-gc{grid-area:gc}
+  .form-to .bang-nt-cc .c-daco{grid-column:1/-1}
+  .form-to .bang-nt-cc .cc-chip .chip{padding:9px 16px;font-size:15px}
+  /* Chân form dính đáy màn hình: tổng kết + Đóng + Gửi */
+  .form-to .nt-chan{position:sticky;bottom:0;z-index:2;background:var(--card);margin:8px -10px 0;padding:10px;
+    border-top:1px solid var(--line);box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+  .form-to .nt-chan .nt-tong{flex-basis:100%;font-size:13.5px}
+  .form-to .nt-chan .btn{flex:1;padding:12px;font-size:15px}
+  .thanh-hang-cho{bottom:10px}
+}
 .the-nho{display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:2px;font-size:11px;
   background:var(--line);color:var(--ink-2);white-space:nowrap}
 .the-nho.canh{background:var(--clay-soft);color:var(--clay)}
@@ -630,6 +704,14 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Dữ liệu nhập tay đã ghi Sheet nhưng chưa đẩy BigQuery (xem capNhatChoDay) -->
     <div id="khungChoDayBq" class="bao-loi" style="display:none"></div>
     <div id="thongBao"></div>
+    <!-- Tổ trưởng: 2 nút nhập nhanh luôn ở đầu mọi tab (kể cả khi mất mạng) -->
+    <div class="thanh-nhap-nhanh" id="thanhNhapNhanh" style="display:none">
+      <button class="btn chinh" id="nnSanLuong" type="button">＋ Nhập sản lượng cả tổ</button>
+      <button class="btn chinh" id="nnChamCong" type="button">＋ Chấm công cả tổ</button>
+      <button class="btn" id="nnCaiApp" type="button" style="display:none">📲 Cài lên điện thoại</button>
+    </div>
+    <!-- Hàng chờ gửi (nhập lúc mất mạng): nút nổi dưới màn hình -->
+    <button type="button" id="thanhHangCho" class="thanh-hang-cho" hidden></button>
 
     <!-- Tab: Tổng quan -->
     <!-- Tổng quan chia 5 hạng mục: Sản lượng · So sánh & xếp hạng · Giao khoán · Chấm công · Nhân sự.
@@ -1736,7 +1818,9 @@ function goiAPI(action, thamSo, msCho, _daThuLai) {
       try { console.warn('Backend lỗi đường truyền, tự thử lại lần 2:', e.message); } catch (x) {}
       return goiAPI(action, thamSo, msCho, true);
     }
-    throw new Error('Lỗi mạng: không kết nối được máy chủ sau khi đã thử lại. Kiểm tra kết nối mạng rồi bấm "Tải lại".');
+    var e2 = new Error('Lỗi mạng: không kết nối được máy chủ sau khi đã thử lại. Kiểm tra kết nối mạng rồi bấm "Tải lại".');
+    e2.vanChuyen = true;   // nhập cả tổ: lỗi đường truyền -> đưa phiếu vào hàng chờ gửi
+    throw e2;
   });
 }
 
@@ -2013,6 +2097,11 @@ function veKyHieuCong(el, ds) {
 }
 
 function baoLoi(nut, thong) {
+  // Mất mạng ở vườn: nói rõ việc vẫn làm được thay vì thông báo kỹ thuật
+  if (nut === 'thongBao' && thong && /^Lỗi mạng/.test(thong) && S.vaiTro) {
+    thong = '📴 Không có mạng — số liệu xem chưa tải được.' + (coQuyen('sanLuong', 'THEM') || coQuyen('chamCong', 'THEM')
+      ? ' Vẫn nhập sản lượng / chấm công cả tổ được (nút ở đầu trang), phiếu tự gửi khi có sóng.' : ' Có sóng thì bấm "Tải lại".');
+  }
   $(nut).innerHTML = thong ? '<div class="bao-loi">' + thoat(thong) + '</div>' : '';
 }
 
@@ -6944,6 +7033,169 @@ function luuThemSanLuong() {
 }
 
 /* =====================================================================
+   NHẬP OFFLINE — HÀNG CHỜ GỬI (tổ trưởng ở vườn mất sóng)
+   ---------------------------------------------------------------------
+   "Gửi xử lý" lúc mất mạng (hoặc đứt mạng giữa chừng) -> mỗi lô thành 1 phiếu trong hàng chờ trên máy
+   (localStorage crck2_hang_cho), kèm maGui riêng. Có mạng lại thì tự gửi (mở app, sự kiện online, mỗi phút);
+   máy chủ nhớ maGui (LOG_GUI_MOT_LAN) nên gửi lại không bao giờ ghi đôi. Người bị máy chủ từ chối giữ lại trong
+   phiếu (trạng thái lỗi) để Gửi lại / Sửa (đưa về bảng nhập) / Xoá.
+   ===================================================================== */
+var HC_KHOA = 'crck2_hang_cho';
+var _hcDangGui = false;
+
+function hcMaGui() { return 'G' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+function hcDoc() { try { var d = JSON.parse(docLS(HC_KHOA) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; } }
+function hcGhi(ds) { if (ds.length) ghiLS(HC_KHOA, JSON.stringify(ds)); else xoaLS(HC_KHOA); veThanhHangCho(); }
+function laLoiMang(e) { return !!(e && e.vanChuyen) || !navigator.onLine; }
+
+/** Thêm các lô vào hàng chờ. dsLo = [{ id: maGui, dong: [...] }]; tomTat(dong) -> chuỗi mô tả lô. */
+function hcThem(loai, dsLo, tomTat) {
+  var ds = hcDoc();
+  dsLo.forEach(function (l) {
+    ds.push({ id: l.id, loai: loai, action: loai === 'SL' ? 'nhapHangLoatSanLuong' : 'nhapHangLoatChamCong',
+              vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: toNhapCaTo(), dong: l.dong, tomTat: tomTat(l.dong),
+              luc: Date.now(), trangThai: 'cho', loi: '', loiDong: [] });
+  });
+  hcGhi(ds);
+}
+
+/** Người đang nằm trong hàng chờ (chưa lên hệ thống) theo loại + ngày: { maCn: dòng } — để khoá, tránh nhập trùng. */
+function hcNguoiCho(loai, loc) {
+  var ra = {};
+  hcDoc().forEach(function (it) {
+    if (it.loai !== loai || it.to !== toNhapCaTo()) return;
+    it.dong.forEach(function (r) { if (loc(r)) ra[r.maCn] = r; });
+  });
+  return ra;
+}
+
+async function hcGuiHet(chuDong) {
+  if (_hcDangGui || !S.vaiTro) return;
+  if (!navigator.onLine && !chuDong) { veThanhHangCho(); return; }
+  var cho = hcDoc().filter(function (x) { return x.trangThai === 'cho' && x.vaiTro === S.vaiTro && x.maDonVi === S.maDonVi; });
+  if (!cho.length) return;
+  _hcDangGui = true;
+  var okNguoi = 0, loiNguoi = 0;
+  try {
+    for (var i = 0; i < cho.length; i++) {
+      var it = cho[i];
+      veThanhHangCho('Đang gửi phiếu ' + (i + 1) + '/' + cho.length + '…');
+      var kq, loiChung = '';
+      try {
+        kq = await goiAPI(it.action, { vaiTro: it.vaiTro, maDonVi: it.maDonVi, dong: JSON.stringify(it.dong), maGui: it.id }, 60000);
+      } catch (e) {
+        if (laLoiMang(e)) break;          // vẫn mất mạng: để nguyên, lần sau gửi tiếp
+        loiChung = e.message;
+      }
+      var ds = hcDoc(), k = -1;           // đọc lại: trong lúc gửi có thể vừa thêm phiếu mới
+      for (var j = 0; j < ds.length; j++) if (ds[j].id === it.id) k = j;
+      if (k < 0) continue;
+      if (loiChung) { ds[k].trangThai = 'loi'; ds[k].loi = loiChung; hcGhi(ds); continue; }
+      var conLai = [], loiDong = [];
+      (kq.ketQua || []).forEach(function (r) {
+        var x = it.dong[r.dong - 2];
+        if (r.ok) okNguoi++;
+        else { loiNguoi++; if (x) { conLai.push(x); loiDong.push({ maCn: x.maCn, loi: r.loi }); } }
+      });
+      if (!conLai.length) ds.splice(k, 1);
+      else { ds[k].dong = conLai; ds[k].loiDong = loiDong; ds[k].trangThai = 'loi'; ds[k].loi = conLai.length + ' người bị từ chối'; }
+      hcGhi(ds);
+    }
+  } finally {
+    _hcDangGui = false;
+    veThanhHangCho();
+  }
+  if (okNguoi || loiNguoi) {
+    _cacheFE = {};
+    nsBaoOkChung('Hàng chờ: đã gửi ' + okNguoi + ' người' + (loiNguoi ? ', ' + loiNguoi + ' người bị từ chối (bấm thanh đỏ dưới màn hình để xem)' : '') + '.');
+    if (okNguoi && S.meta && !$('nenPhieu').classList.contains('hien')) taiTab();
+  }
+}
+
+/** Thanh nổi dưới màn hình: mất mạng / số phiếu chờ / đang gửi / lỗi. Bấm để xem hàng chờ. */
+function veThanhHangCho(dangGui) {
+  var el = $('thanhHangCho');
+  if (!el) return;
+  var ds = hcDoc(), cho = 0, loi = 0, off = !navigator.onLine;
+  ds.forEach(function (x) { if (x.trangThai === 'loi') loi++; else cho++; });
+  if (!S.vaiTro || (!ds.length && !off)) { el.hidden = true; return; }
+  el.hidden = false;
+  el.className = 'thanh-hang-cho' + (loi ? ' loi' : (off ? ' offline' : ''));
+  var phan = [];
+  if (dangGui) phan.push('⏳ ' + dangGui);
+  else if (off) phan.push('📴 Mất mạng' + (cho ? ' · ' + cho + ' phiếu chờ gửi' : ' · vẫn nhập được, có sóng sẽ tự gửi'));
+  else if (cho) phan.push('⏳ ' + cho + ' phiếu chờ gửi · bấm để gửi ngay');
+  if (loi) phan.push('⚠ ' + loi + ' phiếu lỗi — bấm để xem');
+  el.textContent = phan.join(' · ');
+}
+
+function moHangCho() {
+  var ds = hcDoc();
+  var h = '<p class="goi-y" style="margin-top:0">Phiếu nhập lúc mất mạng nằm trên <b>máy này</b> tới khi gửi xong — đừng xoá dữ liệu trình duyệt. ' +
+    'Có sóng là tự gửi; gửi lại không bị trùng.</p>';
+  if (!ds.length) h += '<div class="rong">Không có phiếu nào chờ gửi.</div>';
+  ds.forEach(function (it) {
+    h += '<div class="the hc-phieu' + (it.trangThai === 'loi' ? ' hc-loi' : '') + '">' +
+      '<div><b>' + thoat(it.tomTat) + '</b></div>' +
+      '<div class="nhan-mo" style="font-size:12.5px">Tổ ' + thoat(it.to) + ' · nhập lúc ' + ntGio(it.luc) + ' ' + ngayVN(nsHomNayTu(it.luc)) +
+        ' · ' + (it.trangThai === 'loi' ? '<span style="color:var(--clay);font-weight:600">' + thoat(it.loi) + '</span>' : 'chờ gửi') + '</div>' +
+      (it.loiDong && it.loiDong.length ? '<ul class="hc-ds-loi">' + it.loiDong.map(function (l) { return '<li><b>' + thoat(l.maCn) + '</b>: ' + thoat(l.loi) + '</li>'; }).join('') + '</ul>' : '') +
+      '<div class="hc-nut">' + (it.trangThai === 'loi' ? '<button class="btn nho" data-hc-gui="' + it.id + '">Gửi lại</button>' : '') +
+        '<button class="btn nho" data-hc-sua="' + it.id + '">Sửa (đưa về bảng nhập)</button>' +
+        '<button class="btn nho" data-hc-xoa="' + it.id + '">Xoá</button></div></div>';
+  });
+  h += '<div class="nt-chan"><span style="margin-right:auto"></span>' + nsNut('hcDong', 'Đóng', false) +
+    (ds.some(function (x) { return x.trangThai === 'cho'; }) ? nsNut('hcGuiNgay', navigator.onLine ? 'Gửi tất cả ngay' : 'Đang mất mạng', true) : '') + '</div>';
+  nsMoModal('Phiếu chờ gửi (' + ds.length + ')', h);
+  $('nenPhieu').classList.add('form-to');
+  $('hcDong').onclick = dongSuaSanLuong;
+  if ($('hcGuiNgay')) {
+    $('hcGuiNgay').disabled = !navigator.onLine;
+    $('hcGuiNgay').onclick = function () { this.disabled = true; this.textContent = 'Đang gửi…'; hcGuiHet(true).then(moHangCho); };
+  }
+  $('thanPhieu').onclick = function (ev) {
+    var n = ev.target.closest('button');
+    if (!n) return;
+    var ds2 = hcDoc(), id = n.getAttribute('data-hc-gui') || n.getAttribute('data-hc-sua') || n.getAttribute('data-hc-xoa');
+    var it = ds2.filter(function (x) { return x.id === id; })[0];
+    if (!it) return;
+    if (n.hasAttribute('data-hc-gui')) {          // mã gửi MỚI: phần còn lại là lô khác với lần đã gửi
+      it.id = hcMaGui(); it.trangThai = 'cho'; it.loi = ''; it.loiDong = [];
+      hcGhi(ds2);
+      hcGuiHet(true).then(moHangCho);
+    } else if (n.hasAttribute('data-hc-xoa')) {
+      if (!confirm('Xoá phiếu "' + it.tomTat + '" khỏi máy? Số liệu chưa gửi sẽ mất.')) return;
+      hcGhi(ds2.filter(function (x) { return x.id !== id; }));
+      moHangCho();
+    } else hcSua(it);
+  };
+}
+
+function nsHomNayTu(ms) {
+  var d = new Date(ms);
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+
+/** Đưa phiếu về bảng nhập cả tổ (gộp vào bản tạm) để sửa rồi gửi lại; gỡ khỏi hàng chờ. */
+function hcSua(it) {
+  if (it.to !== toNhapCaTo()) { alert('Phiếu của tổ ' + it.to + ' — chọn đúng tổ này ở bộ lọc rồi mở lại.'); return; }
+  var r0 = it.dong[0] || {}, dong = {};
+  if (it.loai === 'SL') {
+    var tam = ntDocTam();
+    var cu = tam && tam.ngay === r0.ngay && tam.phien === r0.phien && tam.loai === r0.loaiMu ? tam.dong : {};
+    it.dong.forEach(function (r) { cu[r.maCn] = { kg: r.kg, nhat: r.nhat || '', gc: r.ghiChu || '' }; });
+    ghiLS(ntKhoa(), JSON.stringify({ ngay: r0.ngay, phien: r0.phien, loai: r0.loaiMu, cl: r0.chatLuong, nhat: (tam && tam.nhat) || '', dong: cu, luc: Date.now() }));
+  } else {
+    var tamC = ccDocTam();
+    dong = tamC && tamC.ngay === r0.ngay ? tamC.dong : {};
+    it.dong.forEach(function (r) { dong[r.maCn] = { kh: r.kyHieu, ph: r.phien || '', gc: r.ghiChu || '' }; });
+    ghiLS(ccKhoa(), JSON.stringify({ ngay: r0.ngay, kh: (tamC && tamC.kh) || r0.kyHieu, ph: (tamC && tamC.ph) || '', dong: dong, luc: Date.now() }));
+  }
+  hcGhi(hcDoc().filter(function (x) { return x.id !== it.id; }));
+  if (it.loai === 'SL') moNhapCaTo(); else moChamCongCaTo();
+}
+
+/* =====================================================================
    Nhập sản lượng CẢ TỔ trong một bảng
    ---------------------------------------------------------------------
    Hiện sẵn mọi công nhân của tổ; ngày / phiên / loại mủ / chất lượng chọn
@@ -7137,31 +7389,33 @@ function moNhapCaTo() {
   var ngay = (tam && tam.ngay) || nsHomNay();
   var nhatMd = (tam && tam.nhat) || '2';
 
-  var h = '<div class="bo-loc the" style="margin-bottom:10px">' +
+  var h = '<div id="ntOff" class="nt-off"></div><div class="nt-dau">' +
     '<div><label class="nhan" for="ntNgay">Ngày</label><input class="o" id="ntNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
     '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
     '<div><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
-    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
-      '<span id="ntTongKet" style="margin-right:auto"></span><span class="nhan-mo" id="ntTrangThaiLuu"></span></div>' +
-    '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangNhapTo"><thead><tr><th>#</th><th>Mã công nhân</th>' +
+    '<div class="nhan-mo nt-luu" id="ntTrangThaiLuu"></div>' +
+    '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangNhapTo" class="bang-nt-sl"><thead><tr><th>#</th><th>Mã công nhân</th>' +
     '<th>Sản lượng (kg)</th><th>Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
   for (var i = 0; i < ds.length; i++) {
     var d = tam && tam.dong && tam.dong[ds[i]];
-    h += '<tr data-cn="' + thoat(ds[i]) + '"><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(ds[i]) + '</b></td>' +
-      '<td><input class="o nt-kg" type="number" step="0.01" min="0" inputmode="decimal" value="' + thoat(d ? d.kg : '') + '"></td>' +
-      '<td><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
-      '<td><input class="o nt-gc" maxlength="200" value="' + thoat(d ? d.gc : '') + '"></td></tr>';
+    h += '<tr data-cn="' + thoat(ds[i]) + '"><td class="nhan-mo c-stt">' + (i + 1) + '</td><td class="c-ma"><b>' + thoat(ds[i]) + '</b><span class="nt-tag"></span></td>' +
+      '<td class="c-kg" data-nhan="Sản lượng (kg)"><input class="o nt-kg" type="number" step="0.01" min="0" inputmode="decimal" enterkeyhint="next" aria-label="Sản lượng kg của ' + thoat(ds[i]) + '" value="' + thoat(d ? d.kg : '') + '"></td>' +
+      '<td class="c-nhat" data-nhan="Số nhát"><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
+      '<td class="c-gc" data-nhan="Ghi chú"><input class="o nt-gc" maxlength="200" value="' + thoat(d ? d.gc : '') + '"></td></tr>';
   }
   h += '</tbody></table></div><div id="ntLoi"></div>' +
-    '<p class="goi-y">Chỉ người có <b>kg &gt; 0</b> mới được gửi. Bảng tự lưu tạm khi gõ; đóng cửa sổ hay tải lại trang vẫn còn trong ' + (NT_HAN_MS / 3600000) + ' giờ. ' +
+    '<p class="goi-y an-dt">Chỉ người có <b>kg &gt; 0</b> mới được gửi. Bảng tự lưu tạm khi gõ; đóng cửa sổ hay tải lại trang vẫn còn trong ' + (NT_HAN_MS / 3600000) + ' giờ. ' +
     'Ngày / phiên / loại mủ áp cho cả bảng — người cạo đúp hoặc có thêm loại mủ khác thì nhập thêm một lượt riêng.</p>' +
-    '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
-      nsNut('ntMau', 'Tải file mẫu', false) + '<button class="btn" id="ntChonFile">Nhập từ file</button>' +
+    '<div class="nt-chan"><span id="ntTongKet" class="nt-tong"></span>' +
+      '<span class="an-dt">' + nsNut('ntMau', 'Tải file mẫu', false) + '</span><button class="btn an-dt" id="ntChonFile">Nhập từ file</button>' +
       '<input type="file" id="ntFile" accept=".xlsx,.xls,.csv" style="display:none">' +
-      nsNut('ntXoaTam', 'Xoá bản tạm', false) + nsNut('ntLuu', 'Lưu tạm', false) + nsNut('ntDong', 'Đóng', false) + nsNut('ntGui', 'Gửi xử lý', true) + '</div>';
+      '<span class="an-dt">' + nsNut('ntXoaTam', 'Xoá bản tạm', false) + nsNut('ntLuu', 'Lưu tạm', false) + '</span>' + nsNut('ntDong', 'Đóng', false) + nsNut('ntGui', 'Gửi xử lý', true) + '</div>';
   nsMoModal('Nhập sản lượng cả tổ — ' + toNhapCaTo(), h);
+  $('nenPhieu').classList.add('form-to');
+  veNtOff();
+  ntDanhDauCho();
   ntTongKet();
   $('ntTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
 
@@ -7173,6 +7427,7 @@ function moNhapCaTo() {
     $(id).onchange = function () {
       var np = $('bangNhapTo').querySelectorAll('.nt-nhat');
       for (var q = 0; q < np.length; q++) np[q].placeholder = $('ntNhat').value;
+      ntDanhDauCho();
       thayDoi();
     };
   });
@@ -7181,7 +7436,7 @@ function moNhapCaTo() {
   for (var z = 0; z < kgs.length; z++) {
     kgs[z].onkeydown = (function (i) {
       return function (ev) {
-        if (ev.key === 'Enter') { ev.preventDefault(); if (kgs[i + 1]) { kgs[i + 1].focus(); kgs[i + 1].select(); } }
+        if (ev.key === 'Enter') { ev.preventDefault(); for (var n2 = i + 1; n2 < kgs.length; n2++) if (!kgs[n2].disabled) { kgs[n2].focus(); kgs[n2].select(); return; } }
       };
     })(z);
   }
@@ -7198,7 +7453,31 @@ function moNhapCaTo() {
   $('ntMau').onclick = ntTaiMau;
   $('ntChonFile').onclick = function () { $('ntFile').click(); };
   $('ntFile').onchange = function () { if (this.files && this.files[0]) ntNhapFile(this.files[0], thayDoi); this.value = ''; };
-  if (kgs[0]) kgs[0].focus();
+  // Điện thoại: không tự bật bàn phím che mất phần đầu form
+  if (kgs[0] && !matchMedia('(max-width:700px)').matches) kgs[0].focus();
+}
+
+/** Dòng báo mất mạng ở đầu form nhập cả tổ / chấm công cả tổ. */
+function veNtOff() {
+  ['ntOff', 'ccOff'].forEach(function (id) {
+    if (!$(id)) return;
+    $(id).innerHTML = navigator.onLine ? '' : '📴 Đang mất mạng — vẫn nhập và bấm <b>Gửi</b> được: phiếu vào hàng chờ trên máy, có sóng sẽ tự gửi.';
+  });
+}
+
+/** Khoá người đã nằm trong hàng chờ (cùng ngày + phiên + loại mủ) để không nhập trùng. */
+function ntDanhDauCho() {
+  if (!$('bangNhapTo')) return;
+  var ngay = $('ntNgay').value, ph = $('ntPhien').value, lo = $('ntLoai').value;
+  var cho = hcNguoiCho('SL', function (r) { return r.ngay === ngay && r.phien === ph && r.loaiMu === lo; });
+  var tr = $('bangNhapTo').querySelectorAll('tr[data-cn]');
+  for (var i = 0; i < tr.length; i++) {
+    var c = cho[tr[i].getAttribute('data-cn')], o = tr[i].querySelector('.nt-kg');
+    tr[i].classList.toggle('nt-cho', !!c);
+    o.disabled = !!c;
+    if (c) o.value = '';
+    tr[i].querySelector('.nt-tag').textContent = c ? ' ⏳ chờ gửi ' + c.kg + ' kg' : '';
+  }
 }
 
 /** File mẫu = đúng danh sách công nhân của tổ, điền sẵn số đang gõ trong bảng (dùng luôn để xuất bảng ra Excel). */
@@ -7288,19 +7567,33 @@ async function ntGui() {
 
   baoLoi('ntLoi', '');
   $('ntGui').disabled = true;
-  var lo = chiaLoTheoDoDai(dsDong, 5000), tongOK = 0, loi = [], xong = {};
+  // Mỗi lô 1 mã gửi: mất mạng (từ đầu hoặc giữa chừng) thì lô đó trở đi vào hàng chờ, giữ NGUYÊN mã gửi —
+  // lô đã tới máy chủ mà mất phản hồi, lúc gửi lại máy chủ trả đúng kết quả cũ, không ghi đôi.
+  var lo = chiaLoTheoDoDai(dsDong, 5000).map(function (x) { return { id: hcMaGui(), dong: x }; });
+  var tongOK = 0, loi = [], xong = {}, choGui = [];
   for (var b = 0; b < lo.length; b++) {
+    if (!navigator.onLine) { choGui = lo.slice(b); break; }
     $('ntTongKet').innerHTML = 'Đang gửi đợt ' + (b + 1) + '/' + lo.length + '…';
     try {
-      var kq = await goiAPI('nhapHangLoatSanLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(lo[b]) }, 60000);
+      var kq = await goiAPI('nhapHangLoatSanLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(lo[b].dong), maGui: lo[b].id }, 60000);
       tongOK += kq.thanhCong;
       for (var j = 0; j < kq.ketQua.length; j++) {
-        var it = kq.ketQua[j], cn = lo[b][it.dong - 2] ? lo[b][it.dong - 2].maCn : '?';
+        var it = kq.ketQua[j], cn = lo[b].dong[it.dong - 2] ? lo[b].dong[it.dong - 2].maCn : '?';
         if (it.ok) xong[cn] = true; else loi.push({ cn: cn, loi: it.loi });
       }
     } catch (e) {
-      for (var k = 0; k < lo[b].length; k++) loi.push({ cn: lo[b][k].maCn, loi: 'Đợt gửi bị lỗi: ' + e.message });
+      if (laLoiMang(e)) { choGui = lo.slice(b); break; }
+      for (var k = 0; k < lo[b].dong.length; k++) loi.push({ cn: lo[b].dong[k].maCn, loi: 'Đợt gửi bị lỗi: ' + e.message });
     }
+  }
+  var soCho = 0;
+  if (choGui.length) {
+    var tenLoai = ((S.meta.loaiMu || []).filter(function (x) { return x.ma === d.loai; })[0] || {}).ten || d.loai;
+    hcThem('SL', choGui, function (dong) {
+      return 'Sản lượng ' + ngayVN(d.ngay) + ' · phiên ' + d.phien + ' · ' + tenLoai + ' · ' + dong.length + ' người · ' +
+        soVN(dong.reduce(function (t, x) { return t + Number(x.kg); }, 0), 2) + ' kg';
+    });
+    choGui.forEach(function (l) { l.dong.forEach(function (r) { xong[r.maCn] = 'cho'; soCho++; }); });
   }
   _cacheFE = {};
   // Người đã gửi thành công: gỡ khỏi bảng + bản tạm; người lỗi: giữ nguyên để sửa rồi gửi lại
@@ -7314,11 +7607,13 @@ async function ntGui() {
     } else if (bao[cnI] !== undefined) tr[i2].classList.add('nt-loi');
   }
   ntLuuTam(false);
+  ntDanhDauCho();
   ntTongKet();
+  var baoCho = soCho ? ' ' + soCho + ' người đang MẤT MẠNG — đã vào hàng chờ trên máy, có sóng sẽ tự gửi.' : '';
   if (!loi.length) {
     dongSuaSanLuong();
-    nsBaoOkChung('Đã gửi xử lý ' + tongOK + ' người, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '.');
-    taiTab();
+    nsBaoOkChung((tongOK ? 'Đã gửi xử lý ' + tongOK + ' người, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '.' : '') + baoCho);
+    if (tongOK) taiTab();
     return;
   }
   var h = '<div class="bao-loi">Đã gửi <b>' + tongOK + '</b> người; <b>' + loi.length + ' lỗi</b> (tô đỏ trong bảng, đã giữ lại để sửa):' +
@@ -7391,6 +7686,7 @@ function ccVePc(tr) {
   var ds = (box.getAttribute('data-v') || '').split(',').filter(Boolean);
   if (!ds.length) { o.innerHTML = '<span class="nhan-mo">—</span>'; return; }
   if (!_ccBangPc) { o.innerHTML = '<span class="nhan-mo">đang tải…</span>'; return; }
+  if (_ccBangPc.__khongCo) { o.innerHTML = '<span class="nhan-mo">chưa có dữ liệu phần cạo trên máy (mất mạng) — máy chủ tự gán khi gửi</span>'; return; }
   var cua = _ccBangPc[tr.getAttribute('data-cn')] || {};
   o.innerHTML = ds.map(function (p) {
     return cua[p] ? '<b>' + thoat(cua[p]) + '</b>' : '<span style="color:var(--clay)" title="Công nhân chưa được giao khoán phần cạo ở phiên này">' +
@@ -7451,23 +7747,24 @@ function moChamCongCaTo() {
     }).join('');
   };
 
-  var h = '<div class="bo-loc the" style="margin-bottom:10px">' +
+  var h = '<div id="ccOff" class="nt-off"></div><div class="nt-dau">' +
     '<div><label class="nhan" for="ccNgay">Ngày</label><input class="o" id="ccNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ccKhMd">Ký hiệu mặc định</label><select class="o" id="ccKhMd">' + optKh(khMd) + '</select></div>' +
     '<div><label class="nhan">Phiên cạo mặc định <span class="nhan-mo">(tối đa 2 nếu cạo đúp)</span></label>' +
       ccChipPhien(phMd, '', 'ccPhMd') + '</div>' +
     '<div style="display:flex;align-items:flex-end"><button class="btn nho" id="ccApMd" title="Đặt lại ký hiệu + phiên mặc định cho mọi người chưa chấm">Áp mặc định cho cả bảng</button></div></div>' +
-    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
-      '<span id="ccTongKet" style="margin-right:auto"></span><span class="nhan-mo" id="ccTrangThaiLuu"></span></div>' +
-    '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangCCTo"><thead><tr><th>#</th><th>Mã công nhân</th>' +
+    '<div class="nhan-mo nt-luu" id="ccTrangThaiLuu"></div>' +
+    '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangCCTo" class="bang-nt-cc"><thead><tr><th>#</th><th>Mã công nhân</th>' +
     '<th>Ký hiệu công</th><th>Phiên cạo</th><th>Phần cạo</th><th>Ghi chú</th></tr></thead><tbody></tbody></table></div><div id="ccLoi"></div>' +
-    '<p class="goi-y">Mọi người được điền sẵn ký hiệu mặc định — chỉ cần sửa người nghỉ / khác (chọn "— bỏ qua —" để không gửi). ' +
+    '<p class="goi-y an-dt">Mọi người được điền sẵn ký hiệu mặc định — chỉ cần sửa người nghỉ / khác (chọn "— bỏ qua —" để không gửi). ' +
     'Phiên cạo: bấm chọn, tối đa <b>2 phiên</b> nếu cạo đúp (bấm lại để bỏ); phần cạo theo giao khoán hiện ngay bên cạnh. ' +
     'Người <span class="nhan-mo">đã có chấm công ngày này</span> bị khoá, muốn đổi thì sửa ở danh sách chấm công. ' +
     'Bảng tự lưu tạm ' + (NT_HAN_MS / 3600000) + ' giờ trong trình duyệt này.</p>' +
-    '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
-      nsNut('ccXoaTam', 'Xoá bản tạm', false) + nsNut('ccDong', 'Đóng', false) + nsNut('ccGui', 'Gửi xử lý', true) + '</div>';
+    '<div class="nt-chan"><span id="ccTongKet" class="nt-tong"></span>' +
+      '<span class="an-dt">' + nsNut('ccXoaTam', 'Xoá bản tạm', false) + '</span>' + nsNut('ccDong', 'Đóng', false) + nsNut('ccGui', 'Gửi xử lý', true) + '</div>';
   nsMoModal('Chấm công cả tổ — ' + toNhapCaTo(), h);
+  $('nenPhieu').classList.add('form-to');
+  veNtOff();
 
   var dsCn = dsCnNhapTo();
   var veBang = function (daCo) {
@@ -7476,17 +7773,17 @@ function moChamCongCaTo() {
     for (var i = 0; i < dsCn.length; i++) {
       var ma = dsCn[i], co = daCo[ma], x = cu[ma];
       if (co) {
-        b += '<tr data-cn="' + thoat(ma) + '" class="cc-da-co"><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(ma) + '</b></td>' +
-          '<td colspan="4" class="nhan-mo">Đã chấm: <b>' + thoat(co.kyHieu) + '</b>' + (co.phien ? ' · phiên ' + thoat(co.phien) : '') +
+        b += '<tr data-cn="' + thoat(ma) + '" class="cc-da-co' + (co.choGui ? ' nt-cho' : '') + '"><td class="nhan-mo c-stt">' + (i + 1) + '</td><td class="c-ma"><b>' + thoat(ma) + '</b></td>' +
+          '<td colspan="4" class="nhan-mo c-daco">' + (co.choGui ? '⏳ Chờ gửi (mất mạng): ' : 'Đã chấm: ') + '<b>' + thoat(co.kyHieu) + '</b>' + (co.phien ? ' · phiên ' + thoat(co.phien) : '') +
           (co.phanCao ? ' · phần cạo ' + thoat(co.phanCao) : '') +
-          ' · ' + (co.trangThai === 'DA_DUYET' ? 'đã duyệt' : 'chờ duyệt') + ' (' + thoat(co.ma) + ')</td></tr>';
+          (co.choGui ? '' : ' · ' + (co.trangThai === 'DA_DUYET' ? 'đã duyệt' : 'chờ duyệt') + ' (' + thoat(co.ma) + ')') + '</td></tr>';
         continue;
       }
       var kh = x ? x.kh : kh0, ph = x ? x.ph : ph0;
-      b += '<tr data-cn="' + thoat(ma) + '"><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(ma) + '</b></td>' +
-        '<td><select class="o cc-kh">' + optKh(kh) + '</select></td>' +
-        '<td>' + ccChipPhien(ph, 'cc-ph') + '</td><td class="cc-pc"></td>' +
-        '<td><input class="o cc-gc" maxlength="200" value="' + thoat(x ? x.gc : '') + '"></td></tr>';
+      b += '<tr data-cn="' + thoat(ma) + '"><td class="nhan-mo c-stt">' + (i + 1) + '</td><td class="c-ma"><b>' + thoat(ma) + '</b></td>' +
+        '<td class="c-kh" data-nhan="Ký hiệu công"><select class="o cc-kh" aria-label="Ký hiệu công của ' + thoat(ma) + '">' + optKh(kh) + '</select></td>' +
+        '<td class="c-ph" data-nhan="Phiên cạo">' + ccChipPhien(ph, 'cc-ph') + '</td><td class="cc-pc c-pc" data-nhan="Phần cạo"></td>' +
+        '<td class="c-gc" data-nhan="Ghi chú"><input class="o cc-gc" maxlength="200" value="' + thoat(x ? x.gc : '') + '"></td></tr>';
     }
     $('bangCCTo').querySelector('tbody').innerHTML = b;
     var o = $('bangCCTo').querySelectorAll('select,input');
@@ -7517,10 +7814,15 @@ function moChamCongCaTo() {
     ccLuuTam();
   };
   // Phần cạo giao khoán của cả tổ — 1 lần gọi, dùng cho mọi dòng.
+  // Nhớ trên máy theo tổ: mất mạng vẫn hiện phần cạo giao khoán lần tải gần nhất
   _ccBangPc = null;
+  var khoaPc = 'crck2_pc_' + toNhapCaTo();
   goiAPI('phanCaoTheoCN', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: toNhapCaTo() })
-    .then(function (d) { _ccBangPc = d.bang || {}; })
-    .catch(function () { _ccBangPc = {}; })
+    .then(function (d) { _ccBangPc = d.bang || {}; ghiLS(khoaPc, JSON.stringify(_ccBangPc)); })
+    .catch(function () {
+      var luu = docLS(khoaPc);
+      try { _ccBangPc = luu ? JSON.parse(luu) : { __khongCo: true }; } catch (e) { _ccBangPc = { __khongCo: true }; }
+    })
     .then(function () {
       var dongs = $('bangCCTo') ? $('bangCCTo').querySelectorAll('tr[data-cn]:not(.cc-da-co)') : [];
       for (var z = 0; z < dongs.length; z++) ccVePc(dongs[z]);
@@ -7537,10 +7839,14 @@ function moChamCongCaTo() {
     return goiAPI('chamCong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: ngayChon, denNgay: ngayChon, to: to,
                                 layHet: 1, docSheet: S.laAdmin ? 1 : '' })
       .then(function (d) {
-        var daCo = {};
+        var daCo = ccDaCoTuHangCho(ngayChon);
         (d.rows || []).forEach(function (r) { daCo[r.maCn] = r; });
         veBang(daCo);
-      }).catch(function (e) { veBang({}); baoLoi('ccLoi', 'Không kiểm tra được chấm công đã có (' + e.message + ') — người trùng sẽ bị báo lỗi khi gửi.'); });
+      }).catch(function (e) {
+        veBang(ccDaCoTuHangCho(ngayChon));
+        baoLoi('ccLoi', laLoiMang(e) ? 'Đang mất mạng: chưa kiểm tra được ai đã chấm công ngày này trên hệ thống — vẫn chấm được, người trùng sẽ được báo khi gửi.'
+                                   : 'Không kiểm tra được chấm công đã có (' + e.message + ') — người trùng sẽ bị báo lỗi khi gửi.');
+      });
   };
   napDaCo();
   $('ccTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
@@ -7567,6 +7873,13 @@ function moChamCongCaTo() {
   $('ccGui').onclick = ccGui;
 }
 
+/** Người đang nằm trong hàng chờ chấm công (chưa lên hệ thống) của ngày — hiện như "đã chấm" (khoá) để không chấm trùng. */
+function ccDaCoTuHangCho(ngay) {
+  var ra = {}, cho = hcNguoiCho('CC', function (r) { return r.ngay === ngay; });
+  Object.keys(cho).forEach(function (cn) { ra[cn] = { kyHieu: cho[cn].kyHieu, phien: cho[cn].phien || '', choGui: true }; });
+  return ra;
+}
+
 async function ccGui() {
   var ngay = $('ccNgay').value;
   if (!ngay) { baoLoi('ccLoi', 'Chưa chọn ngày.'); return; }
@@ -7584,19 +7897,28 @@ async function ccGui() {
 
   baoLoi('ccLoi', '');
   $('ccGui').disabled = true;
-  var lo = chiaLoTheoDoDai(dsDong, 5000), tongOK = 0, loi = [], xong = {};
+  // Như nhập sản lượng cả tổ: mỗi lô 1 mã gửi; mất mạng thì lô đó trở đi vào hàng chờ (giữ nguyên mã gửi).
+  var lo = chiaLoTheoDoDai(dsDong, 5000).map(function (x) { return { id: hcMaGui(), dong: x }; });
+  var tongOK = 0, loi = [], xong = {}, choGui = [];
   for (var b = 0; b < lo.length; b++) {
+    if (!navigator.onLine) { choGui = lo.slice(b); break; }
     $('ccTongKet').innerHTML = 'Đang gửi đợt ' + (b + 1) + '/' + lo.length + '…';
     try {
-      var kq = await goiAPI('nhapHangLoatChamCong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(lo[b]) }, 60000);
+      var kq = await goiAPI('nhapHangLoatChamCong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(lo[b].dong), maGui: lo[b].id }, 60000);
       tongOK += kq.thanhCong;
       for (var j = 0; j < kq.ketQua.length; j++) {
-        var it = kq.ketQua[j], cn = lo[b][it.dong - 2] ? lo[b][it.dong - 2].maCn : '?';
+        var it = kq.ketQua[j], cn = lo[b].dong[it.dong - 2] ? lo[b].dong[it.dong - 2].maCn : '?';
         if (it.ok) xong[cn] = it.ma || true; else loi.push({ cn: cn, loi: it.loi });
       }
     } catch (e) {
-      for (var k = 0; k < lo[b].length; k++) loi.push({ cn: lo[b][k].maCn, loi: 'Đợt gửi bị lỗi: ' + e.message });
+      if (laLoiMang(e)) { choGui = lo.slice(b); break; }
+      for (var k = 0; k < lo[b].dong.length; k++) loi.push({ cn: lo[b].dong[k].maCn, loi: 'Đợt gửi bị lỗi: ' + e.message });
     }
+  }
+  var soCho = 0;
+  if (choGui.length) {
+    hcThem('CC', choGui, function (dong) { return 'Chấm công ' + ngayVN(ngay) + ' · ' + dong.length + ' người'; });
+    choGui.forEach(function (l) { l.dong.forEach(function (r) { xong[r.maCn] = 'cho'; soCho++; }); });
   }
   _cacheFE = {};
   var bao = {}, i2;
@@ -7607,17 +7929,18 @@ async function ccGui() {
     if (xong[cnI]) {
       var khI = tr[i2].querySelector('.cc-kh').value, phI = tr[i2].querySelector('.cc-ph').getAttribute('data-v');
       var pcI = tr[i2].querySelector('.cc-pc').textContent;
-      tr[i2].className = 'cc-da-co nt-co';
+      tr[i2].className = 'cc-da-co ' + (xong[cnI] === 'cho' ? 'nt-cho' : 'nt-co');
       tr[i2].innerHTML = tr[i2].children[0].outerHTML + tr[i2].children[1].outerHTML +
-        '<td colspan="4" class="nhan-mo">Vừa gửi: <b>' + thoat(khI) + '</b>' + (phI ? ' · phiên ' + thoat(phI) : '') +
-        (pcI && pcI !== '—' ? ' · ' + thoat(pcI) : '') + ' · chờ duyệt</td>';
+        '<td colspan="4" class="nhan-mo c-daco">' + (xong[cnI] === 'cho' ? '⏳ Chờ gửi (mất mạng): ' : 'Vừa gửi: ') + '<b>' + thoat(khI) + '</b>' + (phI ? ' · phiên ' + thoat(phI) : '') +
+        (pcI && pcI !== '—' ? ' · ' + thoat(pcI) : '') + (xong[cnI] === 'cho' ? '' : ' · chờ duyệt') + '</td>';
     } else if (bao[cnI] !== undefined) tr[i2].classList.add('nt-loi');
   }
   if (!loi.length) {
     xoaLS(ccKhoa());
     dongSuaSanLuong();
-    nsBaoOkChung('Đã chấm công ' + tongOK + ' người, ngày ' + ngayVN(ngay) + ' (chờ duyệt).');
-    taiTab();
+    nsBaoOkChung((tongOK ? 'Đã chấm công ' + tongOK + ' người, ngày ' + ngayVN(ngay) + ' (chờ duyệt).' : '') +
+      (soCho ? ' ' + soCho + ' người đang MẤT MẠNG — đã vào hàng chờ trên máy, có sóng sẽ tự gửi.' : ''));
+    if (tongOK) taiTab();
     return;
   }
   ccLuuTam();
@@ -8042,7 +8365,7 @@ function moSuaSanLuong(r) {
 
 function dongSuaSanLuong() {
   _dangSua = null;
-  $('nenPhieu').classList.remove('hien');
+  $('nenPhieu').classList.remove('hien', 'form-to');
   $('nutInPhieu').style.display = '';
 }
 
@@ -8688,6 +9011,10 @@ function apDungQuyenGiaoDien() {
   var slThem = coQuyen('sanLuong', 'THEM'), ccThem = coQuyen('chamCong', 'THEM');
   hienNeu(['nutThemSL', 'nutNhapTo', 'nutHangLoatSL'], slThem);
   hienNeu(['nutDayBase'], coQuyen('dayBase', 'THEM'));
+  // Thanh nhập nhanh: chỉ tổ trưởng (vai trò nhập cho đúng 1 tổ của mình)
+  $('thanhNhapNhanh').style.display = S.vaiTro === 'TO_TRUONG' && (slThem || ccThem) ? '' : 'none';
+  $('nnSanLuong').style.display = slThem ? '' : 'none';
+  $('nnChamCong').style.display = ccThem ? '' : 'none';
   hienNeu(['nutThemCC', 'nutChamCongTo', 'nutHangLoatCC', 'thanhNhapCC'], ccThem);
   hienNeu(['nutKmLuu', 'nutKmNhapFile'], coQuyen('khoMieng', 'SUA'));
   hienNeu(['nutXlLuu', 'nutXlNhapFile', 'nutXlDienA'], coQuyen('xepLoai', 'SUA'));
@@ -8993,11 +9320,22 @@ function vaoApp(d, vtChon) {
 
   hien('app');
   napChoDay();
+  veThanhHangCho();
+  setTimeout(function () { hcGuiHet(); }, 1500);   // còn phiếu chờ từ lần trước thì gửi luôn
 
   // Nạp danh mục rồi vẽ tab đầu — truyền vaiTro/maDonVi để backend biết
   // đọc khoảng ngày (ngayMin/ngayMax) từ Sheet hay từ BigQuery cho đúng
   // nguồn ban lãnh đạo đang xem.
+  // Danh mục (loại mủ, phiên, ký hiệu công…) lưu trên máy: mất mạng vẫn mở được form nhập cả tổ.
   goiAPI('meta', { vaiTro: d.vaiTro, maDonVi: d.maDonVi }).then(function (m) {
+    ghiLS('crck2_meta_offline', JSON.stringify(m));
+    return m;
+  }).catch(function (e) {
+    var c = null;
+    try { c = JSON.parse(docLS('crck2_meta_offline') || 'null'); } catch (x) { c = null; }
+    if (c && laLoiMang(e)) return c;
+    throw e;
+  }).then(function (m) {
     S.meta = m;
 
     var sl = $('fLoaiMu');
@@ -9279,6 +9617,8 @@ function nsCsvNguoi() {
 /* ---- Modal dùng chung (tái dùng #nenPhieu) ---- */
 function nsMoModal(tieuDe, than) {
   _dangSua = null;
+  $('nenPhieu').classList.remove('form-to');   // form nhập cả tổ / hàng chờ tự bật lại (toàn màn hình trên điện thoại)
+  $('thanPhieu').onclick = null;
   $('tieuDePhieu').textContent = tieuDe;
   $('nutInPhieu').style.display = 'none';
   $('thanPhieu').innerHTML = than;
@@ -9614,6 +9954,42 @@ ganSuKienPhanQuyen();
 ganSuKienBanDo();
 ganSuKienBaoCaoTD();
 
+// ---- Nhập offline: thanh nhập nhanh, hàng chờ gửi, theo dõi mạng ----
+function moNhanh(ham) {
+  if (!S.meta || !S.dsCn) { baoLoi('thongBao', 'Đang nạp danh mục, thử lại sau vài giây.'); return; }
+  ham();
+}
+$('nnSanLuong').onclick = function () { moNhanh(moNhapCaTo); };
+$('nnChamCong').onclick = function () { moNhanh(moChamCongCaTo); };
+$('thanhHangCho').onclick = function () {
+  var ds = hcDoc();
+  if (navigator.onLine && ds.length && !ds.some(function (x) { return x.trangThai === 'loi'; })) hcGuiHet(true);
+  else moHangCho();
+};
+window.addEventListener('online', function () { veThanhHangCho(); veNtOff(); hcGuiHet(); });
+window.addEventListener('offline', function () { veThanhHangCho(); veNtOff(); });
+setInterval(function () { if (navigator.onLine) hcGuiHet(); }, 60000);
+// Hộp thoại đóng (bằng bất kỳ đường nào) thì bỏ chế độ toàn màn hình của form nhập cả tổ
+// Service worker: trang mở được khi mất mạng (chỉ chạy trên https / localhost)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(function (e) { try { console.warn('Không đăng ký được service worker:', e); } catch (x) {} });
+}
+// Nút cài app: Android/Chrome có hộp cài sẵn; iPhone (Safari) chỉ cài được qua Chia sẻ -> Thêm vào MH chính
+var _hoiCai = null;
+var _daCai = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', function (ev) { ev.preventDefault(); _hoiCai = ev; $('nnCaiApp').style.display = ''; });
+if (!_daCai && /iphone|ipad|ipod/i.test(navigator.userAgent)) $('nnCaiApp').style.display = '';
+$('nnCaiApp').onclick = function () {
+  if (_hoiCai) { _hoiCai.prompt(); _hoiCai.userChoice.then(function () { _hoiCai = null; $('nnCaiApp').style.display = 'none'; }); return; }
+  alert('Cài lên iPhone: mở trang này bằng Safari → bấm nút Chia sẻ (ô vuông có mũi tên lên) → chọn \u0022Thêm vào MH chính\u0022 → Thêm.\nSau đó mở app từ biểu tượng CRCK2 trên màn hình chính.');
+};
+window.addEventListener('appinstalled', function () { $('nnCaiApp').style.display = 'none'; });
+new MutationObserver(function () {
+  // Chỉ gỡ khi đang có: classList.remove luôn ghi lại thuộc tính class -> tự kích hoạt observer -> lặp vô tận
+  var c = $('nenPhieu').classList;
+  if (!c.contains('hien') && c.contains('form-to')) c.remove('form-to');
+}).observe($('nenPhieu'), { attributes: true, attributeFilter: ['class'] });
+
 $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').click(); };
 
 $('nutVao').onclick = function () {
@@ -9627,12 +10003,25 @@ $('nutVao').onclick = function () {
   nut.disabled = true; nut.textContent = 'Đang kiểm tra…';
   // Chưa có bảng quyền nhớ sẵn thì chờ; có rồi thì vào ngay bằng bản nhớ và làm mới ngầm sau đó.
   var coSan = !!_pq;
+  // Mất mạng (ở vườn): máy đã từng đăng nhập đúng tài khoản này thì vào bằng bản lưu trên máy để vẫn nhập được.
+  var banLuu = null;
+  try { banLuu = JSON.parse(docLS('crck2_dn_offline') || 'null'); } catch (x) { banLuu = null; }
+  if (banLuu && (banLuu.vt !== vtChon || String(banLuu.ma).toUpperCase() !== ma.toUpperCase())) banLuu = null;
+  var vaoOffline = function () {
+    nut.disabled = false; nut.textContent = 'Đăng nhập';
+    vaoApp(banLuu.d, vtChon);
+    nsBaoOkChung('📴 Đang mất mạng — vào bằng dữ liệu lưu trên máy (lần đăng nhập ' + ntGio(banLuu.luc) + ' ' + ngayVN(nsHomNayTu(banLuu.luc)) +
+      '). Vẫn nhập được sản lượng / chấm công cả tổ; số liệu xem sẽ cập nhật khi có sóng.');
+  };
+  if (!navigator.onLine && banLuu) { vaoOffline(); return; }
   Promise.all([goiAPI('dangNhap', { vaiTro: vt, maDonVi: ma }), coSan ? Promise.resolve(_pq) : napPhanQuyen()]).then(function (kq) {
     var d = kq[0];
     nut.disabled = false; nut.textContent = 'Đăng nhập';
+    ghiLS('crck2_dn_offline', JSON.stringify({ vt: vtChon, ma: ma, d: d, luc: Date.now() }));
     vaoApp(d, vtChon);
     if (coSan) napPhanQuyen();
   }).catch(function (e) {
+    if (laLoiMang(e) && banLuu) { vaoOffline(); return; }
     nut.disabled = false; nut.textContent = 'Đăng nhập';
     baoLoi('loiDangNhap', e.message);
   });
