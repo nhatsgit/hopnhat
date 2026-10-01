@@ -221,10 +221,17 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .bo-loc-noidung{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   gap:12px;padding:16px}
 .bo-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
-/* Nút mở + nền mờ + tấm trượt lên từ dưới: chỉ áp dụng trên màn hẹp (điện thoại) — màn rộng
-   vẫn hiện đủ bộ lọc ngay trong luồng trang như cũ, không đụng gì (khối .bo-loc-dau/.nen-loc
-   ẩn hẳn, .bo-loc không position:fixed). */
-.bo-loc-dau{display:none}
+/* Bộ lọc mặc định THU GỌN ở mọi màn: màn rộng = nút nhỏ (icon phễu + "Bộ lọc"), bấm thì khung lọc
+   xổ ngay bên dưới trong luồng trang (.bo-loc.mo); bấm lại / Esc / Áp dụng thì thu. Màn hẹp (điện
+   thoại, @media 900px bên dưới) = nút dính đầu trang + tấm trượt lên từ dưới kèm nền mờ. */
+.bo-loc-dau{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;margin-bottom:14px;
+  border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-weight:600;font-size:13.5px;
+  border-radius:99px;cursor:pointer;box-shadow:var(--shadow)}
+.bo-loc-dau:hover,.bo-loc-dau.dang-mo{border-color:var(--leaf);color:var(--leaf)}
+.bo-loc-dau .phieu-loc{flex:none}
+.bo-loc-dau .tom-tat,.bo-loc-dau .chevron{display:none}
+.bo-loc{display:none}
+.bo-loc.mo{display:block}
 .bo-loc-dau-sheet{display:none}
 .nen-loc{display:none}
 @media (max-width:900px){
@@ -234,9 +241,10 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
     text-align:left;cursor:pointer;border:1px solid var(--line);border-radius:2px;
     margin-bottom:20px;box-shadow:var(--shadow);
     position:sticky;top:56px;z-index:60}   /* 56px = né hàng nút ☰/☀️ cố định góc trên (14px+36px+6px) */
-  .bo-loc-dau .tom-tat{color:var(--ink-2);font-weight:400;font-size:12.5px;
+  .bo-loc-dau{border-radius:2px;font-size:14px}
+  .bo-loc-dau .tom-tat{display:inline;color:var(--ink-2);font-weight:400;font-size:12.5px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bo-loc-dau .chevron{margin-left:auto;flex:none;color:var(--ink-3);font-size:11px}
+  .bo-loc-dau .chevron{display:inline;margin-left:auto;flex:none;color:var(--ink-3);font-size:11px}
 
   .nen-loc.mo{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70}
 
@@ -637,11 +645,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
       <div class="wrap">
 
-    <!-- Bộ lọc: trên điện thoại (xem CSS @media 900px) hiện dạng nút mở + tấm trượt lên từ dưới
-         (bottom sheet) kèm nền mờ, thay vì luôn choán hết đầu trang. Màn rộng bỏ qua hết phần
-         này, luôn hiện đủ bộ lọc ngay trong luồng trang như trước. -->
+    <!-- Bộ lọc: mặc định thu gọn thành nút (icon phễu + "Bộ lọc"). Màn rộng bấm thì xổ khung ngay bên dưới;
+         điện thoại (CSS @media 900px) mở tấm trượt lên từ dưới kèm nền mờ. -->
     <button class="bo-loc-dau" id="nutThuGonLoc" type="button">
-      <span>Bộ lọc</span>
+      <svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span>
       <span class="tom-tat" id="tomTatBoLoc"></span>
       <span class="chevron">▾</span>
     </button>
@@ -1179,7 +1186,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
          khung lọc chung: màn rộng luôn hiện, màn hẹp = nút dính đầu trang mở tấm trượt. -->
     <section id="pBaoCaoTD" style="display:none">
       <button class="bo-loc-dau" id="tdNutMoLoc" type="button">
-        <span>Bộ lọc</span>
+        <svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span>
         <span class="tom-tat" id="tdTomTatLoc"></span>
         <span class="chevron">▾</span>
       </button>
@@ -1272,7 +1279,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <!-- Bộ lọc riêng của bản đồ, cùng khuôn khung lọc chung: màn rộng luôn hiện; màn hẹp = nút dính trên đầu
            (kèm tóm tắt) mở tấm trượt từ dưới lên -->
       <button class="bo-loc-dau" id="bdNutMoLoc" type="button">
-        <span>Bộ lọc</span>
+        <svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span>
         <span class="tom-tat" id="bdTomTatLoc"></span>
         <span class="chevron">▾</span>
       </button>
@@ -4681,7 +4688,7 @@ function _bdDungLo() {
   if (cu && ds.some(function (x) { return x.maLo === cu; })) $('bdLo').value = cu;
 }
 
-function bdDongLoc() { $('bdKhungLoc').classList.remove('mo'); $('bdNenLoc').classList.remove('mo'); }
+function bdDongLoc() { $('bdKhungLoc').classList.remove('mo'); $('bdNenLoc').classList.remove('mo'); $('bdNutMoLoc').classList.remove('dang-mo'); }
 
 /** Tóm tắt bộ lọc trên nút "Bộ lọc" dính đầu trang (màn hẹp). */
 function _bdTomTatLoc() {
@@ -5056,7 +5063,11 @@ function ganSuKienBanDo() {
     taiBanDoLo();
   };
   // Màn hẹp: tấm lọc trượt từ dưới lên (giống khung lọc chung); bấm áp dụng / chọn nhanh / đổi mode thì tự đóng
-  $('bdNutMoLoc').onclick = function () { $('bdKhungLoc').classList.add('mo'); $('bdNenLoc').classList.add('mo'); };
+  $('bdNutMoLoc').onclick = function () {
+    var mo = !$('bdKhungLoc').classList.contains('mo');
+    $('bdKhungLoc').classList.toggle('mo', mo); $('bdNenLoc').classList.toggle('mo', mo); this.classList.toggle('dang-mo', mo);
+    if (mo && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
+  };
   $('bdDongLoc').onclick = $('bdNenLoc').onclick = bdDongLoc;
   $('bdNapFile').onclick = function () { $('bdFile').click(); };
   $('bdFile').onchange = function () { if (this.files && this.files[0]) bdNapFile(this.files[0]); this.value = ''; };
@@ -5536,7 +5547,7 @@ function veBaoCaoTD() {
       : '<div class="nhan-mo" style="font-size:13px">Kỳ này chưa có phiếu Base (số nhập tay hoặc chưa báo cáo).</div>');
 }
 
-function tdDongLoc() { $('tdKhungLoc').classList.remove('mo'); $('tdNenLoc').classList.remove('mo'); }
+function tdDongLoc() { $('tdKhungLoc').classList.remove('mo'); $('tdNenLoc').classList.remove('mo'); $('tdNutMoLoc').classList.remove('dang-mo'); }
 
 /** Lùi / tiến 1 kỳ theo loại kỳ đang chọn. */
 function _tdDoiKy(buoc) {
@@ -5568,7 +5579,10 @@ function xuatBaoCaoTD() {
 }
 
 function ganSuKienBaoCaoTD() {
-  $('tdNutMoLoc').onclick = function () { $('tdKhungLoc').classList.add('mo'); $('tdNenLoc').classList.add('mo'); };
+  $('tdNutMoLoc').onclick = function () {
+    var mo = !$('tdKhungLoc').classList.contains('mo');
+    $('tdKhungLoc').classList.toggle('mo', mo); $('tdNenLoc').classList.toggle('mo', mo); this.classList.toggle('dang-mo', mo);
+  };
   $('tdDongLoc').onclick = $('tdNenLoc').onclick = tdDongLoc;
   $('tdLoaiKy').onchange = function () { _tdHienO(); taiBaoCaoTD({ vaiTro: S.vaiTro, maDonVi: S.maDonVi, loaiKy: this.value, ky: '' }); };
   $('tdApDung').onclick = function () { tdDongLoc(); taiBaoCaoTD(); };
@@ -10809,12 +10823,15 @@ $('nutLoc').onclick = function () {
 // Bộ lọc dạng tấm trượt lên từ dưới trên điện thoại (xem CSS .bo-loc-dau/.nen-loc) — mở bằng
 // nút "Bộ lọc", đóng bằng nút ✕/nền mờ/phím Esc, hoặc tự đóng khi bấm "Áp dụng" (chọn xong rồi
 // xem kết quả luôn, đỡ phải tự tay đóng).
-function moLoc() { $('khungBoLocChung').classList.add('mo'); $('nenLoc').classList.add('mo'); }
-function dongLoc() { $('khungBoLocChung').classList.remove('mo'); $('nenLoc').classList.remove('mo'); }
-$('nutThuGonLoc').onclick = moLoc;
+function moLoc() { $('khungBoLocChung').classList.add('mo'); $('nenLoc').classList.add('mo'); $('nutThuGonLoc').classList.add('dang-mo'); }
+function dongLoc() { $('khungBoLocChung').classList.remove('mo'); $('nenLoc').classList.remove('mo'); $('nutThuGonLoc').classList.remove('dang-mo'); }
+$('nutThuGonLoc').onclick = function () { if ($('khungBoLocChung').classList.contains('mo')) dongLoc(); else moLoc(); };
 $('nutDongLoc').onclick = dongLoc;
 $('nenLoc').onclick = dongLoc;
-document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') dongLoc(); });
+document.addEventListener('keydown', function (ev) {
+  if (ev.key !== 'Escape') return;
+  dongLoc(); tdDongLoc(); bdDongLoc();   // Esc thu mọi khung lọc đang mở (chung, Báo cáo TĐ, Bản đồ)
+});
 var _nutLocGoc = $('nutLoc').onclick;
 $('nutLoc').onclick = function () { _nutLocGoc(); dongLoc(); };
 
