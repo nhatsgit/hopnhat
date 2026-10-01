@@ -282,6 +282,19 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .ct-bd{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0}
 .ct-bd i{display:inline-block;width:16px;height:12px;border-radius:2px;flex:none;border:1px solid rgba(0,0,0,.15)}
 /* Cột phải chỉ 300px: chia cột cố định + cho xuống dòng (bảng chung để nowrap -> giá trị dài tràn khung) */
+/* Báo cáo Tập đoàn */
+.bang-td td,.bang-td th{padding:6px 10px}
+.bang-td .ten-ct{white-space:normal;min-width:240px}
+.bang-td tr.cap1 td{background:var(--paper);font-weight:700}
+.bang-td tr.cap2 td.ten-ct{font-weight:600}
+.td-nguon{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;border:1px solid var(--line-2);color:var(--ink-3);white-space:nowrap}
+.td-nguon.base{border-color:var(--leaf);color:var(--leaf)}
+.td-nguon.sua{border-color:var(--clay);color:var(--clay);font-weight:600}
+.td-nguon.tinh{border-style:dashed}
+.td-tl{display:flex;align-items:center;gap:6px;min-width:92px}
+.td-tl .vach{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden;min-width:40px}
+.td-tl .vach i{display:block;height:100%;background:var(--leaf)}
+.td-tl .vach i.thap{background:var(--clay)}
 .bd-bang{width:100%;font-size:13px;table-layout:fixed}
 .bd-bang td{padding:3px 0;border-bottom:1px solid var(--line);vertical-align:top;white-space:normal;overflow-wrap:anywhere}
 .bd-bang td:first-child{color:var(--ink-3);padding-right:8px;width:42%}
@@ -1009,6 +1022,78 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="luoi-bc" id="dsBaoCao"></div>
     </section>
 
+    <!-- Tab Báo cáo chỉ tiêu Tập đoàn (action baoCaoTD, Cloud Run đọc BigQuery; chỉ đọc). Bộ lọc riêng cùng khuôn
+         khung lọc chung: màn rộng luôn hiện, màn hẹp = nút dính đầu trang mở tấm trượt. -->
+    <section id="pBaoCaoTD" style="display:none">
+      <button class="bo-loc-dau" id="tdNutMoLoc" type="button">
+        <span>Bộ lọc</span>
+        <span class="tom-tat" id="tdTomTatLoc"></span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="nen-loc" id="tdNenLoc"></div>
+      <div class="the bo-loc" id="tdKhungLoc">
+        <div class="bo-loc-dau-sheet">
+          <b>Bộ lọc báo cáo Tập đoàn</b>
+          <button class="nut-dong-sheet" id="tdDongLoc" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <div class="bo-loc-noidung">
+          <div><label class="nhan" for="tdLoaiKy">Báo cáo</label>
+            <select class="o" id="tdLoaiKy"><option value="NGAY">Ngày</option><option value="TUAN">Tuần</option><option value="THANG">Tháng</option></select></div>
+          <div id="khungTdNgay"><label class="nhan" for="tdNgay">Ngày</label><input class="o" id="tdNgay" type="date"></div>
+          <div id="khungTdTuan" style="display:none"><label class="nhan" for="tdTuan">Tuần</label><select class="o" id="tdTuan"></select></div>
+          <div id="khungTdThang" style="display:none"><label class="nhan" for="tdThang">Tháng</label><select class="o" id="tdThang"></select></div>
+          <div><label class="nhan" for="tdPhong">Phòng ban</label>
+            <select class="o" id="tdPhong"><option value="">Tất cả phòng</option><option value="KTNN">KTNN — Kỹ thuật nông nghiệp</option>
+              <option value="KHDT">KHĐT — Kế hoạch đầu tư</option><option value="TCKT">TCKT — Tài chính kế toán</option>
+              <option value="TCHC">TCHC — Tổ chức hành chính</option></select></div>
+          <div><label class="nhan" for="tdHien">Hiển thị</label>
+            <select class="o" id="tdHien"><option value="coSo">Chỉ tiêu có số</option><option value="chinh">Chỉ tiêu chính</option><option value="">Tất cả chỉ tiêu</option></select></div>
+          <div><label class="nhan" for="tdQ">Tìm chỉ tiêu</label><input class="o" id="tdQ" placeholder="Tên / mã / STT"></div>
+          <div class="hanh-dong">
+            <div class="nhanh" id="tdMocNhanh">
+              <button type="button" class="chip" data-moc="moi">Mới nhất</button>
+              <button type="button" class="chip" data-moc="truoc">◀ Kỳ trước</button>
+              <button type="button" class="chip" data-moc="sau">Kỳ sau ▶</button>
+            </div>
+            <button class="btn" id="tdXuat">Xuất Excel</button>
+            <button class="btn chinh" id="tdApDung">Áp dụng</button>
+          </div>
+        </div>
+      </div>
+      <div id="tdLoi"></div>
+      <h2 class="nhom-tq" id="tdTieuDe">Báo cáo chỉ tiêu Tập đoàn <small id="tdPhuDe"></small></h2>
+      <div class="kpis" id="kpisTD"></div>
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Xu hướng theo tháng <span class="nhan-mo" id="tdXuHuongDv" style="text-transform:none;font-weight:400"></span></h3>
+          <div class="nhanh" id="tdChonXuHuong" style="margin:0 0 10px"></div>
+          <div id="tdXuHuong"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Tiến độ kế hoạch năm <span class="nhan-mo" style="text-transform:none;font-weight:400">(luỹ kế / kế hoạch, chỉ tiêu chính)</span></h3>
+          <div id="tdTienDo"></div>
+        </div>
+      </div>
+      <div class="the">
+        <div style="padding:14px 16px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tdTomTatBang">—</h3>
+          <span class="nhan-mo" style="font-size:12.5px">Nguồn: <span class="td-nguon base">Base</span> phiếu Base ·
+            <span class="td-nguon tay">Nhập tay</span> · <span class="td-nguon sua">Sửa tay</span> sổ cái khác phiếu Base · <span class="td-nguon tinh">Tính</span> dòng tổng</span>
+        </div>
+        <div class="cuon cuon-doc" style="max-height:70vh"><table id="bangTD" class="bang-td"></table></div>
+      </div>
+      <div class="luoi-2">
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Sổ cái khác phiếu Base <span class="nhan-mo" style="text-transform:none;font-weight:400">(cả năm — đã sửa tay sau khi kéo từ Base)</span></h3>
+          <div id="tdSuaTay"></div>
+        </div>
+        <div class="the o-bieu-do">
+          <h3 class="tieude-muc">Phiếu Base &amp; nguồn số liệu</h3>
+          <div id="tdPhieu"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Tab Bản đồ lô: ranh lô (DIM_LO_BAN_DO, action banDoLo) trên nền vệ tinh, tô màu theo năng suất /
          xếp hạng / giống / năm trồng / tổ / lệch diện tích (số liệu lấy từ nangSuatVuon). Leaflet nạp khi mở tab. -->
     <section id="pBanDoLo" style="display:none">
@@ -1391,7 +1476,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
-  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1,
+  phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
@@ -1524,6 +1609,7 @@ function pqTimVaiTro(ma) {
 /** Quyền khi chưa tải được bảng quyền lần nào — đúng quyền cứng trước đây (backend vẫn kiểm lại). */
 function coQuyenCu(ma, tt) {
   var vt = S.vaiTro;
+  if (tt === 'XEM' && ma === 'baoCaoTD') return vt === 'BAN_LANH_DAO';   // có tài chính/lương: lãnh đạo + KTNN
   if (tt === 'XEM') return ma !== 'hoSoLuong' || vt === 'DOI_TRUONG';
   if (ma === 'sanLuong' || ma === 'chamCong') return vt === 'TO_TRUONG' || (ma === 'sanLuong' && tt === 'SUA' && S.vaiTroHienThi === 'TRO_LY');
   if (ma === 'nhanSu') return vt === 'TO_TRUONG' || vt === 'DOI_TRUONG';
@@ -4559,6 +4645,236 @@ function xuatNangSuatVuon(ds, nam) {
 }
 
 /* =====================================================================
+   BÁO CÁO CHỈ TIÊU TẬP ĐOÀN — action baoCaoTD (Cloud Run đọc BigQuery, chỉ đọc). Kỳ ngày / tuần / tháng;
+   bảng chỉ tiêu theo cây STT, luỹ kế năm (cộng dồn hoặc cuối kỳ), % kế hoạch, nguồn từng ô (Base / nhập tay / sửa tay).
+   ===================================================================== */
+var _td = null, _tdLan = 0;
+var TD_THE = [
+  ['N_KTNN_SL_CS_TuKhaiThac_Tan', 'Sản lượng tự khai thác'], ['N_KHDT_SL_CS_ThuMua_Tan', 'Thu mua'],
+  ['N_KHDT_CB_Mu_TongHop_Tan', 'Chế biến'], ['T_KHDT_TieuThu_Tong_Tan', 'Tiêu thụ'],
+  ['Th_TCKT_DT_BanHangDichVu_TrieuDong', 'Doanh thu bán hàng'], ['Th_TCKT_LoiNhuan_TruocThue_TrieuDong', 'Lợi nhuận trước thuế']
+];
+var TD_XU_HUONG = [['N_KTNN_SL_CS_TuKhaiThac_Tan', 'Tự khai thác'], ['N_KHDT_SL_CS_ThuMua_Tan', 'Thu mua'],
+                   ['N_KHDT_CB_Mu_TongHop_Tan', 'Chế biến'], ['T_KHDT_TieuThu_Tong_Tan', 'Tiêu thụ']];
+var _tdXuHuong = TD_XU_HUONG[0][0];
+
+/** Số theo đơn vị: % lưu dạng tỷ lệ (0,57) -> 57,0%; người 0 lẻ; còn lại 2 lẻ. */
+function tdSo(v, dvt) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (dvt === '%') return soVN(Math.abs(v) <= 1.5 ? v * 100 : v, 1) + '%';
+  return soVN(v, /người/i.test(dvt || '') ? 0 : 2);
+}
+
+function tdNgayVN(s) { return s ? s.split('-').reverse().join('/') : ''; }
+
+function tdBadge(x) {
+  if (x.nguon === 'BASE') return '<span class="td-nguon base" title="Phiếu Base ' + thoat(x.maPhieu) + '">Base #' + thoat(x.maPhieu) + '</span>';
+  if (x.nguon === 'SUA_TAY') return '<span class="td-nguon sua" title="Phiếu Base #' + thoat(x.maPhieu) + ' ghi ' +
+    thoat(tdSo(x.giaTriBase, x.dvt)) + '">Sửa tay · Base ' + thoat(tdSo(x.giaTriBase, x.dvt)) + '</span>';
+  if (x.nguon === 'NHAP_TAY') return '<span class="td-nguon tay">Nhập tay</span>';
+  if (x.nguon === 'TINH_TOAN') return '<span class="td-nguon tinh">Tính</span>';
+  return '';
+}
+
+function tdTyLe(v) {
+  if (v === null || v === undefined) return '<span class="nhan-mo">—</span>';
+  return '<div class="td-tl"><div class="vach"><i class="' + (v < 50 ? 'thap' : '') + '" style="width:' + Math.min(100, Math.max(0, v)) +
+    '%"></i></div><span class="num">' + soVN(v, 1) + '%</span></div>';
+}
+
+function _tdThamSo() {
+  var lk = $('tdLoaiKy').value, ky = lk === 'NGAY' ? $('tdNgay').value : lk === 'TUAN' ? $('tdTuan').value : $('tdThang').value;
+  return { vaiTro: S.vaiTro, maDonVi: S.maDonVi, loaiKy: lk, ky: ky || '' };
+}
+
+function _tdHienO() {
+  var lk = $('tdLoaiKy').value;
+  $('khungTdNgay').style.display = lk === 'NGAY' ? '' : 'none';
+  $('khungTdTuan').style.display = lk === 'TUAN' ? '' : 'none';
+  $('khungTdThang').style.display = lk === 'THANG' ? '' : 'none';
+}
+
+function taiBaoCaoTD(thamSo) {
+  _tdHienO();
+  $('kpisTD').innerHTML = skKpis(6);
+  ['tdXuHuong', 'tdTienDo', 'tdSuaTay', 'tdPhieu'].forEach(function (id) { $(id).innerHTML = skKhoi(); });
+  var lan = ++_tdLan;
+  goiCache('baoCaoTD', thamSo || _tdThamSo()).then(function (d) {
+    if (lan !== _tdLan) return;   // bấm đổi kỳ liên tiếp: chỉ nhận kết quả của lần cuối
+    _td = d;
+    // Ô chọn kỳ theo đúng dữ liệu đang có
+    $('tdLoaiKy').value = d.loaiKy;
+    _tdHienO();
+    $('tdNgay').min = d.ngayMin; $('tdNgay').max = d.ngayMax;
+    if (d.loaiKy === 'NGAY') $('tdNgay').value = d.den;
+    $('tdTuan').innerHTML = d.dsTuan.slice().reverse().map(function (t) {
+      return '<option value="' + t.so + '">Tuần ' + t.so + ' (đến ' + tdNgayVN(t.den) + ')' + (t.coSo ? '' : ' · chưa có phiếu') + '</option>';
+    }).join('');
+    $('tdThang').innerHTML = d.dsThang.slice().reverse().map(function (t) {
+      return '<option value="' + t.so + '">Tháng ' + pad2VN(t.so) + '/' + d.nam + (t.coSo ? '' : ' · chưa có phiếu tháng') + '</option>';
+    }).join('');
+    if (d.loaiKy === 'TUAN') $('tdTuan').value = String(d.ky);
+    if (d.loaiKy === 'THANG') $('tdThang').value = String(d.ky);
+    baoLoi('tdLoi', '');
+    veBaoCaoTD();
+  }).catch(function (e) {
+    if (lan !== _tdLan) return;
+    $('kpisTD').innerHTML = '';
+    ['tdXuHuong', 'tdTienDo', 'tdSuaTay', 'tdPhieu'].forEach(function (id) { $(id).innerHTML = ''; });
+    $('bangTD').innerHTML = '';
+    baoLoi('tdLoi', e.message);
+  });
+}
+
+function pad2VN(n) { return ('0' + n).slice(-2); }
+
+function _tdLoc() {
+  var d = _td, pb = $('tdPhong').value, hien = $('tdHien').value, q = $('tdQ').value.trim().toLowerCase();
+  return d.chiTieu.filter(function (x) {
+    if (pb && x.phongBan !== pb) return false;
+    if (hien === 'chinh' && !x.chinh) return false;
+    if (hien === 'coSo' && !x.kyNay && !x.luyKe && !x.keHoach) return false;   // bỏ dòng toàn trống / 0
+    if (q && (x.ten + ' ' + x.ma + ' ' + x.stt).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
+
+function veBaoCaoTD() {
+  var d = _td;
+  if (!d) return;
+  var theoMa = {};
+  d.chiTieu.forEach(function (x) { theoMa[x.ma] = x; });
+  $('tdPhuDe').textContent = d.donVi + ' · ' + d.nhan;
+  var tt = [$('tdLoaiKy').options[$('tdLoaiKy').selectedIndex].text + ': ' + d.nhan.replace(/^(Ngày|Tuần|Tháng) /, '')];
+  if ($('tdPhong').value) tt.push($('tdPhong').value);
+  if ($('tdQ').value.trim()) tt.push('tìm "' + $('tdQ').value.trim() + '"');
+  $('tdTomTatLoc').textContent = tt.join(' · ');
+
+  // Thẻ chỉ tiêu chính
+  $('kpisTD').innerHTML = TD_THE.map(function (t) {
+    var x = theoMa[t[0]];
+    if (!x) return '';
+    var phu = (x.kyNay !== null ? 'Kỳ này <b>' + tdSo(x.kyNay, x.dvt) + '</b>' : 'Kỳ này —') +
+      (x.keHoach ? ' · KH ' + tdSo(x.keHoach, x.dvt) : '');
+    return the_kpi(t[1], tdSo(x.luyKe, x.dvt), x.dvt, '', phu + (x.tyLeKH !== null ? tdTyLe(x.tyLeKH) : ''));
+  }).join('');
+
+  // Xu hướng
+  $('tdChonXuHuong').innerHTML = TD_XU_HUONG.map(function (t) {
+    return '<button type="button" class="chip' + (t[0] === _tdXuHuong ? ' on' : '') + '" data-ma="' + t[0] + '">' + t[1] + '</button>';
+  }).join('');
+  var chuoi = d.xuHuong[_tdXuHuong] || [], xs = [];
+  var thangCuoi = d.ngayMax ? +d.ngayMax.substring(5, 7) : 12;
+  for (var i = 0; i < thangCuoi; i++) xs.push({ thang: 'T' + (i + 1), gt: chuoi[i] || 0 });
+  $('tdXuHuongDv').textContent = '(tấn, năm ' + d.nam + ')';
+  veCotThang($('tdXuHuong'), xs, function (x) { return x.gt; },
+    function (x) { return x.thang + ': ' + soVN(x.gt, 2) + ' tấn'; }, 'var(--leaf)');
+
+  // Tiến độ kế hoạch: chỉ tiêu chính cộng dồn có kế hoạch
+  var tienDo = d.chiTieu.filter(function (x) { return x.chinh && x.cach === 'CONG_DON' && x.keHoach && x.tyLeKH !== null; });
+  veCotNgang($('tdTienDo'), tienDo, function (x) { return (x.stt ? x.stt + ' ' : '') + x.ten; },
+    function (x) { return x.tyLeKH; }, function (v) { return soVN(v, 1) + '%'; },
+    function (x) { return x.tyLeKH < 50 ? 'var(--clay)' : 'var(--leaf)'; });
+
+  // Bảng chỉ tiêu
+  var ds = _tdLoc();
+  var cuoi = d.loaiKy === 'NGAY' ? 'Trong ngày' : d.loaiKy === 'TUAN' ? 'Trong tuần' : 'Trong tháng';
+  var h = '<thead><tr><th>STT</th><th>Chỉ tiêu</th><th>ĐVT</th><th class="so">Kế hoạch ' + d.nam + '</th><th class="so">' + cuoi +
+    '</th><th class="so">Luỹ kế / cuối kỳ</th><th>% KH</th><th class="so">Ước cả năm</th><th class="so">% ước</th><th>Nguồn</th></tr></thead><tbody>';
+  ds.forEach(function (x) {
+    var lk = tdSo(x.luyKe, x.dvt);
+    if (x.cach === 'CUOI_KY' && x.luyKe !== null && x.luyKeDen && x.luyKeDen !== d.den) lk += ' <span class="nhan-mo" style="font-size:11px">(' + tdNgayVN(x.luyKeDen) + ')</span>';
+    h += '<tr class="cap' + Math.min(x.cap, 3) + '"><td class="nhan-mo">' + thoat(x.stt) + '</td>' +
+      '<td class="ten-ct" style="padding-left:' + (10 + (x.cap - 1) * 14) + 'px" title="' + thoat(x.ma + ' · ' + x.tanSuat + (x.cach === 'CUOI_KY' ? ' · lấy số cuối kỳ' : ' · cộng dồn')) + '">' + thoat(x.ten) + '</td>' +
+      '<td class="nhan-mo">' + thoat(x.dvt) + '</td><td class="so">' + tdSo(x.keHoach, x.dvt) + '</td>' +
+      '<td class="so">' + tdSo(x.kyNay, x.dvt) + '</td><td class="so">' + lk + '</td><td>' + tdTyLe(x.tyLeKH) + '</td>' +
+      '<td class="so">' + tdSo(x.uoc, x.dvt) + '</td><td class="so">' + (x.tyLeUoc !== null ? soVN(x.tyLeUoc, 1) + '%' : '—') + '</td>' +
+      '<td>' + tdBadge(x) + '</td></tr>';
+  });
+  if (!ds.length) h += '<tr><td colspan="10" class="rong">Không có chỉ tiêu nào khớp bộ lọc.</td></tr>';
+  $('bangTD').innerHTML = h + '</tbody>';
+  $('tdTomTatBang').textContent = 'Chỉ tiêu ' + d.nhan.toLowerCase() + ' · ' + ds.length + '/' + d.chiTieu.length + ' chỉ tiêu';
+
+  // Sửa tay so với phiếu Base
+  var tenCt = function (ma) { return theoMa[ma] ? theoMa[ma].ten : ma; };
+  $('tdSuaTay').innerHTML = d.suaTay.length ? '<div class="cuon"><table><thead><tr><th>Kỳ</th><th>Chỉ tiêu</th><th class="so">Sổ cái</th><th class="so">Phiếu Base</th><th>Phiếu</th></tr></thead><tbody>' +
+    d.suaTay.map(function (z) {
+      var dvt = theoMa[z.ma] ? theoMa[z.ma].dvt : '';
+      return '<tr><td>' + (z.loai === 'NGAY' ? tdNgayVN(z.ngay) : z.loai === 'THANG' ? 'Tháng ' + z.ngay.substring(5, 7) : 'Tuần đến ' + tdNgayVN(z.ngay)) +
+        '</td><td style="white-space:normal">' + thoat(tenCt(z.ma)) + '</td><td class="so"><b>' + tdSo(z.gt, dvt) + '</b></td><td class="so">' +
+        tdSo(z.gtBase, dvt) + '</td><td class="nhan-mo">#' + thoat(z.phieu) + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="rong">Không có ô nào khác phiếu Base.</div>';
+
+  // Phiếu Base + nguồn
+  var dn = d.demNguon || {};
+  $('tdPhieu').innerHTML =
+    '<div class="kpis" style="margin-bottom:10px">' +
+      the_kpi('Phiếu Base năm ' + d.nam, soVN((d.soPhieu.NGAY || 0) + (d.soPhieu.TUAN || 0) + (d.soPhieu.THANG || 0), 0), 'phiếu',
+              (d.soPhieu.NGAY || 0) + ' ngày · ' + (d.soPhieu.TUAN || 0) + ' tuần · ' + (d.soPhieu.THANG || 0) + ' tháng') +
+      the_kpi('Ô số theo nguồn', soVN((dn.BASE || 0) + (dn.NHAP_TAY || 0) + (dn.SUA_TAY || 0), 0), 'ô',
+              'Base ' + soVN(dn.BASE || 0, 0) + ' · nhập tay ' + soVN(dn.NHAP_TAY || 0, 0) + ' · sửa tay ' + soVN(dn.SUA_TAY || 0, 0)) + '</div>' +
+    (d.phieuKy.length ? '<div class="nhan-mo" style="font-size:12.5px;margin-bottom:4px">Phiếu của kỳ đang xem:</div>' +
+      d.phieuKy.map(function (p) { return '<div style="font-size:13px;margin:2px 0"><b>#' + thoat(p.ma) + '</b> ' + thoat(p.ten) +
+        (p.trangThai ? ' <span class="nhan-mo">— ' + thoat(p.trangThai) + '</span>' : '') + '</div>'; }).join('')
+      : '<div class="nhan-mo" style="font-size:13px">Kỳ này chưa có phiếu Base (số nhập tay hoặc chưa báo cáo).</div>');
+}
+
+function tdDongLoc() { $('tdKhungLoc').classList.remove('mo'); $('tdNenLoc').classList.remove('mo'); }
+
+/** Lùi / tiến 1 kỳ theo loại kỳ đang chọn. */
+function _tdDoiKy(buoc) {
+  var lk = $('tdLoaiKy').value;
+  if (lk === 'NGAY') {
+    var v = $('tdNgay').value || (_td && _td.den);
+    if (!v) return;
+    var dt = new Date(v + 'T00:00:00Z'); dt.setUTCDate(dt.getUTCDate() + buoc);
+    $('tdNgay').value = dt.toISOString().substring(0, 10);
+  } else {
+    var el = lk === 'TUAN' ? $('tdTuan') : $('tdThang');   // danh sách xếp mới -> cũ
+    var i = el.selectedIndex - buoc;
+    if (i < 0 || i >= el.options.length) return;
+    el.selectedIndex = i;
+  }
+  taiBaoCaoTD();
+}
+
+function xuatBaoCaoTD() {
+  if (!_td) return;
+  var d = _td, nhan = ['STT', 'Mã chỉ tiêu', 'Chỉ tiêu', 'Phòng ban', 'Tần suất', 'ĐVT', 'Kế hoạch ' + d.nam,
+    (d.loaiKy === 'NGAY' ? 'Trong ngày' : d.loaiKy === 'TUAN' ? 'Trong tuần' : 'Trong tháng'), 'Luỹ kế / cuối kỳ', '% KH', 'Ước cả năm', '% ước', 'Nguồn', 'Mã phiếu Base'];
+  var dong = _tdLoc().map(function (x) {
+    return [x.stt, x.ma, x.ten, x.phongBan, x.tanSuat, x.dvt, x.keHoach, x.kyNay, x.luyKe, x.tyLeKH, x.uoc, x.tyLeUoc,
+            { BASE: 'Base', NHAP_TAY: 'Nhập tay', SUA_TAY: 'Sửa tay', TINH_TOAN: 'Tính' }[x.nguon] || '', x.maPhieu || ''];
+  });
+  xuatBangExcel('bao_cao_tap_doan_' + d.donVi + '_' + d.loaiKy.toLowerCase() + '_' + String(d.den || d.ky) + '.xlsx', nhan, dong);
+}
+
+function ganSuKienBaoCaoTD() {
+  $('tdNutMoLoc').onclick = function () { $('tdKhungLoc').classList.add('mo'); $('tdNenLoc').classList.add('mo'); };
+  $('tdDongLoc').onclick = $('tdNenLoc').onclick = tdDongLoc;
+  $('tdLoaiKy').onchange = function () { _tdHienO(); taiBaoCaoTD({ vaiTro: S.vaiTro, maDonVi: S.maDonVi, loaiKy: this.value, ky: '' }); };
+  $('tdApDung').onclick = function () { tdDongLoc(); taiBaoCaoTD(); };
+  ['tdNgay', 'tdTuan', 'tdThang'].forEach(function (id) { $(id).onchange = function () { taiBaoCaoTD(); }; });
+  ['tdPhong', 'tdHien'].forEach(function (id) { $(id).onchange = veBaoCaoTD; });
+  $('tdQ').oninput = function () { clearTimeout(this._h); this._h = setTimeout(veBaoCaoTD, 250); };
+  $('tdMocNhanh').onclick = function (ev) {
+    var nut = ev.target.closest('button[data-moc]');
+    if (!nut) return;
+    tdDongLoc();
+    var m = nut.getAttribute('data-moc');
+    if (m === 'moi') taiBaoCaoTD({ vaiTro: S.vaiTro, maDonVi: S.maDonVi, loaiKy: $('tdLoaiKy').value, ky: '' });
+    else _tdDoiKy(m === 'truoc' ? -1 : 1);
+  };
+  $('tdChonXuHuong').onclick = function (ev) {
+    var nut = ev.target.closest('button[data-ma]');
+    if (!nut) return;
+    _tdXuHuong = nut.getAttribute('data-ma');
+    veBaoCaoTD();
+  };
+  $('tdXuat').onclick = xuatBaoCaoTD;
+}
+
+/* =====================================================================
    SỔ GHI CHÉP SẢN LƯỢNG CỦA TỔ TRƯỞNG + SỔ THEO DÕI SẢN LƯỢNG HẰNG NGÀY (KTNN)
    Số liệu: backend soSanLuong (1 tháng, đội/tổ, đã duyệt). Mẫu: mau/so_to_truong.xlsx,
    mau/so_ktnn.xlsx (bản sạch). Sổ tổ trưởng dựng lại từng khối (mỗi tổ/phiên) từ khối
@@ -7573,7 +7889,8 @@ var LOC_THEO_TAB = {
   baoCao: [],           // có ô chọn tháng/đội/tổ riêng, ẩn khung lọc chung
   nangSuatVuon: [],     // bộ lọc riêng (năm, giống, năm mở cạo...)
   phanQuyen: [],        // trang quản trị, không lọc
-  banDoLo: []           // bộ lọc riêng trên bản đồ
+  banDoLo: [],          // bộ lọc riêng trên bản đồ
+  baoCaoTD: []          // bộ lọc riêng (kỳ ngày/tuần/tháng)
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -7588,7 +7905,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -7767,6 +8084,7 @@ function taiTab() {
   else if (S.tab === 'nangSuatVuon') taiNangSuatVuon();
   else if (S.tab === 'phanQuyen') taiPhanQuyen();
   else if (S.tab === 'banDoLo') taiBanDoLo();
+  else if (S.tab === 'baoCaoTD') taiBaoCaoTD();
 }
 
 /**
@@ -7881,7 +8199,7 @@ var NHOM_TAB = [
   { id: 'sanLuong', ten: 'Sản lượng', tabs: ['sanLuong', 'phieu', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
   { id: 'luong', ten: 'Lương', tabs: ['chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
-  { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
+  { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao', 'baoCaoTD'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
@@ -7889,7 +8207,7 @@ var TEN_TAB = {
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
-  phanQuyen: 'Phân quyền', banDoLo: 'Bản đồ lô'
+  phanQuyen: 'Phân quyền', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -8037,6 +8355,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pNangSuatVuon').style.display = (ten === 'nangSuatVuon') ? '' : 'none';
   $('pPhanQuyen').style.display = (ten === 'phanQuyen') ? '' : 'none';
   $('pBanDoLo').style.display = (ten === 'banDoLo') ? '' : 'none';
+  $('pBaoCaoTD').style.display = (ten === 'baoCaoTD') ? '' : 'none';
   if (ten === 'banDoLo' && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
   veTuyChonDoi();
   dungLocTo();
@@ -9273,6 +9592,7 @@ $('nutLuuApi').onclick = function () {
 $('oVaiTro').onchange = capNhatGoiY;
 ganSuKienPhanQuyen();
 ganSuKienBanDo();
+ganSuKienBaoCaoTD();
 
 $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').click(); };
 
