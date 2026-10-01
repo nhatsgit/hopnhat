@@ -1480,10 +1480,19 @@ var PQ_TEN_HE_THONG = { TO_TRUONG: 'Tổ trưởng', DOI_TRUONG: 'Đội trưở
 var _pq = (function () { try { return JSON.parse(docLS('crck2_pq') || 'null'); } catch (e) { return null; } })();
 
 var _pqLuc = 0;   // lần tải bảng quyền gần nhất — quay lại cửa sổ sau 2 phút thì tải lại (Admin vừa đổi quyền)
+/** Bảng quyền: đọc qua Cloud Run (nhanh), lỗi thì Apps Script. Admin lưu xong Apps Script báo Cloud Run xoá bộ đệm. */
+function goiPhanQuyen() {
+  if (!S.apiDoc) return goiQua(S.api, 'phanQuyen', {}, 30000);
+  return goiQua(S.apiDoc, 'phanQuyen', {}, 15000).catch(function (e) {
+    try { console.warn('Cloud Run lỗi khi tải bảng quyền, chuyển sang Apps Script:', e.message); } catch (x) {}
+    return goiQua(S.api, 'phanQuyen', {}, 30000);
+  });
+}
+
 function napPhanQuyen() {
   if (!S.api) return Promise.resolve(_pq);
   _pqLuc = Date.now();
-  return goiQua(S.api, 'phanQuyen', {}, 30000).then(function (d) {
+  return goiPhanQuyen().then(function (d) {
     var cua = function (x) { return JSON.stringify(x && x.cauHinh && x.cauHinh[S.vaiTroHienThi]); };
     var doi = S.vaiTro && !S.laAdmin && cua(_pq) !== cua(d);
     _pq = d; ghiLS('crck2_pq', JSON.stringify(d));
@@ -8361,7 +8370,7 @@ function taiPhanQuyen() {
   if (!$('pqNguoi').value) $('pqNguoi').value = docLS('crck2_ns_nguoi') || '';
   if (PQ && pqCoThayDoi()) { veTrangPhanQuyen(); return; }     // đang sửa dở thì giữ nguyên, không nạp đè
   $('bangPqQuyen').innerHTML = skBang(6);
-  goiQua(S.api, 'phanQuyen', {}, 30000).then(function (d) {
+  goiPhanQuyen().then(function (d) {
     _pq = d; ghiLS('crck2_pq', JSON.stringify(d));
     pqNapTuMayChu(d);
     veTrangPhanQuyen();
