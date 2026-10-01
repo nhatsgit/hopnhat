@@ -224,12 +224,18 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 /* Bộ lọc mặc định THU GỌN thành nút (icon phễu + "Bộ lọc"); bấm thì khung lọc TRƯỢT LÊN TỪ DƯỚI kèm nền mờ
    ở mọi màn (đóng bằng ✕ / nền mờ / Esc / Áp dụng). Màn rộng: nút nhỏ, tấm rộng tối đa 980px giữa màn;
    màn hẹp (@media 900px): nút dính đầu trang, rộng hết, kèm dòng tóm tắt bộ lọc đang dùng. */
-.bo-loc-dau{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;margin-bottom:14px;
-  border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-weight:600;font-size:13.5px;
-  border-radius:99px;cursor:pointer;box-shadow:var(--shadow)}
-.bo-loc-dau:hover,.bo-loc-dau.dang-mo{border-color:var(--leaf);color:var(--leaf)}
+.bo-loc-dau{display:flex;align-items:center;gap:10px;width:100%;padding:0;margin-bottom:14px;
+  border:none;background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.bo-loc-dau .nut-loc-pill{display:inline-flex;align-items:center;gap:7px;flex:none;padding:7px 14px;
+  border:1px solid var(--line-2);background:var(--card);font-weight:600;font-size:13.5px;
+  border-radius:99px;box-shadow:var(--shadow)}
+.bo-loc-dau:hover .nut-loc-pill,.bo-loc-dau.dang-mo .nut-loc-pill{border-color:var(--leaf);color:var(--leaf)}
 .bo-loc-dau .phieu-loc{flex:none}
-.bo-loc-dau .tom-tat,.bo-loc-dau .chevron{display:none}
+/* Bộ lọc đang dùng: mỗi điều kiện 1 chip, nằm bên phải nút (bấm vào cũng mở tấm lọc) */
+.bo-loc-dau .tom-tat{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.loc-chip{padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--card);
+  color:var(--ink-2);font-size:12.5px;white-space:nowrap}
+.bo-loc-dau .chevron{display:none}
 .nen-loc{display:none}
 .nen-loc.mo{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70}
 .bo-loc{position:fixed;left:0;right:0;bottom:0;z-index:75;margin:0 auto;max-width:980px;
@@ -245,11 +251,14 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   color:var(--ink);border-radius:50%;font-size:15px;line-height:1;cursor:pointer}
 @media (max-width:900px){
   /* Luôn hiện khi cuộn trang (position:sticky) — khỏi phải cuộn lên đầu mới mở được bộ lọc. */
-  .bo-loc-dau{display:flex;gap:8px;width:100%;padding:14px 16px;text-align:left;
-    border:1px solid var(--line);border-radius:2px;font-size:14px;margin-bottom:20px;
+  .bo-loc-dau{gap:8px;padding:14px 16px;background:var(--card);box-shadow:var(--shadow);
+    border:1px solid var(--line);border-radius:2px;margin-bottom:20px;
     position:sticky;top:56px;z-index:60}   /* 56px = né hàng nút ☰/☀️ cố định góc trên (14px+36px+6px) */
-  .bo-loc-dau .tom-tat{display:inline;color:var(--ink-2);font-weight:400;font-size:12.5px;
+  .bo-loc-dau .nut-loc-pill{padding:0;border:none;background:none;box-shadow:none;border-radius:0;font-size:14px}
+  .bo-loc-dau .tom-tat{display:block;color:var(--ink-2);font-weight:400;font-size:12.5px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bo-loc-dau .loc-chip{padding:0;border:none;background:none;font-size:12.5px}
+  .bo-loc-dau .loc-chip + .loc-chip::before{content:' · '}
   .bo-loc-dau .chevron{display:inline;margin-left:auto;flex:none;color:var(--ink-3);font-size:11px}
   .bo-loc{max-width:none}
 }
@@ -639,7 +648,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <!-- Bộ lọc: mặc định thu gọn thành nút (icon phễu + "Bộ lọc"); bấm thì tấm lọc trượt lên từ dưới kèm nền mờ
          (mọi màn — xem CSS .bo-loc). -->
     <button class="bo-loc-dau" id="nutThuGonLoc" type="button">
-      <svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span>
+      <span class="nut-loc-pill"><svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span></span>
       <span class="tom-tat" id="tomTatBoLoc"></span>
       <span class="chevron">▾</span>
     </button>
@@ -1177,7 +1186,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
          khung lọc chung: màn rộng luôn hiện, màn hẹp = nút dính đầu trang mở tấm trượt. -->
     <section id="pBaoCaoTD" style="display:none">
       <button class="bo-loc-dau" id="tdNutMoLoc" type="button">
-        <svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span>
+        <span class="nut-loc-pill"><svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span></span>
         <span class="tom-tat" id="tdTomTatLoc"></span>
         <span class="chevron">▾</span>
       </button>
@@ -1270,7 +1279,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <!-- Bộ lọc riêng của bản đồ, cùng khuôn khung lọc chung: màn rộng luôn hiện; màn hẹp = nút dính trên đầu
            (kèm tóm tắt) mở tấm trượt từ dưới lên -->
       <button class="bo-loc-dau" id="bdNutMoLoc" type="button">
-        <svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span>
+        <span class="nut-loc-pill"><svg class="phieu-loc" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7z"/></svg><span>Bộ lọc</span></span>
         <span class="tom-tat" id="bdTomTatLoc"></span>
         <span class="chevron">▾</span>
       </button>
@@ -4681,7 +4690,14 @@ function _bdDungLo() {
 
 function bdDongLoc() { $('bdKhungLoc').classList.remove('mo'); $('bdNenLoc').classList.remove('mo'); $('bdNutMoLoc').classList.remove('dang-mo'); }
 
-/** Tóm tắt bộ lọc trên nút "Bộ lọc" dính đầu trang (màn hẹp). */
+/** Tóm tắt bộ lọc: mỗi phần 1 chip (màn rộng hiện cạnh nút "Bộ lọc"; màn hẹp nối liền dòng trong nút). */
+function ganTomTatLoc(el, phan) {
+  if (!el) return;
+  el.innerHTML = phan.filter(function (x) { return x && String(x).trim(); })
+    .map(function (x) { return '<span class="loc-chip">' + thoat(x) + '</span>'; }).join('');
+}
+
+/** Tóm tắt bộ lọc của trang Bản đồ lô. */
 function _bdTomTatLoc() {
   var o = $('bdMau').options[$('bdMau').selectedIndex];
   var p = [(o ? o.text.replace(/\s*\(.*\)$/, '') : ''), ngayVN($('bdTu').value) + ' – ' + ngayVN($('bdDen').value)];
@@ -4689,7 +4705,7 @@ function _bdTomTatLoc() {
   if ($('bdTo').value) p.push($('bdTo').value);
   if ($('bdLo').value) { var x = _bdTimLo($('bdLo').value); if (x) p.push('lô ' + x.tenLo); }
   if ($('bdQ').value.trim()) p.push('tìm "' + $('bdQ').value.trim() + '"');
-  $('bdTomTatLoc').textContent = p.join(' · ');
+  ganTomTatLoc($('bdTomTatLoc'), p);
 }
 
 function _bdTaoBanDo() {
@@ -5467,7 +5483,7 @@ function veBaoCaoTD() {
   var tt = [$('tdLoaiKy').options[$('tdLoaiKy').selectedIndex].text + ': ' + d.nhan.replace(/^(Ngày|Tuần|Tháng) /, '')];
   if ($('tdPhong').value) tt.push($('tdPhong').value);
   if ($('tdQ').value.trim()) tt.push('tìm "' + $('tdQ').value.trim() + '"');
-  $('tdTomTatLoc').textContent = tt.join(' · ');
+  ganTomTatLoc($('tdTomTatLoc'), tt);
 
   // Thẻ chỉ tiêu chính
   $('kpisTD').innerHTML = TD_THE.map(function (t) {
@@ -9179,7 +9195,15 @@ function veTomTatBoLoc() {
   }
   if ($('fDoi').value) phan.push('Đội ' + $('fDoi').value);
   if ($('fTo').value) phan.push('Tổ ' + $('fTo').value);
-  el.textContent = phan.join(' · ');
+  // Các điều kiện khác đang chọn (chỉ khi ô đó hiện ở tab này)
+  [['khungLocLoaiMu', 'fLoaiMu', ''], ['khungLocPhien', 'fPhien', 'Phiên '], ['khungLocChatLuong', 'fChatLuong', ''],
+   ['khungLocCn', 'fMaCn', ''], ['khungLocKyHieu', 'fKyHieu', 'Ký hiệu ']].forEach(function (x) {
+    var k = $(x[0]), o = $(x[1]);
+    if (!k || !o || !o.value || k.style.display === 'none') return;
+    var t = o.options && o.selectedIndex > -1 ? o.options[o.selectedIndex].text : o.value;
+    phan.push(x[2] + t);
+  });
+  ganTomTatLoc(el, phan);
 }
 
 /**
