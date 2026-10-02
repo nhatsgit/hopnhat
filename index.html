@@ -15,6 +15,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+/* Ngôn ngữ giao diện: mặc định Tiếng Việt. Đã chọn ខ្មែរ thì nạp từ điển ngay khi mở trang (xem dichKm). */
+(function () {
+  try {
+    if (localStorage.getItem('crck2_ngon_ngu') === 'km') {
+      document.documentElement.lang = 'km';
+      document.write('<script src="tu_dien_km.js?v=eab36126"><\/script>');
+    }
+  } catch (e) { /* trình duyệt chặn bộ nhớ: giữ Tiếng Việt */ }
+})();
+</script>
 <!-- Đọc/ghi file Excel (.xlsx) ngay trên trình duyệt — dùng cho Nhập hàng
      loạt và Tải mẫu Excel, không cần gửi file thô lên server. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
@@ -61,8 +73,10 @@
 
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+html[lang="km"] body{line-height:1.65}
+.nut-ngon-ngu{font-family:'Noto Sans Khmer','Archivo',sans-serif}
 body{background:var(--paper);color:var(--ink);
-  font-family:'Archivo',system-ui,-apple-system,sans-serif;
+  font-family:'Archivo','Noto Sans Khmer',system-ui,-apple-system,sans-serif;
   font-size:15px;line-height:1.55;font-variant-numeric:tabular-nums;
   -webkit-font-smoothing:antialiased}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
@@ -577,6 +591,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 <!-- ===================== MÀN HÌNH ĐĂNG NHẬP ===================== -->
 <div class="man-hinh" id="manDangNhap" style="display:none">
   <div class="hop">
+    <div style="display:flex;justify-content:flex-end"><button class="btn nho nut-ngon-ngu" type="button" data-khong-dich></button></div>
     <h1>Hệ thống quản trị hợp nhất</h1>
     <p class="phu">Cao su Chư Sê – Kampong Thom</p>
     <div class="truong">
@@ -625,6 +640,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="ben-duoi">
         <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
         <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
+        <button class="btn nho nut-ngon-ngu" type="button" data-khong-dich></button>
         <button class="btn nho" id="nutTai">Tải lại</button>
         <button class="btn nho" id="nutThoat">Đổi người dùng</button>
       </div>
@@ -11012,6 +11028,113 @@ document.addEventListener('keydown', function (ev) {
     if (ev.target.closest('button[data-tab], button[data-nhom-mot]')) dongBen();
   });
 })();
+
+
+/* =====================================================================
+   NGÔN NGỮ — Tiếng Việt (gốc, mặc định) / ខ្មែរ. Không sửa từng chỗ trong code: khi chọn Khmer, mọi chữ
+   hiện trên trang (kể cả nội dung dựng sau khi tải số liệu, chữ trong biểu đồ SVG, title/placeholder)
+   được dịch lúc hiển thị bằng từ điển tu_dien_km.js:
+     - khớp NGUYÊN câu (bỏ qua hoa/thường, dấu câu đầu/cuối) trước;
+     - câu ghép kèm số ("Tháng 08/2026 · 398 người") thì thay từng cụm có trong từ điển, cụm dài trước;
+     - câu còn hơn 2 chữ Việt chưa dịch được thì giữ nguyên tiếng Việt (tránh câu nửa Việt nửa Khmer).
+   Mã (Đ1-KV1, SL-…), số, tên người không đổi; file Excel xuất ra không đổi. Phần tử có data-khong-dich bỏ qua.
+   Đổi ngôn ngữ = lưu lựa chọn rồi tải lại trang.
+   ===================================================================== */
+var NGON_NGU = docLS('crck2_ngon_ngu') === 'km' ? 'km' : 'vi';
+// Chữ Latin có dấu (Việt): Latin-1/Extended + Latin Extended Additional — KHÔNG dùng khoảng À-ỹ vì nó trùm cả chữ Khmer
+var CHU_VIET = /[À-ɏḀ-ỿ]/;
+var CHU_CAI = '0-9A-Za-z\\u00C0-\\u024F\\u1E00-\\u1EFF';
+var THUOC_TINH_DICH = ['title', 'placeholder', 'aria-label'];
+// Từ đơn dễ sai nghĩa khi thay lẻ trong câu (vd "Công ty" ≠ ngày công) — chỉ dịch khi khớp nguyên câu
+var KHONG_THAY_LE = { 'hàng': 1, 'hiện': 1, 'là': 1, 'có': 1 };
+// Từ Latin viết thường được phép còn lại trong câu đã dịch (đơn vị, tên kỹ thuật)
+var DON_VI_GIU = { kg: 1, ha: 1, g: 1, riel: 1, km: 1, m: 1, xlsx: 1, https: 1 };
+var _dich = null;
+
+function _dungBoDich() {
+  if (_dich || !window.TU_DIEN_KM) return _dich;
+  var map = window.TU_DIEN_KM;
+  var khoa = Object.keys(map).sort(function (a, b) { return b.length - a.length; });
+  var thoatRe = function (x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+  _dich = {
+    map: map,
+    re: new RegExp('(^|[^' + CHU_CAI + '])(' + khoa.map(thoatRe).join('|') + ')(?=[^' + CHU_CAI + ']|$)', 'giu')
+  };
+  return _dich;
+}
+
+/** Dịch 1 chuỗi sang Khmer; trả null nếu không cần / không dịch được (giữ nguyên). */
+function dichKm(t) {
+  if (!t || !CHU_VIET.test(t) || /[ក-៿]/.test(t) || !_dungBoDich()) return null;   // đã có chữ Khmer (dữ liệu song ngữ / đã dịch) thì thôi
+  t = t.normalize('NFC');   // d\u1eef li\u1ec7u t\u1eeb Sheet \u0111\u00f4i khi l\u00e0 ch\u1eef d\u1ea5u t\u00e1ch r\u1eddi (NFD)
+  var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(t), loi = m[2].replace(/\u00a0/g, ' ');
+  var p = /^([\s"'>(·,.?!—\-:+%\[]*)([\s\S]*?)([\s.)·:,;…("'?!—\-\[]*)$/.exec(loi);
+  var nguyen = _dich.map[p[2].replace(/\s+/g, ' ').toLowerCase()];
+  if (nguyen) return m[1] + p[1] + nguyen + p[3] + m[3];
+  var ra = loi.replace(_dich.re, function (x, truoc, cum) {
+    var kk = cum.replace(/\s+/g, ' ').toLowerCase();
+    if (KHONG_THAY_LE[kk]) return x;
+    var k = _dich.map[kk];
+    return k ? truoc + k : x;
+  });
+  if (ra === loi) return null;
+  // Còn chữ Việt chưa dịch (ngoài mã Đ1-KV2…, số, đơn vị, tên riêng viết hoa) thì giữ nguyên câu Việt — tránh câu lai
+  var soi = ra.replace(/[A-ZĐ]{1,4}\d[\w\-.·]*/g, ' ').replace(/\d[\w.,:\/%\-]*/g, ' ');
+  var conTu = soi.match(/[A-Za-zÀ-ɏḀ-ỿ]+/g) || [];
+  for (var i = 0; i < conTu.length; i++) {
+    var w = conTu[i];
+    if (CHU_VIET.test(w) || (/^[a-z]{2,}$/.test(w) && !DON_VI_GIU[w])) return null;
+  }
+  return m[1] + ra + m[3];
+}
+
+function dichNut(n) {
+  if (n.nodeType === 3) {
+    var cha = n.parentNode;
+    if (!cha || /^(SCRIPT|STYLE|TEXTAREA)$/.test(cha.nodeName) || (cha.closest && cha.closest('[data-khong-dich]'))) return;
+    var d = dichKm(n.data);
+    if (d !== null && d !== n.data) n.data = d;
+    return;
+  }
+  if (n.nodeType !== 1 || /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.nodeName) || n.hasAttribute('data-khong-dich')) return;
+  for (var a = 0; a < THUOC_TINH_DICH.length; a++) {
+    var v = n.getAttribute(THUOC_TINH_DICH[a]);
+    if (v) { var dv = dichKm(v); if (dv !== null) n.setAttribute(THUOC_TINH_DICH[a], dv); }
+  }
+  for (var c = n.firstChild; c; c = c.nextSibling) dichNut(c);
+}
+
+/** Bật dịch: dịch cả trang rồi theo dõi mọi thay đổi (nội dung dựng sau). Chữ đã dịch không còn chữ Việt nên không lặp. */
+function batDichKm() {
+  if (NGON_NGU !== 'km' || !_dungBoDich()) return;
+  document.title = dichKm(document.title) || document.title;
+  dichNut(document.body);
+  new MutationObserver(function (ds) {
+    for (var i = 0; i < ds.length; i++) {
+      var r = ds[i];
+      if (r.type === 'childList') { for (var j = 0; j < r.addedNodes.length; j++) dichNut(r.addedNodes[j]); }
+      else if (r.type === 'characterData') dichNut(r.target);
+      else if (r.type === 'attributes' && r.target.nodeType === 1 && !r.target.hasAttribute('data-khong-dich')) {
+        var v = r.target.getAttribute(r.attributeName), dv = v && dichKm(v);
+        if (dv) r.target.setAttribute(r.attributeName, dv);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: THUOC_TINH_DICH });
+}
+
+/** Nút đổi ngôn ngữ (màn đăng nhập + thanh bên): ghi lựa chọn rồi tải lại trang. */
+(function () {
+  var nuts = document.querySelectorAll('.nut-ngon-ngu');
+  for (var i = 0; i < nuts.length; i++) {
+    nuts[i].textContent = NGON_NGU === 'km' ? 'Tiếng Việt' : 'ភាសាខ្មែរ';
+    nuts[i].title = NGON_NGU === 'km' ? 'Chuyển giao diện sang Tiếng Việt' : 'ប្តូរភាសាជាភាសាខ្មែរ (Khmer)';
+    nuts[i].onclick = function () {
+      ghiLS('crck2_ngon_ngu', NGON_NGU === 'km' ? 'vi' : 'km');
+      location.reload();
+    };
+  }
+})();
+batDichKm();
 
 S.thamSoURL = layThamSoURL();
 batDau();
