@@ -154,26 +154,39 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   width:250px;flex:none;background:var(--sb-bg);color:var(--sb-ink);
   padding:20px 16px;display:flex;flex-direction:column;gap:16px;
   position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40}
-.hieu{display:flex;flex-direction:column;line-height:1.2}
-.hieu b{font-weight:600;font-size:16px;letter-spacing:-.01em}
-.hieu span{color:var(--ink-3);font-size:12.5px}
-.thanh-ben .hieu span{color:var(--sb-ink-2)}
+.hieu{display:flex;align-items:center;gap:10px}
+/* Ô vuông chữ cái đầu (logo) bên trái tên hệ thống — kiểu sidebar tham khảo. */
+.hieu-logo{flex:none;width:34px;height:34px;border-radius:8px;background:var(--sb-active-bg);color:var(--sb-active-ink);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.hieu-chu{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.hieu b{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.hieu-chu span{color:var(--ink-3);font-size:12px}
+.thanh-ben .hieu-chu span{color:var(--sb-ink-2)}
 .the-vaitro{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
   background:var(--leaf-soft);color:var(--leaf);border-radius:2px;
   font-size:12.5px;font-weight:600;align-self:flex-start}
 .thanh-ben .the-vaitro{background:rgba(255,255,255,.16);color:var(--sb-ink)}
 
-/* Thông tin tài khoản trong sidebar: xếp dọc, nút full-width thay vì trải hàng ngang. */
-.ben-taikhoan{display:flex;flex-direction:column;gap:8px;padding-bottom:16px;
-  border-bottom:1px solid var(--sb-line)}
-.ben-taikhoan .gat{flex-direction:column}
-.ben-taikhoan .btn.nho{width:100%;text-align:center}
+/* Gạt Tất cả/Chưa/Đã duyệt (tổ/đội trưởng) ngay dưới tên hệ thống. */
+.ben-gat .gat{flex-direction:row;gap:4px}
+.ben-gat .gat .chip{flex:1;min-width:0;padding-left:4px;padding-right:4px;text-align:center;white-space:nowrap;font-size:12px}
 
-/* Tải lại / Đổi người dùng: đẩy hẳn xuống đáy sidebar (margin-top:auto trong cột flex),
-   tách khỏi khối thông tin tài khoản ở trên và nhóm điều hướng ở giữa. */
+/* Đáy sidebar (margin-top:auto trong cột flex): nút tiện ích + thẻ người dùng đang đăng nhập. */
 .ben-duoi{margin-top:auto;display:flex;flex-direction:column;gap:8px;
-  padding-top:16px;border-top:1px solid var(--sb-line)}
+  padding-top:14px;border-top:1px solid var(--sb-line)}
 .ben-duoi .btn.nho{width:100%;text-align:center}
+.ben-nut{display:flex;gap:6px}
+.ben-nut .btn.nho{flex:1;min-width:0}
+.the-nguoi-dung{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.08)}
+.avatar-nd{flex:none;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);color:var(--sb-ink);
+  display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700}
+.nd-chu{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.nd-chu b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thanh-ben .nd-chu .the-vaitro{display:block;background:none;padding:0;border-radius:0;font-size:12px;font-weight:400;
+  color:var(--sb-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nut-thoat-nho{flex:none;width:30px;height:30px;border-radius:8px;border:1px solid var(--sb-line);background:transparent;
+  color:var(--sb-ink-2);display:flex;align-items:center;justify-content:center;padding:0}
+.nut-thoat-nho:hover{background:var(--sb-hover);color:var(--sb-ink)}
 
 /* Nút/chip bên trong sidebar (Tải lại, Đổi người dùng, Đồng bộ..., gạt Tất cả/Chưa/Đã duyệt):
    viền + chữ trắng mờ trên nền xanh, thay vì màu --card/--leaf mặc định (lẫn vào nền). */
@@ -183,27 +196,23 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 .thanh-ben .chip:hover{border-color:rgba(255,255,255,.5);color:var(--sb-ink)}
 .thanh-ben .chip.on{background:var(--sb-active-bg);border-color:var(--sb-active-bg);color:var(--sb-active-ink)}
 
-/* Nhóm tab chính (Tổng quan/Sản lượng/Nhân sự/Lương) — liệt kê dọc trong sidebar, mục đang
-   chọn thành khối bo góc nền trắng như mẫu tham khảo, kèm icon bên trái tên nhóm. */
-.tabs-nhom-doc{display:flex;flex-direction:column;gap:2px}
-.nhom-khoi{display:flex;flex-direction:column;gap:2px}
-.tabs-nhom-doc .tab{width:100%;text-align:left;border-radius:8px;border-bottom:none;
+/* Điều hướng dạng phẳng: nhãn mục chữ hoa nhỏ (= tên nhóm) + các trang của nhóm liệt kê sẵn bên dưới,
+   mỗi trang 1 icon; trang đang xem thành khối bo góc nền trắng; số đếm (huy hiệu) sát phải. */
+.tabs-nhom-doc{display:flex;flex-direction:column;gap:2px;margin:0 -4px;padding:0 4px;
+  flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent}
+.tabs-nhom-doc .tab{flex:none}
+.nhan-muc{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--sb-ink-2);padding:14px 12px 6px}
+.tabs-nhom-doc .tab{width:100%;text-align:left;border-radius:8px;border-bottom:none;padding:9px 12px;font-size:13.5px;
   color:var(--sb-ink-2);display:flex;align-items:center;gap:10px}
+.huy-hieu{flex:none;min-width:20px;padding:1px 6px;border-radius:999px;background:var(--sb-active-bg);
+  color:var(--sb-active-ink);font-size:11px;font-weight:700;text-align:center;line-height:1.5}
+.tabs-nhom-doc .tab.on .huy-hieu{background:var(--sb-bg);color:var(--sb-ink)}
 .tabs-nhom-doc .tab:hover{color:var(--sb-ink);background:var(--sb-hover)}
 .tabs-nhom-doc .tab.on{background:var(--sb-active-bg);color:var(--sb-active-ink);font-weight:600}
 .nhom-icon{display:inline-flex;flex:none}
 .nhom-icon svg{display:block}
-.nhom-ten{flex:1}
-/* Nhóm chứa tab đang xem (nhưng bản thân nhóm không phải trang) — chữ đậm, không tô nền. */
-.tabs-nhom-doc .tab.chua{color:var(--sb-ink);font-weight:600}
-.nhom-mui{flex:none;font-size:10px;opacity:.7;transition:transform .15s}
-.nhom-khoi.dong .nhom-mui{transform:rotate(-90deg)}
-
-/* Tab con xổ ra ngay dưới nhóm đang chọn, thụt vào bằng viền dọc mờ bên trái. */
-.nhom-con{display:flex;flex-direction:column;gap:2px;margin:2px 0 6px;
-  padding-left:14px;border-left:2px solid var(--sb-line)}
-.nhom-con .tab{font-size:13px;padding:8px 12px;font-weight:400}
-.nhom-con .tab.on{font-weight:600}
+.nhom-ten{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 
 .tab{padding:11px 16px;border:none;background:none;color:var(--ink-3);
   border-bottom:2px solid transparent;font-weight:500;white-space:nowrap}
@@ -634,23 +643,32 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
          nội dung bên phải (#tabsCon), không lồng bên trong sidebar. -->
     <aside class="thanh-ben" id="thanhBen">
       <div class="hieu">
-        <b>Hệ thống quản trị hợp nhất</b>
-        <span id="dongDonVi">—</span>
+        <div class="hieu-logo" aria-hidden="true" data-khong-dich>H</div>
+        <div class="hieu-chu">
+          <b>Hệ thống quản trị hợp nhất</b>
+          <span id="dongDonVi">—</span>
+        </div>
       </div>
-      <div class="ben-taikhoan">
-        <span class="the-vaitro" id="theVaiTro">—</span>
-        <!-- Chỉ tổ trưởng/đội trưởng thấy — ban lãnh đạo khoá cứng xem đã duyệt,
-             không cần gạt gì (xem BigQuery, không có khái niệm chờ duyệt). -->
-        <div class="gat" id="gatTrangThai" style="display:none"></div>
-      </div>
+      <!-- Chỉ tổ trưởng/đội trưởng thấy — ban lãnh đạo khoá cứng xem đã duyệt,
+           không cần gạt gì (xem BigQuery, không có khái niệm chờ duyệt). -->
+      <div class="ben-gat"><div class="gat" id="gatTrangThai" style="display:none"></div></div>
       <nav class="tabs-nhom-doc" id="tabsNhom"></nav>
       <!-- margin-top:auto (xem CSS .ben-duoi) đẩy khối này xuống sát đáy sidebar. -->
       <div class="ben-duoi">
         <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
         <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
-        <button class="btn nho nut-ngon-ngu" type="button" data-khong-dich></button>
-        <button class="btn nho" id="nutTai">Tải lại</button>
-        <button class="btn nho" id="nutThoat">Đổi người dùng</button>
+        <div class="ben-nut">
+          <button class="btn nho nut-ngon-ngu" type="button" data-khong-dich></button>
+          <button class="btn nho" id="nutTai">Tải lại</button>
+        </div>
+        <div class="the-nguoi-dung">
+          <span class="avatar-nd" id="avatarND" data-khong-dich>—</span>
+          <div class="nd-chu">
+            <b id="tenND">—</b>
+            <span class="the-vaitro" id="theVaiTro">—</span>
+          </div>
+          <button class="nut-thoat-nho" id="nutThoat" type="button" title="Đổi người dùng" aria-label="Đổi người dùng"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5H4.5v13H8"/><path d="M12 6.5 15.5 10 12 13.5M15.5 10H8"/></svg></button>
+        </div>
       </div>
     </aside>
 
@@ -3408,6 +3426,8 @@ function taiPhieu() {
   goiCache('phieu', layBoLoc()).then(function (d) {
     var soChoDuyet = 0;
     for (var q = 0; q < d.rows.length; q++) if (d.rows[q].trangThai === 'CHO_DUYET') soChoDuyet++;
+    S.huyHieu = S.huyHieu || {};
+    if (S.huyHieu.phieu !== (chiCoDaDuyet() ? 0 : soChoDuyet)) { S.huyHieu.phieu = chiCoDaDuyet() ? 0 : soChoDuyet; veNhomTab(); }
     $('kpisPhieu').innerHTML =
       the_kpi('Tổng phiếu', soVN(d.tong, 0), 'phiếu', 'Trong khoảng đang lọc') +
       the_kpi('Tổng khối lượng', soVN(d.tongKg, 2), 'kg', 'Cộng mọi phiếu') +
@@ -9329,6 +9349,27 @@ var ICON_NHOM = {
   baoCao: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H5.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M11.5 2.5V7H16"/><path d="M10 9.5v5M7.8 12.3 10 14.5l2.2-2.2"/></svg>'
 };
 
+/** Icon từng trang (sidebar phẳng) — cùng nét với ICON_NHOM; trang nào thiếu thì lấy icon nhóm. */
+function _svgNet(d) {
+  return '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+}
+var ICON_TAB = {
+  baoCaoTD: ICON_NHOM.tongQuan, banDoLo: ICON_NHOM.banDo, sanLuong: ICON_NHOM.sanLuong, nhanSu: ICON_NHOM.nhanSu,
+  luong: ICON_NHOM.luong, baoCao: ICON_NHOM.baoCao, phanQuyen: ICON_NHOM.quanTri,
+  tongQuan: _svgNet('<path d="M3.5 14a6.5 6.5 0 1 1 13 0"/><path d="M10 14l3-4"/>'),
+  tqNhanSu: _svgNet('<path d="M3.5 14a6.5 6.5 0 1 1 13 0"/><path d="M10 14l3-4"/>'),
+  phieu: _svgNet('<path d="M5 2.5h10v15l-2-1.3-1.5 1.3-1.5-1.3-1.5 1.3L7 16.2l-2 1.3z"/><path d="M7.5 7h5M7.5 10h5"/>'),
+  tramCan: _svgNet('<path d="M10 3v14M6 17h8M4 6h12"/><path d="M4 6l-2 5a2.5 2.5 0 0 0 4 0zM16 6l-2 5a2.5 2.5 0 0 0 4 0z"/>'),
+  slTheoCn: _svgNet('<circle cx="7" cy="6" r="2.5"/><path d="M2.5 16.5c0-2.8 2-4.5 4.5-4.5s4.5 1.7 4.5 4.5"/><path d="M14 16.5v-4M17 16.5V8"/>'),
+  giaoKhoan: _svgNet('<rect x="4.5" y="3.5" width="11" height="14" rx="1.5"/><path d="M7.5 3.5V2.5h5v1M7.5 8h5M7.5 11h5M7.5 14h3"/>'),
+  nangSuatVuon: _svgNet('<path d="M10 17.5V9"/><path d="M10 11c-4 0-6-2.5-6-6 3.5 0 6 2 6 6zM10 9c0-3.5 2.5-6 6-6 0 3.5-2.5 6-6 6z"/>'),
+  chamCong: _svgNet('<rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7.5 12.5l1.8 1.8 3.4-3.6"/>'),
+  xepHang: _svgNet('<path d="M2.5 17.5h15M4 17.5v-5h4v5M8 17.5V8h4v9.5M12 17.5v-7h4v7"/>'),
+  xepLoai: _svgNet('<path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/>'),
+  khoMieng: _svgNet('<path d="M10 2.8c3 3.6 5 6.3 5 8.8a5 5 0 0 1-10 0c0-2.5 2-5.2 5-8.8z"/>'),
+  taiKhoan: _svgNet('<circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="8.3" r="2.5"/><path d="M5.3 15.8c1-1.8 2.7-2.8 4.7-2.8s3.7 1 4.7 2.8"/>')
+};
+
 function timNhom(id) {
   for (var i = 0; i < NHOM_TAB.length; i++) if (NHOM_TAB[i].id === id) return NHOM_TAB[i];
   return null;
@@ -9341,48 +9382,40 @@ function timNhomCuaTab(tab) {
 }
 
 /**
- * Nhóm dựng dạng cây: mỗi nhóm 1 nút (kèm icon), nhóm đang mở thì xổ thêm danh sách tab con
- * thụt vào ngay bên dưới nó (giống kiểu sidebar phân cấp tham khảo) — chỉ xổ đúng 1 nhóm tại
- * 1 thời điểm (nhóm đang chọn), không phải accordion nhiều nhóm cùng mở.
+ * Sidebar phẳng (kiểu mẫu tham khảo): mỗi nhóm nhiều trang = 1 nhãn mục chữ hoa nhỏ + các trang liệt kê sẵn
+ * bên dưới (không xổ/thu). Các nhóm chỉ 1 trang ở đầu danh sách (Tổng quan, Bản đồ) hiện thẳng thành mục
+ * không nhãn; từ nhóm có nhãn đầu tiên trở đi nhóm nào cũng có nhãn để khỏi lẫn vào mục phía trên.
+ * 1 trang thuộc 2 nhóm (vd Sản lượng theo CN) chỉ sáng ở nhóm đang chọn. S.huyHieu[tab] = số đếm sát phải.
  */
 function veNhomTab() {
-  if (S.nhomXo === undefined) S.nhomXo = S.nhom;
-  var h = '';
+  var h = '', daCoNhan = false, hh = S.huyHieu || {};
   for (var i = 0; i < NHOM_TAB.length; i++) {
     var nh = NHOM_TAB[i];
     var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
     if (!dsCon.length) continue;
-    var coCon = dsCon.length > 1;
-    var xo = coCon && S.nhomXo === nh.id;
-    var lop = !coCon ? (S.nhom === nh.id ? ' on' : '') : (S.nhom === nh.id ? ' chua' : '');
-    h += '<div class="nhom-khoi' + (coCon && !xo ? ' dong' : '') + '">';
-    h += '<button class="tab' + lop + '" data-nhom="' + nh.id + '"' + (coCon ? ' aria-expanded="' + xo + '"' : ' data-nhom-mot="1"') + '>' +
-         '<span class="nhom-icon">' + (ICON_NHOM[nh.id] || '') + '</span>' +
-         '<span class="nhom-ten">' + nh.ten + '</span>' +
-         (coCon ? '<span class="nhom-mui">▾</span>' : '') + '</button>';
-    if (xo) {
-      h += '<div class="nhom-con">';
-      for (var k = 0; k < dsCon.length; k++) {
-        h += '<button class="tab' + (S.tab === dsCon[k] ? ' on' : '') +
-             '" data-tab="' + dsCon[k] + '" data-nhom-cha="' + nh.id + '">' + TEN_TAB[dsCon[k]] + '</button>';
-      }
-      h += '</div>';
+    if (dsCon.length === 1 && !daCoNhan) {
+      h += '<button class="tab' + (S.nhom === nh.id ? ' on' : '') + '" data-tab="' + dsCon[0] + '" data-nhom-cha="' + nh.id + '">' +
+           '<span class="nhom-icon">' + (ICON_NHOM[nh.id] || '') + '</span><span class="nhom-ten">' + nh.ten + '</span>' +
+           (hh[dsCon[0]] ? '<span class="huy-hieu">' + hh[dsCon[0]] + '</span>' : '') + '</button>';
+      continue;
     }
-    h += '</div>';
+    daCoNhan = true;
+    h += '<div class="nhan-muc">' + nh.ten + '</div>';
+    for (var k = 0; k < dsCon.length; k++) {
+      var t = dsCon[k];
+      h += '<button class="tab' + (S.tab === t && S.nhom === nh.id ? ' on' : '') + '" data-tab="' + t + '" data-nhom-cha="' + nh.id + '">' +
+           '<span class="nhom-icon">' + (ICON_TAB[t] || ICON_NHOM[nh.id] || '') + '</span><span class="nhom-ten">' + TEN_TAB[t] + '</span>' +
+           (hh[t] ? '<span class="huy-hieu">' + hh[t] + '</span>' : '') + '</button>';
+    }
   }
   $('tabsNhom').innerHTML = h;
 
-  var nutNhom = $('tabsNhom').querySelectorAll('button[data-nhom]');
-  for (var j = 0; j < nutNhom.length; j++) {
-    nutNhom[j].onclick = function () { chuyenNhom(this.getAttribute('data-nhom')); };
-  }
   var nutCon = $('tabsNhom').querySelectorAll('button[data-tab]');
   for (var m = 0; m < nutCon.length; m++) {
-    // Giữ nguyên đúng nhóm cha đang xổ — 1 tab con có thể thuộc nhiều nhóm (vd Chấm công),
+    // Giữ nguyên đúng nhóm cha của mục được bấm — 1 trang có thể thuộc nhiều nhóm (vd Sản lượng theo CN),
     // không để chuyenTab tự suy ra lại nhóm khác (xem timNhomCuaTab).
     nutCon[m].onclick = function () {
       S.trang = 1;
-      S.nhomXo = this.getAttribute('data-nhom-cha');
       chuyenTab(this.getAttribute('data-tab'), this.getAttribute('data-nhom-cha'));
     };
   }
@@ -9417,12 +9450,7 @@ function chuyenNhom(id) {
   var nh = timNhom(id);
   if (!nh) return;
   var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
-  // Nhóm đang xem: bấm chỉ đóng/mở danh sách tab con. Nhóm khác: xổ ra và mở luôn trang đầu (Tổng quan của nhóm).
-  if (dsCon.length > 1 && S.nhom === id) {
-    S.nhomXo = S.nhomXo === id ? '' : id;
-    veNhomTab();
-    return;
-  }
+  // Mở trang đầu của nhóm (Tổng quan của nhóm)
   S.trang = 1;
   S.nhomXo = id;
   chuyenTab(dsCon[0], nh.id);
@@ -9711,7 +9739,7 @@ function batDau() {
   var pg = null;
   try { pg = JSON.parse(docLS('crck2_phien_dn') || 'null'); } catch (e) { pg = null; }
   if (pg && pg.phien && pg.han > Date.now()) {
-    S.phienDN = pg.phien; S.emailDN = pg.email || '';
+    S.phienDN = pg.phien; S.emailDN = pg.email || ''; S.hoTenDN = pg.hoTen || '';
     $('oVaiTro').value = pg.vaiTroHien;
     $('oMaDonVi').value = pg.maDonVi;
     capNhatGoiY();
@@ -10075,7 +10103,15 @@ function vaoApp(d, vtChon) {
 
   // Tên công ty ở CRCK có kèm "(Bean Heack)" (dữ liệu meta backend) — không cần hiện ở đây.
   $('dongDonVi').textContent = d.ten.replace(/\s*\(bean heack\)\s*/i, '');
-  $('theVaiTro').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + d.maDonVi + (S.emailDN ? ' · ' + S.emailDN : '');
+  var tenHien = S.hoTenDN || tenVaiTro(S.vaiTroHienThi);
+  var phuND = (S.hoTenDN ? tenVaiTro(S.vaiTroHienThi) + ' · ' : '') + d.maDonVi + (S.emailDN ? ' · ' + S.emailDN : '');
+  $('tenND').textContent = tenHien;
+  $('theVaiTro').textContent = phuND;
+  $('theVaiTro').title = phuND;
+  // Chữ viết tắt trên ô tròn: chữ đầu 2 từ đầu (vai trò) hoặc họ + tên (họ tên Google)
+  var tuND = tenHien.trim().split(/\s+/);
+  $('avatarND').textContent = ((tuND[0] || '').charAt(0) + (tuND.length > 1 ? tuND[S.hoTenDN ? tuND.length - 1 : 1].charAt(0) : '')).toUpperCase() || '—';
+  S.huyHieu = {};
 
   // Toàn công ty có tới 33 tổ — thêm ô lọc theo đội cho đỡ rối
   var dsDoi = [];
@@ -10834,7 +10870,7 @@ $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').cl
 $('nutVao').onclick = function () {
   baoLoi('loiDangNhap', '');
   // Bấm đăng nhập cũ bằng tay -> bỏ phiên Google (khôi phục phiên Google lúc mở trang thì giữ)
-  if (!S._khoiPhucGoogle) { S.phienDN = ''; S.emailDN = ''; xoaLS('crck2_phien_dn'); }
+  if (!S._khoiPhucGoogle) { S.phienDN = ''; S.emailDN = ''; S.hoTenDN = ''; xoaLS('crck2_phien_dn'); }
   S._khoiPhucGoogle = false;
   var vtChon = $('oVaiTro').value;
   var vt = vaiTroThuc(vtChon);
@@ -10886,7 +10922,7 @@ $('nutVao').onclick = function () {
 
 $('nutThoat').onclick = function () {
   S.vaiTro = ''; S.maDonVi = ''; S.vaiTroHienThi = '';
-  S.phienDN = ''; S.emailDN = ''; xoaLS('crck2_phien_dn');
+  S.phienDN = ''; S.emailDN = ''; S.hoTenDN = ''; xoaLS('crck2_phien_dn');
   try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) { /* bỏ qua */ }
   xoaLS('crck2_dangnhap');
   xoaLS('crck2_dangxem');
@@ -11252,7 +11288,7 @@ function xuLyGoogle(resp) {
   Promise.all([goiQua(S.api, 'dangNhapGoogle', { credential: resp.credential }, 30000), _pq ? Promise.resolve(_pq) : napPhanQuyen()])
     .then(function (kq) {
       var r = kq[0], d = r.dangNhap;
-      S.phienDN = r.phien; S.emailDN = r.email;
+      S.phienDN = r.phien; S.emailDN = r.email; S.hoTenDN = r.hoTen || '';
       ghiLS('crck2_phien_dn', JSON.stringify({ phien: r.phien, han: r.han, email: r.email, hoTen: r.hoTen,
                                                vaiTroHien: r.vaiTroHien, maDonVi: d.maDonVi }));
       ghiLS('crck2_dn_offline', JSON.stringify({ vt: r.vaiTroHien, ma: d.maDonVi, d: d, luc: Date.now() }));
@@ -11267,7 +11303,7 @@ function xuLyGoogle(resp) {
 /** Phiên hết hạn / bị từ chối: bỏ phiên, về màn đăng nhập kèm lời nhắn. */
 function hetPhienGoogle(thongBao) {
   if (!S.phienDN && !S.vaiTro) return;
-  S.phienDN = ''; S.emailDN = ''; xoaLS('crck2_phien_dn');
+  S.phienDN = ''; S.emailDN = ''; S.hoTenDN = ''; xoaLS('crck2_phien_dn');
   if (S.vaiTro) $('nutThoat').click();
   baoLoi('loiGoogle', thongBao);
   baoLoi('loiDangNhap', thongBao);
