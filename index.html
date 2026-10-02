@@ -821,11 +821,11 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="kpis" id="kpisLuongTQ"></div>
       <div class="luoi-2 deu">
         <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Tổng thu nhập theo tháng <span class="nhan-mo" style="text-transform:none;font-weight:400">(đã duyệt)</span></h3>
+          <h3 class="tieude-muc">Tổng thu nhập theo tháng <span class="nhan-mo" style="text-transform:none;font-weight:400">(riel, đã duyệt)</span></h3>
           <div id="bdLuongThangTQ"></div>
         </div>
         <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Thu nhập bình quân/người theo tháng</h3>
+          <h3 class="tieude-muc">Thu nhập bình quân/người theo tháng <span class="nhan-mo" style="text-transform:none;font-weight:400">(riel)</span></h3>
           <div id="bdLuongBqTQ"></div>
         </div>
       </div>
@@ -3122,18 +3122,19 @@ function taiTqLuong() {
       return ' · <span class="' + (pt >= 0 ? 'tang' : 'giam') + '">' + (pt >= 0 ? '+' : '') + soVN(pt, 1) + '%</span> so tháng ' + kyVN(t.ky);
     };
     $('kpisLuongTQ').innerHTML =
-      the_kpi('Tổng thu nhập', soVN(m.tongThuNhap, 0), 'đ', 'Tháng ' + kyVN(m.ky) + soVoiTruoc(m.tongThuNhap, t && t.tongThuNhap)) +
-      the_kpi('Thực nhận', soVN(m.tongThucNhan, 0), 'đ', 'Sau bảo hiểm và thuế') +
-      the_kpi('Bình quân', soVN(bq(m), 0), 'đ/người', soVN(m.soNguoi, 0) + ' người' + soVoiTruoc(bq(m), t && bq(t))) +
-      the_kpi('Bảo hiểm', soVN(m.tongBh, 0), 'đ', 'Thuế TNCN ' + soVN(m.tongThue, 0) + ' đ');
+      // Tiền lương tính bằng riel (như tab Lương): số tổng hiện triệu riel, bình quân riel/người
+      the_kpi('Tổng thu nhập', soVN(m.tongThuNhap / 1e6, 2), 'triệu riel', '', 'Tháng ' + kyVN(m.ky) + soVoiTruoc(m.tongThuNhap, t && t.tongThuNhap)) +
+      the_kpi('Thực nhận', soVN(m.tongThucNhan / 1e6, 2), 'triệu riel', 'Sau bảo hiểm và thuế') +
+      the_kpi('Bình quân', soVN(bq(m), 0), 'riel/người', '', soVN(m.soNguoi, 0) + ' người' + soVoiTruoc(bq(m), t && bq(t))) +
+      the_kpi('Bảo hiểm', soVN(m.tongBh / 1e6, 2), 'triệu riel', 'Thuế TNCN ' + soVN(m.tongThue, 0) + ' riel');
     veCotThang($('bdLuongThangTQ'), ds, function (x) { return x.tongThuNhap; },
-      function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(x.tongThuNhap, 0) + ' đ · ' + soVN(x.soNguoi, 0) + ' người'; }, 'var(--leaf)');
+      function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(x.tongThuNhap / 1e6, 2) + ' triệu riel · ' + soVN(x.soNguoi, 0) + ' người'; }, 'var(--leaf)');
     veCotThang($('bdLuongBqTQ'), ds, bq,
-      function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(bq(x), 0) + ' đ/người'; }, 'var(--sky)');
+      function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(bq(x), 0) + ' riel/người'; }, 'var(--sky)');
     // Bảng theo đội của tháng mới nhất
     $('tieuDeLuongDoiTQ').textContent = 'Theo đội — tháng ' + kyVN(m.ky);
-    var h = '<thead><tr><th>Đội</th><th class="p">Số người</th><th class="p">Tổng thu nhập (đ)</th><th class="p">Thực nhận (đ)</th>' +
-            '<th class="p">Bình quân (đ/người)</th><th class="p">Tỷ trọng</th></tr></thead><tbody>';
+    var h = '<thead><tr><th>Đội</th><th class="p">Số người</th><th class="p">Tổng thu nhập (riel)</th><th class="p">Thực nhận (riel)</th>' +
+            '<th class="p">Bình quân (riel/người)</th><th class="p">Tỷ trọng</th></tr></thead><tbody>';
     (m.theoDoi || []).forEach(function (x) {
       h += '<tr><td>' + thoat(x.doi) + '</td><td class="p num">' + soVN(x.soNguoi, 0) + '</td><td class="p num">' + soVN(x.tongThuNhap, 0) +
            '</td><td class="p num">' + soVN(x.tongThucNhan, 0) + '</td><td class="p num">' + soVN(x.soNguoi ? x.tongThuNhap / x.soNguoi : 0, 0) +
