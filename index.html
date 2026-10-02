@@ -3048,7 +3048,7 @@ function taiTqNhanSu() {
   var blTQ = layBoLoc();
   var xemLuong = coQuyen('luong', 'XEM');
   $('khoiLuongTQ').style.display = xemLuong ? '' : 'none';
-  if (xemLuong) taiTqLuong();
+  if (xemLuong) taiTqLuong(blTQ);
   $('bdChuyenCanDoi').innerHTML = skKhoi(); $('bdKyHieuTQ').innerHTML = skKhoi();
   ['kpisCCTQ', 'kpisNhanSuTH'].forEach(function (id) { $(id).innerHTML = skKpis(4); });
   var theoDoi = S.toanCongTy && !blTQ.doi;
@@ -3103,14 +3103,19 @@ function taiTqNhanSu() {
   ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
 }
 
-/** Khối quỹ lương trong Tổng quan nhân sự: số đã duyệt 6 tháng gần nhất có chấm công, theo phạm vi tài khoản (không theo bộ lọc). */
+/**
+ * Khối quỹ lương trong Tổng quan nhân sự: số đã duyệt 6 tháng gần nhất có chấm công, theo bộ lọc Đội / Tổ
+ * (không theo khoảng ngày — lương tính trọn tháng). Đã chọn đội/tổ thì bảng chi tiết chia theo tổ.
+ */
 var _tqLuongLan = 0;
-function taiTqLuong() {
+function taiTqLuong(bl) {
+  bl = bl || {};
   var lan = ++_tqLuongLan;
   $('kpisLuongTQ').innerHTML = skKpis(4);
   $('bdLuongThangTQ').innerHTML = skKhoi(); $('bdLuongBqTQ').innerHTML = skKhoi(); $('bangLuongDoiTQ').innerHTML = skBang(3);
-  $('phuNhomLuongTQ').textContent = (S.toanCongTy ? 'Toàn công ty' : S.maDonVi) + ' · 6 tháng gần nhất có chấm công';
-  goiCache('chiPhiLuongTongHop', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, soKy: 6 }).then(function (d) {
+  var pham = bl.to ? 'Tổ ' + bl.to : bl.doi ? 'Đội ' + bl.doi : (S.toanCongTy ? 'Toàn công ty' : S.maDonVi);
+  $('phuNhomLuongTQ').textContent = pham + ' · 6 tháng gần nhất có chấm công (theo đội/tổ đang lọc, không theo khoảng ngày)';
+  goiCache('chiPhiLuongTongHop', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, soKy: 6, doi: bl.doi || '', to: bl.to || '' }).then(function (d) {
     if (lan !== _tqLuongLan) return;
     // Bỏ tháng chưa có thu nhập (mới chấm công thử / chưa duyệt sản lượng)
     var ds = (d.theoThang || []).filter(function (x) { return x.tongThuNhap > 0; });
@@ -3138,8 +3143,8 @@ function taiTqLuong() {
     veCotThang($('bdLuongBqTQ'), ds, bq,
       function (x) { return 'Tháng ' + kyVN(x.ky) + ': ' + soVN(bq(x), 0) + ' riel/người'; }, 'var(--sky)');
     // Bảng theo đội của tháng mới nhất
-    $('tieuDeLuongDoiTQ').textContent = 'Theo đội — tháng ' + kyVN(m.ky);
-    var h = '<thead><tr><th>Đội</th><th class="p">Số người</th><th class="p">Tổng thu nhập (riel)</th><th class="p">Thực nhận (riel)</th>' +
+    $('tieuDeLuongDoiTQ').textContent = (d.theoTo ? 'Theo tổ' : 'Theo đội') + ' — tháng ' + kyVN(m.ky);
+    var h = '<thead><tr><th>' + (d.theoTo ? 'Tổ' : 'Đội') + '</th><th class="p">Số người</th><th class="p">Tổng thu nhập (riel)</th><th class="p">Thực nhận (riel)</th>' +
             '<th class="p">Bình quân (riel/người)</th><th class="p">Tỷ trọng</th></tr></thead><tbody>';
     (m.theoDoi || []).forEach(function (x) {
       h += '<tr><td>' + thoat(x.doi) + '</td><td class="p num">' + soVN(x.soNguoi, 0) + '</td><td class="p num">' + soVN(x.tongThuNhap, 0) +
