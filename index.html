@@ -813,10 +813,9 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div id="bdKyHieuTQ"></div>
         </div>
       </div>
-    </section>
 
-    <!-- Tab: Tổng quan nhóm Lương — quỹ lương các tháng đã có chấm công (chiPhiLuongTongHop, số đã duyệt) -->
-    <section id="pTqLuong" style="display:none">
+      <!-- Quỹ lương (chiPhiLuongTongHop, số đã duyệt) — chỉ hiện khi có quyền Xem "Bảng lương" -->
+      <div id="khoiLuongTQ">
       <h2 class="nhom-tq">Quỹ lương <small id="phuNhomLuongTQ"></small></h2>
       <div class="kpis" id="kpisLuongTQ"></div>
       <div class="luoi-2 deu">
@@ -832,6 +831,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="the" style="margin-top:20px">
         <h3 class="tieude-muc" style="padding:16px 16px 0" id="tieuDeLuongDoiTQ">Theo đội</h3>
         <div class="cuon"><table id="bangLuongDoiTQ"></table></div>
+      </div>
       </div>
     </section>
 
@@ -3040,9 +3040,15 @@ function tcDocFile(files) {
   }).catch(function (e) { baoLoi('tcLoi', e.message); });
 }
 
-/** Tổng quan nhóm Nhân sự: nhân sự hiện tại + chấm công & chuyên cần trong kỳ đang lọc (tách từ trang tổng quan cũ). */
+/**
+ * Tổng quan nhóm Nhân sự (đã gộp nhóm Lương): nhân sự hiện tại + chấm công & chuyên cần trong kỳ đang lọc
+ * + quỹ lương 6 tháng (chỉ khi được Xem "Bảng lương").
+ */
 function taiTqNhanSu() {
   var blTQ = layBoLoc();
+  var xemLuong = coQuyen('luong', 'XEM');
+  $('khoiLuongTQ').style.display = xemLuong ? '' : 'none';
+  if (xemLuong) taiTqLuong();
   $('bdChuyenCanDoi').innerHTML = skKhoi(); $('bdKyHieuTQ').innerHTML = skKhoi();
   ['kpisCCTQ', 'kpisNhanSuTH'].forEach(function (id) { $(id).innerHTML = skKpis(4); });
   var theoDoi = S.toanCongTy && !blTQ.doi;
@@ -3097,7 +3103,7 @@ function taiTqNhanSu() {
   ].reduce(function (chuoi, buoc) { return chuoi.then(buoc); }, Promise.resolve());
 }
 
-/** Tổng quan nhóm Lương: quỹ lương (số đã duyệt) 6 tháng gần nhất có chấm công, theo phạm vi tài khoản. */
+/** Khối quỹ lương trong Tổng quan nhân sự: số đã duyệt 6 tháng gần nhất có chấm công, theo phạm vi tài khoản (không theo bộ lọc). */
 var _tqLuongLan = 0;
 function taiTqLuong() {
   var lan = ++_tqLuongLan;
@@ -8871,7 +8877,6 @@ function taiMauExcel(loai) {
 var LOC_THEO_TAB = {
   tongQuan: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
   tqNhanSu: ['doi', 'to'],
-  tqLuong: [],          // quỹ lương theo phạm vi tài khoản, không lọc
   sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
   phieu:    ['doi', 'to'],
   tramCan:  ['doi', 'to', 'loaiMu'],   // trống khoảng ngày = tháng có phiếu cân mới nhất
@@ -8903,7 +8908,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD' || S.tab === 'tqLuong';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -9068,7 +9073,6 @@ function taiTab() {
   veTomTatBoLoc();
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'tqNhanSu') taiTqNhanSu();
-  else if (S.tab === 'tqLuong') taiTqLuong();
   else if (S.tab === 'tramCan') taiTramCan();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
@@ -9207,13 +9211,13 @@ var NHOM_TAB = [
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['baoCaoTD'] },
   { id: 'banDo', ten: 'Bản đồ', tabs: ['banDoLo'] },
   { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'phieu', 'tramCan', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
-  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai'] },
-  { id: 'luong', ten: 'Lương', tabs: ['tqLuong', 'chamCong', 'slTheoCn', 'khoMieng', 'xepLoai', 'luong'] },
+  // Nhân sự = nhân sự + chấm công + lương (đã gộp nhóm Lương cũ)
+  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
-  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', tqLuong: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm', tramCan: 'Trạm cân',
+  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm', tramCan: 'Trạm cân',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
@@ -9353,7 +9357,6 @@ function chuyenTab(ten, nhomMoi) {
   veTabCon();
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
   $('pTqNhanSu').style.display = (ten === 'tqNhanSu') ? '' : 'none';
-  $('pTqLuong').style.display = (ten === 'tqLuong') ? '' : 'none';
   $('pTramCan').style.display = (ten === 'tramCan') ? '' : 'none';
   $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
   $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
