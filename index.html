@@ -22,7 +22,7 @@
   try {
     if (localStorage.getItem('crck2_ngon_ngu') === 'km') {
       document.documentElement.lang = 'km';
-      document.write('<script src="tu_dien_km.js?v=eab36126"><\/script>');
+      document.write('<script src="tu_dien_km.js?v=3664c7a4"><\/script>');
     }
   } catch (e) { /* trình duyệt chặn bộ nhớ: giữ Tiếng Việt */ }
 })();
@@ -594,6 +594,13 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     <div style="display:flex;justify-content:flex-end"><button class="btn nho nut-ngon-ngu" type="button" data-khong-dich></button></div>
     <h1>Hệ thống quản trị hợp nhất</h1>
     <p class="phu">Cao su Chư Sê – Kampong Thom</p>
+    <!-- Đăng nhập Google: chỉ hiện khi Admin đã cấu hình Client ID (Quản trị → Tài khoản). Form cũ bên dưới giữ để thử -->
+    <div id="khungGoogle" style="display:none;margin:14px 0 6px">
+      <div id="nutGoogle" style="display:flex;justify-content:center;min-height:44px"></div>
+      <div class="loi" id="loiGoogle" style="margin-top:8px"></div>
+      <div id="vachCu" class="nhan-mo" style="text-align:center;margin:14px 0 4px;font-size:12.5px">— hoặc đăng nhập thử bằng mã (chế độ cũ) —</div>
+    </div>
+    <div id="khungDangNhapCu">
     <div class="truong">
       <label class="nhan" for="oVaiTro">Bạn là</label>
       <select class="o" id="oVaiTro">
@@ -612,6 +619,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </div>
     <div id="loiDangNhap"></div>
     <button class="btn chinh" id="nutVao" style="width:100%">Đăng nhập</button>
+    </div>
   </div>
 </div>
 
@@ -1365,6 +1373,41 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
     <!-- Tab Quản trị → Phân quyền (chỉ Admin): quản lý 3 bảng DIM_VAI_TRO / DIM_CHUC_NANG / PHAN_QUYEN
          (PhanQuyen.gs). Tick Xem / Thêm / Sửa / Xoá từng chức năng cho từng vai trò, thêm vai trò mới. -->
+    <!-- Tab Quản trị → Tài khoản (chỉ Admin): tài khoản Google được vào hệ thống + cấu hình đăng nhập Google -->
+    <section id="pTaiKhoan" style="display:none">
+      <div id="tkLoi"></div>
+      <div class="the" style="padding:16px;margin-bottom:20px">
+        <h3 class="tieude-muc" style="margin:0 0 10px">Đăng nhập Google</h3>
+        <div id="tkTrangThai" class="nhan-mo" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:260px"><label class="nhan" for="tkClientId">OAuth Client ID (Web)</label>
+            <input class="o" id="tkClientId" placeholder="123456789-xxxx.apps.googleusercontent.com" style="width:100%"></div>
+          <button class="btn chinh nho" id="tkLuuClientId" type="button">Lưu Client ID</button>
+          <button class="btn nho" id="tkBatBuoc" type="button"></button>
+        </div>
+      </div>
+      <div class="the" style="padding:16px;margin-bottom:20px">
+        <h3 class="tieude-muc" style="margin:0 0 10px" id="tkTieuDeForm">Thêm tài khoản</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end">
+          <div><label class="nhan" for="tkEmail">Gmail</label><input class="o" id="tkEmail" type="email" placeholder="ten@gmail.com" style="width:100%"></div>
+          <div><label class="nhan" for="tkHoTen">Họ tên</label><input class="o" id="tkHoTen" placeholder="Không bắt buộc" style="width:100%"></div>
+          <div><label class="nhan" for="tkVaiTro">Quyền (vai trò)</label><select class="o" id="tkVaiTro" style="width:100%"></select></div>
+          <div><label class="nhan" for="tkDonVi" id="tkNhanDonVi">Đơn vị</label><select class="o" id="tkDonVi" style="width:100%"></select></div>
+          <div><label class="nhan" for="tkTrangThaiTk">Trạng thái</label>
+            <select class="o" id="tkTrangThaiTk" style="width:100%"><option value="HOAT_DONG">Hoạt động</option><option value="KHOA">Khoá</option></select></div>
+          <div><label class="nhan" for="tkGhiChu">Ghi chú</label><input class="o" id="tkGhiChu" style="width:100%"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn chinh nho" id="tkLuu" type="button">Lưu tài khoản</button>
+          <button class="btn nho" id="tkHuySua" type="button" style="display:none">Huỷ sửa</button>
+        </div>
+      </div>
+      <div class="the">
+        <h3 class="tieude-muc" style="padding:16px 16px 0" id="tkTieuDeBang">Tài khoản được vào hệ thống</h3>
+        <div class="cuon"><table id="bangTaiKhoan"></table></div>
+      </div>
+    </section>
+
     <section id="pPhanQuyen" style="display:none">
       <div class="the thanh-pq">
         <div style="flex:1;min-width:240px">
@@ -1820,7 +1863,7 @@ function pqChucNangCuaTab(tab) {
 /** Tab bị ẩn: danh sách cố định TAB_AN, trang Phân quyền chỉ Admin, còn lại theo quyền Xem. */
 function tabAn(t) {
   if (TAB_AN[t]) return true;
-  if (t === 'phanQuyen') return !S.laAdmin;
+  if (t === 'phanQuyen' || t === 'taiKhoan') return !S.laAdmin;
   if (!S.vaiTro) return false;
   return !coQuyen(pqChucNangCuaTab(t), 'XEM');
 }
@@ -1888,6 +1931,8 @@ function dsCnNhapTo() {
 
 function goiApiMotLan(action, thamSo, msCho) {
   try { thamSo = thamSoAdmin(action, thamSo); } catch (e) { return Promise.reject(e); }
+  // Đăng nhập Google: mọi lệnh kèm phiên (máy chủ lấy vai trò / đơn vị từ phiên, không tin tham số tự khai)
+  if (S.phienDN) thamSo = Object.assign({}, thamSo, { phienDN: S.phienDN });
   // Vai trò hiển thị (Trợ lý, KTNN, Admin, vai trò tự thêm) — backend dùng để tra bảng quyền.
   if (S.vaiTroHienThi && thamSo && thamSo.vaiTro) thamSo = Object.assign({}, thamSo, { vaiTroHien: S.vaiTroHienThi });
   var vuaGhiNS = LENH_DOC_NHAN_SU[action] && (Date.now() - _nsGhiLuc < 120000);
@@ -1914,6 +1959,7 @@ function goiApiMotLan(action, thamSo, msCho) {
  */
 function goiAPI(action, thamSo, msCho, _daThuLai) {
   return goiApiMotLan(action, thamSo, msCho).catch(function (e) {
+    if (/Phiên đăng nhập Google|Cần đăng nhập bằng Google/.test(e.message || '')) hetPhienGoogle(e.message);
     if (!e.vanChuyen) throw e;               // lỗi nghiệp vụ — báo luôn, không thử lại
     if (!_daThuLai) {
       try { console.warn('Backend lỗi đường truyền, tự thử lại lần 2:', e.message); } catch (x) {}
@@ -3032,7 +3078,7 @@ function tcDocFile(files) {
       dsFile.reduce(function (chuoi, x, i) {
         return chuoi.then(function () {
           nut.textContent = 'Đang nạp ' + (i + 1) + '/' + dsFile.length + '…';
-          return fetch(S.api + '?action=napPhieuCan', { method: 'POST', body: JSON.stringify({
+          return fetch(S.api + '?action=napPhieuCan', { method: 'POST', body: JSON.stringify({ phienDN: S.phienDN || undefined,
             vaiTro: S.vaiTro, maDonVi: S.maDonVi, vaiTroHien: S.vaiTroHienThi, nguon: x.file.name,
             nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi), dong: x.dong }) })
             .then(function (r) { return r.json(); })
@@ -5064,7 +5110,7 @@ function bdNapFile(file) {
     $('bdHuyNap').onclick = function () { baoLoi('bdLoi', ''); };
     $('bdXacNhanNap').onclick = function () {
       var nut = this; nut.disabled = true; nut.textContent = 'Đang nạp…';
-      fetch(S.api + '?action=banDoLoLuu', { method: 'POST', body: JSON.stringify({
+      fetch(S.api + '?action=banDoLoLuu', { method: 'POST', body: JSON.stringify({ phienDN: S.phienDN || undefined,
         vaiTro: S.vaiTro, maDonVi: S.maDonVi, vaiTroHien: S.vaiTroHienThi, nguon: file.name,
         nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi), lo: lo }) })
         .then(function (r) { return r.json(); })
@@ -8939,6 +8985,7 @@ var LOC_THEO_TAB = {
   baoCao: [],           // có ô chọn tháng/đội/tổ riêng, ẩn khung lọc chung
   nangSuatVuon: [],     // bộ lọc riêng (năm, giống, năm mở cạo...)
   phanQuyen: [],        // trang quản trị, không lọc
+  taiKhoan: [],
   banDoLo: [],          // bộ lọc riêng trên bản đồ
   baoCaoTD: []          // bộ lọc riêng (kỳ ngày/tuần/tháng)
 };
@@ -8955,7 +9002,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'taiKhoan' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -9135,6 +9182,7 @@ function taiTab() {
   else if (S.tab === 'baoCao') taiBaoCao();
   else if (S.tab === 'nangSuatVuon') taiNangSuatVuon();
   else if (S.tab === 'phanQuyen') taiPhanQuyen();
+  else if (S.tab === 'taiKhoan') taiTaiKhoan();
   else if (S.tab === 'banDoLo') taiBanDoLo();
   else if (S.tab === 'baoCaoTD') taiBaoCaoTD();
 }
@@ -9261,14 +9309,14 @@ var NHOM_TAB = [
   // Nhân sự = nhân sự + chấm công + lương (đã gộp nhóm Lương cũ)
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
-  { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen'] }   // chỉ Admin (tabAn)
+  { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
   tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm', tramCan: 'Trạm cân',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
-  phanQuyen: 'Phân quyền', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn'
+  phanQuyen: 'Phân quyền', taiKhoan: 'Tài khoản', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -9419,6 +9467,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pBaoCao').style.display = (ten === 'baoCao') ? '' : 'none';
   $('pNangSuatVuon').style.display = (ten === 'nangSuatVuon') ? '' : 'none';
   $('pPhanQuyen').style.display = (ten === 'phanQuyen') ? '' : 'none';
+  $('pTaiKhoan').style.display = (ten === 'taiKhoan') ? '' : 'none';
   $('pBanDoLo').style.display = (ten === 'banDoLo') ? '' : 'none';
   $('pBaoCaoTD').style.display = (ten === 'baoCaoTD') ? '' : 'none';
   if (ten === 'banDoLo' && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
@@ -9657,6 +9706,20 @@ function batDau() {
     $('nutVao').click();
     return;
   }
+
+  // Phiên Google còn hạn: vào thẳng bằng phiên (máy chủ lấy vai trò / đơn vị từ phiên)
+  var pg = null;
+  try { pg = JSON.parse(docLS('crck2_phien_dn') || 'null'); } catch (e) { pg = null; }
+  if (pg && pg.phien && pg.han > Date.now()) {
+    S.phienDN = pg.phien; S.emailDN = pg.email || '';
+    $('oVaiTro').value = pg.vaiTroHien;
+    $('oMaDonVi').value = pg.maDonVi;
+    capNhatGoiY();
+    S._khoiPhucGoogle = true;
+    $('nutVao').click();
+    return;
+  }
+  if (pg) xoaLS('crck2_phien_dn');
 
   // Reload mà phiên trước còn hiệu lực thì vào thẳng bảng điều khiển,
   // không bắt gõ lại mã đơn vị. Bấm "Đổi người dùng" mới quay về đây.
@@ -10012,7 +10075,7 @@ function vaoApp(d, vtChon) {
 
   // Tên công ty ở CRCK có kèm "(Bean Heack)" (dữ liệu meta backend) — không cần hiện ở đây.
   $('dongDonVi').textContent = d.ten.replace(/\s*\(bean heack\)\s*/i, '');
-  $('theVaiTro').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + d.maDonVi;
+  $('theVaiTro').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + d.maDonVi + (S.emailDN ? ' · ' + S.emailDN : '');
 
   // Toàn công ty có tới 33 tổ — thêm ô lọc theo đội cho đỡ rối
   var dsDoi = [];
@@ -10770,6 +10833,9 @@ $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').cl
 
 $('nutVao').onclick = function () {
   baoLoi('loiDangNhap', '');
+  // Bấm đăng nhập cũ bằng tay -> bỏ phiên Google (khôi phục phiên Google lúc mở trang thì giữ)
+  if (!S._khoiPhucGoogle) { S.phienDN = ''; S.emailDN = ''; xoaLS('crck2_phien_dn'); }
+  S._khoiPhucGoogle = false;
   var vtChon = $('oVaiTro').value;
   var vt = vaiTroThuc(vtChon);
   var ma = $('oMaDonVi').value.trim();
@@ -10820,6 +10886,8 @@ $('nutVao').onclick = function () {
 
 $('nutThoat').onclick = function () {
   S.vaiTro = ''; S.maDonVi = ''; S.vaiTroHienThi = '';
+  S.phienDN = ''; S.emailDN = ''; xoaLS('crck2_phien_dn');
+  try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) { /* bỏ qua */ }
   xoaLS('crck2_dangnhap');
   xoaLS('crck2_dangxem');
   _cacheFE = {};
@@ -11135,6 +11203,197 @@ function batDichKm() {
   }
 })();
 batDichKm();
+
+
+/* =====================================================================
+   ĐĂNG NHẬP GOOGLE (chạy song song đăng nhập cũ để thử). Admin thêm Gmail + quyền ở Quản trị → Tài khoản.
+   Nút Google (Google Identity Services) -> dangNhapGoogle (Apps Script xác minh với Google, tra NGUOI_DUNG)
+   -> phiên ký S.phienDN gửi kèm mọi lệnh (goiApiMotLan). Phiên hết hạn / sai -> về màn đăng nhập.
+   ===================================================================== */
+var _cauHinhDN = null;
+
+function napCauHinhDangNhap() {
+  try { _cauHinhDN = JSON.parse(docLS('crck2_cau_hinh_dn') || 'null'); } catch (e) { _cauHinhDN = null; }
+  veNutGoogle();
+  if (!S.api) return;
+  goiQua(S.api, 'cauHinhDangNhap', {}, 15000).then(function (d) {
+    _cauHinhDN = d; ghiLS('crck2_cau_hinh_dn', JSON.stringify(d));
+    veNutGoogle();
+  }).catch(function () { /* mất mạng: dùng bản nhớ */ });
+}
+
+function veNutGoogle() {
+  var ch = _cauHinhDN || {};
+  $('khungGoogle').style.display = ch.clientId ? '' : 'none';
+  // Bắt buộc Google: ẩn form cũ
+  $('khungDangNhapCu').style.display = ch.batBuoc ? 'none' : '';
+  $('vachCu').style.display = ch.batBuoc ? 'none' : '';
+  if (!ch.clientId) return;
+  var ve = function () {
+    try {
+      google.accounts.id.initialize({ client_id: ch.clientId, callback: xuLyGoogle, auto_select: false, ux_mode: 'popup' });
+      $('nutGoogle').innerHTML = '';
+      google.accounts.id.renderButton($('nutGoogle'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill',
+        locale: NGON_NGU === 'km' ? 'km' : 'vi', width: 280 });
+    } catch (e) { baoLoi('loiGoogle', 'Không hiện được nút Google: ' + e.message); }
+  };
+  if (window.google && google.accounts && google.accounts.id) { ve(); return; }
+  if (document.getElementById('gsiScript')) return;
+  var sc = document.createElement('script');
+  sc.id = 'gsiScript'; sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.defer = true;
+  sc.onload = ve;
+  sc.onerror = function () { baoLoi('loiGoogle', 'Không tải được dịch vụ đăng nhập Google — kiểm tra mạng.'); };
+  document.head.appendChild(sc);
+}
+
+function xuLyGoogle(resp) {
+  baoLoi('loiGoogle', ''); baoLoi('loiDangNhap', '');
+  $('nutGoogle').style.opacity = '.5';
+  Promise.all([goiQua(S.api, 'dangNhapGoogle', { credential: resp.credential }, 30000), _pq ? Promise.resolve(_pq) : napPhanQuyen()])
+    .then(function (kq) {
+      var r = kq[0], d = r.dangNhap;
+      S.phienDN = r.phien; S.emailDN = r.email;
+      ghiLS('crck2_phien_dn', JSON.stringify({ phien: r.phien, han: r.han, email: r.email, hoTen: r.hoTen,
+                                               vaiTroHien: r.vaiTroHien, maDonVi: d.maDonVi }));
+      ghiLS('crck2_dn_offline', JSON.stringify({ vt: r.vaiTroHien, ma: d.maDonVi, d: d, luc: Date.now() }));
+      $('oVaiTro').value = r.vaiTroHien; $('oMaDonVi').value = d.maDonVi;
+      S.lucDuLieu = Date.now();
+      vaoApp(d, r.vaiTroHien);
+    })
+    .catch(function (e) { baoLoi('loiGoogle', e.message); })
+    .then(function () { $('nutGoogle').style.opacity = ''; });
+}
+
+/** Phiên hết hạn / bị từ chối: bỏ phiên, về màn đăng nhập kèm lời nhắn. */
+function hetPhienGoogle(thongBao) {
+  if (!S.phienDN && !S.vaiTro) return;
+  S.phienDN = ''; S.emailDN = ''; xoaLS('crck2_phien_dn');
+  if (S.vaiTro) $('nutThoat').click();
+  baoLoi('loiGoogle', thongBao);
+  baoLoi('loiDangNhap', thongBao);
+}
+
+/* ---------- Quản trị → Tài khoản (chỉ Admin) ---------- */
+var _tk = null, _tkSua = '';
+
+function tkDungVaiTro() {
+  var ds = ((_pq && _pq.vaiTro) || []).filter(function (v) { return v.hoatDong !== false; });
+  $('tkVaiTro').innerHTML = ds.map(function (v) {
+    return '<option value="' + thoat(v.ma) + '">' + thoat(v.ten || v.ma) + '</option>';
+  }).join('');
+  tkDungDonVi();
+}
+
+function tkDungDonVi(chon) {
+  var vt = pqTimVaiTro($('tkVaiTro').value) || {}, ht = vt.heThong || vaiTroThuc($('tkVaiTro').value), o = $('tkDonVi');
+  if (ht === 'TO_TRUONG') {
+    $('tkNhanDonVi').textContent = 'Tổ phụ trách';
+    o.disabled = false;
+    o.innerHTML = (S.dsTo || []).map(function (t) { return '<option value="' + thoat(t.ma) + '">' + thoat(t.ma + (t.ten ? ' — ' + t.ten : '')) + '</option>'; }).join('');
+  } else if (ht === 'DOI_TRUONG') {
+    $('tkNhanDonVi').textContent = 'Đội phụ trách';
+    o.disabled = false;
+    o.innerHTML = (S.dsDoi || []).map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(d) + '</option>'; }).join('');
+  } else {
+    $('tkNhanDonVi').textContent = 'Đơn vị';
+    o.disabled = true;
+    o.innerHTML = '<option value="CRCK">Toàn công ty</option>';
+  }
+  if (chon) o.value = chon;
+}
+
+function tkDatForm(x) {
+  _tkSua = x ? x.email : '';
+  $('tkTieuDeForm').textContent = x ? 'Sửa tài khoản ' + x.email : 'Thêm tài khoản';
+  $('tkEmail').value = x ? x.email : ''; $('tkEmail').disabled = !!x;
+  $('tkHoTen').value = x ? x.hoTen : '';
+  $('tkGhiChu').value = x ? x.ghiChu : '';
+  $('tkTrangThaiTk').value = x ? x.trangThai : 'HOAT_DONG';
+  if (x) { $('tkVaiTro').value = x.vaiTro; tkDungDonVi(x.maDonVi); } else tkDungDonVi();
+  $('tkHuySua').style.display = x ? '' : 'none';
+}
+
+function taiTaiKhoan() {
+  if (!S.laAdmin) { baoLoi('tkLoi', 'Chỉ Admin mới vào được trang Tài khoản.'); return; }
+  $('tkVaiTro').onchange = function () { tkDungDonVi(); };
+  $('tkHuySua').onclick = function () { tkDatForm(null); };
+  $('tkLuu').onclick = tkLuu;
+  $('tkLuuClientId').onclick = function () { tkCauHinh({ clientId: $('tkClientId').value.trim() }, 'Đã lưu Client ID.'); };
+  tkDungVaiTro();
+  $('bangTaiKhoan').innerHTML = skBang(4);
+  goiAPI('taiKhoan', { vaiTro: S.vaiTro, maDonVi: S.maDonVi }).then(function (d) {
+    _tk = d; baoLoi('tkLoi', '');
+    veTaiKhoan();
+  }).catch(function (e) { baoLoi('tkLoi', e.message); $('bangTaiKhoan').innerHTML = ''; });
+}
+
+function veTaiKhoan() {
+  var d = _tk, ch = d.cauHinh || {};
+  $('tkClientId').value = ch.clientId || '';
+  $('tkTrangThai').innerHTML = (ch.clientId ? 'Đã cấu hình Client ID. ' : '<b>Chưa có Client ID</b> — nút Google chưa hiện ở màn đăng nhập. ') +
+    'Chế độ: <b>' + (ch.batBuoc ? 'BẮT BUỘC đăng nhập Google' : 'song song (vẫn cho đăng nhập cũ bằng mã để thử)') + '</b>. ' +
+    (d.dangNhapGoogle ? 'Bạn đang đăng nhập Google: ' + thoat(d.email) + '.' : 'Bạn đang đăng nhập kiểu cũ.');
+  $('tkBatBuoc').textContent = ch.batBuoc ? 'Tắt bắt buộc (cho đăng nhập cũ)' : 'Bật bắt buộc đăng nhập Google';
+  $('tkBatBuoc').onclick = function () {
+    var bat = !ch.batBuoc;
+    if (bat && !confirm('Bật bắt buộc: từ giờ CHỈ đăng nhập bằng Google được (mọi lệnh không có phiên Google bị từ chối). Tiếp tục?')) return;
+    tkCauHinh({ batBuoc: bat ? 1 : 0 }, bat ? 'Đã bật bắt buộc đăng nhập Google.' : 'Đã tắt bắt buộc — đăng nhập cũ dùng lại được.');
+  };
+  var ds = d.ds || [];
+  $('tkTieuDeBang').textContent = 'Tài khoản được vào hệ thống (' + ds.length + ')';
+  if (!ds.length) { $('bangTaiKhoan').innerHTML = '<tr><td><div class="rong">Chưa có tài khoản nào — thêm ở khung phía trên.</div></td></tr>'; return; }
+  var h = '<thead><tr><th>Gmail</th><th>Họ tên</th><th>Quyền</th><th>Đơn vị</th><th>Trạng thái</th><th>Đăng nhập cuối</th><th>Sửa bởi</th><th></th></tr></thead><tbody>';
+  ds.forEach(function (x, i) {
+    h += '<tr><td>' + thoat(x.email) + '</td><td>' + thoat(x.hoTen) + '</td><td>' + thoat(tenVaiTro(x.vaiTro)) + '</td><td>' +
+         thoat(x.maDonVi === 'CRCK' ? 'Toàn công ty' : x.maDonVi) + '</td><td>' +
+         (x.trangThai === 'KHOA' ? '<span class="td-nguon sua">Khoá</span>' : '<span class="td-nguon base">Hoạt động</span>') +
+         '</td><td>' + thoat(x.lanCuoi || '—') + '</td><td class="nhan-mo">' + thoat((x.nguoiSua || '') + (x.lucSua ? ' · ' + x.lucSua : '')) +
+         '</td><td style="white-space:nowrap"><button class="btn nho" data-tk-sua="' + i + '">Sửa</button> ' +
+         '<button class="btn nho" data-tk-khoa="' + i + '">' + (x.trangThai === 'KHOA' ? 'Mở khoá' : 'Khoá') + '</button> ' +
+         '<button class="btn nho" data-tk-xoa="' + i + '">Xoá</button></td></tr>';
+  });
+  $('bangTaiKhoan').innerHTML = h + '</tbody>';
+  var nut = function (attr, fn) {
+    $('bangTaiKhoan').querySelectorAll('button[' + attr + ']').forEach(function (b) { b.onclick = function () { fn(ds[Number(b.getAttribute(attr))], b); }; });
+  };
+  nut('data-tk-sua', function (x) { tkDatForm(x); window.scrollTo(0, 0); });
+  nut('data-tk-khoa', function (x, b) {
+    b.disabled = true;
+    tkGui(Object.assign({}, x, { trangThai: x.trangThai === 'KHOA' ? 'HOAT_DONG' : 'KHOA' }), (x.trangThai === 'KHOA' ? 'Đã mở khoá ' : 'Đã khoá ') + x.email + '.');
+  });
+  nut('data-tk-xoa', function (x, b) {
+    if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Chắc chắn xoá?'; b.classList.add('chinh'); return; }
+    b.disabled = true;
+    goiAPI('taiKhoanLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, email: x.email, xoa: 1 })
+      .then(function () { nsBaoOkChung('Đã xoá tài khoản ' + x.email + '.'); taiTaiKhoan(); })
+      .catch(function (e) { b.disabled = false; baoLoi('tkLoi', e.message); });
+  });
+}
+
+function tkGui(x, thongBao) {
+  return goiAPI('taiKhoanLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, email: x.email, hoTen: x.hoTen, vaiTro: S.vaiTro,
+    vaiTroTk: x.vaiTro, maDonViTk: x.maDonVi, trangThai: x.trangThai, ghiChu: x.ghiChu,
+    nguoi: S.emailDN || docLS('crck2_ns_nguoi') || 'Admin' })
+    .then(function () { nsBaoOkChung(thongBao); tkDatForm(null); taiTaiKhoan(); })
+    .catch(function (e) { baoLoi('tkLoi', e.message); });
+}
+
+function tkLuu() {
+  var email = (_tkSua || $('tkEmail').value).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { baoLoi('tkLoi', 'Nhập Gmail hợp lệ.'); return; }
+  var nut = $('tkLuu'); nut.disabled = true;
+  tkGui({ email: email, hoTen: $('tkHoTen').value.trim(), vaiTro: $('tkVaiTro').value, maDonVi: $('tkDonVi').value,
+          trangThai: $('tkTrangThaiTk').value, ghiChu: $('tkGhiChu').value.trim() }, (_tkSua ? 'Đã lưu ' : 'Đã thêm ') + email + '.')
+    .then(function () { nut.disabled = false; });
+}
+
+function tkCauHinh(thamSo, thongBao) {
+  goiAPI('taiKhoanCauHinh', Object.assign({ vaiTro: S.vaiTro, maDonVi: S.maDonVi }, thamSo)).then(function (d) {
+    _cauHinhDN = d; ghiLS('crck2_cau_hinh_dn', JSON.stringify(d));
+    nsBaoOkChung(thongBao); taiTaiKhoan();
+  }).catch(function (e) { baoLoi('tkLoi', e.message); });
+}
+napCauHinhDangNhap();
 
 S.thamSoURL = layThamSoURL();
 batDau();
