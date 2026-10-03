@@ -934,6 +934,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutCsvPhieu">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangPhieu"></table></div>
+        <div class="phan-trang" id="phanTrangPhieu"></div>
       </div>
     </section>
 
@@ -1030,6 +1031,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutCsvXH">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangXH"></table></div>
+        <div class="phan-trang" id="phanTrangXH"></div>
       </div>
     </section>
 
@@ -1204,6 +1206,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutCsvNsv">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangNsv"></table></div>
+        <div class="phan-trang" id="phanTrangNsv"></div>
       </div>
     </section>
 
@@ -2935,7 +2938,7 @@ function taiTongQuanPhu(blTQ) {
    Thêm "Trạm cân"): đọc file ngay trên máy theo TÊN CỘT tiêu đề, gửi POST napPhieuCan — nạp trùng số
    phiếu thì thay bản cũ, không nhân đôi.
    ===================================================================== */
-var _tc = null, _tcTrang = 1, _tcLan = 0, TC_MOI_TRANG = 50;
+var _tc = null, _tcTrang = 1, _tcLan = 0, _tcThamSo = null, TC_MOI_TRANG = 50;
 var TC_COT_FILE = {
   'SỐ PHIẾU': 'soPhieu', 'SỐ PHIẾU NT': 'soPhieuNt', 'LOẠI': 'loai', 'BIỂN SỐ XE': 'bienSo', 'HÀNG HÓA': 'hangHoa', 'HÀNG HOÁ': 'hangHoa',
   'NGƯỜI BÁN': 'nguoiBan', 'NGƯỜI MUA': 'nguoiMua', 'TÀI XẾ': 'taiXe', 'KHO': 'kho', 'GHI CHÚ': 'ghiChu', 'LÁT CẠO': 'latCao',
@@ -2952,10 +2955,12 @@ function taiTramCan() {
   $('kpisTC').innerHTML = skKpis(4);
   $('bdTcNgay').innerHTML = skKhoi(); $('bdTcDoi').innerHTML = skKhoi();
   $('bangTcXe').innerHTML = skBang(3); $('bangTC').innerHTML = skBang(6); $('phanTrangTC').innerHTML = '';
-  goiCache('tramCan', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay, doi: bl.doi, to: bl.to, loaiMu: bl.loaiMu })
+  _tcThamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay, doi: bl.doi, to: bl.to, loaiMu: bl.loaiMu };
+  _tcTrang = 1;
+  goiCache('tramCan', Object.assign({ trang: 1, moiTrang: TC_MOI_TRANG }, _tcThamSo))
     .then(function (d) {
       if (lan !== _tcLan) return;
-      _tc = d; _tcTrang = 1;
+      _tc = d;
       veTramCan(d);
     }).catch(function (e) {
       if (lan !== _tcLan) return;
@@ -3002,11 +3007,11 @@ function veBangTramCan() {
     $('phanTrangTC').innerHTML = '';
     return;
   }
-  var soTrang = Math.ceil(ds.length / TC_MOI_TRANG);
-  _tcTrang = Math.min(Math.max(1, _tcTrang), soTrang);
+  var soTrang = _tc.soTrang || 1, tongPhieu = _tc.tongPhieu || ds.length;
+  _tcTrang = _tc.trang || 1;
   var h = '<thead><tr><th>Số phiếu</th><th>Giờ cân</th><th>Đội</th><th>Tổ · phiên</th><th>Lô</th><th>Phiếu nội trạm</th>' +
           '<th>Xe</th><th>Tài xế</th><th>Hàng</th><th class="p">Cân tổng</th><th class="p">Cân bì</th><th class="p">Hàng (kg)</th></tr></thead><tbody>';
-  ds.slice((_tcTrang - 1) * TC_MOI_TRANG, _tcTrang * TC_MOI_TRANG).forEach(function (x) {
+  ds.forEach(function (x) {
     var zs = x.zones || [];
     h += '<tr><td class="num">' + thoat(x.ma) + (zs.length > 1 ? ' <span class="td-nguon" title="Một chuyến chở mủ của ' + zs.length + ' tổ">gộp ' + zs.length + '</span>' : '') +
          '</td><td>' + thoat(x.gioTong.substring(8, 10) + '/' + x.gioTong.substring(5, 7) + ' ' + x.gioTong.substring(11)) +
@@ -3020,13 +3025,31 @@ function veBangTramCan() {
   $('phanTrangTC').innerHTML = soTrang > 1
     ? '<button class="btn nho" id="tcTruoc"' + (_tcTrang <= 1 ? ' disabled' : '') + '>← Trước</button><span>Trang ' + _tcTrang + ' / ' + soTrang +
       '</span><button class="btn nho" id="tcSau"' + (_tcTrang >= soTrang ? ' disabled' : '') + '>Sau →</button>'
-    : '<span>Hiển thị toàn bộ ' + soVN(ds.length, 0) + ' phiếu</span>';
-  if ($('tcTruoc')) $('tcTruoc').onclick = function () { _tcTrang--; veBangTramCan(); };
-  if ($('tcSau')) $('tcSau').onclick = function () { _tcTrang++; veBangTramCan(); };
+    : '<span>Hiển thị toàn bộ ' + soVN(tongPhieu, 0) + ' phiếu</span>';
+  if ($('tcTruoc')) $('tcTruoc').onclick = function () { tcSangTrang(_tcTrang - 1); };
+  if ($('tcSau')) $('tcSau').onclick = function () { tcSangTrang(_tcTrang + 1); };
+}
+
+/** Lấy 1 trang phiếu cân từ máy chủ, chỉ vẽ lại bảng phiếu (biểu đồ / KPI giữ nguyên). */
+function tcSangTrang(t) {
+  if (!_tcThamSo) return;
+  var lan = _tcLan;
+  $('bangTC').innerHTML = skBang(6);
+  goiCache('tramCan', Object.assign({ trang: t, moiTrang: TC_MOI_TRANG }, _tcThamSo)).then(function (d) {
+    if (lan !== _tcLan) return;
+    _tc = d;
+    veBangTramCan();
+  }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
 function xuatTramCan() {
-  var ds = (_tc && _tc.phieu) || [];
+  if (!_tcThamSo) return;
+  // Bảng chỉ giữ 1 trang — xuất thì lấy đủ mọi phiếu (không gửi số trang)
+  goiCache('tramCan', _tcThamSo).then(function (d) { _xuatTramCan(d); }).catch(function (e) { baoLoi('thongBao', e.message); });
+}
+
+function _xuatTramCan(dAll) {
+  var ds = (dAll && dAll.phieu) || [];
   if (!ds.length) { baoLoi('thongBao', 'Không có phiếu cân để xuất.'); return; }
   var nhan = ['Số phiếu', 'Giờ cân tổng', 'Giờ cân bì', 'Đội', 'Tổ', 'Phiên', 'Lô', 'Số phiếu nội trạm', 'Biển số xe', 'Tài xế',
               'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Ghi chú'];
@@ -3036,7 +3059,7 @@ function xuatTramCan() {
             zs.map(function (z) { return z.phien; }).join('; '), zs.map(function (z) { return z.lo; }).join(' | '), x.nt, x.xe, x.taiXe,
             x.hang, x.canTong, x.canBi, x.kg, x.ghiChu];
   });
-  xuatBangExcel('tram_can_' + String(_tc.tu || '') + '_' + String(_tc.den || '') + '.xlsx', nhan, dong);
+  xuatBangExcel('tram_can_' + String(dAll.tu || '') + '_' + String(dAll.den || '') + '.xlsx', nhan, dong);
 }
 
 /** Giá trị 1 ô ExcelJS -> số / chuỗi (ngày giờ dạng dd-MM-yyyy HH:mm như file trạm cân). */
@@ -3419,13 +3442,34 @@ function taiSanLuong() {
 /* =====================================================================
    Tab: Phiếu nội trạm
    ===================================================================== */
+/**
+ * Nút trang dùng chung cho bảng phân trang phía máy chủ (d.trang / d.soTrang / d.tong).
+ * chuyen(trangMoi) tự tải lại trang đó.
+ */
+function vePhanTrang(id, d, tong, chuyen) {
+  var el = $(id);
+  if (!el) return;
+  if (d.soTrang > 1) {
+    el.innerHTML = '<button class="btn nho" data-pt="-1"' + (d.trang <= 1 ? ' disabled' : '') + '>← Trước</button>' +
+      '<span>Trang ' + d.trang + ' / ' + d.soTrang + ' · ' + soVN(tong, 0) + ' dòng</span>' +
+      '<button class="btn nho" data-pt="1"' + (d.trang >= d.soTrang ? ' disabled' : '') + '>Sau →</button>';
+    var nut = el.querySelectorAll('button[data-pt]');
+    for (var i = 0; i < nut.length; i++) {
+      nut[i].onclick = function () { chuyen(d.trang + Number(this.getAttribute('data-pt'))); };
+    }
+  } else {
+    el.innerHTML = tong ? '<span>Hiển thị toàn bộ ' + soVN(tong, 0) + ' dòng</span>' : '';
+  }
+}
+
 function taiPhieu() {
   $('bangPhieu').innerHTML = skBang();
   dangTai($('kpisPhieu'), true);
 
-  goiCache('phieu', layBoLoc()).then(function (d) {
-    var soChoDuyet = 0;
-    for (var q = 0; q < d.rows.length; q++) if (d.rows[q].trangThai === 'CHO_DUYET') soChoDuyet++;
+  var blP = layBoLoc();
+  blP.trang = S.trang || 1; blP.moiTrang = 100;
+  goiCache('phieu', blP).then(function (d) {
+    var soChoDuyet = d.soChoDuyet || 0;
     S.huyHieu = S.huyHieu || {};
     if (S.huyHieu.phieu !== (chiCoDaDuyet() ? 0 : soChoDuyet)) { S.huyHieu.phieu = chiCoDaDuyet() ? 0 : soChoDuyet; veNhomTab(); }
     $('kpisPhieu').innerHTML =
@@ -3471,6 +3515,8 @@ function taiPhieu() {
     }
     h += '</tbody>';
     $('bangPhieu').innerHTML = h;
+
+    vePhanTrang('phanTrangPhieu', d, d.tong, function (t) { S.trang = t; taiPhieu(); window.scrollTo(0, 0); });
 
     var nuts = $('bangPhieu').querySelectorAll('button[data-phieu]');
     for (var n = 0; n < nuts.length; n++) {
@@ -3611,8 +3657,10 @@ function taiXepHang() {
 
   var bl = layBoLoc();
   bl.theo = $('fTheo').value;
+  bl.trang = S.trang || 1; bl.moiTrang = 100;
 
   goiCache('xepHang', bl).then(function (d) {
+    var dau = ((d.trang || 1) - 1) * (d.moiTrang || 0);
     var h = '<thead><tr><th>#</th><th>Mã công nhân</th><th>Tổ</th><th>Chức danh</th>' +
             '<th class="p">Tổng kg tươi</th><th class="p">Quy khô</th><th class="p">Số nhát</th>' +
             '<th class="p">kg/nhát</th><th class="p">Ngày có SL</th><th class="p">BQ ngày</th>' +
@@ -3622,7 +3670,7 @@ function taiXepHang() {
     }
     for (var i = 0; i < d.rows.length; i++) {
       var r = d.rows[i];
-      h += '<tr><td class="nhan-mo">' + (i + 1) + '</td>' +
+      h += '<tr><td class="nhan-mo">' + (dau + i + 1) + '</td>' +
         '<td><b>' + thoat(r.maCn) + '</b></td>' +
         '<td>' + thoat(r.to) + '</td>' +
         '<td class="nhan-mo">' + thoat(r.chucDanh || '—') + '</td>' +
@@ -3635,7 +3683,9 @@ function taiXepHang() {
     }
     h += '</tbody>';
     $('bangXH').innerHTML = h;
-    veTomTatXepHang(d.rows);
+    // Thống kê cần MỌI người: máy chủ gửi kèm bản rút gọn [tổ, nhát, NSBQ, quy khô]
+    veTomTatXepHang(d.rutGon ? d.rutGon.map(function (x) { return { to: x[0], nhat: x[1], nsbq: x[2], quyKho: x[3] }; }) : d.rows);
+    vePhanTrang('phanTrangXH', d, d.tong, function (t) { S.trang = t; taiXepHang(); window.scrollTo(0, 0); });
     baoLoi('thongBao', '');
   }).catch(function (e) {
     $('bangXH').innerHTML = '';
@@ -4701,7 +4751,7 @@ function xlLuu() {
    Chỉ số: kg/ha = QK/diện tích; kg/cây = QK/cây cạo; g/cây/lần cạo =
    QK×1000/(cây cạo × lần cạo) chỉ tính trên các tháng có số lần cạo.
    ===================================================================== */
-var _nsv = null;
+var _nsv = null, _nsvTrang = 1, _nsvKhoa = '', NSV_MOI_TRANG = 100;
 
 function taiNangSuatVuon() {
   $('bangNsv').innerHTML = skBang();
@@ -5313,7 +5363,12 @@ function veNangSuatVuon() {
           '<th class="p">kg/cây</th><th class="p">g/cây/lần</th><th class="p">NS 2025</th>' +
           thangs.map(function (t) { return '<th class="p">T' + t + '</th>'; }).join('') + '</tr></thead><tbody>';
   if (!ds.length) h += '<tr><td colspan="' + (20 + thangs.length) + '"><div class="rong">Không có lô nào khớp bộ lọc.</div></td></tr>';
-  ds.forEach(function (r) {
+  // Đổi bộ lọc / chỉ số thì về trang 1
+  var khoaNsv = ds.length + '|' + chiSo + '|' + (ds[0] ? ds[0].maLo || ds[0].tenLo : '');
+  if (khoaNsv !== _nsvKhoa) { _nsvKhoa = khoaNsv; _nsvTrang = 1; }
+  var soTrangNsv = Math.max(1, Math.ceil(ds.length / NSV_MOI_TRANG));
+  _nsvTrang = Math.min(Math.max(1, _nsvTrang), soTrangNsv);
+  ds.slice((_nsvTrang - 1) * NSV_MOI_TRANG, _nsvTrang * NSV_MOI_TRANG).forEach(function (r) {
     var a = _nsvCong([r]);
     h += '<tr><td>' + thoat(r.doi) + '</td><td>' + thoat(r.to) + '</td><td>' + thoat(r.phien || '') + '</td>' +
       '<td class="nhan-mo">' + thoat(r.maLoRung || '') + '</td><td><b>' + thoat(r.tenLo) + '</b></td><td>' + thoat(_nsvGiong(r)) + '</td>' +
@@ -5349,6 +5404,8 @@ function veNangSuatVuon() {
   }
   $('bangNsv').innerHTML = h;
   $('tomTatNsv').textContent = 'Năng suất theo lô — ' + soVN(ds.length, 0) + ' lô';
+  vePhanTrang('phanTrangNsv', { trang: _nsvTrang, soTrang: soTrangNsv }, ds.length,
+    function (t) { _nsvTrang = t; veNangSuatVuon(); });
 }
 
 /** Xuất Excel đủ chỉ số từng tháng như file tổng hợp của phòng NN (QK, lần cạo, kg/ha, kg/cây, g/cây/lần). */
