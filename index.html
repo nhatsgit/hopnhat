@@ -1955,6 +1955,9 @@ function dsCnNhapTo() {
   return S.dsCn.filter(function (ma) { return toCuaMaCn(ma) === to; }).sort();
 }
 
+var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1 };
+var _ghiCloudTat = false;
+
 function goiApiMotLan(action, thamSo, msCho) {
   try { thamSo = thamSoAdmin(action, thamSo); } catch (e) { return Promise.reject(e); }
   // Đăng nhập Google: mọi lệnh kèm phiên (máy chủ lấy vai trò / đơn vị từ phiên, không tin tham số tự khai)
@@ -1963,6 +1966,18 @@ function goiApiMotLan(action, thamSo, msCho) {
   if (S.vaiTroHienThi && thamSo && thamSo.vaiTro) thamSo = Object.assign({}, thamSo, { vaiTroHien: S.vaiTroHienThi });
   var vuaGhiNS = LENH_DOC_NHAN_SU[action] && (Date.now() - _nsGhiLuc < 120000);
   var vuaGhiGiao = LENH_DOC_GIAO_SL[action] && _choDayBq.length > 0;
+  // Lệnh GHI chạy trên Cloud Run (nhanh: bảng đã nằm sẵn trong bộ nhớ). Cloud Run chưa có quyền sửa Sheet / chưa có lệnh
+  // này -> Apps Script (lúc đó chưa ghi gì nên không sợ trùng). Lỗi đường truyền: goiAPI thử lại — lô có maGui nên không ghi 2 lần.
+  if (LENH_GHI_CLOUD[action] && S.apiDoc && !_ghiCloudTat) {
+    return goiQua(S.apiDoc, action, thamSo, msCho).catch(function (e) {
+      if (/CHUA_CO_QUYEN_GHI|Không hiểu yêu cầu/.test(e.message || '') && S.api) {
+        _ghiCloudTat = true;
+        try { console.warn('Cloud Run chưa ghi được, dùng Apps Script:', e.message); } catch (x) {}
+        return goiQua(S.api, action, thamSo, msCho);
+      }
+      throw e;
+    });
+  }
   if (LENH_DOC[action] && S.apiDoc && !vuaGhiNS && !vuaGhiGiao) {
     return goiQua(S.apiDoc, action, thamSo, Math.min(msCho || 30000, 20000))
       .catch(function (e) {
