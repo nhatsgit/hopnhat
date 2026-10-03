@@ -947,7 +947,11 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <button class="btn chinh" id="nutChamCongTo" title="Chấm công cho cả tổ trong một bảng, có lưu tạm">Chấm công cả tổ</button>
         <button class="btn chinh" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
         <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
-        <button class="btn nho" id="nutCCBase" style="display:none" title="Chọn tổ + ngày, xem chấm công rồi tạo phiếu duyệt trên Base (TCHC duyệt)">Gửi duyệt Base</button>
+      </div>
+      <!-- Thanh riêng (không nằm trong thanh nhập — thanh nhập ẩn với Trợ lý): gửi phiếu duyệt chấm công lên Base -->
+      <div class="thanh-nhap" id="thanhBaseCC" style="display:none">
+        <div class="thanh-nhap-chu"><b>Duyệt chấm công</b><span>Gửi phiếu từng tổ × ngày cho TCHC duyệt trên Base</span></div>
+        <button class="btn chinh" id="nutCCBase" title="Chọn tổ + ngày, xem chấm công rồi tạo phiếu duyệt trên Base (TCHC duyệt)">Gửi duyệt Base</button>
       </div>
       <div class="kpis" id="kpisCC"></div>
       <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
@@ -9986,7 +9990,7 @@ function apDungQuyenGiaoDien() {
   var slThem = coQuyen('sanLuong', 'THEM'), ccThem = coQuyen('chamCong', 'THEM');
   hienNeu(['nutThemSL', 'nutNhapTo', 'nutHangLoatSL'], slThem);
   hienNeu(['nutDayBase'], coQuyen('dayBase', 'THEM'));
-  hienNeu(['nutCCBase'], coQuyen('dayChamCongBase', 'THEM'));
+  hienNeu(['thanhBaseCC'], coQuyen('dayChamCongBase', 'THEM'));
   // Thanh nhập nhanh: chỉ tổ trưởng (vai trò nhập cho đúng 1 tổ của mình)
   $('thanhNhapNhanh').style.display = S.vaiTro === 'TO_TRUONG' && (slThem || ccThem) ? '' : 'none';
   $('nnSanLuong').style.display = slThem ? '' : 'none';
