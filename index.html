@@ -947,6 +947,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
         <button class="btn chinh" id="nutChamCongTo" title="Chấm công cho cả tổ trong một bảng, có lưu tạm">Chấm công cả tổ</button>
         <button class="btn chinh" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
         <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
+        <button class="btn nho" id="nutCCBase" style="display:none" title="Chọn tổ + ngày, xem chấm công rồi tạo phiếu duyệt trên Base (TCHC duyệt)">Gửi duyệt Base</button>
       </div>
       <div class="kpis" id="kpisCC"></div>
       <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
@@ -8186,6 +8187,110 @@ function dbDayLen() {
   }).then(function () { if ($('dbXem')) $('dbXem').disabled = false; });
 }
 
+/* ---------------------------------------------------------------------
+   GỬI PHIẾU DUYỆT CHẤM CÔNG LÊN BASE (mặc định Trợ lý): chọn tổ + ngày → Xem dữ liệu → Gửi.
+   TCHC duyệt trên Base → webhook đổi các dòng chấm công (ngày, tổ) sang Đã duyệt; từ chối thì giữ Chờ duyệt.
+   --------------------------------------------------------------------- */
+var _ccbXem = null;
+
+function moCCBase() {
+  if (!coQuyen('dayChamCongBase', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền gửi phiếu chấm công lên Base.'); return; }
+  var dsTo = (S.dsTo || []).map(function (t) { return t.ma; });
+  var toMd = $('fTo').value || (S.vaiTro === 'TO_TRUONG' ? S.maDonVi : '');
+  var h = '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">' +
+    '<div><label class="nhan" for="ccbTo">Tổ</label><select class="o" id="ccbTo" style="width:auto"><option value="">— Chọn tổ —</option>' +
+      dsTo.map(function (t) { return '<option value="' + thoat(t) + '"' + (t === toMd ? ' selected' : '') + '>' + thoat(t) + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div><label class="nhan" for="ccbNgay">Ngày</label><input class="o" id="ccbNgay" type="date" style="width:auto" value="' + thoat(nsHomNay()) + '"></div>' +
+    '<div>' + nsNut('ccbXem', 'Xem dữ liệu', true) + '</div></div>' +
+    '<div id="ccbLoi"></div><div id="ccbKetQua"></div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
+      nsNut('ccbDong', 'Đóng', false) + '<button class="btn chinh" id="ccbGui" style="display:none">Gửi duyệt lên Base</button></div>';
+  nsMoModal('Gửi phiếu duyệt chấm công lên Base', h);
+  _ccbXem = null;
+  var boKq = function () { _ccbXem = null; $('ccbKetQua').innerHTML = ''; $('ccbGui').style.display = 'none'; baoLoi('ccbLoi', ''); };
+  $('ccbTo').onchange = boKq;
+  $('ccbNgay').onchange = boKq;
+  $('ccbXem').onclick = ccbXemDuLieu;
+  $('ccbGui').onclick = ccbGuiLen;
+  $('ccbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
+}
+
+function ccbXemDuLieu() {
+  var to = $('ccbTo').value, ngay = $('ccbNgay').value;
+  if (!to) { baoLoi('ccbLoi', 'Chọn tổ.'); return; }
+  if (!ngay) { baoLoi('ccbLoi', 'Chọn ngày.'); return; }
+  baoLoi('ccbLoi', '');
+  $('ccbGui').style.display = 'none';
+  $('ccbXem').disabled = true; $('ccbXem').textContent = 'Đang tải…';
+  $('ccbKetQua').innerHTML = '<p class="goi-y">Đang đọc chấm công ' + thoat(to) + ' ngày ' + thoat(ngayVN(ngay)) + '…</p>';
+  goiAPI('xemChamCongBase', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: to, ngay: ngay }, 60000).then(function (d) {
+    if ($('ccbTo').value !== to || $('ccbNgay').value !== ngay) return;
+    _ccbXem = d;
+    ccbVeKetQua(d);
+  }).catch(function (e) {
+    $('ccbKetQua').innerHTML = '';
+    baoLoi('ccbLoi', e.message);
+  }).then(function () { if ($('ccbXem')) { $('ccbXem').disabled = false; $('ccbXem').textContent = 'Xem dữ liệu'; } });
+}
+
+function ccbVeKetQua(d) {
+  var dt = d.demTrangThai || {}, tenTt = { CHO_DUYET: 'Chờ duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối' };
+  var ttChu = Object.keys(dt).map(function (k) { return (tenTt[k] || k || '(trống)') + ' ' + dt[k]; }).join(' · ');
+  var theoLoai = {};
+  d.dong.forEach(function (x) { theoLoai[x.loai] = (theoLoai[x.loai] || 0) + 1; });
+  var h = '<div class="kpis" style="margin-bottom:10px">' +
+    the_kpi('Công nhân', soVN(d.soNguoi, 0), 'người', d.dong.length + ' dòng · ' + ttChu) +
+    the_kpi('Tổng công', soVN(d.tongCong, 1), 'công', Object.keys(theoLoai).map(function (k) { return k + ': ' + theoLoai[k]; }).join(' · ')) +
+    '</div>';
+  if (!d.coCauHinh) h += '<div class="bao-loi">Chưa cấu hình token Base trên Apps Script (datCauHinhBase) — chưa gửi được.</div>';
+  if (d.daTao && d.daTao.length) {
+    h += '<div class="bao-loi">Tổ này ngày này <b>đã có ' + d.daTao.length + ' phiếu Base</b>: ' +
+      d.daTao.map(function (x) { return '<a href="' + tdLinkBase(x.ticketId) + '" target="_blank" rel="noopener">#' + thoat(x.ticketId) + ' ↗</a> (' + thoat(tenTt[x.trangThai] || x.trangThai || 'đã tạo') + ')'; }).join(', ') +
+      '. Gửi tiếp sẽ tạo thêm phiếu mới.</div>';
+  }
+  if (dt.DA_DUYET) h += '<div class="bao-loi">Có ' + dt.DA_DUYET + ' dòng đã duyệt — phiếu vẫn gửi đủ mọi dòng của tổ trong ngày.</div>';
+  h += '<h3 class="tieude-muc" style="margin:12px 0 6px">Chi tiết ' + d.dong.length + ' dòng</h3>' +
+    '<div class="cuon cuon-doc" style="max-height:40vh"><table><thead><tr><th>#</th><th>Mã CN</th><th>Tên</th><th>Loại công</th>' +
+    '<th class="so">Số công</th><th>Phiên</th><th>Phần cạo</th><th>Trạng thái</th></tr></thead><tbody>' +
+    d.dong.map(function (x, i) {
+      return '<tr><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(x.maCn) + '</b></td><td>' + thoat(x.ten || '—') + '</td><td>' + thoat(x.loai) +
+        '</td><td class="so">' + soVN(x.soCong, 1) + '</td><td>' + thoat(x.phien) + '</td><td>' + thoat(x.pc) +
+        '</td><td>' + thoat(tenTt[x.trangThai] || x.trangThai) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  $('ccbKetQua').innerHTML = h;
+  var nut = $('ccbGui');
+  delete nut.dataset.xacNhan;
+  nut.disabled = !d.coCauHinh;
+  nut.textContent = 'Gửi duyệt lên Base (' + d.soNguoi + ' người · ' + soVN(d.tongCong, 1) + ' công)';
+  nut.style.display = '';
+}
+
+function ccbGuiLen() {
+  var d = _ccbXem, nut = $('ccbGui');
+  if (!d) return;
+  if (d.daTao && d.daTao.length && !nut.dataset.xacNhan) {
+    nut.dataset.xacNhan = '1'; nut.textContent = 'Đã có phiếu — bấm lần nữa để tạo thêm';
+    return;
+  }
+  nut.disabled = true; nut.textContent = 'Đang tạo phiếu trên Base…';
+  $('ccbXem').disabled = true;
+  baoLoi('ccbLoi', '');
+  // Gọi đúng 1 lần (không tự thử lại) — thử lại khi mạng chập chờn có thể tạo 2 phiếu.
+  goiApiMotLan('dayChamCongBase', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: d.to, ngay: d.ngay }, 120000).then(function (kq) {
+    nut.style.display = 'none';
+    $('ccbKetQua').insertAdjacentHTML('afterbegin', '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' +
+      'Đã tạo phiếu Base <a href="' + tdLinkBase(kq.ticketId) + '" target="_blank" rel="noopener"><b>#' + thoat(kq.ticketId) + '</b> ↗</a> — ' + thoat(d.to) + ' ngày ' + thoat(ngayVN(d.ngay)) + ': ' +
+      kq.soNguoi + ' người, ' + soVN(kq.tongCong, 1) + ' công.' +
+      (kq.loiBang ? '<br><b>Lưu ý:</b> điền bảng vào phiếu có lỗi — ' + thoat(kq.dienBang) : '') + '</div>');
+    _ccbXem = null;
+  }).catch(function (e) {
+    nut.disabled = false;
+    nut.textContent = 'Gửi duyệt lên Base (' + d.soNguoi + ' người · ' + soVN(d.tongCong, 1) + ' công)';
+    baoLoi('ccbLoi', e.message + (e.vanChuyen ? ' — Có thể phiếu đã được tạo: bấm "Xem dữ liệu" lại để kiểm tra trước khi gửi lần nữa.' : ''));
+  }).then(function () { if ($('ccbXem')) $('ccbXem').disabled = false; });
+}
+
 function moNhapCaTo() {
   if (!coQuyen('sanLuong', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền nhập sản lượng.'); return; }
   if (!toNhapCaTo()) { baoLoi('thongBao', 'Chọn 1 tổ ở bộ lọc trước khi nhập cả tổ.'); return; }
@@ -9881,6 +9986,7 @@ function apDungQuyenGiaoDien() {
   var slThem = coQuyen('sanLuong', 'THEM'), ccThem = coQuyen('chamCong', 'THEM');
   hienNeu(['nutThemSL', 'nutNhapTo', 'nutHangLoatSL'], slThem);
   hienNeu(['nutDayBase'], coQuyen('dayBase', 'THEM'));
+  hienNeu(['nutCCBase'], coQuyen('dayChamCongBase', 'THEM'));
   // Thanh nhập nhanh: chỉ tổ trưởng (vai trò nhập cho đúng 1 tổ của mình)
   $('thanhNhapNhanh').style.display = S.vaiTro === 'TO_TRUONG' && (slThem || ccThem) ? '' : 'none';
   $('nnSanLuong').style.display = slThem ? '' : 'none';
@@ -11161,6 +11267,7 @@ $('nutMauSL').onclick = function () { taiMauExcel('sanLuong'); };
 $('nutHangLoatSL').onclick = function () { moNhapHangLoat('sanLuong'); };
 $('nutNhapTo').onclick = moNhapCaTo;
 $('nutDayBase').onclick = moDayBase;
+$('nutCCBase').onclick = moCCBase;
 $('nutCsvPhieu').onclick = csvPhieu;
 $('nutCsvXH').onclick = csvXepHang;
 
