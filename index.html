@@ -620,8 +620,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 .kpi .ten{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13.5px;
   font-weight:500;color:var(--ink-2);margin-bottom:10px}
 .kpi.co-nhan .ten{padding-right:74px}
-.kpi .so{font-size:30px}
-.kpi .dv{font-size:14px}
+.kpi .so{font-size:30px;overflow-wrap:anywhere}
+.kpi .so.so-dai{font-size:25px}
+.kpi .so.so-rat-dai{font-size:21px}
+.kpi .dv{font-size:14px;white-space:nowrap;display:inline-block}
 .kpi .phu2{color:var(--ink-2)}
 .icon-kpi{flex:none;width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;
   background:var(--leaf-soft);color:var(--leaf)}
@@ -641,7 +643,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 .thanh-nho i{display:block;height:100%;border-radius:999px;background:var(--latex)}
 .thanh-cot-ngang,.thanh-cot-ngang .lap,.td-tl .vach,.td-tl .vach i{border-radius:999px}
 @media (prefers-reduced-motion:no-preference){.thanh-nho i{transform-origin:left center;animation:hu-mo-ngang .6s cubic-bezier(.2,.7,.3,1) both}}
-@media (max-width:640px){.kpi .so{font-size:24px}.kpi{padding:14px}.duong-nho{width:calc(100% + 28px);margin:10px -14px -14px}
+@media (max-width:640px){.kpi .so{font-size:24px}.kpi .so.so-dai,.kpi .so.so-rat-dai{font-size:21px}.kpi{padding:14px}.duong-nho{width:calc(100% + 28px);margin:10px -14px -14px}
   .tabs.tabs-con{padding:6px 12px}}
 </style>
 </head>
@@ -2504,12 +2506,12 @@ window.addEventListener('resize', function () {
 
 // Khối thẻ KPI: số cột = chia đều số thẻ đang hiện cho số hàng ít nhất (thẻ rộng tối thiểu 170px).
 // Chạy lại khi khối đổi bề ngang (đổi tab, đổi cỡ màn hình) hoặc đổi thẻ bên trong (vẽ lại số liệu).
-var KPI_RONG = 170, KPI_KHE = 12;
+var KPI_RONG = 170, KPI_KHE = 12, KPI_TOI_DA = 5;   // tối đa 5 thẻ một hàng
 function chiaDeuKpi(el) {
   var n = 0, w = el.clientWidth;
   for (var i = 0; i < el.children.length; i++) if (getComputedStyle(el.children[i]).display !== 'none') n++;
   if (!n || !w) return;
-  var toiDa = Math.max(1, Math.floor((w + KPI_KHE) / (KPI_RONG + KPI_KHE)));
+  var toiDa = Math.max(1, Math.min(KPI_TOI_DA, Math.floor((w + KPI_KHE) / (KPI_RONG + KPI_KHE))));
   var cot = Math.ceil(n / Math.ceil(n / toiDa));
   if (el.style.getPropertyValue('--cot') !== String(cot)) el.style.setProperty('--cot', cot);
   el.classList.toggle('gian', toiDa <= 2);
@@ -3477,7 +3479,8 @@ function iconKpi(ten, dv) {
   var s = (String(ten) + ' ' + String(dv || '')).toLowerCase(), k = 'giot', mau = '';
   if (/chờ duyệt|cảnh báo|thiếu|chậm|lệch|dưới/.test(s)) { k = 'dongHo'; mau = 'clay'; }
   else if (/quy khô|drc/.test(s)) { k = 'can'; mau = 'latex'; }
-  else if (/tiền|lương|thu nhập|riel|chi phí|thuế|bhxh/.test(s)) { k = 'tien'; mau = 'latex'; }
+  else if (/tiền|lương|thu nhập|riel|chi phí|thuế|bhxh|doanh thu|lợi nhuận|đồng/.test(s)) { k = 'tien'; mau = 'latex'; }
+  else if (/tiêu thụ|xuất bán|vận chuyển/.test(s)) { k = 'xe'; mau = 'sky'; }
   else if (/bình quân|năng suất|tỷ lệ|hoàn thành|%/.test(s)) { k = 'cot'; }
   else if (/công nhân|người|lao động|nhân sự|tuyển|nghỉ việc/.test(s)) { k = 'nguoi'; mau = 'sky'; }
   else if (/phiếu|dòng/.test(s)) { k = 'phieu'; mau = 'sky'; }
@@ -3499,9 +3502,12 @@ function the_kpi(ten, so, dv, phu, phuHtml) {
     nhan = '<span class="nhan-ss ' + (m[1] || '') + '" title="So với kỳ trước">' + m[2] + '</span>';
     phuH = phuH.slice(0, m.index);
   }
+  // Số dài (vd 1,081,427.28 triệu đồng) thu nhỏ chữ cho vừa thẻ
+  var doDai = String(so).replace(/<[^>]*>/g, '').length;
+  var coSo = doDai > 13 ? ' so-rat-dai' : (doDai > 10 ? ' so-dai' : '');
   return '<div class="the kpi' + (nhan ? ' co-nhan' : '') + '">' + nhan +
     '<div class="ten">' + iconKpi(ten, dv) + '<span>' + thoat(ten) + '</span></div>' +
-    '<div class="so num">' + so + '<span class="dv">' + thoat(dv) + '</span></div>' +
+    '<div class="so num' + coSo + '">' + so + '<span class="dv">' + thoat(dv) + '</span></div>' +
     '<div class="phu2">' + phuH + '</div></div>';
 }
 
