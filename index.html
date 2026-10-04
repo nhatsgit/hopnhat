@@ -1955,7 +1955,8 @@ function dsCnNhapTo() {
   return S.dsCn.filter(function (ma) { return toCuaMaCn(ma) === to; }).sort();
 }
 
-var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1 };
+var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1, xoaChamCong: 1,
+                       themSanLuong: 1, nhapHangLoatSanLuong: 1, suaSanLuong: 1, xoaSanLuong: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho) {
