@@ -3359,6 +3359,7 @@ var COT_SL = [
 function viTrangThai(tt) {
   if (tt === 'CHO_DUYET') return '<span class="vi canh">Chờ duyệt</span>';
   if (tt === 'DA_DUYET') return '<span class="vi ok">Đã duyệt</span>';
+  if (tt === 'DANG_DUYET') return '<span class="vi canh" title="Đã gửi phiếu Base, chờ duyệt — sửa trên phiếu Base">Đang duyệt (Base)</span>';
   return '<span class="nhan-mo">' + thoat(tt || '—') + '</span>';
 }
 
@@ -8254,7 +8255,8 @@ function ccbXemDuLieu() {
 }
 
 function ccbVeKetQua(d) {
-  var dt = d.demTrangThai || {}, tenTt = { CHO_DUYET: 'Chờ duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối' };
+  var dt = d.demTrangThai || {}, tenTt = { CHO_DUYET: 'Chờ duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối', DANG_DUYET: 'Đang duyệt (Base)',
+                                           DA_TAO: 'Đã tạo', DA_DUYET_CO_LOI: 'Đã duyệt — có dòng lỗi', LOI_DONG_BO: 'Lỗi đồng bộ', HUY: 'Đã huỷ' };
   var ttChu = Object.keys(dt).map(function (k) { return (tenTt[k] || k || '(trống)') + ' ' + dt[k]; }).join(' · ');
   var theoLoai = {};
   d.dong.forEach(function (x) { theoLoai[x.loai] = (theoLoai[x.loai] || 0) + 1; });
@@ -8269,6 +8271,10 @@ function ccbVeKetQua(d) {
       '. Gửi tiếp sẽ tạo thêm phiếu mới.</div>';
   }
   if (dt.DA_DUYET) h += '<div class="bao-loi">Có ' + dt.DA_DUYET + ' dòng đã duyệt — phiếu vẫn gửi đủ mọi dòng của tổ trong ngày.</div>';
+  if (dt.DANG_DUYET) {
+    h += '<div class="bao-loi">' + dt.DANG_DUYET + ' dòng <b>đang duyệt trên Base</b> — sửa trên phiếu Base, duyệt xong sẽ tự ghi về. ' +
+      'Phiếu Base bị huỷ / bỏ dở thì <button class="btn nho" id="ccbHuy" type="button">Trả về Chờ duyệt</button></div>';
+  }
   h += '<h3 class="tieude-muc" style="margin:12px 0 6px">Chi tiết ' + d.dong.length + ' dòng</h3>' +
     '<div class="cuon cuon-doc" style="max-height:40vh"><table><thead><tr><th>#</th><th>Mã CN</th><th>Tên</th><th>Loại công</th>' +
     '<th class="so">Số công</th><th>Phiên</th><th>Phần cạo</th><th>Trạng thái</th></tr></thead><tbody>' +
@@ -8278,6 +8284,15 @@ function ccbVeKetQua(d) {
         '</td><td>' + thoat(tenTt[x.trangThai] || x.trangThai) + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   $('ccbKetQua').innerHTML = h;
+  if ($('ccbHuy')) $('ccbHuy').onclick = function () {
+    var b = this;
+    if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Bấm lần nữa để trả về Chờ duyệt'; return; }
+    b.disabled = true; b.textContent = 'Đang trả về…';
+    goiApiMotLan('huyDangDuyetChamCong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: d.to, ngay: d.ngay }, 60000).then(function (kq) {
+      b.textContent = 'Đã trả ' + kq.soDong + ' dòng về Chờ duyệt';
+      ccbXemDuLieu();
+    }).catch(function (e) { b.disabled = false; b.textContent = 'Trả về Chờ duyệt'; baoLoi('ccbLoi', e.message); });
+  };
   var nut = $('ccbGui');
   delete nut.dataset.xacNhan;
   nut.disabled = !d.coCauHinh;
