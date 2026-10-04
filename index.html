@@ -125,6 +125,25 @@ label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
 :root[data-theme="dark"] .skeleton::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
 @keyframes skel-shine{100%{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){.skeleton::after{animation:none}}
+
+/* ---------- Hiệu ứng giao diện (tự tắt khi máy đặt "giảm chuyển động") ---------- */
+.btn,.chip,.tab,.loc-chip,.nut-theme{transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s,opacity .15s,transform .1s}
+tbody tr{transition:background-color .12s}
+@media (prefers-reduced-motion:no-preference){
+  .btn:active:not(:disabled),.chip:active,.tab:active,.loc-chip:active{transform:scale(.97)}
+  .kpi{transition:transform .2s ease,box-shadow .2s ease}
+  .kpi:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
+  .vao{animation:hu-vao .28s ease-out both}                        /* đổi tab */
+  .kpi.vao-the{animation:hu-vao .35s ease-out both;animation-delay:calc(var(--i, 0) * 45ms)}
+  .duong-ve{stroke-dasharray:1;stroke-dashoffset:1;animation:hu-ve-duong .9s ease-out .05s forwards}
+  .vung-ve{animation:hu-hien .8s ease-out both}
+  .diem-ve{animation:hu-hien .4s ease-out .7s both}
+  .thanh-cot-ngang .lap,.td-tl .vach i{transform-origin:left center;animation:hu-mo-ngang .6s cubic-bezier(.2,.7,.3,1) both}
+}
+@keyframes hu-vao{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes hu-ve-duong{to{stroke-dashoffset:0}}
+@keyframes hu-hien{from{opacity:0}to{opacity:1}}
+@keyframes hu-mo-ngang{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .sk-bang td{padding:14px 16px}
 .sk-kpi{height:74px;border-radius:2px}
 .sk-khoi{height:210px;border-radius:4px}
@@ -2384,10 +2403,10 @@ function veDuong(el, ds, tuy) {
            '<text x="' + (trai - 6) + '" y="' + (gy + 3.5) + '" text-anchor="end" font-size="10.5" fill="var(--ink-3)">' + soRutGon(gv) + '</text>';
   }
   var diem = ds.map(function (x, i) { return X(i).toFixed(1) + ',' + Y(x.gt).toFixed(1); });
-  svg += '<path d="M' + X(0).toFixed(1) + ',' + Y(0).toFixed(1) + ' L' + diem.join(' L') + ' L' + X(n - 1).toFixed(1) + ',' + Y(0).toFixed(1) + ' Z" fill="url(#' + idGra + ')"/>' +
-         '<polyline points="' + diem.join(' ') + '" fill="none" stroke="' + mau + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+  svg += '<path d="M' + X(0).toFixed(1) + ',' + Y(0).toFixed(1) + ' L' + diem.join(' L') + ' L' + X(n - 1).toFixed(1) + ',' + Y(0).toFixed(1) + ' Z" fill="url(#' + idGra + ')" class="vung-ve"/>' +
+         '<polyline class="duong-ve" pathLength="1" points="' + diem.join(' ') + '" fill="none" stroke="' + mau + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
   var banKinh = n <= 31 ? 3 : (n <= 62 ? 2 : 0);
-  if (banKinh) ds.forEach(function (x, i) { svg += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.gt).toFixed(1) + '" r="' + banKinh + '" fill="var(--card)" stroke="' + mau + '" stroke-width="1.6"/>'; });
+  if (banKinh) ds.forEach(function (x, i) { svg += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.gt).toFixed(1) + '" r="' + banKinh + '" class="diem-ve" fill="var(--card)" stroke="' + mau + '" stroke-width="1.6"/>'; });
   // Nhãn trục ngang: giãn cách để chữ không đè nhau; luôn ghi điểm cuối
   var buocNhan = Math.max(1, Math.ceil(n * 36 / rong));
   ds.forEach(function (x, i) {
@@ -2467,6 +2486,48 @@ function chiaDeuKpi(el) {
     window.addEventListener('resize', henQuet);
     henQuet();
   }
+  if (document.body) batDau(); else document.addEventListener('DOMContentLoaded', batDau);
+})();
+
+// ---------- Hiệu ứng: tab trượt vào, thẻ KPI hiện lần lượt + số đếm chạy ----------
+var GIAM_CHUYEN_DONG = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function hieuUngVao(el) {
+  if (!el || GIAM_CHUYEN_DONG) return;
+  el.classList.remove('vao');
+  void el.offsetWidth;                      // chạy lại hiệu ứng mỗi lần mở tab
+  el.classList.add('vao');
+}
+/** Số trên thẻ chạy từ 0 tới giá trị thật (~0,7 giây), giữ đúng cách viết số (dấu phẩy nghìn, số chữ số lẻ). */
+function demSoKpi(so) {
+  var nut = so && so.firstChild;
+  if (!nut || nut.nodeType !== 3) return;
+  var goc = nut.nodeValue, m = /^\s*(-?)([0-9][0-9,]*)(?:\.([0-9]+))?\s*$/.exec(goc);
+  if (!m) return;
+  var le = m[3] ? m[3].length : 0, dich = Number((m[1] + m[2].replace(/,/g, '')) + (m[3] ? '.' + m[3] : ''));
+  if (!dich || !isFinite(dich)) return;
+  var t0 = performance.now(), dai = 700;
+  (function buoc(t) {
+    if (nut.nodeValue === null || !nut.parentNode) return;            // thẻ đã vẽ lại
+    var k = Math.min(1, (t - t0) / dai), e = 1 - Math.pow(1 - k, 3);
+    nut.nodeValue = k < 1 ? (dich * e).toLocaleString('en-US', { minimumFractionDigits: le, maximumFractionDigits: le }) : goc;
+    if (k < 1) requestAnimationFrame(buoc);
+  })(t0);
+}
+(function () {
+  if (GIAM_CHUYEN_DONG || typeof MutationObserver !== 'function') return;
+  function xemThe(ds) {
+    ds.forEach(function (bg) {
+      var i = 0;
+      bg.addedNodes.forEach(function (n) {
+        if (n.nodeType !== 1 || !n.classList.contains('kpi') || n.querySelector('.skeleton')) return;
+        if (!n.parentNode || !n.parentNode.classList || !n.parentNode.classList.contains('kpis')) return;
+        n.style.setProperty('--i', i++);
+        n.classList.add('vao-the');
+        demSoKpi(n.querySelector('.so'));
+      });
+    });
+  }
+  function batDau() { new MutationObserver(xemThe).observe(document.body, { childList: true, subtree: true }); }
   if (document.body) batDau(); else document.addEventListener('DOMContentLoaded', batDau);
 })();
 
@@ -9733,6 +9794,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pBanDoLo').style.display = (ten === 'banDoLo') ? '' : 'none';
   $('pBaoCaoTD').style.display = (ten === 'baoCaoTD') ? '' : 'none';
   if (ten === 'banDoLo' && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
+  hieuUngVao($('p' + ten.charAt(0).toUpperCase() + ten.slice(1)));
   veTuyChonDoi();
   dungLocTo();
   capNhatHienBoLoc();
