@@ -8505,6 +8505,8 @@ function ntTongKet() {
 /* ---------------------------------------------------------------------
    ĐẨY PHIẾU DUYỆT LÊN BASE (mặc định chỉ Admin): chọn tổ + ngày → Xem dữ liệu → Đẩy lên Base.
    Dữ liệu đang xem gắn với đúng (tổ, ngày) đó — đổi tổ/ngày là ẩn kết quả, phải xem lại mới đẩy được.
+   Giống chấm công: đẩy xong các dòng sang Đang duyệt (web khoá sửa / thêm / xoá); duyệt trên Base thì bảng Sản lượng
+   trên phiếu (đã có thể sửa) tự ghi về; từ chối giữ Đang duyệt; phiếu bỏ dở thì "Trả về Chờ duyệt".
    --------------------------------------------------------------------- */
 var _dbXem = null;
 
@@ -8551,7 +8553,7 @@ function dbXemDuLieu() {
 }
 
 function dbVeKetQua(d) {
-  var dt = d.demTrangThai || {}, tenTt = { CHO_DUYET: 'Chờ duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối' };
+  var dt = d.demTrangThai || {}, tenTt = { CHO_DUYET: 'Chờ duyệt', DA_DUYET: 'Đã duyệt', TU_CHOI: 'Từ chối', DANG_DUYET: 'Đang duyệt (Base)' };
   var ttChu = Object.keys(dt).map(function (k) { return (tenTt[k] || k || '(trống)') + ' ' + dt[k]; }).join(' · ');
   var tongNhat = 0, tongQk = 0;
   d.dong.forEach(function (x) { tongNhat += Number(x.nhat) || 0; tongQk += Number(x.qk) || 0; });
@@ -8568,6 +8570,11 @@ function dbVeKetQua(d) {
       '. Đẩy tiếp sẽ tạo thêm phiếu mới.</div>';
   }
   if (dt.DA_DUYET) h += '<div class="bao-loi">Có ' + dt.DA_DUYET + ' dòng đã duyệt — phiếu vẫn gửi đủ mọi dòng của tổ trong ngày.</div>';
+  // Giống chấm công: đã gửi phiếu thì sửa / thêm / xoá trên phiếu Base, duyệt xong bảng trên phiếu tự ghi về
+  if (dt.DANG_DUYET) {
+    h += '<div class="bao-loi">' + dt.DANG_DUYET + ' dòng <b>đang duyệt trên Base</b> — sửa trên phiếu Base, duyệt xong sẽ tự ghi về. ' +
+      'Phiếu Base bị huỷ / bỏ dở thì <button class="btn nho" id="dbHuy" type="button">Trả về Chờ duyệt</button></div>';
+  }
 
   h += '<h3 class="tieude-muc" style="margin:12px 0 6px">Theo loại mủ</h3><div class="cuon"><table><thead><tr>' +
     '<th>Loại mủ</th><th class="so">Sản lượng (kg)</th><th class="so">Tỷ lệ</th></tr></thead><tbody>' +
@@ -8582,6 +8589,15 @@ function dbVeKetQua(d) {
         '</td><td class="so">' + soVN(x.qk, 2) + '</td><td>' + thoat(tenTt[x.trangThai] || x.trangThai) + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   $('dbKetQua').innerHTML = h;
+  if ($('dbHuy')) $('dbHuy').onclick = function () {
+    var b = this;
+    if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Bấm lần nữa để trả về Chờ duyệt'; return; }
+    b.disabled = true; b.textContent = 'Đang trả về…';
+    goiApiMotLan('huyDangDuyetSanLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: d.to, ngay: d.ngay }, 60000).then(function (kq) {
+      b.textContent = 'Đã trả ' + kq.soDong + ' dòng về Chờ duyệt';
+      dbXemDuLieu();
+    }).catch(function (e) { b.disabled = false; b.textContent = 'Trả về Chờ duyệt'; baoLoi('dbLoi', e.message); });
+  };
 
   var nut = $('dbDay');
   delete nut.dataset.xacNhan;
