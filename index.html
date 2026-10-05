@@ -1074,7 +1074,12 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
           <select class="o" id="drcKy" style="width:auto" title="Kỳ nghiệm thu của bảng kê"><option value="1">Kỳ 01–15</option><option value="2">Kỳ 16–cuối tháng</option><option value="0">Cả tháng</option></select>
           <button class="btn nho" id="nutXuatDrc" title="Xuất bảng kê nghiệm thu mủ nguyên liệu theo phiếu cân (đúng bố cục file nhà máy) từ số cân + DRC đã nhập">Xuất bảng kê</button>
         </div>
-        <div class="cuon cuon-doc"><table id="bangDrc" class="bang-drc"></table></div>
+        <div style="padding:0 16px 10px;display:flex;gap:8px;flex-wrap:wrap" id="drcLoaiNut">
+          <button class="btn nho chinh" data-loai="MU_DONG">Mủ đông chén</button>
+          <button class="btn nho" data-loai="MU_DAY">Mủ dây</button>
+        </div>
+        <div class="cuon cuon-doc" id="khungDrcDong"><table id="bangDrc" class="bang-drc"></table></div>
+        <div class="cuon cuon-doc" id="khungDrcDay" style="display:none"><table id="bangDrcDay" class="bang-drc"></table></div>
         <p class="goi-y" id="ghiChuDrc" style="padding:8px 16px"></p>
       </div>
       <div class="the">
@@ -6712,7 +6717,16 @@ function _xuatSoTheoMau(tenMau, dung, tenFile, ch, nut) {
    từng loại mủ. Quy khô thật của đội trong ngày = tổng phiếu cân của đội × DRC; phân về tổ theo tỉ lệ sổ tổ đã duyệt.
    Máy chủ: drcNgay (đọc, Cloud Run) · drcLuu (ghi, Apps Script, bảng FACT_DRC_NGAY_DOI). Để trống ô = xoá DRC ngày đó.
    ===================================================================== */
-var _drc = null, _drcLan = 0;
+var _drc = null, _drcLan = 0, _drcLoai = 'MU_DONG';
+
+/** Chuyển giữa bảng mủ đông / mủ dây (cả hai cùng nằm trong trang nên ô đang sửa dở không mất khi chuyển). */
+function drcChonLoai(ma) {
+  _drcLoai = ma;
+  $('khungDrcDong').style.display = ma === 'MU_DONG' ? '' : 'none';
+  $('khungDrcDay').style.display = ma === 'MU_DAY' ? '' : 'none';
+  var nut = $('drcLoaiNut').querySelectorAll('button');
+  for (var i = 0; i < nut.length; i++) nut[i].classList.toggle('chinh', nut[i].getAttribute('data-loai') === ma);
+}
 
 function drcSoNhap(s) { var v = parseFloat(String(s).replace(',', '.').replace('%', '')); return isNaN(v) ? null : v; }
 
@@ -6733,14 +6747,14 @@ function taiDrc() {
   $('nutLuuDrc').onclick = drcLuu;
   $('nutXuatDrc').onclick = drcXuatBangKe;
   if (!sel.value) { $('bangDrc').innerHTML = '<tr><td><div class="rong">Không có đội nào trong phạm vi của bạn.</div></td></tr>'; return; }
-  $('kpisDrc').innerHTML = skKpis(4); $('bangDrc').innerHTML = skBang(8); $('bangDrcTo').innerHTML = skBang(4);
+  $('kpisDrc').innerHTML = skKpis(4); $('bangDrc').innerHTML = skBang(7); $('bangDrcDay').innerHTML = ''; $('bangDrcTo').innerHTML = skBang(4);
   goiAPI('drcNgay', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: sel.value, thang: $('drcThang').value }).then(function (d) {
     if (lan !== _drcLan) return;
     _drc = d; veDrc(d);
   }).catch(function (e) {
     if (lan !== _drcLan) return;
     $('kpisDrc').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
-    $('bangDrc').innerHTML = ''; $('bangDrcTo').innerHTML = '';
+    $('bangDrc').innerHTML = ''; $('bangDrcDay').innerHTML = ''; $('bangDrcTo').innerHTML = '';
   });
 }
 
@@ -6758,34 +6772,40 @@ function veDrc(d) {
     the_kpi('Ngày còn thiếu DRC', soVN(thieu, 0), 'ngày-loại mủ', '', thieu ? '<span class="giam">Có phiếu cân nhưng chưa nhập DRC</span>' : 'Đủ DRC mọi ngày có cân');
   $('tomTatDrc').textContent = 'DRC từng ngày — ' + tenDoiNgan(d.doi) + ' · tháng ' + d.thang.substring(5) + '/' + d.thang.substring(0, 4);
 
-  var h = '<thead><tr><th rowspan="2">Ngày</th><th colspan="5" class="nhom-drc">Mủ đông chén</th><th colspan="3" class="nhom-drc">Mủ dây</th></tr>' +
-          '<tr><th class="p">Cân (kg)</th><th class="p">Sổ tổ (kg)</th><th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th><th class="p">Tạm tính (kg)</th>' +
-          '<th class="p">Cân (kg)</th><th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th></tr></thead><tbody>';
   var oNhap = function (x, ma) {
     var a = x.loai[ma];
     var nhan = a.drc === null ? '' : String(a.drc).replace('.', ',');
-    var goiY = d.goiY && d.goiY[ma] ? 'gần nhất ' + String(d.goiY[ma].drc).replace('.', ',') : '52,3';
+    var goiY = d.goiY && d.goiY[ma] ? 'gần nhất ' + String(d.goiY[ma].drc).replace('.', ',') : (ma === 'MU_DAY' ? '61,8' : '52,3');
     if (!sua || (a.kgCan <= 0 && a.drc === null)) return '<td class="p num">' + (a.drc === null ? '—' : soVN(a.drc, 2)) + '</td>';
     return '<td class="p"><input class="o drc-in" inputmode="decimal" autocomplete="off" data-ngay="' + x.ngay + '" data-loai="' + ma + '" data-goc="' + nhan +
            '" data-can="' + a.kgCan + '" value="' + nhan + '" placeholder="' + goiY + '"' +
            (a.luc ? ' title="' + thoat((a.nguoi || '') + ' · ' + a.luc) + '"' : '') + '></td>';
   };
-  d.ngay.forEach(function (x) {
-    var m = x.loai.MU_DONG, y = x.loai.MU_DAY;
-    h += '<tr data-ngay="' + x.ngay + '"><td>' + thoat(ngayVN(x.ngay)) + '</td>' +
-         '<td class="p num">' + soVN(m.kgCan, 0) + '</td><td class="p num">' + soVN(m.kgSo, 0) + '</td>' + oNhap(x, 'MU_DONG') +
-         '<td class="p num qk-that" data-qk="MU_DONG">' + (m.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(m.qkThat, 0) + '</b>') + '</td>' +
-         '<td class="p num nhan-mo">' + soVN(m.qkTam, 0) + '</td>' +
-         '<td class="p num">' + soVN(y.kgCan, 0) + '</td>' + oNhap(x, 'MU_DAY') +
-         '<td class="p num qk-that" data-qk="MU_DAY">' + (y.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(y.qkThat, 0) + '</b>') + '</td></tr>';
-  });
-  if (!d.ngay.length) h += '<tr><td colspan="9"><div class="rong">Tháng này chưa có phiếu cân nào của ' + thoat(tenDoiNgan(d.doi)) + '.' +
-    (d.ngayCanMax ? ' Phiếu cân mới nhất: ' + thoat(ngayVN(d.ngayCanMax)) + ' — <button class="btn nho" id="drcNhayThang" data-thang="' + d.ngayCanMax.substring(0, 7) + '">Xem tháng đó</button>' : '') +
-    '</div></td></tr>';
-  else h += '<tr class="dong-tong"><td><b>Cả tháng</b></td><td class="p num"><b>' + soVN(tm.kgCan, 0) + '</b></td><td class="p num"><b>' + soVN(tm.kgSo, 0) + '</b></td>' +
-            '<td class="p num"><b>' + (tm.drcBq === null ? '—' : soVN(tm.drcBq, 2)) + '</b></td><td class="p num"><b>' + soVN(tm.qkThat, 0) + '</b></td><td class="p num">' + soVN(tm.qkTam, 0) + '</td>' +
-            '<td class="p num"><b>' + soVN(td.kgCan, 0) + '</b></td><td class="p num"><b>' + (td.drcBq === null ? '—' : soVN(td.drcBq, 2)) + '</b></td><td class="p num"><b>' + soVN(td.qkThat, 0) + '</b></td></tr>';
-  $('bangDrc').innerHTML = h + '</tbody>';
+  // Mỗi loại mủ 1 bảng: Ngày | Số phiếu | Cân | Sổ tổ | DRC | Quy khô thật | Tạm tính. Mủ dây chỉ liệt kê ngày có cân / có DRC.
+  var bangLoai = function (ma, chiNgayCo) {
+    var t = d.tong[ma], hh = '<thead><tr><th>Ngày</th><th class="p">Số phiếu cân</th><th class="p">Cân (kg)</th><th class="p">Sổ tổ (kg)</th>' +
+      '<th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th><th class="p">Tạm tính (kg)</th></tr></thead><tbody>';
+    var n = 0;
+    d.ngay.forEach(function (x) {
+      var a = x.loai[ma];
+      if (chiNgayCo && !(a.kgCan > 0 || a.drc !== null)) return;
+      n++;
+      hh += '<tr data-ngay="' + x.ngay + '"><td>' + thoat(ngayVN(x.ngay)) + '</td><td class="p num">' + soVN(a.soPhieu, 0) + '</td>' +
+            '<td class="p num">' + soVN(a.kgCan, 0) + '</td><td class="p num">' + soVN(a.kgSo, 0) + '</td>' + oNhap(x, ma) +
+            '<td class="p num qk-that" data-qk="' + ma + '">' + (a.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(a.qkThat, 0) + '</b>') + '</td>' +
+            '<td class="p num nhan-mo">' + soVN(a.qkTam, 0) + '</td></tr>';
+    });
+    if (!n) return hh + '</tbody><tbody><tr><td colspan="7"><div class="rong">Tháng này chưa có phiếu cân ' + (ma === 'MU_DAY' ? 'mủ dây' : 'mủ đông') + ' của ' + thoat(tenDoiNgan(d.doi)) + '.' +
+      (d.ngayCanMax && ma === 'MU_DONG' ? ' Phiếu cân mới nhất: ' + thoat(ngayVN(d.ngayCanMax)) + ' — <button class="btn nho" id="drcNhayThang" data-thang="' + d.ngayCanMax.substring(0, 7) + '">Xem tháng đó</button>' : '') +
+      '</div></td></tr></tbody>';
+    return hh + '<tr class="dong-tong"><td><b>Cả tháng</b></td><td class="p num"></td><td class="p num"><b>' + soVN(t.kgCan, 0) + '</b></td><td class="p num"><b>' + soVN(t.kgSo, 0) + '</b></td>' +
+           '<td class="p num"><b>' + (t.drcBq === null ? '—' : soVN(t.drcBq, 2)) + '</b></td><td class="p num"><b>' + soVN(t.qkThat, 0) + '</b></td><td class="p num">' + soVN(t.qkTam, 0) + '</td></tr></tbody>';
+  };
+  $('bangDrc').innerHTML = bangLoai('MU_DONG', false);
+  $('bangDrcDay').innerHTML = bangLoai('MU_DAY', true);
+  var nutLoai = $('drcLoaiNut').querySelectorAll('button');
+  for (var q = 0; q < nutLoai.length; q++) nutLoai[q].onclick = function () { drcChonLoai(this.getAttribute('data-loai')); };
+  drcChonLoai(_drcLoai);
   if ($('drcNhayThang')) $('drcNhayThang').onclick = function () { $('drcThang').value = this.getAttribute('data-thang'); taiDrc(); };
   $('ghiChuDrc').textContent = (sua ? 'Gõ DRC phòng QLCL báo vào ô của ngày (Enter xuống ngày kế), xong bấm "Lưu DRC". Để trống ô rồi lưu = xoá DRC ngày đó. ' : 'Bạn chỉ có quyền xem DRC. ') +
     'Quy khô thật = kg phiếu cân của đội × DRC; ngày chưa có DRC để trống, không đoán. "Tạm tính" là cách cũ (DRC cố định theo loại mủ) để so. ' +
@@ -6807,9 +6827,9 @@ function veDrc(d) {
 
 /** Ô DRC: sửa thì tô nổi + tính quy khô thật ngay; Enter xuống ngày kế; nút Lưu đếm số ô đã đổi. */
 function drcGanOnhap() {
-  var ins = $('bangDrc').querySelectorAll('input.drc-in');
+  var ins = $('pDrc').querySelectorAll('input.drc-in');
   var capNhat = function () {
-    var n = $('bangDrc').querySelectorAll('input.drc-in.da-sua').length;
+    var n = $('pDrc').querySelectorAll('input.drc-in.da-sua').length;
     $('nutLuuDrc').textContent = n ? 'Lưu DRC (' + n + ' thay đổi)' : 'Lưu DRC';
     $('nutLuuDrc').disabled = !n;
   };
@@ -6826,7 +6846,7 @@ function drcGanOnhap() {
     ins[i].onkeydown = function (e) {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      var tat = Array.prototype.slice.call($('bangDrc').querySelectorAll('input.drc-in[data-loai="' + this.getAttribute('data-loai') + '"]'));
+      var tat = Array.prototype.slice.call(this.closest('table').querySelectorAll('input.drc-in'));
       var k = tat.indexOf(this);
       if (tat[k + 1]) { tat[k + 1].focus(); tat[k + 1].select(); }
     };
@@ -6835,7 +6855,7 @@ function drcGanOnhap() {
 }
 
 function drcLuu() {
-  var ins = $('bangDrc').querySelectorAll('input.drc-in.da-sua'), dong = [], sai = 0;
+  var ins = $('pDrc').querySelectorAll('input.drc-in.da-sua'), dong = [], sai = 0;
   for (var i = 0; i < ins.length; i++) {
     var t = String(ins[i].value).trim(), v = drcSoNhap(t);
     if (t !== '' && (v === null || v < _drc.drcMin || v > _drc.drcMax)) { sai++; continue; }
