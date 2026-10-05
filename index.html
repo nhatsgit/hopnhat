@@ -534,7 +534,13 @@ a.td-nguon:hover{background:var(--leaf-soft)}
   position:sticky;left:0;text-align:left;font-weight:600;background:var(--card);z-index:1}
 .bang-cc-thang thead th:first-child{background:var(--paper);z-index:3}
 .bang-cc-thang th:last-child,.bang-cc-thang td:last-child{
-  position:sticky;right:0;font-weight:700;background:var(--card);z-index:1}
+  position:sticky;right:0;font-weight:700;background:var(--card);z-index:1;white-space:nowrap}
+/* Vạch ngăn cột dính với phần cuộn bên dưới */
+.bang-cc-thang th:first-child,.bang-cc-thang td:first-child{box-shadow:inset -1px 0 0 var(--line)}
+.bang-cc-thang th:last-child,.bang-cc-thang td:last-child{box-shadow:inset 1px 0 0 var(--line)}
+.bang-cc-thang thead th{white-space:nowrap;box-shadow:inset 0 -1px 0 var(--line)}
+.bang-cc-thang thead th:first-child{box-shadow:inset -1px -1px 0 var(--line)}
+.bang-cc-thang thead th:last-child{box-shadow:inset 1px -1px 0 var(--line)}
 .bang-cc-thang thead th:last-child{background:var(--paper);z-index:3}
 .bang-cc-thang .cn{color:var(--clay)}
 .dong-cot-ngang{display:grid;grid-template-columns:76px 1fr auto;gap:10px;
@@ -7331,14 +7337,15 @@ function taiBangChamCongThang() {
       o[w.maCn + '|' + w.ngay] = { kyHieu: w.kyHieu, soCong: w.soCong };
     }
 
-    var h = '<thead><tr><th rowspan="2">Mã số</th>' +
-            '<th colspan="' + kt.soNgay + '">Ngày</th><th rowspan="2">Tổng công<br>tháng</th></tr><tr>';
+    // 1 hàng tiêu đề duy nhất: cột đầu / cột cuối dính trái / phải theo :first-child / :last-child — có hàng thứ 2
+    // (các ngày) thì ngày 1 và ngày cuối cũng bị dính, đè lên ô Mã số / Tổng công.
+    var h = '<thead><tr><th>Mã số</th>';
     for (var n = 1; n <= kt.soNgay; n++) {
       var d2 = (n < 10 ? '0' : '') + n;
       var thu = new Date(thang + '-' + d2).getDay();
       h += '<th' + (thu === 0 ? ' class="cn"' : '') + '>' + THU_VIET_TAT[thu] + '<br>' + n + '</th>';
     }
-    h += '</tr></thead><tbody>';
+    h += '<th>Tổng công<br>tháng</th></tr></thead><tbody>';
 
     if (!dsCn.length) {
       h += '<tr><td colspan="' + (kt.soNgay + 2) + '"><div class="rong">Không có công nhân nào trong phạm vi.</div></td></tr>';
