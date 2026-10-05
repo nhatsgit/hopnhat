@@ -226,6 +226,19 @@ tbody tr{transition:background-color .12s}
 .tabs-nhom-doc .tab{flex:none}
 .nhan-muc{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
   color:var(--sb-ink-2);padding:14px 12px 6px}
+/* Nhãn nhóm bấm được: xổ/thu danh sách trang; mũi tên xoay khi xổ. */
+button.nhan-muc{flex:none;width:100%;display:flex;align-items:center;gap:8px;border:none;background:none;
+  border-radius:8px;margin-top:6px;padding:9px 12px;font-family:inherit;text-align:left;cursor:pointer;
+  transition:color .15s,background .15s}
+button.nhan-muc:hover{color:var(--sb-ink);background:var(--sb-hover)}
+button.nhan-muc.xo,button.nhan-muc.co-trang{color:var(--sb-ink)}
+.mui-ten-nhom{flex:none;opacity:.7;transition:transform .2s ease}
+button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
+.ds-trang-nhom{display:flex;flex-direction:column;gap:2px}
+@media (prefers-reduced-motion:no-preference){
+  .ds-trang-nhom.vua-mo{animation:xoNhom .22s ease-out}
+  @keyframes xoNhom{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+}
 .tabs-nhom-doc .tab{width:100%;text-align:left;border-radius:8px;border-bottom:none;padding:9px 12px;font-size:13.5px;
   color:var(--sb-ink-2);display:flex;align-items:center;gap:10px}
 .huy-hieu{flex:none;min-width:20px;padding:1px 6px;border-radius:999px;background:var(--sb-active-bg);
@@ -9789,8 +9802,8 @@ function timNhomCuaTab(tab) {
 }
 
 /**
- * Sidebar phẳng (kiểu mẫu tham khảo): mỗi nhóm nhiều trang = 1 nhãn mục chữ hoa nhỏ + các trang liệt kê sẵn
- * bên dưới (không xổ/thu). Các nhóm chỉ 1 trang ở đầu danh sách (Tổng quan, Bản đồ) hiện thẳng thành mục
+ * Sidebar: mỗi nhóm nhiều trang = 1 nhãn mục chữ hoa nhỏ bấm được; chỉ nhóm đang xổ (S.nhomXo) hiện các
+ * trang bên dưới, bấm nhóm khác thì xổ nhóm đó + mở trang đầu. Các nhóm chỉ 1 trang ở đầu danh sách (Tổng quan, Bản đồ) hiện thẳng thành mục
  * không nhãn; từ nhóm có nhãn đầu tiên trở đi nhóm nào cũng có nhãn để khỏi lẫn vào mục phía trên.
  * 1 trang thuộc 2 nhóm (vd Sản lượng theo CN) chỉ sáng ở nhóm đang chọn. S.huyHieu[tab] = số đếm sát phải.
  */
@@ -9807,15 +9820,36 @@ function veNhomTab() {
       continue;
     }
     daCoNhan = true;
-    h += '<div class="nhan-muc">' + nh.ten + '</div>';
+    var xo = S.nhomXo === nh.id, tongHh = 0;
+    for (var q = 0; q < dsCon.length; q++) tongHh += (+hh[dsCon[q]] || 0);
+    // Nhãn nhóm = nút xổ/thu; nhóm đang thu mà chứa trang đang xem thì nhãn sáng nhẹ (co-trang),
+    // huy hiệu cộng dồn của nhóm chỉ hiện khi đang thu (khỏi mất số chờ duyệt).
+    h += '<button class="nhan-muc' + (xo ? ' xo' : '') + (!xo && S.nhom === nh.id ? ' co-trang' : '') + '" data-nhom="' + nh.id + '">' +
+         '<span class="nhom-ten">' + nh.ten + '</span>' +
+         (!xo && tongHh ? '<span class="huy-hieu">' + tongHh + '</span>' : '') +
+         '<svg class="mui-ten-nhom" viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5l5 5-5 5"/></svg></button>';
+    if (!xo) continue;
+    h += '<div class="ds-trang-nhom' + (S.nhomVuaMo === nh.id ? ' vua-mo' : '') + '">';
     for (var k = 0; k < dsCon.length; k++) {
       var t = dsCon[k];
       h += '<button class="tab' + (S.tab === t && S.nhom === nh.id ? ' on' : '') + '" data-tab="' + t + '" data-nhom-cha="' + nh.id + '">' +
            '<span class="nhom-icon">' + (ICON_TAB[t] || ICON_NHOM[nh.id] || '') + '</span><span class="nhom-ten">' + TEN_TAB[t] + '</span>' +
            (hh[t] ? '<span class="huy-hieu">' + hh[t] + '</span>' : '') + '</button>';
     }
+    h += '</div>';
   }
+  S.nhomVuaMo = null;
   $('tabsNhom').innerHTML = h;
+
+  // Bấm nhãn nhóm: nhóm đang thu → xổ ra + mở trang đầu của nhóm; nhóm đang xổ → thu lại (không đổi trang).
+  var nutNhom = $('tabsNhom').querySelectorAll('button[data-nhom]');
+  for (var n = 0; n < nutNhom.length; n++) {
+    nutNhom[n].onclick = function () {
+      var id = this.getAttribute('data-nhom');
+      if (S.nhomXo === id) { S.nhomXo = null; veNhomTab(); return; }
+      chuyenNhom(id);
+    };
+  }
 
   var nutCon = $('tabsNhom').querySelectorAll('button[data-tab]');
   for (var m = 0; m < nutCon.length; m++) {
@@ -9850,16 +9884,18 @@ function veTabCon() {
 }
 
 /**
- * Bấm vào 1 nhóm: nhóm có nhiều tab con thì chỉ xổ ra / thu lại danh sách để chọn (không nhảy
- * trang); nhóm chỉ có 1 tab (Tổng quan) thì mở luôn tab đó.
+ * Bấm vào 1 nhóm đang thu: xổ danh sách trang ra và mở luôn trang đầu của nhóm (Tổng quan của nhóm).
+ * Thu lại nhóm đang xổ xử lý ở veNhomTab (không đổi trang).
  */
 function chuyenNhom(id) {
   var nh = timNhom(id);
   if (!nh) return;
   var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
   // Mở trang đầu của nhóm (Tổng quan của nhóm)
+  if (!dsCon.length) return;
   S.trang = 1;
   S.nhomXo = id;
+  S.nhomVuaMo = id;
   chuyenTab(dsCon[0], nh.id);
 }
 
