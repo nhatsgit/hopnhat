@@ -307,6 +307,12 @@ button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
   transition:transform .15s ease,box-shadow .15s ease}
 .o.o-noi-bat:hover,.o.o-noi-bat:focus{transform:translateY(-1px);box-shadow:0 6px 16px -2px color-mix(in srgb,var(--leaf) 50%,transparent);outline:none}
 .o.o-noi-bat::-webkit-calendar-picker-indicator{cursor:pointer}
+.bang-drc .nhom-drc{text-align:center;border-bottom:1px solid var(--line)}
+.bang-drc .drc-in{width:88px;text-align:right;padding:5px 8px;font-variant-numeric:tabular-nums}
+.bang-drc .drc-in.da-sua{border-color:var(--leaf);background:var(--leaf-soft);font-weight:700}
+.bang-drc .drc-in.loi-o{border-color:#c0392b;background:color-mix(in srgb,#c0392b 12%,transparent)}
+.bang-drc tr.dong-tong td{border-top:2px solid var(--line);background:color-mix(in srgb,var(--leaf) 6%,transparent)}
+#bangDrcTo tr.dong-tong td{border-top:2px solid var(--line);font-weight:600}
 .bo-loc-dau .phieu-loc{flex:none}
 /* Bộ lọc đang dùng: mỗi điều kiện 1 chip, nằm bên phải nút (bấm vào cũng mở tấm lọc) */
 .bo-loc-dau .tom-tat{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
@@ -1051,6 +1057,29 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
         </div>
         <div class="cuon cuon-doc"><table id="bangTC"></table></div>
         <div class="phan-trang" id="phanTrangTC"></div>
+      </div>
+    </section>
+
+    <!-- Tab: DRC thật (nhóm Sản lượng) — nhập DRC phòng QLCL báo mỗi ngày mỗi đội; quy khô thật = phiếu cân của đội × DRC -->
+    <section id="pDrc" style="display:none">
+      <div class="kpis" id="kpisDrc"></div>
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatDrc">—</h3>
+          <label class="nhan" for="drcDoi" style="margin:0">Đội</label>
+          <select class="o" id="drcDoi" style="width:auto"></select>
+          <label class="nhan" for="drcThang" style="margin:0">Tháng</label>
+          <input class="o o-noi-bat" id="drcThang" type="month" style="width:auto">
+          <button class="btn chinh nho" id="nutLuuDrc" style="display:none">Lưu DRC</button>
+          <select class="o" id="drcKy" style="width:auto" title="Kỳ nghiệm thu của bảng kê"><option value="1">Kỳ 01–15</option><option value="2">Kỳ 16–cuối tháng</option><option value="0">Cả tháng</option></select>
+          <button class="btn nho" id="nutXuatDrc" title="Xuất bảng kê nghiệm thu mủ nguyên liệu theo phiếu cân (đúng bố cục file nhà máy) từ số cân + DRC đã nhập">Xuất bảng kê</button>
+        </div>
+        <div class="cuon cuon-doc"><table id="bangDrc" class="bang-drc"></table></div>
+        <p class="goi-y" id="ghiChuDrc" style="padding:8px 16px"></p>
+      </div>
+      <div class="the">
+        <h3 class="tieude-muc" style="padding:16px 16px 0">Quy khô thật phân về tổ <span class="nhan-mo" style="text-transform:none;font-weight:400">(theo tỉ lệ kg tươi trong sổ tổ đã duyệt cùng ngày)</span></h3>
+        <div class="cuon"><table id="bangDrcTo"></table></div>
       </div>
     </section>
 
@@ -1879,7 +1908,7 @@ var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
-  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1,
+  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -6679,6 +6708,237 @@ function _xuatSoTheoMau(tenMau, dung, tenFile, ch, nut) {
 }
 
 /* =====================================================================
+   Tab DRC THẬT (nhóm Sản lượng): xe cân xong vài tiếng, phòng QLCL báo DRC -> Admin nhập MỖI NGÀY MỖI ĐỘI 1 DRC cho
+   từng loại mủ. Quy khô thật của đội trong ngày = tổng phiếu cân của đội × DRC; phân về tổ theo tỉ lệ sổ tổ đã duyệt.
+   Máy chủ: drcNgay (đọc, Cloud Run) · drcLuu (ghi, Apps Script, bảng FACT_DRC_NGAY_DOI). Để trống ô = xoá DRC ngày đó.
+   ===================================================================== */
+var _drc = null, _drcLan = 0;
+
+function drcSoNhap(s) { var v = parseFloat(String(s).replace(',', '.').replace('%', '')); return isNaN(v) ? null : v; }
+
+function taiDrc() {
+  var lan = ++_drcLan, sel = $('drcDoi');
+  if (!sel.options.length) {
+    var ds = (S.dsDoi || []).filter(function (d) { return /^Đ\d+$/.test(d); });
+    sel.innerHTML = ds.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('');
+    var fd = $('fDoi').value;
+    if (fd && ds.indexOf(fd) > -1) sel.value = fd;
+  }
+  if (!$('drcThang').value) {
+    $('drcThang').value = String($('fDenNgay').value || (S.meta && S.meta.ngayMax) || '').substring(0, 7) || new Date().toISOString().substring(0, 7);
+  }
+  sel.onchange = $('drcThang').onchange = taiDrc;
+  var sua = coQuyen('drc', 'THEM') || coQuyen('drc', 'SUA');
+  $('nutLuuDrc').style.display = sua ? '' : 'none';
+  $('nutLuuDrc').onclick = drcLuu;
+  $('nutXuatDrc').onclick = drcXuatBangKe;
+  if (!sel.value) { $('bangDrc').innerHTML = '<tr><td><div class="rong">Không có đội nào trong phạm vi của bạn.</div></td></tr>'; return; }
+  $('kpisDrc').innerHTML = skKpis(4); $('bangDrc').innerHTML = skBang(8); $('bangDrcTo').innerHTML = skBang(4);
+  goiAPI('drcNgay', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: sel.value, thang: $('drcThang').value }).then(function (d) {
+    if (lan !== _drcLan) return;
+    _drc = d; veDrc(d);
+  }).catch(function (e) {
+    if (lan !== _drcLan) return;
+    $('kpisDrc').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
+    $('bangDrc').innerHTML = ''; $('bangDrcTo').innerHTML = '';
+  });
+}
+
+function veDrc(d) {
+  var sua = coQuyen('drc', 'THEM') || coQuyen('drc', 'SUA');
+  if ($('drcThang').value !== d.thang) $('drcThang').value = d.thang;
+  var tm = d.tong.MU_DONG, td = d.tong.MU_DAY, qkThat = tm.qkThat + td.qkThat;
+  var thieu = tm.soNgayThieu + td.soNgayThieu, coCan = tm.soNgayCan + td.soNgayCan;
+  var chenh = tm.drcBq === null ? 0 : tm.drcBq - d.drcTam.MU_DONG * 100;
+  var lech = tm.drcBq === null ? '' : ' · tạm tính ' + soVN(d.drcTam.MU_DONG * 100, 1) + '% (' + (chenh >= 0 ? '+' : '') + soVN(chenh, 1) + ' điểm)';
+  $('kpisDrc').innerHTML =
+    the_kpi_kg('Quy khô thật ' + tenDoiNgan(d.doi), qkThat, 'Phiếu cân × DRC, ' + soVN(coCan - thieu, 0) + '/' + soVN(coCan, 0) + ' ngày-loại mủ đã có DRC') +
+    the_kpi('DRC bình quân mủ đông', tm.drcBq === null ? '—' : soVN(tm.drcBq, 2), '%', '', tm.drcBq === null ? 'Chưa nhập DRC nào trong tháng' : 'Gia quyền theo kg cân' + lech) +
+    the_kpi('DRC bình quân mủ dây', td.drcBq === null ? '—' : soVN(td.drcBq, 2), '%', '', td.drcBq === null ? 'Chưa nhập DRC nào trong tháng' : 'Gia quyền theo kg cân · tạm tính ' + soVN(d.drcTam.MU_DAY * 100, 1) + '%') +
+    the_kpi('Ngày còn thiếu DRC', soVN(thieu, 0), 'ngày-loại mủ', '', thieu ? '<span class="giam">Có phiếu cân nhưng chưa nhập DRC</span>' : 'Đủ DRC mọi ngày có cân');
+  $('tomTatDrc').textContent = 'DRC từng ngày — ' + tenDoiNgan(d.doi) + ' · tháng ' + d.thang.substring(5) + '/' + d.thang.substring(0, 4);
+
+  var h = '<thead><tr><th rowspan="2">Ngày</th><th colspan="5" class="nhom-drc">Mủ đông chén</th><th colspan="3" class="nhom-drc">Mủ dây</th></tr>' +
+          '<tr><th class="p">Cân (kg)</th><th class="p">Sổ tổ (kg)</th><th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th><th class="p">Tạm tính (kg)</th>' +
+          '<th class="p">Cân (kg)</th><th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th></tr></thead><tbody>';
+  var oNhap = function (x, ma) {
+    var a = x.loai[ma];
+    var nhan = a.drc === null ? '' : String(a.drc).replace('.', ',');
+    var goiY = d.goiY && d.goiY[ma] ? 'gần nhất ' + String(d.goiY[ma].drc).replace('.', ',') : '52,3';
+    if (!sua || (a.kgCan <= 0 && a.drc === null)) return '<td class="p num">' + (a.drc === null ? '—' : soVN(a.drc, 2)) + '</td>';
+    return '<td class="p"><input class="o drc-in" inputmode="decimal" autocomplete="off" data-ngay="' + x.ngay + '" data-loai="' + ma + '" data-goc="' + nhan +
+           '" data-can="' + a.kgCan + '" value="' + nhan + '" placeholder="' + goiY + '"' +
+           (a.luc ? ' title="' + thoat((a.nguoi || '') + ' · ' + a.luc) + '"' : '') + '></td>';
+  };
+  d.ngay.forEach(function (x) {
+    var m = x.loai.MU_DONG, y = x.loai.MU_DAY;
+    h += '<tr data-ngay="' + x.ngay + '"><td>' + thoat(ngayVN(x.ngay)) + '</td>' +
+         '<td class="p num">' + soVN(m.kgCan, 0) + '</td><td class="p num">' + soVN(m.kgSo, 0) + '</td>' + oNhap(x, 'MU_DONG') +
+         '<td class="p num qk-that" data-qk="MU_DONG">' + (m.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(m.qkThat, 0) + '</b>') + '</td>' +
+         '<td class="p num nhan-mo">' + soVN(m.qkTam, 0) + '</td>' +
+         '<td class="p num">' + soVN(y.kgCan, 0) + '</td>' + oNhap(x, 'MU_DAY') +
+         '<td class="p num qk-that" data-qk="MU_DAY">' + (y.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(y.qkThat, 0) + '</b>') + '</td></tr>';
+  });
+  if (!d.ngay.length) h += '<tr><td colspan="9"><div class="rong">Tháng này chưa có phiếu cân nào của ' + thoat(tenDoiNgan(d.doi)) + '.' +
+    (d.ngayCanMax ? ' Phiếu cân mới nhất: ' + thoat(ngayVN(d.ngayCanMax)) + ' — <button class="btn nho" id="drcNhayThang" data-thang="' + d.ngayCanMax.substring(0, 7) + '">Xem tháng đó</button>' : '') +
+    '</div></td></tr>';
+  else h += '<tr class="dong-tong"><td><b>Cả tháng</b></td><td class="p num"><b>' + soVN(tm.kgCan, 0) + '</b></td><td class="p num"><b>' + soVN(tm.kgSo, 0) + '</b></td>' +
+            '<td class="p num"><b>' + (tm.drcBq === null ? '—' : soVN(tm.drcBq, 2)) + '</b></td><td class="p num"><b>' + soVN(tm.qkThat, 0) + '</b></td><td class="p num">' + soVN(tm.qkTam, 0) + '</td>' +
+            '<td class="p num"><b>' + soVN(td.kgCan, 0) + '</b></td><td class="p num"><b>' + (td.drcBq === null ? '—' : soVN(td.drcBq, 2)) + '</b></td><td class="p num"><b>' + soVN(td.qkThat, 0) + '</b></td></tr>';
+  $('bangDrc').innerHTML = h + '</tbody>';
+  if ($('drcNhayThang')) $('drcNhayThang').onclick = function () { $('drcThang').value = this.getAttribute('data-thang'); taiDrc(); };
+  $('ghiChuDrc').textContent = (sua ? 'Gõ DRC phòng QLCL báo vào ô của ngày (Enter xuống ngày kế), xong bấm "Lưu DRC". Để trống ô rồi lưu = xoá DRC ngày đó. ' : 'Bạn chỉ có quyền xem DRC. ') +
+    'Quy khô thật = kg phiếu cân của đội × DRC; ngày chưa có DRC để trống, không đoán. "Tạm tính" là cách cũ (DRC cố định theo loại mủ) để so. ' +
+    'Sổ sản lượng, lương vẫn dùng DRC tạm tính cho đến khi chốt.';
+
+  var g = '<thead><tr><th>Tổ</th><th class="p">Mủ đông: sổ tươi (kg)</th><th class="p">Quy khô thật (kg)</th><th class="p">Mủ dây: sổ tươi (kg)</th><th class="p">Quy khô thật (kg)</th><th class="p">Tổng quy khô thật (kg)</th></tr></thead><tbody>';
+  var s = [0, 0, 0, 0];
+  (d.theoTo || []).forEach(function (t) {
+    var m = t.loai.MU_DONG, y = t.loai.MU_DAY;
+    s[0] += m.kgSo; s[1] += m.qkThat; s[2] += y.kgSo; s[3] += y.qkThat;
+    g += '<tr><td>' + thoat(t.to) + '</td><td class="p num">' + soVN(m.kgSo, 0) + '</td><td class="p num">' + soVN(m.qkThat, 0) + '</td><td class="p num">' + soVN(y.kgSo, 0) +
+         '</td><td class="p num">' + soVN(y.qkThat, 0) + '</td><td class="p num"><b>' + soVN(m.qkThat + y.qkThat, 0) + '</b></td></tr>';
+  });
+  $('bangDrcTo').innerHTML = (d.theoTo || []).length
+    ? g + '<tr class="dong-tong"><td><b>Cộng</b></td><td class="p num">' + soVN(s[0], 0) + '</td><td class="p num"><b>' + soVN(s[1], 0) + '</b></td><td class="p num">' + soVN(s[2], 0) + '</td><td class="p num"><b>' + soVN(s[3], 0) + '</b></td><td class="p num"><b>' + soVN(s[1] + s[3], 0) + '</b></td></tr></tbody>'
+    : '<tr><td><div class="rong">Chưa có ngày nào đủ DRC + sổ tổ đã duyệt để phân về tổ.</div></td></tr>';
+  drcGanOnhap();
+}
+
+/** Ô DRC: sửa thì tô nổi + tính quy khô thật ngay; Enter xuống ngày kế; nút Lưu đếm số ô đã đổi. */
+function drcGanOnhap() {
+  var ins = $('bangDrc').querySelectorAll('input.drc-in');
+  var capNhat = function () {
+    var n = $('bangDrc').querySelectorAll('input.drc-in.da-sua').length;
+    $('nutLuuDrc').textContent = n ? 'Lưu DRC (' + n + ' thay đổi)' : 'Lưu DRC';
+    $('nutLuuDrc').disabled = !n;
+  };
+  for (var i = 0; i < ins.length; i++) {
+    ins[i].oninput = function () {
+      var v = drcSoNhap(this.value), goc = this.getAttribute('data-goc');
+      this.classList.toggle('da-sua', String(this.value).trim() !== goc);
+      var sai = String(this.value).trim() !== '' && (v === null || v < _drc.drcMin || v > _drc.drcMax);
+      this.classList.toggle('loi-o', sai);
+      var oQk = this.closest('tr').querySelector('td.qk-that[data-qk="' + this.getAttribute('data-loai') + '"]');
+      if (oQk) oQk.innerHTML = (v === null || sai) ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(Number(this.getAttribute('data-can')) * v / 100, 0) + '</b>';
+      capNhat();
+    };
+    ins[i].onkeydown = function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var tat = Array.prototype.slice.call($('bangDrc').querySelectorAll('input.drc-in[data-loai="' + this.getAttribute('data-loai') + '"]'));
+      var k = tat.indexOf(this);
+      if (tat[k + 1]) { tat[k + 1].focus(); tat[k + 1].select(); }
+    };
+  }
+  capNhat();
+}
+
+function drcLuu() {
+  var ins = $('bangDrc').querySelectorAll('input.drc-in.da-sua'), dong = [], sai = 0;
+  for (var i = 0; i < ins.length; i++) {
+    var t = String(ins[i].value).trim(), v = drcSoNhap(t);
+    if (t !== '' && (v === null || v < _drc.drcMin || v > _drc.drcMax)) { sai++; continue; }
+    dong.push({ ngay: ins[i].getAttribute('data-ngay'), loaiMu: ins[i].getAttribute('data-loai'), drc: t === '' ? '' : v });
+  }
+  if (sai) { baoLoi('thongBao', sai + ' ô DRC ngoài khoảng ' + _drc.drcMin + '–' + _drc.drcMax + ' % — sửa các ô viền đỏ rồi lưu lại.'); return; }
+  if (!dong.length) return;
+  var nut = $('nutLuuDrc'); nut.disabled = true; nut.textContent = 'Đang lưu…';
+  goiAPI('drcLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: _drc.doi, dong: JSON.stringify(dong),
+                     nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi) }).then(function (r) {
+    _cacheFE = {};
+    nsBaoOkChung('Đã lưu DRC ' + tenDoiNgan(_drc.doi) + ': thêm ' + (r.them || 0) + ', sửa ' + (r.sua || 0) + ', xoá ' + (r.xoa || 0) + '.');
+    taiDrc();
+  }).catch(function (e) { nut.disabled = false; baoLoi('thongBao', e.message); drcGanOnhap(); });
+}
+
+/**
+ * Xuất BẢNG KÊ nghiệm thu mủ nguyên liệu theo phiếu cân (đúng bố cục file nhà máy gửi: I. mủ đông chén theo từng ngày,
+ * II. mủ dây, Tổng I+II) từ số phiếu cân + DRC đã nhập. Kỳ: 1 = 01–15, 2 = 16–cuối tháng, 0 = cả tháng.
+ * Số biên bản, người lập để điền tay trên file (mỗi nơi đánh số khác nhau).
+ */
+function drcXuatBangKe() {
+  if (!_drc) return;
+  var d = _drc, ky = $('drcKy').value, ngayCuoi = Number(d.den.substring(8));
+  var tuN = ky === '2' ? 16 : 1, denN = ky === '1' ? 15 : ngayCuoi;
+  var hai = function (n) { return (n < 10 ? '0' : '') + n; };
+  var theoNgay = {};
+  d.ngay.forEach(function (x) { theoNgay[Number(x.ngay.substring(8))] = x; });
+  var thieu = 0;
+  var wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Bảng kê', { pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+  ws.columns = [{ width: 6 }, { width: 12 }, { width: 14 }, { width: 18 }, { width: 11 }, { width: 18 }, { width: 22 }];
+  var vien = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  var r = 1;
+  var dong = function (text, o) {
+    ws.mergeCells(r, 1, r, 7);
+    var c = ws.getCell(r, 1); c.value = text; c.alignment = { horizontal: (o && o.can) || 'center', vertical: 'middle', wrapText: true };
+    c.font = { bold: !o || o.dam !== false, size: (o && o.co) || 11 };
+    r++;
+  };
+  dong('KINGDOM OF CAMBODIA — VƯƠNG QUỐC CAMPUCHIA', { co: 11 });
+  dong('SUMMARY TABLE DETAILS FIELD GRADE COAGULUM FOLLOWING WEIGHBRIDGE RECEIPT', { co: 12 });
+  dong('BẢNG TỔNG HỢP CHI TIẾT MỦ NGUYÊN LIỆU THEO PHIẾU CÂN', { co: 12 });
+  dong('(Đính kèm theo biên bản số: ............/BBNL/' + d.doi + '  ngày ...... tháng ' + d.thang.substring(5) + ' năm ' + d.thang.substring(0, 4) + ')', { dam: false });
+  dong('Đội sản xuất: ' + d.doi + ' — Từ ' + hai(tuN) + '/' + d.thang.substring(5) + '/' + d.thang.substring(0, 4) + ' đến ' + hai(denN) + '/' + d.thang.substring(5) + '/' + d.thang.substring(0, 4), { dam: false });
+  r++;
+  var tieuDe = function (ten, tenTan) {
+    ws.mergeCells(r, 1, r, 7); var c0 = ws.getCell(r, 1); c0.value = ten; c0.font = { bold: true }; r++;
+    var h = ['STT', 'Đội SX', 'Ngày tháng', tenTan, 'DRC (%)', 'Quy khô (Tấn)', 'Ghi chú'];
+    h.forEach(function (t, i) {
+      var c = ws.getCell(r, i + 1); c.value = t; c.font = { bold: true }; c.border = vien;
+      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEA' } };
+    });
+    ws.getRow(r).height = 32; r++;
+  };
+  var khoi = function (ten, tenTan, ma, chiNgayCo) {
+    tieuDe(ten, tenTan);
+    var dau = r, stt = 0;
+    for (var n = tuN; n <= denN; n++) {
+      var x = theoNgay[n], a = x && x.loai[ma];
+      if (chiNgayCo && !(a && a.kgCan > 0)) continue;
+      var kg = a ? a.kgCan : 0, drc = a ? a.drc : null, qk = a && a.qkThat !== null ? a.qkThat : 0;
+      var ghi = '';
+      if (kg > 0 && drc === null) { ghi = 'CHƯA CÓ DRC'; thieu++; }
+      var vals = [++stt, d.doi, hai(n) + '/' + d.thang.substring(5) + '/' + d.thang.substring(0, 4), kg / 1000, kg > 0 && drc !== null ? drc : 0, Math.round(qk) / 1000, ghi];
+      vals.forEach(function (v, i) {
+        var c = ws.getCell(r, i + 1); c.value = v; c.border = vien;
+        c.alignment = { horizontal: i >= 3 && i <= 5 ? 'right' : 'center', vertical: 'middle' };
+        if (i === 3 || i === 5) c.numFmt = '#,##0.000'; if (i === 4) c.numFmt = '0.00';
+        if (i === 6 && ghi) c.font = { bold: true, color: { argb: 'FFC0392B' } };
+      });
+      r++;
+    }
+    var cuoi = r - 1;
+    ws.mergeCells(r, 1, r, 3); var ct = ws.getCell(r, 1); ct.value = 'Cộng / Sum'; ct.font = { bold: true }; ct.alignment = { horizontal: 'center' };
+    var fT = ws.getCell(r, 4), fQ = ws.getCell(r, 6);
+    fT.value = { formula: cuoi >= dau ? 'SUM(D' + dau + ':D' + cuoi + ')' : '0' }; fQ.value = { formula: cuoi >= dau ? 'SUM(F' + dau + ':F' + cuoi + ')' : '0' };
+    var fD = ws.getCell(r, 5); fD.value = { formula: 'IF(D' + r + '>0,ROUND(F' + r + '/D' + r + '*100,2),0)' }; fD.numFmt = '0.00';
+    fT.numFmt = fQ.numFmt = '#,##0.000';
+    for (var i2 = 1; i2 <= 7; i2++) { var cc = ws.getCell(r, i2); cc.border = vien; cc.font = { bold: true }; if (i2 >= 4 && i2 <= 6) cc.alignment = { horizontal: 'right' }; }
+    var dongTong = r; r += 2;
+    return dongTong;
+  };
+  var rI = khoi('I. Mủ đông chén — Cup lump rubber', 'NL mủ đông chén (Tấn)', 'MU_DONG', false);
+  var rII = khoi('II. Mủ dây — Tree lace rubber', 'NL mủ dây (Tấn)', 'MU_DAY', true);
+  ws.mergeCells(r, 1, r, 3); var tc = ws.getCell(r, 1); tc.value = 'Tổng cộng (I + II) / Total'; tc.font = { bold: true }; tc.alignment = { horizontal: 'center' };
+  ws.getCell(r, 4).value = { formula: 'D' + rI + '+D' + rII }; ws.getCell(r, 6).value = { formula: 'F' + rI + '+F' + rII };
+  ws.getCell(r, 4).numFmt = ws.getCell(r, 6).numFmt = '#,##0.000';
+  for (var i3 = 1; i3 <= 7; i3++) { var c3 = ws.getCell(r, i3); c3.border = vien; c3.font = { bold: true }; if (i3 >= 4 && i3 <= 6) c3.alignment = { horizontal: 'right' }; }
+  r += 2;
+  dong('Nguyên liệu: PEFC Controlled sources (PEFC CS)', { can: 'left', dam: false });
+  dong('Khối lượng = tổng phiếu cân của đội trong ngày; DRC do phòng QLCL báo, nhập theo ngày. Quy khô = khối lượng × DRC.', { can: 'left', dam: false, co: 10 });
+  r++;
+  ws.getCell(r, 5).value = 'Lập biểu / Prepared by'; ws.mergeCells(r, 5, r, 7); ws.getCell(r, 5).alignment = { horizontal: 'center' }; ws.getCell(r, 5).font = { bold: true };
+  var ten = 'Bang_ke_DRC_' + d.doi + '_' + d.thang + (ky === '1' ? '_01-15' : ky === '2' ? '_16-cuoi' : '') + '.xlsx';
+  wb.xlsx.writeBuffer().then(function (buf) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.download = ten; a.click();
+    nsBaoOkChung('Đã xuất ' + ten + (thieu ? ' — còn ' + thieu + ' ngày có cân nhưng chưa có DRC (ghi "CHƯA CÓ DRC" trong file).' : '.'));
+  }).catch(function (e) { baoLoi('thongBao', 'Không dựng được file: ' + e.message); });
+}
+
+/* =====================================================================
    Tab XUẤT BIỂU MẪU — mỗi biểu mẫu 1 thẻ. Thêm biểu mẫu mới: thêm 1 mục
    vào BAO_CAO (ten, moTa, gồm, phamVi 'doiTo' | 'doi', loc 'nam' nếu chọn năm
    thay vì tháng, duocXuat, xuat). Bấm "Xuất Excel" mở popup bộ lọc riêng (moXuatBc).
@@ -9677,6 +9937,7 @@ var LOC_THEO_TAB = {
   sanLuong: ['doi', 'to', 'loaiMu', 'phien', 'chatLuong', 'cn'],
   phieu:    ['doi', 'to'],
   tramCan:  ['doi', 'to', 'loaiMu'],   // trống khoảng ngày = tháng có phiếu cân mới nhất
+  drc:      [],         // có ô chọn đội + tháng riêng, ẩn khung lọc chung
   xepHang:  ['doi', 'to', 'loaiMu', 'phien', 'chatLuong'],
   chamCong: ['doi', 'to', 'cn', 'kyHieu', 'phien'],
   doiChieu: ['doi', 'to'],
@@ -9872,6 +10133,7 @@ function taiTab() {
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'tqNhanSu') taiTqNhanSu();
   else if (S.tab === 'tramCan') taiTramCan();
+  else if (S.tab === 'drc') taiDrc();
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'phieu') taiPhieu();
   else if (S.tab === 'chamCong') taiChamCong();
@@ -10009,14 +10271,14 @@ var NHOM_TAB = [
   // Tổng quan đầu trang = Báo cáo chỉ tiêu Tập đoàn; mỗi nhóm có trang tổng quan riêng ở đầu nhóm
   { id: 'tongQuan', ten: 'Tổng quan', tabs: ['baoCaoTD'] },
   { id: 'banDo', ten: 'Bản đồ', tabs: ['banDoLo'] },
-  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'phieu', 'tramCan', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
+  { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'phieu', 'tramCan', 'drc', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
   // Nhân sự = nhân sự + chấm công + lương (đã gộp nhóm Lương cũ)
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
-  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm', tramCan: 'Trạm cân',
+  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Sản lượng chi tiết', phieu: 'Phiếu nội trạm', tramCan: 'Trạm cân', drc: 'DRC thật',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
@@ -10044,6 +10306,7 @@ var ICON_TAB = {
   tqNhanSu: _svgNet('<path d="M3.5 14a6.5 6.5 0 1 1 13 0"/><path d="M10 14l3-4"/>'),
   phieu: _svgNet('<path d="M5 2.5h10v15l-2-1.3-1.5 1.3-1.5-1.3-1.5 1.3L7 16.2l-2 1.3z"/><path d="M7.5 7h5M7.5 10h5"/>'),
   tramCan: _svgNet('<path d="M10 3v14M6 17h8M4 6h12"/><path d="M4 6l-2 5a2.5 2.5 0 0 0 4 0zM16 6l-2 5a2.5 2.5 0 0 0 4 0z"/>'),
+  drc: _svgNet('<path d="M10 2.5c3 3.8 5 6.3 5 8.8a5 5 0 0 1-10 0c0-2.5 2-5 5-8.8z"/><path d="M7.8 11.5a2.4 2.4 0 0 0 2.2 2.2"/>'),
   slTheoCn: _svgNet('<circle cx="7" cy="6" r="2.5"/><path d="M2.5 16.5c0-2.8 2-4.5 4.5-4.5s4.5 1.7 4.5 4.5"/><path d="M14 16.5v-4M17 16.5V8"/>'),
   giaoKhoan: _svgNet('<rect x="4.5" y="3.5" width="11" height="14" rx="1.5"/><path d="M7.5 3.5V2.5h5v1M7.5 8h5M7.5 11h5M7.5 14h3"/>'),
   nangSuatVuon: _svgNet('<path d="M10 17.5V9"/><path d="M10 11c-4 0-6-2.5-6-6 3.5 0 6 2 6 6zM10 9c0-3.5 2.5-6 6-6 0 3.5-2.5 6-6 6z"/>'),
@@ -10190,6 +10453,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
   $('pTqNhanSu').style.display = (ten === 'tqNhanSu') ? '' : 'none';
   $('pTramCan').style.display = (ten === 'tramCan') ? '' : 'none';
+  $('pDrc').style.display = (ten === 'drc') ? '' : 'none';
   $('pSanLuong').style.display = (ten === 'sanLuong') ? '' : 'none';
   $('pPhieu').style.display = (ten === 'phieu') ? '' : 'none';
   $('pChamCong').style.display = (ten === 'chamCong') ? '' : 'none';
