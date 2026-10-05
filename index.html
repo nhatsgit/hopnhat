@@ -3357,7 +3357,8 @@ function veBangTramCan() {
   var soTrang = _tc.soTrang || 1, tongPhieu = _tc.tongPhieu || ds.length;
   _tcTrang = _tc.trang || 1;
   var h = '<thead><tr><th>Số phiếu</th><th>Giờ cân</th><th>Đội</th><th>Tổ · phiên</th><th>Lô</th><th>Phiếu nội trạm</th>' +
-          '<th>Xe</th><th>Tài xế</th><th>Hàng</th><th class="p">Cân tổng</th><th class="p">Cân bì</th><th class="p">Hàng (kg)</th></tr></thead><tbody>';
+          '<th>Xe</th><th>Tài xế</th><th>Hàng</th><th class="p">Cân tổng</th><th class="p">Cân bì</th><th class="p">Hàng (kg)</th>' +
+          '<th class="p" title="DRC phòng QLCL báo cho ngày + đội + loại mủ của phiếu (nhập ở tab DRC thật)">DRC (%)</th><th class="p" title="Hàng × DRC">Quy khô (kg)</th></tr></thead><tbody>';
   ds.forEach(function (x) {
     var zs = x.zones || [];
     h += '<tr><td class="num">' + thoat(x.ma) + (zs.length > 1 ? ' <span class="td-nguon" title="Một chuyến chở mủ của ' + zs.length + ' tổ">gộp ' + zs.length + '</span>' : '') +
@@ -3366,7 +3367,9 @@ function veBangTramCan() {
          '</td><td>' + zs.map(function (z) { return thoat(z.lo); }).join('<br>') +
          '</td><td>' + thoat(x.nt) + '</td><td>' + thoat(x.xe) + '</td><td>' + thoat(x.taiXe) +
          '</td><td>' + thoat(TEN_NGAN_LOAI_MU[x.loaiMu] || x.hang) + '</td><td class="p num">' + soVN(x.canTong, 0) +
-         '</td><td class="p num">' + soVN(x.canBi, 0) + '</td><td class="p num"><b>' + soVN(x.kg, 0) + '</b></td></tr>';
+         '</td><td class="p num">' + soVN(x.canBi, 0) + '</td><td class="p num"><b>' + soVN(x.kg, 0) + '</b></td>' +
+         '<td class="p num">' + (x.drc === null || x.drc === undefined ? '<span class="nhan-mo">—</span>' : soVN(x.drc, 2)) + '</td>' +
+         '<td class="p num">' + (x.quyKho === null || x.quyKho === undefined ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(x.quyKho, 0) + '</b>') + '</td></tr>';
   });
   $('bangTC').innerHTML = h + '</tbody>';
   $('phanTrangTC').innerHTML = soTrang > 1
@@ -3399,12 +3402,13 @@ function _xuatTramCan(dAll) {
   var ds = (dAll && dAll.phieu) || [];
   if (!ds.length) { baoLoi('thongBao', 'Không có phiếu cân để xuất.'); return; }
   var nhan = ['Số phiếu', 'Giờ cân tổng', 'Giờ cân bì', 'Đội', 'Tổ', 'Phiên', 'Lô', 'Số phiếu nội trạm', 'Biển số xe', 'Tài xế',
-              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Ghi chú'];
+              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'DRC (%)', 'Quy khô (kg)', 'Ghi chú'];
   var dong = ds.map(function (x) {
     var zs = x.zones || [];
     return [x.ma, x.gioTong, x.gioBi, x.doi, zs.map(function (z) { return z.to || 'Zone ' + z.zone; }).join('; '),
             zs.map(function (z) { return z.phien; }).join('; '), zs.map(function (z) { return z.lo; }).join(' | '), x.nt, x.xe, x.taiXe,
-            x.hang, x.canTong, x.canBi, x.kg, x.ghiChu];
+            x.hang, x.canTong, x.canBi, x.kg, x.drc === null || x.drc === undefined ? '' : x.drc,
+            x.quyKho === null || x.quyKho === undefined ? '' : x.quyKho, x.ghiChu];
   });
   xuatBangExcel('tram_can_' + String(dAll.tu || '') + '_' + String(dAll.den || '') + '.xlsx', nhan, dong);
 }
