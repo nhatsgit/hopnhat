@@ -301,6 +301,12 @@ button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
 .bo-loc-dau:hover .nut-loc-pill,.bo-loc-dau.dang-mo .nut-loc-pill{filter:brightness(1.08);transform:translateY(-1px);
   box-shadow:0 6px 16px -2px color-mix(in srgb,var(--leaf) 55%,transparent)}
 .bo-loc-dau:active .nut-loc-pill{transform:scale(.97)}
+/* Ô chọn nổi bật (vd chọn tháng của Sổ chấm công): viền + nền màu lá, chữ đậm, bóng nhẹ — cùng kiểu nút Bộ lọc */
+.o.o-noi-bat{border:2px solid var(--leaf);background:var(--leaf-soft);color:var(--ink);font-weight:700;
+  border-radius:99px;padding:7px 14px;box-shadow:0 4px 12px -2px color-mix(in srgb,var(--leaf) 35%,transparent);cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease}
+.o.o-noi-bat:hover,.o.o-noi-bat:focus{transform:translateY(-1px);box-shadow:0 6px 16px -2px color-mix(in srgb,var(--leaf) 50%,transparent);outline:none}
+.o.o-noi-bat::-webkit-calendar-picker-indicator{cursor:pointer}
 .bo-loc-dau .phieu-loc{flex:none}
 /* Bộ lọc đang dùng: mỗi điều kiện 1 chip, nằm bên phải nút (bấm vào cũng mở tấm lọc) */
 .bo-loc-dau .tom-tat{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
@@ -1103,7 +1109,7 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatBangCC">—</h3>
           <label class="nhan" for="ccThang" style="margin:0">Tháng</label>
-          <input class="o" id="ccThang" type="month" style="width:auto">
+          <input class="o o-noi-bat" id="ccThang" type="month" style="width:auto">
           <button class="btn nho" id="nutXuatSoCC" title="Xuất đúng mẫu &quot;Sổ theo dõi chấm công&quot; của đội: trang bìa + bảng tháng, công thức tổng công sống">Xuất Excel (mẫu sổ)</button>
         </div>
         <div class="bang-cc-thang" id="khungBangCC"><table id="bangCCThang"></table></div>
