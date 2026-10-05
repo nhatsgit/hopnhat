@@ -205,6 +205,8 @@ tbody tr{transition:background-color .12s}
   display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700}
 .nd-chu{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
 .nd-chu b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thanh-ben .nd-chu .the-vaitro,.nd-email{align-self:stretch;max-width:100%}
+.nd-email{font-size:11.5px;color:var(--sb-ink-2);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .thanh-ben .nd-chu .the-vaitro{display:block;background:none;padding:0;border-radius:0;font-size:12px;font-weight:400;
   color:var(--sb-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nut-thoat-nho{flex:none;width:30px;height:30px;border-radius:8px;border:1px solid var(--sb-line);background:transparent;
@@ -335,6 +337,9 @@ button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
 .luoi-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
 .luoi-2.deu{grid-template-columns:1fr 1fr}
 .luoi-2.mot{grid-template-columns:1fr}
+/* Ô lưới không được nở theo bảng / biểu đồ bên trong (mặc định min-width:auto làm cột 2fr phình quá màn hình) —
+   bảng rộng thì cuộn ngang trong khung .cuon của nó. */
+.luoi-2>*,.luoi-bd>*,.top-to>*,.dong-cot-ngang>*{min-width:0}
 @media (max-width:900px){.luoi-2,.luoi-2.deu{grid-template-columns:1fr}}
 /* Tổng quan chia theo hạng mục: mỗi hạng mục 1 tiêu đề lớn */
 .nhom-tq{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:28px 0 12px;padding-top:14px;
@@ -633,10 +638,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 .kpi .ten{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13.5px;
   font-weight:500;color:var(--ink-2);margin-bottom:10px}
 .kpi.co-nhan .ten{padding-right:74px}
-.kpi .so{font-size:30px;overflow-wrap:anywhere}
-.kpi .so.so-dai{font-size:25px}
-.kpi .so.so-rat-dai{font-size:21px}
-.kpi .dv{font-size:14px;white-space:nowrap;display:inline-block}
+.kpi .so{font-size:30px;white-space:nowrap}
+/* vuaSoKpi (script) co chữ số của cả khối cho vừa thẻ hẹp nhất; co tới cỡ nhỏ nhất vẫn tràn thì cho đơn vị xuống dòng */
+.kpi .so.xuong{white-space:normal}
+.kpi .dv{font-size:14px;white-space:nowrap}
 .kpi .phu2{color:var(--ink-2)}
 .icon-kpi{flex:none;width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;
   background:var(--leaf-soft);color:var(--leaf)}
@@ -656,8 +661,33 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 .thanh-nho i{display:block;height:100%;border-radius:999px;background:var(--latex)}
 .thanh-cot-ngang,.thanh-cot-ngang .lap,.td-tl .vach,.td-tl .vach i{border-radius:999px}
 @media (prefers-reduced-motion:no-preference){.thanh-nho i{transform-origin:left center;animation:hu-mo-ngang .6s cubic-bezier(.2,.7,.3,1) both}}
-@media (max-width:640px){.kpi .so{font-size:24px}.kpi .so.so-dai,.kpi .so.so-rat-dai{font-size:21px}.kpi{padding:14px}.duong-nho{width:calc(100% + 28px);margin:10px -14px -14px}
+@media (max-width:640px){.kpi .so{font-size:24px}.kpi{padding:14px}.duong-nho{width:calc(100% + 28px);margin:10px -14px -14px}
   .tabs.tabs-con{padding:6px 12px}}
+
+/* ---------- Điện thoại / máy tính bảng (05/10/2026) ---------- */
+.thanh-tren-dt{display:none}
+@media (max-width:900px){
+  /* Thanh trên: nút ☰ (trái) + nút sáng/tối (phải) nằm trong thanh, không đè lên tab / bộ lọc */
+  .thanh-tren-dt{display:flex;align-items:center;justify-content:center;height:64px;padding:0 64px;
+    background:var(--card);border-bottom:1px solid var(--line)}
+  .thanh-tren-dt b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tabs.tabs-con{scrollbar-width:none}
+  .tabs.tabs-con::-webkit-scrollbar{display:none}
+}
+@media (max-width:640px){
+  /* Thẻ số 2 cột: nhỏ gọn, nhãn so sánh xuống dưới số thay vì chiếm góc trên */
+  .kpi{display:flex;flex-direction:column;padding:12px}
+  .kpi .ten{font-size:12.5px;gap:8px;margin-bottom:8px;align-items:flex-start}
+  .kpi.co-nhan .ten{padding-right:0}
+  .icon-kpi{width:28px;height:28px;border-radius:8px}
+  .icon-kpi svg{width:15px;height:15px}
+  .kpi .so{font-size:22px}
+  .kpi .dv{font-size:12px}
+  .nhan-ss{position:static;order:2;align-self:flex-start;margin-top:6px;font-size:11px;padding:1px 7px}
+  .kpi .phu2{order:3;font-size:12px}
+  .kpi .thanh-nho{order:4}
+  .duong-nho{order:4;width:calc(100% + 24px);margin:10px -12px -12px}
+}
 </style>
 </head>
 <body>
@@ -749,6 +779,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <div class="nd-chu">
             <b id="tenND">—</b>
             <span class="the-vaitro" id="theVaiTro">—</span>
+            <span class="nd-email" id="emailND" data-khong-dich hidden></span>
           </div>
           <button class="nut-thoat-nho" id="nutThoat" type="button" title="Đổi người dùng" aria-label="Đổi người dùng"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5H4.5v13H8"/><path d="M12 6.5 15.5 10 12 13.5M15.5 10H8"/></svg></button>
         </div>
@@ -756,6 +787,8 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
     </aside>
 
     <main class="noi-dung-chinh">
+      <!-- Thanh trên cùng của điện thoại / máy tính bảng: chừa chỗ cho nút ☰ và nút sáng/tối, ghi tên trang đang xem -->
+      <div class="thanh-tren-dt" id="thanhTrenDt"><b id="tieuDeDt"></b></div>
       <div class="tabs tabs-con" id="tabsCon" style="display:none"></div>
 
       <div class="wrap">
@@ -2519,15 +2552,53 @@ window.addEventListener('resize', function () {
 
 // Khối thẻ KPI: số cột = chia đều số thẻ đang hiện cho số hàng ít nhất (thẻ rộng tối thiểu 170px).
 // Chạy lại khi khối đổi bề ngang (đổi tab, đổi cỡ màn hình) hoặc đổi thẻ bên trong (vẽ lại số liệu).
-var KPI_RONG = 170, KPI_KHE = 12, KPI_TOI_DA = 5;   // tối đa 5 thẻ một hàng
+var KPI_RONG = 170, KPI_RONG_DT = 140, KPI_KHE = 12, KPI_TOI_DA = 5;   // tối đa 5 thẻ một hàng
 function chiaDeuKpi(el) {
   var n = 0, w = el.clientWidth;
+  var rong = w < 600 ? KPI_RONG_DT : KPI_RONG;   // điện thoại: thẻ hẹp hơn để được 2 thẻ một hàng
   for (var i = 0; i < el.children.length; i++) if (getComputedStyle(el.children[i]).display !== 'none') n++;
   if (!n || !w) return;
-  var toiDa = Math.max(1, Math.min(KPI_TOI_DA, Math.floor((w + KPI_KHE) / (KPI_RONG + KPI_KHE))));
+  var toiDa = Math.max(1, Math.min(KPI_TOI_DA, Math.floor((w + KPI_KHE) / (rong + KPI_KHE))));
   var cot = Math.ceil(n / Math.ceil(n / toiDa));
   if (el.style.getPropertyValue('--cot') !== String(cot)) el.style.setProperty('--cot', cot);
   el.classList.toggle('gian', toiDa <= 2);
+  vuaSoKpi(el);
+}
+
+/**
+ * Số trong thẻ KPI (vd 1,081,427.28 triệu đồng, 30/09/2026) không bao giờ ngắt giữa số: đo chữ số của mọi thẻ
+ * trong khối, co cả khối về cùng 1 cỡ vừa thẻ chật nhất (đồng đều, không thẻ to thẻ nhỏ), thấp nhất KPI_CO_MIN px;
+ * tới cỡ đó vẫn tràn thì riêng thẻ đó cho đơn vị xuống dòng.
+ */
+var KPI_CO_MIN = 18;
+function vuaSoKpi(el) {
+  var ds = el.querySelectorAll('.kpi .so');
+  if (!ds.length || !el.clientWidth) return;
+  var i, tiLe = 1, goc = 0, dangChay = [];
+  for (i = 0; i < ds.length; i++) {
+    ds[i].style.fontSize = ''; ds[i].classList.remove('xuong');
+    // Số đang chạy hiệu ứng đếm: tạm đặt số thật để đo, đo xong trả lại
+    var n0 = ds[i].firstChild;
+    if (ds[i]._soThat && n0 && n0.nodeType === 3) { dangChay.push([n0, n0.nodeValue]); n0.nodeValue = ds[i]._soThat; }
+  }
+  for (i = 0; i < ds.length; i++) {
+    var o = ds[i];
+    if (!o.clientWidth) continue;
+    if (!goc) goc = parseFloat(getComputedStyle(o).fontSize) || 30;
+    if (o.scrollWidth > o.clientWidth + 1) {
+      // Chỉ phần số co theo cỡ chữ, đơn vị giữ cỡ riêng -> tính tỉ lệ trên phần số
+      var dv = o.querySelector('.dv'), wDv = dv ? dv.offsetWidth + 4 : 0;
+      tiLe = Math.min(tiLe, Math.max(0, o.clientWidth - wDv) / Math.max(1, o.scrollWidth - wDv));
+    }
+  }
+  if (tiLe < 1) {
+    var co = Math.max(KPI_CO_MIN, Math.floor(goc * tiLe * 0.98));
+    for (i = 0; i < ds.length; i++) {
+      ds[i].style.fontSize = co + 'px';
+      if (ds[i].scrollWidth > ds[i].clientWidth + 1) ds[i].classList.add('xuong');
+    }
+  }
+  dangChay.forEach(function (x) { x[0].nodeValue = x[1]; });
 }
 (function () {
   var daTheoDoi = typeof WeakSet === 'function' ? new WeakSet() : null, hen = 0;
@@ -2567,8 +2638,9 @@ function demSoKpi(so) {
   var le = m[3] ? m[3].length : 0, dich = Number((m[1] + m[2].replace(/,/g, '')) + (m[3] ? '.' + m[3] : ''));
   if (!dich || !isFinite(dich)) return;
   var t0 = performance.now(), dai = 700;
+  so._soThat = goc;   // vuaSoKpi đo cỡ chữ theo số thật, không theo số đang chạy dở
   // Trình duyệt không vẽ khung hình (tab ẩn, in, chụp) thì requestAnimationFrame dừng: luôn trả số thật sau ~0,8 giây
-  setTimeout(function () { if (nut.parentNode) nut.nodeValue = goc; }, dai + 100);
+  setTimeout(function () { if (nut.parentNode) nut.nodeValue = goc; so._soThat = null; }, dai + 100);
   (function buoc(t) {
     if (nut.nodeValue === null || !nut.parentNode) return;            // thẻ đã vẽ lại
     var k = Math.min(1, (t - t0) / dai), e = 1 - Math.pow(1 - k, 3);
@@ -2579,6 +2651,10 @@ function demSoKpi(so) {
 (function () {
   if (GIAM_CHUYEN_DONG || typeof MutationObserver !== 'function') return;
   function xemThe(ds) {
+    // Cỡ chữ số đo theo số thật TRƯỚC khi các thẻ bắt đầu đếm từ 0
+    var khoi = [];
+    ds.forEach(function (bg) { if (bg.target.classList && bg.target.classList.contains('kpis') && khoi.indexOf(bg.target) < 0) khoi.push(bg.target); });
+    khoi.forEach(function (k) { chiaDeuKpi(k); });
     ds.forEach(function (bg) {
       var i = 0;
       bg.addedNodes.forEach(function (n) {
@@ -3515,12 +3591,9 @@ function the_kpi(ten, so, dv, phu, phuHtml) {
     nhan = '<span class="nhan-ss ' + (m[1] || '') + '" title="So với kỳ trước">' + m[2] + '</span>';
     phuH = phuH.slice(0, m.index);
   }
-  // Số dài (vd 1,081,427.28 triệu đồng) thu nhỏ chữ cho vừa thẻ
-  var doDai = String(so).replace(/<[^>]*>/g, '').length;
-  var coSo = doDai > 13 ? ' so-rat-dai' : (doDai > 10 ? ' so-dai' : '');
   return '<div class="the kpi' + (nhan ? ' co-nhan' : '') + '">' + nhan +
     '<div class="ten">' + iconKpi(ten, dv) + '<span>' + thoat(ten) + '</span></div>' +
-    '<div class="so num' + coSo + '">' + so + '<span class="dv">' + thoat(dv) + '</span></div>' +
+    '<div class="so num">' + so + '<span class="dv">' + thoat(dv) + '</span></div>' +
     '<div class="phu2">' + phuH + '</div></div>';
 }
 
@@ -5114,7 +5187,9 @@ function _bdTomTatLoc() {
 }
 
 function _bdTaoBanDo() {
-  _bdMap = L.map('banDo', { preferCanvas: true, zoomControl: true });
+  // maxBoundsViscosity 1: kéo chạm mép vùng cho phép thì dừng hẳn (không trượt ra ngoài rồi bật lại)
+  _bdMap = L.map('banDo', { preferCanvas: true, zoomControl: true, maxBoundsViscosity: 1 });
+  _bdMap.on('resize', _bdGioiHan);
   var veTinh = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     { maxZoom: 19, attribution: 'Ảnh vệ tinh © Esri' });
   var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
@@ -5122,6 +5197,22 @@ function _bdTaoBanDo() {
   L.control.layers({ 'Vệ tinh': veTinh, 'Bản đồ': osm }, null, { position: 'topright' }).addTo(_bdMap);
   L.control.scale({ imperial: false }).addTo(_bdMap);
   _bdMap.setView([13.19, 104.62], 12);
+}
+
+/**
+ * Chỉ cho kéo / thu nhỏ trong phạm vi các lô (cả công ty, không theo bộ lọc) + 1 khoảng đệm: khung hình mọi lô
+ * nới 25% mỗi phía; thu nhỏ tối đa tới mức vừa thấy trọn khung đó (tính lại khi bản đồ đổi cỡ).
+ */
+var _bdKhung = null;
+function _bdGioiHan() {
+  if (!_bdMap || !_bd || !_bd.hinh || !_bd.hinh.lo.length || !_bdMap.getSize().x) return;
+  if (!_bdKhung) {
+    _bdKhung = L.geoJSON({ type: 'FeatureCollection', features: _bd.hinh.lo.map(function (x) {
+      return { type: 'Feature', properties: {}, geometry: x.g };
+    }) }).getBounds().pad(0.25);
+    _bdMap.setMaxBounds(_bdKhung);
+  }
+  _bdMap.setMinZoom(_bdMap.getBoundsZoom(_bdKhung, false));
 }
 
 function _bdLoc() {
@@ -5276,6 +5367,7 @@ function veBanDoLo(canVua) {
       lop.on('click', function () { _bdChon = x.maLo; veChiTietLo(x); _bdLop.setStyle(_bdLop.options.style); });
     }
   }).addTo(_bdMap);
+  _bdGioiHan();
   if (canVua && ds.length) _bdMap.fitBounds(_bdLop.getBounds(), { padding: [20, 20] });
 
   // Lô cao nhất / thấp nhất: chỉ tô viền nổi bật (không ghim nhãn — che các lô bên cạnh), đưa lên trên cùng
@@ -9921,6 +10013,8 @@ function chuyenTab(ten, nhomMoi) {
   khoiPhucLocTab(ten);
   veNhomTab();
   veTabCon();
+  var nhDt = timNhom(S.nhom);
+  $('tieuDeDt').textContent = nhDt && nhDt.tabs.length > 1 && TEN_TAB[ten] !== nhDt.ten ? nhDt.ten + ' · ' + TEN_TAB[ten] : (TEN_TAB[ten] || '');
   $('pTongQuan').style.display = (ten === 'tongQuan') ? '' : 'none';
   $('pTqNhanSu').style.display = (ten === 'tqNhanSu') ? '' : 'none';
   $('pTramCan').style.display = (ten === 'tramCan') ? '' : 'none';
@@ -10549,10 +10643,15 @@ function vaoApp(d, vtChon) {
   // Tên công ty ở CRCK có kèm "(Bean Heack)" (dữ liệu meta backend) — không cần hiện ở đây.
   $('dongDonVi').textContent = d.ten.replace(/\s*\(bean heack\)\s*/i, '');
   var tenHien = S.hoTenDN || tenVaiTro(S.vaiTroHienThi);
-  var phuND = (S.hoTenDN ? tenVaiTro(S.vaiTroHienThi) + ' · ' : '') + d.maDonVi + (S.emailDN ? ' · ' + S.emailDN : '');
+  var phuND = (S.hoTenDN ? tenVaiTro(S.vaiTroHienThi) + ' · ' : '') + d.maDonVi;
   $('tenND').textContent = tenHien;
+  $('tenND').title = tenHien;
   $('theVaiTro').textContent = phuND;
   $('theVaiTro').title = phuND;
+  // Email Google 1 dòng riêng (dài -> "…", rê chuột xem đủ)
+  $('emailND').textContent = S.emailDN || '';
+  $('emailND').title = S.emailDN || '';
+  $('emailND').hidden = !S.emailDN;
   // Chữ viết tắt trên ô tròn: chữ đầu 2 từ đầu (vai trò) hoặc họ + tên (họ tên Google)
   var tuND = tenHien.trim().split(/\s+/);
   $('avatarND').textContent = ((tuND[0] || '').charAt(0) + (tuND.length > 1 ? tuND[S.hoTenDN ? tuND.length - 1 : 1].charAt(0) : '')).toUpperCase() || '—';
