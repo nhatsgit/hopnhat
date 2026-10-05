@@ -6317,7 +6317,8 @@ function dungSoToTruong(wb, d) {
   for (var j = d.dsTo.length; j < tSh.length; j++) { wb.removeWorksheet(tSh[j].id); if (bia[j]) wb.removeWorksheet(bia[j].id); }
   var soDoi = _hai(Number(String(doiCuaTo(d.dsTo[0] ? d.dsTo[0].ma : '')).replace(/\D/g, '')) || 0);
 
-  var viTri = {};   // maTo -> { tenT, dongT: {phien: {maCn: row}}, dongY: {maCn: row}, dongR: {...}, tongG }
+  var viTri = {};   // maTo -> { tenT: {phien: tên sheet}, tenY, dongT: {phien: {maCn: row}}, dongY: {maCn: row}, dongR: {...}, tongG }
+  var nhanDoi = {};   // sheet gốc (id) -> các sheet nhân bản, để xếp lại thứ tự sheet cuối cùng
   d.dsTo.forEach(function (to, j) {
     var n = _soTo(to.ma), cns = sl.cnCuaTo[to.ma] || [], vt = viTri[to.ma] = { dongT: {}, dongY: {}, dongR: {} };
 
@@ -6340,13 +6341,14 @@ function dungSoToTruong(wb, d) {
       });
     }
 
-    // Mủ đông: sheet T{n}, 4 khối phiên
-    var w = tSh[j];
-    w.name = 'T' + n;
-    vt.tenT = w.name;
-    xoaTuDong(w, 1, SC_T + 8);
-    var dich = 1;
+    // Mủ đông: mỗi LÁT (phiên A/B/C/D) 1 sheet "T{n} LÁT x" — đội kiểm từng lát cho dễ (giống sổ gốc MĐ LÁT A..D)
+    vt.tenT = {};
+    xoaTuDong(tSh[j], 1, SC_T + 8);
     PHIEN_4.forEach(function (ph) {
+      var w = ph === 'A' ? tSh[j] : _nhanDoiSheet(wb, tSh[j], nhanDoi);
+      w.name = 'T' + n + ' LÁT ' + ph;
+      vt.tenT[ph] = w.name;
+      var dich = 1;
       var dongPh = sl.dong.filter(function (x) {
         if (x.loai !== 'MU_DONG' || toCuaMaCn(x.maCn) !== to.ma) return false;
         var xp = x.phien || 'A';
@@ -6380,11 +6382,20 @@ function dungSoToTruong(wb, d) {
     });
   });
 
-  // Mủ dây / Mủ đất: mỗi tổ 1 khối
-  function khoiPhu(ws, k, loai, khoaDong) {
-    xoaTuDong(ws, 1, SC_D + 6);
+  // Mủ dây: mỗi tổ 1 sheet "T{n} MỦ DÂY" (riêng khỏi mủ đông). Mủ đất: mỗi tổ 1 khối trong sheet "Mủ đất".
+  var dsSheetDay = [];
+  function khoiPhu(ws0, k, loai, khoaDong, riengTo) {
+    xoaTuDong(ws0, 1, SC_D + 6);
     var dich = 1;
-    d.dsTo.forEach(function (to) {
+    d.dsTo.forEach(function (to, jt) {
+      var ws = ws0;
+      if (riengTo) {
+        ws = jt === 0 ? ws0 : _nhanDoiSheet(wb, ws0, nhanDoi);
+        ws.name = 'T' + _soTo(to.ma) + ' MỦ DÂY';
+        viTri[to.ma].tenY = ws.name;
+        dsSheetDay.push(ws);
+        dich = 1;
+      }
       var vt = viTri[to.ma], cns = sl.cnCuaTo[to.ma] || [];
       var g = _gomNgay(sl.dong.filter(function (x) { return x.loai === loai && toCuaMaCn(x.maCn) === to.ma; })), oNgay = _chiaONgay(g.ngays, 5);
       var dau = dich;
@@ -6395,8 +6406,8 @@ function dungSoToTruong(wb, d) {
         var r = danVung(ws, k.dong, dich, SC_D) - 1, row = ws.getRow(r), rT = vt.dongT.A[cn.maCn];
         dongCn[cn.maCn] = r;
         row.getCell(1).value = i + 1;
-        row.getCell(2).value = { formula: "'" + vt.tenT + "'!D" + rT, result: cn.ten || '' };
-        row.getCell(3).value = { formula: "'" + vt.tenT + "'!E" + rT, result: cn.maCn };
+        row.getCell(2).value = { formula: "'" + vt.tenT.A + "'!D" + rT, result: cn.ten || '' };
+        row.getCell(3).value = { formula: "'" + vt.tenT.A + "'!E" + rT, result: cn.maCn };
         for (var s = 0; s < 5; s++) {
           var kg = 0, kg2 = 0;
           oNgay[s].forEach(function (ng) { var c = ((g.o[cn.maCn] || {})[ng]) || {}; kg += c.kg || 0; kg2 += c.kg2 || 0; });
@@ -6412,8 +6423,8 @@ function dungSoToTruong(wb, d) {
       dich = danVung(ws, k.cuoi, rTong + 1, SC_D);
     });
   }
-  khoiPhu(wDay, kY, 'MU_DAY', 'dongY');
-  khoiPhu(wDat, kR, 'MU_DAT', 'dongR');
+  khoiPhu(wDay, kY, 'MU_DAY', 'dongY', true);
+  khoiPhu(wDat, kR, 'MU_DAT', 'dongR', false);
 
   // TỔNG: mỗi tổ 1 khối + bảng tổng các tổ ở cuối
   xoaTuDong(wTong, 1, SC_TG + 4);
@@ -6438,15 +6449,15 @@ function dungSoToTruong(wb, d) {
     sl.dong.forEach(function (x) { if (x.loai === 'MU_DONG' && x.cl === 'LOAI_II') loai2[x.maCn] = (loai2[x.maCn] || 0) + x.kg; });
     cns.forEach(function (cn, i) {
       var r = danVung(wTong, kG.dong, dich, SC_TG) - 1, row = wTong.getRow(r), rT = vt.dongT.A[cn.maCn];
-      var tongDong = PHIEN_4.map(function (ph) { return "'" + vt.tenT + "'!V" + vt.dongT[ph][cn.maCn]; }).join('+');
+      var tongDong = PHIEN_4.map(function (ph) { return "'" + vt.tenT[ph] + "'!V" + vt.dongT[ph][cn.maCn]; }).join('+');
       row.getCell(1).value = i + 1;
-      row.getCell(2).value = { formula: "'" + vt.tenT + "'!D" + rT, result: cn.ten || '' };
-      row.getCell(3).value = { formula: "'" + vt.tenT + "'!E" + rT, result: cn.maCn };
+      row.getCell(2).value = { formula: "'" + vt.tenT.A + "'!D" + rT, result: cn.ten || '' };
+      row.getCell(3).value = { formula: "'" + vt.tenT.A + "'!E" + rT, result: cn.maCn };
       row.getCell(4).value = { formula: tongDong + '-E' + r };
       row.getCell(5).value = loai2[cn.maCn] ? Math.round(loai2[cn.maCn] * 100) / 100 : null;
       row.getCell(6).value = { formula: '(D' + r + '+E' + r + ')*' + drcD };
       row.getCell(7).value = { formula: 'F' + r };
-      row.getCell(8).value = { formula: "'Mủ dây'!N" + vt.dongY[cn.maCn] };
+      row.getCell(8).value = { formula: "'" + vt.tenY + "'!N" + vt.dongY[cn.maCn] };
       row.getCell(9).value = { formula: 'H' + r + '*' + drcY };
       row.getCell(10).value = { formula: 'I' + r };
       row.getCell(11).value = { formula: "'Mủ đất'!N" + vt.dongR[cn.maCn] };
@@ -6484,14 +6495,53 @@ function dungSoToTruong(wb, d) {
   }
   // Vùng in: mẫu gốc mang vùng in hỏng ($NaN:$NaN) và tiêu đề in lặp trỏ lung tung -> Excel báo "found a problem".
   // Đặt lại theo nội dung thật; bỏ tiêu đề lặp (mỗi sheet nhiều khối, mỗi khối có tiêu đề riêng).
-  d.dsTo.forEach(function (to) { _datVungIn(wb.getWorksheet(viTri[to.ma].tenT), SC_T); });
-  _datVungIn(wDay, SC_D); _datVungIn(wDat, SC_D); _datVungIn(wTong, SC_TG);
+  d.dsTo.forEach(function (to) { PHIEN_4.forEach(function (ph) { _datVungIn(wb.getWorksheet(viTri[to.ma].tenT[ph]), SC_T); }); });
+  dsSheetDay.forEach(function (w) { _datVungIn(w, SC_D); });
+  _datVungIn(wDat, SC_D); _datVungIn(wTong, SC_TG);
+  _xepThuTuSheet(wb, nhanDoi);
   return { boPhien: boPhien };
+}
+
+/** Nhân đôi 1 sheet MẪU thành sheet trống cùng khổ (độ rộng cột, in, hiển thị) — nội dung dựng lại bằng danVung. */
+function _nhanDoiSheet(wb, src, dangKy) {
+  var sao = function (o) { return JSON.parse(JSON.stringify(o || {})); };
+  var views = sao(src.views || []);
+  views.forEach(function (v) { v.tabSelected = false; });   // nhiều sheet cùng "được chọn" = Excel gộp nhóm, sửa 1 sheet đổi cả nhóm
+  var w = wb.addWorksheet('tam_' + (src.id || 0) + '_' + wb.worksheets.length,
+    { properties: sao(src.properties), pageSetup: sao(src.pageSetup), views: views, headerFooter: sao(src.headerFooter) });
+  var n = Math.max(src.columnCount || 0, 30);
+  for (var c = 1; c <= n; c++) {
+    var sc = src.getColumn(c);
+    if (sc.width) w.getColumn(c).width = sc.width;
+    if (sc.hidden) w.getColumn(c).hidden = true;
+  }
+  (dangKy[src.id] = dangKy[src.id] || []).push(w);
+  return w;
+}
+
+/** Sheet nhân bản đứng ngay sau sheet gốc của nó (mẫu: bìa, T1, … ; mới: T1 LÁT A, T1 LÁT B, …). */
+function _xepThuTuSheet(wb, dangKy) {
+  var laBanSao = {};
+  Object.keys(dangKy).forEach(function (id) { dangKy[id].forEach(function (w) { laBanSao[w.id] = true; }); });
+  var ra = [];
+  wb.worksheets.forEach(function (w) {
+    if (laBanSao[w.id]) return;
+    ra.push(w);
+    (dangKy[w.id] || []).forEach(function (b) { ra.push(b); });
+  });
+  ra.forEach(function (w, i) { w.orderNo = i + 1; });
 }
 
 function _datVungIn(ws, soCot) {
   if (!ws) return;
-  ws.pageSetup.printArea = 'A1:' + _cotChu(soCot) + Math.max(1, ws.rowCount);
+  // Dòng cuối = dòng cuối CÓ CHỮ (sheet lấy từ mẫu còn sót các dòng trống của các khối cũ, rowCount lớn hơn nội dung thật)
+  var cuoi = 1;
+  ws.eachRow({ includeEmpty: false }, function (row, r) {
+    var co = false;
+    row.eachCell(function (ce) { if (ce.value !== null && ce.value !== undefined && ce.value !== '') co = true; });
+    if (co) cuoi = r;
+  });
+  ws.pageSetup.printArea = 'A1:' + _cotChu(soCot) + Math.max(1, cuoi + 1);
   delete ws.pageSetup.printTitlesRow;
   delete ws.pageSetup.printTitlesColumn;
 }
