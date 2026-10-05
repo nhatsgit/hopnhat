@@ -5289,8 +5289,9 @@ function _bdTaoBanDo() {
 }
 
 /**
- * Chỉ cho kéo / thu nhỏ trong phạm vi các lô (cả công ty, không theo bộ lọc) + 1 khoảng đệm: khung hình mọi lô
- * nới 25% mỗi phía; thu nhỏ tối đa tới mức vừa thấy trọn khung đó (tính lại khi bản đồ đổi cỡ).
+ * Chỉ cho kéo / thu nhỏ trong phạm vi các lô (cả công ty, không theo bộ lọc) + khoảng đệm: khung hình mọi lô
+ * nới 60% mỗi phía; thu nhỏ được thêm 1 nấc so với mức vừa khít mọi lô (màn nhỏ vẫn thấy trọn công ty);
+ * tính lại khi bản đồ đổi cỡ.
  */
 var _bdKhung = null;
 function _bdGioiHan() {
@@ -5298,10 +5299,10 @@ function _bdGioiHan() {
   if (!_bdKhung) {
     _bdKhung = L.geoJSON({ type: 'FeatureCollection', features: _bd.hinh.lo.map(function (x) {
       return { type: 'Feature', properties: {}, geometry: x.g };
-    }) }).getBounds().pad(0.25);
-    _bdMap.setMaxBounds(_bdKhung);
+    }) }).getBounds();
+    _bdMap.setMaxBounds(_bdKhung.pad(0.6));
   }
-  _bdMap.setMinZoom(_bdMap.getBoundsZoom(_bdKhung, false));
+  _bdMap.setMinZoom(Math.max(0, _bdMap.getBoundsZoom(_bdKhung, false) - 1));
 }
 
 function _bdLoc() {
