@@ -678,6 +678,15 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 
 /* ---------- Điện thoại / máy tính bảng (05/10/2026) ---------- */
 .thanh-tren-dt{display:none}
+/* Phần chỉ có nghĩa khi có số nhát cạo (xem CO_SO_NHAT) */
+.an-nhat .chi-nhat{display:none !important}
+html:not(.an-nhat) .khong-nhat{display:none !important}
+/* Sản lượng chi tiết: dòng bất thường + thẻ đang dùng làm bộ lọc */
+#bangSL tr.bat-thuong td{background:var(--clay-soft)}
+.vi-bt{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;font-size:11px;font-weight:600;
+  background:var(--clay-soft);color:var(--clay);white-space:nowrap}
+.kpi.bam-duoc{cursor:pointer}
+.kpi.dang-loc{outline:2px solid var(--clay);outline-offset:-2px}
 @media (max-width:900px){
   /* Thanh trên: nút ☰ (trái) + nút sáng/tối (phải) nằm trong thanh, không đè lên tab / bộ lọc */
   .thanh-tren-dt{display:flex;align-items:center;justify-content:center;height:64px;padding:0 64px;
@@ -941,7 +950,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <h3 class="tieude-muc">Xếp hạng sản lượng theo đội</h3>
           <div id="bdXepDoi"></div>
         </div>
-        <div class="the o-bieu-do">
+        <div class="the o-bieu-do chi-nhat">
           <h3 class="tieude-muc">Năng suất bình quân theo đội (kg/nhát)</h3>
           <div id="bdNsbqDoi"></div>
         </div>
@@ -951,7 +960,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <h3 class="tieude-muc">Tổ dẫn đầu &amp; tổ cần chú ý <span class="nhan-mo" style="text-transform:none;font-weight:400">(theo sản lượng tươi)</span></h3>
           <div id="bangTopTo"></div>
         </div>
-        <div class="the o-bieu-do">
+        <div class="the o-bieu-do chi-nhat">
           <h3 class="tieude-muc">Công nhân dẫn đầu &amp; cần chú ý <span class="nhan-mo" style="text-transform:none;font-weight:400">(theo kg/nhát)</span></h3>
           <div id="bangTopCn"></div>
         </div>
@@ -1049,6 +1058,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <button class="btn nho" id="nutCsvSL">Xuất Excel</button>
         </div>
         <div class="cuon cuon-doc"><table id="bangSL"></table></div>
+        <p class="goi-y" id="ghiChuSL" style="padding:0 16px"></p>
         <div class="phan-trang" id="phanTrangSL"></div>
       </div>
     </section>
@@ -1144,7 +1154,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
       <div class="kpis" id="kpisXH"></div>
       <div class="luoi-2 deu" id="luoiXH">
         <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Phân bố năng suất (kg/nhát) <span class="nhan-mo" style="text-transform:none;font-weight:400">— số công nhân mỗi khoảng</span></h3>
+          <h3 class="tieude-muc">Phân bố năng suất <span class="chi-nhat">(kg/nhát)</span><span class="khong-nhat">(kg quy khô / người)</span> <span class="nhan-mo" style="text-transform:none;font-weight:400">— số công nhân mỗi khoảng</span></h3>
           <div id="bdPhanBoXH"></div>
         </div>
         <div class="the o-bieu-do" id="theXHTo">
@@ -1158,7 +1168,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
           <select class="o" id="fTheo" style="width:auto">
             <option value="kg">Theo tổng kg tươi</option>
             <option value="quyKho">Theo quy khô</option>
-            <option value="nsbq">Theo NSBQ kg/nhát</option>
+            <option value="nsbq" class="chi-nhat">Theo NSBQ kg/nhát</option>
             <option value="binhQuanNgay">Theo bình quân ngày</option>
           </select>
           <button class="btn nho" id="nutCsvXH">Xuất Excel</button>
@@ -1495,7 +1505,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
               <option value="qk">Quy khô tổng (kg)</option>
               <option value="kgHa">Năng suất (kg quy khô/ha)</option>
               <option value="kgTuoi">Sản lượng tươi (kg)</option>
-              <option value="nsbq">NSBQ (kg/nhát)</option>
+              <option value="nsbq" class="chi-nhat">NSBQ (kg/nhát)</option>
             </optgroup>
             <optgroup label="Mùa vụ">
               <option value="gk">% hoàn thành giao khoán</option>
@@ -2081,6 +2091,22 @@ function dsCnNhapTo() {
   if (S.vaiTro === 'TO_TRUONG') return S.dsCn.slice().sort();
   var to = toNhapCaTo();
   return S.dsCn.filter(function (ma) { return toCuaMaCn(ma) === to; }).sort();
+}
+
+/**
+ * Số nhát cạo / NSBQ kg/nhát: sổ sản lượng hằng ngày hiện KHÔNG ghi số nhát (cột trống 100%) nên mọi chỉ số theo
+ * nhát đều ra 0 — tạm ẩn khỏi toàn hệ thống (bảng, thẻ, biểu đồ, form nhập, file xuất). Có nguồn số nhát thì đặt true.
+ */
+var CO_SO_NHAT = false;
+if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
+if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('option.chi-nhat').forEach(function (o) { o.remove(); });
+});
+/** Bỏ các cột có chữ "nhát" khỏi file Excel xuất khi tắt số nhát. Trả [tieuDe, dong]. */
+function cotKhongNhat(tieuDe, dong) {
+  if (CO_SO_NHAT) return [tieuDe, dong];
+  var giu = tieuDe.map(function (t, i) { return /nhát/i.test(t) ? -1 : i; }).filter(function (i) { return i >= 0; });
+  return [giu.map(function (i) { return tieuDe[i]; }), dong.map(function (r) { return giu.map(function (i) { return r[i]; }); })];
 }
 
 var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1, xoaChamCong: 1,
@@ -2976,7 +3002,7 @@ function taiTongQuan() {
     veDonut($('bdLoai'), d.theoLoaiMu);
     veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
     veBangPhienTQ(d.theoPhien || []);
-    veTopCn($('bangTopCn'), d);
+    if (CO_SO_NHAT) veTopCn($('bangTopCn'), d);
 
     // Tổ trưởng chỉ quản 1 tổ — không có gì để "so sánh", ẩn hẳn khối này
     // thay vì hiện một bảng chỉ có đúng 1 dòng (chính họ).
@@ -3000,7 +3026,7 @@ function taiTongQuan() {
         for (var ma in (x.loai || {})) {
           var v = x.loai[ma];
           if (!tongLoai[ma]) tongLoai[ma] = { kg: 0, quyKho: 0, nhat: 0, kgNhat: 0 };
-          tongLoai[ma].kg += v.kg; tongLoai[ma].quyKho += v.quyKho; tongLoai[ma].nhat += v.nhat;
+          tongLoai[ma].kg += v.kg; tongLoai[ma].quyKho += v.quyKho; tongLoai[ma].nhat += CO_SO_NHAT ? v.nhat : 0;
           tongLoai[ma].kgNhat += kgCoNhat(v);
         }
       });
@@ -3014,7 +3040,7 @@ function taiTongQuan() {
         return '<td class="p num">' + (v.kg ? soVN(v.kg, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
                '<td class="p num">' + (v.quyKho ? soVN(v.quyKho, 2) : '<span class="nhan-mo">—</span>') + '</td>' +
                '<td class="p num">' + (tong && tong.kg && v.kg ? soVN(v.kg / tong.kg * 100, 1) + '%' : '<span class="nhan-mo">—</span>') + '</td>' +
-               (tong && tong.nhat ? '<td class="p num">' + (v.nhat ? soVN(kgCoNhat(v) / v.nhat, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '');
+               (tong && tong.nhat && CO_SO_NHAT ? '<td class="p num">' + (v.nhat ? soVN(kgCoNhat(v) / v.nhat, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '');
       };
       // Loại mủ không ghi số nhát (mủ dây, mủ đất...) thì bỏ hẳn cột NSBQ của loại đó.
       var soCotLoai = function (ma) { return tongLoai[ma].nhat ? 4 : 3; };
@@ -3056,6 +3082,7 @@ function taiTongQuan() {
     // Đơn vị so sánh theo vai trò: lãnh đạo theo đội (xếp hạng + NSBQ đội), lãnh đạo/đội trưởng có
     // top tổ; tổ trưởng chỉ 1 tổ nên thay bằng top công nhân chiếm trọn hàng.
     $('khoiXepDoi').style.display = S.toanCongTy && !blTQ.doi && d.theoDoi.length > 1 ? '' : 'none';
+    $('khoiXepDoi').className = 'luoi-2 ' + (CO_SO_NHAT ? 'deu' : 'mot');   // không số nhát: chỉ còn xếp hạng sản lượng
     if (S.toanCongTy && !blTQ.doi) {
       veCotNgang($('bdXepDoi'), d.theoDoi.slice().sort(function (a, b) { return b.quyKho - a.quyKho; }),
         function (x) { return x.doi; }, function (x) { return x.quyKho; },
@@ -3066,7 +3093,8 @@ function taiTongQuan() {
     }
     var coTopTo = d.theoTo.length > 1;
     $('theTopTo').style.display = coTopTo ? '' : 'none';
-    $('khoiTopTq').className = 'luoi-2 ' + (coTopTo ? 'deu' : 'mot');
+    $('khoiTopTq').className = 'luoi-2 ' + (coTopTo && CO_SO_NHAT ? 'deu' : 'mot');
+    $('khoiTopTq').style.display = coTopTo || CO_SO_NHAT ? '' : 'none';
     if (coTopTo) veTopTo($('bangTopTo'), d.theoTo);
 
     baoLoi('thongBao', '');
@@ -3128,7 +3156,7 @@ function veKpiTQ(d, dt) {
     the_kpi('Quy khô mủ dây', soVN(muDay.quyKho, 2), 'kg', '',
             (muDay.kg ? 'DRC ' + soVN(muDay.quyKho / muDay.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
             sosanh(muDay.quyKho, function () { return (qlt.MU_DAY || {}).quyKho; })) +
-    the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', '', 'Trên dòng đã lọc' + sosanh(k.nsbq, function () { return kt.nsbq; })) +
+    (CO_SO_NHAT ? the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', '', 'Trên dòng đã lọc' + sosanh(k.nsbq, function () { return kt.nsbq; })) : '') +
     the_kpi('Công nhân có sản lượng', soVN(k.soCongNhan, 0), 'người', '',
             soVN(k.soNgay, 0) + ' ngày có sản lượng' + sosanh(k.soCongNhan, function () { return kt.soCongNhan; })) +
     the_kpi('Bình quân/người', soVN(k.soCongNhan ? k.tongQuyKho / k.soCongNhan : 0, 1), 'kg khô', '',
@@ -3149,13 +3177,13 @@ function veBangPhienTQ(ds) {
   if (!ds.length) { $('bangPhien').innerHTML = '<tbody><tr><td><div class="rong">Không có dữ liệu.</div></td></tr></tbody>'; return; }
   var tongQk = ds.reduce(function (s, x) { return s + x.quyKho; }, 0);
   var h = '<thead><tr><th>Phiên</th><th class="p">CN</th><th class="p">Quy khô (kg)</th><th class="p">Tỷ trọng</th>' +
-          '<th class="p">kg/nhát</th></tr></thead><tbody>';
+          (CO_SO_NHAT ? '<th class="p">kg/nhát</th>' : '') + '</tr></thead><tbody>';
   ds.forEach(function (x) {
     h += '<tr><td><b>' + (x.phien === '?' ? '<span class="nhan-mo">Không ghi phiên</span>' : thoat(x.phien)) + '</b></td>' +
          '<td class="p num">' + soVN(x.soCn, 0) + '</td>' +
          '<td class="p num">' + soVN(x.quyKho, 1) + '</td>' +
          '<td class="p num">' + (tongQk ? soVN(x.quyKho / tongQk * 100, 1) + '%' : '—') + '</td>' +
-         '<td class="p num">' + (x.nhat ? soVN(x.nsbq, 3) : '<span class="nhan-mo">—</span>') + '</td></tr>';
+         (CO_SO_NHAT ? '<td class="p num">' + (x.nhat ? soVN(x.nsbq, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '') + '</tr>';
   });
   h += '</tbody>';
   if (!coPhien.length) h += '<caption class="goi-y" style="caption-side:bottom;text-align:left;padding-top:8px">Dòng sản lượng trong kỳ chưa ghi phiên cạo.</caption>';
@@ -3181,7 +3209,7 @@ function taiTongQuanPhu(blTQ) {
         veCotThang($('bdXuHuong'), d.theoThang,
           function (x) { return x.quyKho; },
           function (x) { return 'Tháng ' + x.thang + ': ' + soVN(x.quyKho, 0) + ' kg quy khô / ' +
-                 soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân · ' + soVN(x.nsbq, 3) + ' kg/nhát'; },
+                 soVN(x.kg, 0) + ' kg tươi · ' + soVN(x.soCn, 0) + ' công nhân' + (CO_SO_NHAT ? ' · ' + soVN(x.nsbq, 3) + ' kg/nhát' : ''); },
           'var(--leaf)');
       }).catch(loiKhoi('bdXuHuong'));
     },
@@ -3633,20 +3661,43 @@ function the_kpi_canh(coCanh, ten, so, dv, phu) {
 /* =====================================================================
    Tab: Sản lượng chi tiết
    ===================================================================== */
-/** Thẻ tóm tắt tab Sản lượng: số liệu + kiểm tra dòng mủ đông thiếu phiên/phần cạo/số nhát. */
-function veKpiSanLuong(tk) {
-  if (!tk) { $('kpisSL').innerHTML = ''; return; }
-  var pt = function (n) { return tk.soDongDong ? soVN(n / tk.soDongDong * 100, 1) + '% dòng mủ đông' : ''; };
-  $('kpisSL').innerHTML =
-    the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(tk.soNgay, 0) + ' ngày có sản lượng') +
-    the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo') +
+/**
+ * Thẻ tóm tắt tab Sản lượng (theo đúng bộ lọc của bảng): tươi, quy khô, công nhân · ngày công, bình quân / ngày công
+ * (NSBQ kg/nhát khi có số nhát — CO_SO_NHAT), dòng bất thường (bấm để lọc bảng ra đúng các dòng đó).
+ * Cột phiên / phần cạo / số nhát: sổ không ghi cả cột (thiếu 100%) chỉ là ghi chú dưới bảng; thiếu MỘT PHẦN mới là
+ * cảnh báo (có ghi nhưng sót).
+ */
+function veKpiSanLuong(d) {
+  var tk = d && d.thongKe;
+  if (!tk) { $('kpisSL').innerHTML = ''; $('ghiChuSL').textContent = ''; return; }
+  var kg = d.tongKg, qk = d.tongQuyKho;   // máy chủ tính trên cả tập đang lọc (kể cả khi bảng chỉ hiện dòng bất thường)
+  var nc = tk.soNgayCong || 0;
+  var h =
+    the_kpi('Sản lượng tươi', soVN(kg, 0), 'kg', soVN(tk.soDong !== undefined ? tk.soDong : d.tong, 0) + ' dòng') +
+    the_kpi('Quy khô', soVN(qk, 0), 'kg', kg ? 'DRC bình quân ' + soVN(qk / kg * 100, 1) + '%' : '') +
+    the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(nc, 0) + ' ngày công cạo · ' + soVN(tk.soNgay, 0) + ' ngày') +
+    (CO_SO_NHAT && tk.tongNhat
+      ? the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo')
+      : the_kpi('Bình quân / ngày công', soVN(nc ? qk / nc : 0, 2), 'kg khô', soVN(nc ? kg / nc : 0, 1) + ' kg tươi / ngày công')) +
     (chiCoDaDuyet() ? '' : the_kpi_canh(tk.soChoDuyet > 0, 'Chờ duyệt', soVN(tk.soChoDuyet, 0), 'dòng', soVN(tk.kgChoDuyet, 2) + ' kg')) +
-    the_kpi_canh(tk.thieuPhien > 0, 'Mủ đông thiếu phiên', soVN(tk.thieuPhien, 0), 'dòng',
-                 tk.thieuPhien ? soVN(tk.kgThieuPhien, 0) + ' kg · ' + pt(tk.thieuPhien) : 'Đủ phiên cạo') +
-    the_kpi_canh(tk.thieuPc > 0, 'Mủ đông thiếu phần cạo', soVN(tk.thieuPc, 0), 'dòng',
-                 tk.thieuPc ? pt(tk.thieuPc) + ' — giao khoán/sổ KTNN phải ước tính' : 'Đủ phần cạo') +
-    the_kpi_canh(tk.thieuNhat > 0, 'Mủ đông thiếu số nhát', soVN(tk.thieuNhat, 0), 'dòng',
-                 tk.thieuNhat ? pt(tk.thieuNhat) + ' — không tính được NSBQ' : 'Đủ số nhát');
+    the_kpi_canh(tk.soBatThuong > 0, 'Dòng bất thường', soVN(tk.soBatThuong || 0, 0), 'dòng',
+      tk.soBatThuong ? (S.slBatThuong ? 'Đang lọc — bấm lần nữa để bỏ lọc' : 'Lệch mạnh so với mức thường ngày · bấm để xem') : 'Không có dòng lệch thường');
+  $('kpisSL').innerHTML = h;
+  var theBt = $('kpisSL').lastElementChild;
+  if (theBt && (tk.soBatThuong || S.slBatThuong)) {
+    theBt.classList.add('bam-duoc');
+    theBt.classList.toggle('dang-loc', !!S.slBatThuong);
+    theBt.title = 'Kg = 0, gấp 3 lần trở lên hoặc dưới 1/3 trung vị của chính công nhân đó (cùng loại mủ, trong bộ lọc này)';
+    theBt.onclick = function () { S.slBatThuong = !S.slBatThuong; S.trang = 1; taiSanLuong(); };
+  }
+  // Ghi chú / cảnh báo cột phiên, phần cạo, số nhát của mủ đông
+  var n = tk.soDongDong || 0, thieu = [], chuaGhi = [];
+  [['phiên cạo', tk.thieuPhien], ['phần cạo', tk.thieuPc]].concat(CO_SO_NHAT ? [['số nhát', tk.thieuNhat]] : []).forEach(function (x) {
+    if (!n || !x[1]) return;
+    if (x[1] >= n) chuaGhi.push(x[0]); else thieu.push(soVN(x[1], 0) + ' dòng thiếu ' + x[0]);
+  });
+  $('ghiChuSL').innerHTML = (thieu.length ? '<b style="color:var(--clay)">Mủ đông: ' + thieu.join(' · ') + ' — cần bổ sung.</b> ' : '') +
+    (chuaGhi.length ? 'Sổ chưa ghi ' + chuaGhi.join(', ') + ' cho mủ đông.' : '');
 }
 var COT_SL = [
   { k: 'ngay', t: 'Ngày', sx: true },
@@ -3657,10 +3708,10 @@ var COT_SL = [
   { k: 'loaiMu', t: 'Loại mủ', sx: true },
   { k: 'chatLuong', t: 'Chất lượng', sx: false },
   { k: 'kg', t: 'Sản lượng (kg)', sx: true, p: true },
-  { k: 'nhat', t: 'Nhát cạo', sx: true, p: true },
+  { k: 'nhat', t: 'Nhát cạo', sx: true, p: true, nhat: true },
   { k: 'drc', t: 'DRC', sx: false, p: true },
   { k: 'quyKho', t: 'Quy khô (kg)', sx: true, p: true },
-  { k: 'nsbq', t: 'kg/nhát', sx: true, p: true },
+  { k: 'nsbq', t: 'kg/nhát', sx: true, p: true, nhat: true },
   { k: 'trangThai', t: 'Trạng thái', sx: true },
   { k: '_sua', t: '', sx: false }
 ];
@@ -3677,14 +3728,18 @@ function taiSanLuong() {
 
   var bl = layBoLoc();
   bl.sapXep = S.sapXep; bl.chieu = S.chieu; bl.trang = S.trang; bl.moiTrang = 100;
+  if (S.slBatThuong) bl.batThuong = '1';
+  var dsCot = COT_SL.filter(function (c) { return CO_SO_NHAT || !c.nhat; });
 
   goiCache('sanLuong', bl).then(function (d) {
-    $('tomTatSL').textContent = soVN(d.tong, 0) + ' dòng · ' + soVN(d.tongKg, 2) +
-      ' kg tươi · ' + soVN(d.tongQuyKho, 2) + ' kg khô';
+    var tkSL = d.thongKe || {};
+    $('tomTatSL').textContent = S.slBatThuong
+      ? soVN(d.tong, 0) + ' dòng bất thường · ' + soVN(tkSL.kgBatThuong || 0, 2) + ' kg tươi'
+      : soVN(d.tong, 0) + ' dòng · ' + soVN(d.tongKg, 2) + ' kg tươi · ' + soVN(d.tongQuyKho, 2) + ' kg khô';
 
     var h = '<thead><tr>';
-    for (var c = 0; c < COT_SL.length; c++) {
-      var col = COT_SL[c];
+    for (var c = 0; c < dsCot.length; c++) {
+      var col = dsCot[c];
       var lop = (col.p ? 'p ' : '') + (col.sx ? 'sx ' : '');
       if (col.sx && S.sapXep === col.k) lop += (S.chieu === 'tang' ? 'tang' : 'giam');
       h += '<th class="' + lop.trim() + '"' + (col.sx ? ' data-sx="' + col.k + '"' : '') +
@@ -3693,33 +3748,37 @@ function taiSanLuong() {
     h += '</tr></thead><tbody>';
 
     if (!d.rows.length) {
-      h += '<tr><td colspan="' + COT_SL.length + '"><div class="rong">Không có dòng nào khớp bộ lọc.</div></td></tr>';
+      h += '<tr><td colspan="' + dsCot.length + '"><div class="rong">Không có dòng nào khớp bộ lọc.</div></td></tr>';
     }
+    var NHAN_BT = { '0': ['kg = 0', 'Sản lượng bằng 0'], cao: ['cao bất thường', 'Gấp 3 lần trở lên mức thường ngày của người này'],
+                    thap: ['thấp bất thường', 'Dưới 1/3 mức thường ngày của người này'] };
     for (var i = 0; i < d.rows.length; i++) {
-      var r = d.rows[i];
-      h += '<tr>' +
-        '<td>' + ngayVN(r.ngay) + '</td>' +
-        '<td><b>' + thoat(r.maCn) + '</b></td>' +
-        '<td>' + thoat(r.to) + '</td>' +
-        '<td class="nhan-mo">' + (r.phanCao ? thoat(r.phanCao) : '—') + '</td>' +
-        '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
-        '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>' +
-        '<td class="nhan-mo">' + thoat(r.chatLuong || '—') + '</td>' +
-        '<td class="p num">' + soVN(r.kg, 2) + '</td>' +
-        '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>' +
-        '<td class="p num">' + (r.drc ? soVN(r.drc * 100, 1) + '%' : '—') + '</td>' +
-        '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
-        '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
-        '<td>' + viTrangThai(r.trangThai) + '</td>' +
-        '<td style="white-space:nowrap">' + (r.trangThai === 'CHO_DUYET' && (coQuyen('sanLuong', 'SUA') || coQuyen('sanLuong', 'XOA'))
+      var r = d.rows[i], bt = NHAN_BT[r.batThuong];
+      var o = {
+        ngay: '<td>' + ngayVN(r.ngay) + '</td>',
+        maCn: '<td><b>' + thoat(r.maCn) + '</b></td>',
+        to: '<td>' + thoat(r.to) + '</td>',
+        phanCao: '<td class="nhan-mo">' + (r.phanCao ? thoat(r.phanCao) : '—') + '</td>',
+        phien: '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>',
+        loaiMu: '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>',
+        chatLuong: '<td class="nhan-mo">' + thoat(r.chatLuong || '—') + '</td>',
+        kg: '<td class="p num" style="white-space:nowrap">' + soVN(r.kg, 2) +
+            (bt ? '<span class="vi-bt" title="' + bt[1] + '">' + bt[0] + '</span>' : '') + '</td>',
+        nhat: '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>',
+        drc: '<td class="p num">' + (r.drc ? soVN(r.drc * 100, 1) + '%' : '—') + '</td>',
+        quyKho: '<td class="p num">' + soVN(r.quyKho, 2) + '</td>',
+        nsbq: '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>',
+        trangThai: '<td>' + viTrangThai(r.trangThai) + '</td>',
+        _sua: '<td style="white-space:nowrap">' + (r.trangThai === 'CHO_DUYET' && (coQuyen('sanLuong', 'SUA') || coQuyen('sanLuong', 'XOA'))
             ? (coQuyen('sanLuong', 'SUA') ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button> ' : '') +
               (coQuyen('sanLuong', 'XOA') ? '<button class="btn nho nut-xoa" data-xoasl="' + thoat(r.ma) + '">Xoá</button>' : '')
-            : '<span class="nhan-mo" title="Đã duyệt thì khoá">—</span>') + '</td>' +
-        '</tr>';
+            : '<span class="nhan-mo" title="Đã duyệt thì khoá">—</span>') + '</td>'
+      };
+      h += '<tr' + (bt ? ' class="bat-thuong"' : '') + '>' + dsCot.map(function (c) { return o[c.k]; }).join('') + '</tr>';
     }
     h += '</tbody>';
     $('bangSL').innerHTML = h;
-    veKpiSanLuong(d.thongKe);
+    veKpiSanLuong(d);
 
     // Gắn sắp xếp
     var ths = $('bangSL').querySelectorAll('th[data-sx]');
@@ -3889,7 +3948,7 @@ function moPhieu(ma) {
 
     h += '<h3 class="tieude-muc" style="margin-top:22px">Các dòng sản lượng cấu thành (' + d.dong.length + ')</h3>' +
          '<div class="cuon"><table><thead><tr><th>Mã công nhân</th><th>Phần cạo</th><th>Phiên</th>' +
-         '<th>Loại mủ</th><th class="p">kg</th><th class="p">Nhát</th><th class="p">Quy khô</th>' +
+         '<th>Loại mủ</th><th class="p">kg</th>' + (CO_SO_NHAT ? '<th class="p">Nhát</th>' : '') + '<th class="p">Quy khô</th>' +
          '</tr></thead><tbody>';
     var tKg = 0, tKho = 0;
     for (var j = 0; j < d.dong.length; j++) {
@@ -3930,54 +3989,70 @@ function trungVi(a) {
  * trung vị (cần kèm cặp kỹ thuật), phân bố NSBQ, và năng suất theo tổ.
  */
 function veTomTatXepHang(rows) {
-  var coNhat = rows.filter(function (r) { return r.nhat > 0 && r.nsbq > 0; });
+  // Thước đo năng suất: NSBQ kg/nhát khi có số nhát (CO_SO_NHAT), không thì tổng quy khô mỗi người trong kỳ
+  var M = CO_SO_NHAT
+    ? { lay: function (r) { return r.nsbq; }, co: function (r) { return r.nhat > 0 && r.nsbq > 0; }, dv: 'kg/nhát', le: 3, leKhoang: 2 }
+    : { lay: function (r) { return r.quyKho; }, co: function (r) { return r.quyKho > 0; }, dv: 'kg khô', le: 0, leKhoang: 0 };
+  var coSo = rows.filter(M.co);
   if (!rows.length) { $('kpisXH').innerHTML = ''; $('luoiXH').style.display = 'none'; return; }
   $('luoiXH').style.display = '';
-  var ns = coNhat.map(function (r) { return r.nsbq; }).sort(function (a, b) { return b - a; });
+  var ns = coSo.map(M.lay).sort(function (a, b) { return b - a; });
   var tv = trungVi(ns), n10 = Math.max(1, Math.round(ns.length / 10));
   var bq = function (a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : 0; };
   var dau = bq(ns.slice(0, n10)), cuoi = bq(ns.slice(-n10));
-  var duoi70 = coNhat.filter(function (r) { return r.nsbq < tv * 0.7; }).length;
+  var duoi70 = coSo.filter(function (r) { return M.lay(r) < tv * 0.7; }).length;
   var tongQk = rows.reduce(function (s, r) { return s + r.quyKho; }, 0);
-  // kg của dòng có ghi nhát = nsbq × nhát (backend tính NSBQ chỉ trên các dòng đó)
-  var tongKgN = coNhat.reduce(function (s, r) { return s + r.nsbq * r.nhat; }, 0), tongN = coNhat.reduce(function (s, r) { return s + r.nhat; }, 0);
-  $('kpisXH').innerHTML =
-    the_kpi('Công nhân', soVN(rows.length, 0), 'người', soVN(coNhat.length, 0) + ' người có ghi số nhát') +
-    the_kpi('NSBQ chung', soVN(tongN ? tongKgN / tongN : 0, 3), 'kg/nhát', 'Trung vị ' + soVN(tv, 3) + ' kg/nhát') +
-    the_kpi('10% cao nhất', soVN(dau, 3), 'kg/nhát', 'Gấp ' + soVN(cuoi ? dau / cuoi : 0, 1) + ' lần 10% thấp nhất (' + soVN(cuoi, 3) + ')') +
-    the_kpi_canh(duoi70 > 0, 'Dưới 70% trung vị', soVN(duoi70, 0), 'người', 'Nên xem lại kỹ thuật cạo / phần cạo') +
-    the_kpi('Quy khô BQ/người', soVN(rows.length ? tongQk / rows.length : 0, 1), 'kg', 'Tổng ' + soVN(tongQk, 0) + ' kg quy khô');
+  var gap = 'Gấp ' + soVN(cuoi ? dau / cuoi : 0, 1) + ' lần 10% thấp nhất (' + soVN(cuoi, M.le) + ')';
+  if (CO_SO_NHAT) {
+    // kg của dòng có ghi nhát = nsbq × nhát (backend tính NSBQ chỉ trên các dòng đó)
+    var tongKgN = coSo.reduce(function (s, r) { return s + r.nsbq * r.nhat; }, 0), tongN = coSo.reduce(function (s, r) { return s + r.nhat; }, 0);
+    $('kpisXH').innerHTML =
+      the_kpi('Công nhân', soVN(rows.length, 0), 'người', soVN(coSo.length, 0) + ' người có ghi số nhát') +
+      the_kpi('NSBQ chung', soVN(tongN ? tongKgN / tongN : 0, 3), 'kg/nhát', 'Trung vị ' + soVN(tv, 3) + ' kg/nhát') +
+      the_kpi('10% cao nhất', soVN(dau, 3), 'kg/nhát', gap) +
+      the_kpi_canh(duoi70 > 0, 'Dưới 70% trung vị', soVN(duoi70, 0), 'người', 'Nên xem lại kỹ thuật cạo / phần cạo') +
+      the_kpi('Quy khô BQ/người', soVN(rows.length ? tongQk / rows.length : 0, 1), 'kg', 'Tổng ' + soVN(tongQk, 0) + ' kg quy khô');
+  } else {
+    $('kpisXH').innerHTML =
+      the_kpi('Công nhân', soVN(rows.length, 0), 'người', soVN(coSo.length, 0) + ' người có sản lượng') +
+      the_kpi('Quy khô BQ/người', soVN(rows.length ? tongQk / rows.length : 0, 1), 'kg', 'Trung vị ' + soVN(tv, 1) + ' kg') +
+      the_kpi('10% cao nhất', soVN(dau, 0), 'kg khô', gap) +
+      the_kpi_canh(duoi70 > 0, 'Dưới 70% trung vị', soVN(duoi70, 0), 'người', 'Sản lượng thấp — xem lại kỹ thuật cạo / số ngày công') +
+      the_kpi('Tổng quy khô', soVN(tongQk, 0), 'kg', 'Mọi loại mủ');
+  }
 
-  // Phân bố: 8 khoảng đều giữa min–max NSBQ; khoảng dưới 70% trung vị tô đỏ.
+  // Phân bố: 8 khoảng đều giữa min–max; khoảng dưới 70% trung vị tô đỏ.
   if (ns.length > 1) {
     var mn = ns[ns.length - 1], mx = ns[0], soKhoang = Math.min(8, ns.length), buoc = (mx - mn) / soKhoang || 1;
     var khoang = [];
     for (var k = 0; k < soKhoang; k++) khoang.push({ tu: mn + k * buoc, den: mn + (k + 1) * buoc, n: 0 });
     ns.forEach(function (v) { khoang[Math.min(soKhoang - 1, Math.floor((v - mn) / buoc))].n++; });
     veCotNgang($('bdPhanBoXH'), khoang.reverse(),
-      function (x) { return soVN(x.tu, 2) + '–' + soVN(x.den, 2); }, function (x) { return x.n; },
+      function (x) { return soVN(x.tu, M.leKhoang) + '–' + soVN(x.den, M.leKhoang); }, function (x) { return x.n; },
       function (v) { return soVN(v, 0) + ' người'; },
       function (x) { return x.den <= tv * 0.7 ? 'var(--clay)' : 'var(--sky)'; });
   } else {
-    $('bdPhanBoXH').innerHTML = '<div class="rong">Chưa đủ người có số nhát để vẽ phân bố.</div>';
+    $('bdPhanBoXH').innerHTML = '<div class="rong">Chưa đủ người' + (CO_SO_NHAT ? ' có số nhát' : '') + ' để vẽ phân bố.</div>';
   }
 
-  // Theo tổ: số người, NSBQ (tổng kg/tổng nhát), trung vị, quy khô BQ/người.
+  // Theo tổ: số người, NSBQ (tổng kg/tổng nhát) hoặc quy khô BQ/người, trung vị, quy khô BQ/người.
   var theoTo = {};
   rows.forEach(function (r) {
     var t = theoTo[r.to] = theoTo[r.to] || { to: r.to, n: 0, kg: 0, nhat: 0, qk: 0, ns: [] };
     t.n++; t.qk += r.quyKho;
-    if (r.nhat > 0 && r.nsbq > 0) { t.kg += r.nsbq * r.nhat; t.nhat += r.nhat; t.ns.push(r.nsbq); }
+    if (M.co(r)) { t.ns.push(M.lay(r)); if (CO_SO_NHAT) { t.kg += r.nsbq * r.nhat; t.nhat += r.nhat; } }
   });
+  var giaTriTo = function (t) { return CO_SO_NHAT ? (t.nhat ? t.kg / t.nhat : 0) : t.qk / t.n; };
   var dsTo = Object.keys(theoTo).map(function (k) { return theoTo[k]; })
-    .sort(function (a, b) { return (b.nhat ? b.kg / b.nhat : 0) - (a.nhat ? a.kg / a.nhat : 0); });
+    .sort(function (a, b) { return giaTriTo(b) - giaTriTo(a); });
   $('theXHTo').style.display = dsTo.length > 1 ? '' : 'none';
   $('luoiXH').className = 'luoi-2 ' + (dsTo.length > 1 ? 'deu' : 'mot');
-  $('bangXHTo').innerHTML = '<thead><tr><th>Tổ</th><th class="p">Người</th><th class="p">NSBQ</th><th class="p">Trung vị</th>' +
+  $('bangXHTo').innerHTML = '<thead><tr><th>Tổ</th><th class="p">Người</th>' +
+    (CO_SO_NHAT ? '<th class="p">NSBQ</th>' : '') + '<th class="p">Trung vị</th>' +
     '<th class="p">QK BQ/người</th></tr></thead><tbody>' + dsTo.map(function (t) {
       return '<tr><td><b>' + thoat(t.to) + '</b></td><td class="p num">' + soVN(t.n, 0) + '</td>' +
-        '<td class="p num">' + (t.nhat ? soVN(t.kg / t.nhat, 3) : '—') + '</td>' +
-        '<td class="p num">' + (t.ns.length ? soVN(trungVi(t.ns), 3) : '—') + '</td>' +
+        (CO_SO_NHAT ? '<td class="p num">' + (t.nhat ? soVN(t.kg / t.nhat, 3) : '—') + '</td>' : '') +
+        '<td class="p num">' + (t.ns.length ? soVN(trungVi(t.ns), M.le || 1) : '—') + '</td>' +
         '<td class="p num">' + soVN(t.qk / t.n, 1) + '</td></tr>';
     }).join('') + '</tbody>';
 }
@@ -3986,17 +4061,19 @@ function taiXepHang() {
   $('bangXH').innerHTML = skBang();
 
   var bl = layBoLoc();
+  if (!$('fTheo').value) $('fTheo').value = 'kg';
   bl.theo = $('fTheo').value;
   bl.trang = S.trang || 1; bl.moiTrang = 100;
 
   goiCache('xepHang', bl).then(function (d) {
     var dau = ((d.trang || 1) - 1) * (d.moiTrang || 0);
     var h = '<thead><tr><th>#</th><th>Mã công nhân</th><th>Tổ</th><th>Chức danh</th>' +
-            '<th class="p">Tổng kg tươi</th><th class="p">Quy khô</th><th class="p">Số nhát</th>' +
-            '<th class="p">kg/nhát</th><th class="p">Ngày có SL</th><th class="p">BQ ngày</th>' +
+            '<th class="p">Tổng kg tươi</th><th class="p">Quy khô</th>' +
+            (CO_SO_NHAT ? '<th class="p">Số nhát</th><th class="p">kg/nhát</th>' : '') +
+            '<th class="p">Ngày có SL</th><th class="p">BQ ngày</th>' +
             '</tr></thead><tbody>';
     if (!d.rows.length) {
-      h += '<tr><td colspan="10"><div class="rong">Không có dữ liệu.</div></td></tr>';
+      h += '<tr><td colspan="' + (CO_SO_NHAT ? 10 : 8) + '"><div class="rong">Không có dữ liệu.</div></td></tr>';
     }
     for (var i = 0; i < d.rows.length; i++) {
       var r = d.rows[i];
@@ -4006,8 +4083,8 @@ function taiXepHang() {
         '<td class="nhan-mo">' + thoat(r.chucDanh || '—') + '</td>' +
         '<td class="p num">' + soVN(r.kg, 2) + '</td>' +
         '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
-        '<td class="p num">' + soVN(r.nhat, 0) + '</td>' +
-        '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' +
+        (CO_SO_NHAT ? '<td class="p num">' + soVN(r.nhat, 0) + '</td>' +
+          '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>' : '') +
         '<td class="p num">' + soVN(r.soNgay, 0) + '</td>' +
         '<td class="p num">' + soVN(r.binhQuanNgay, 2) + '</td></tr>';
     }
@@ -5359,6 +5436,7 @@ function bdToiLo(maLo) {
 
 function veBanDoLo(canVua) {
   if (!_bd || !_bdMap) return;
+  if (!$('bdMau').value) $('bdMau').selectedIndex = 0;   // lựa chọn đã lưu không còn (vd NSBQ khi tắt số nhát)
   var chiSo = $('bdMau').value, ds = _bdLoc(), thang = _bdThang(ds, chiSo), mm = _bdTimMaxMin(ds, chiSo);
   var laMax = function (x) { return mm && mm.max.x.maLo === x.maLo; }, laMin = function (x) { return mm && mm.min.x.maLo === x.maLo && mm.min.x !== mm.max.x; };
   if (_bdLop) _bdMap.removeLayer(_bdLop);
@@ -5419,7 +5497,8 @@ function veBanDoLo(canVua) {
   var nhat = sl('nhat');
   $('kpisBd').innerHTML =
     the_kpi('Quy khô tổng', soVN(sl('qk'), 0), 'kg', 'Chén ' + soVN(sl('qkChen'), 0) + ' · dây ' + soVN(sl('qkDay'), 0) + ' kg') +
-    the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát') +
+    the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', CO_SO_NHAT ? 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát'
+      : (sl('kg') ? 'DRC bình quân ' + soVN(sl('qk') / sl('kg') * 100, 1) + '%' : '')) +
     the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
     the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo') +
     the_kpi('Cập nhật bản đồ', _bdNgay(_bd.hinh.capNhat), '', 'Nạp từ file GeoJSON đã làm sạch');
@@ -5456,7 +5535,7 @@ function veChiTietLo(x) {
     dong('Quy khô mủ dây', s.qkDay ? soVN(s.qkDay, 0) + ' kg' : '—') +
     dong('Quy khô tổng', s.qk ? '<b>' + soVN(s.qk, 0) + ' kg</b>' : '—') +
     dong('Sản lượng tươi', s.kg ? soVN(s.kg, 0) + ' kg' : '—') +
-    dong('NSBQ', s.nhat ? soVN(s.kgNhat / s.nhat, 2) + ' kg/nhát' : '—') +
+    (CO_SO_NHAT ? dong('NSBQ', s.nhat ? soVN(s.kgNhat / s.nhat, 2) + ' kg/nhát' : '—') : '') +
     dong('Năng suất', s.qk && r.dienTich ? soVN(s.qk / r.dienTich, 0) + ' kg/ha' : '—') +
     (s.qkPhanBo ? dong('Phân bổ ước tính', soVN(s.qkPhanBo / s.qk * 100, 0) + '% quy khô') : '') +
     dong('Giao khoán ' + (_bd.sl.muaVu || ''), s.gkTyLe !== null && s.gkTyLe !== undefined
@@ -7987,10 +8066,10 @@ function csvSanLuong() {
       return [r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
               r.kg, r.nhat, r.drc, r.quyKho, r.nsbq, r.nguon, r.trangThai, r.ghiChu];
     });
-    xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx',
-      ['Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
+    var xs = cotKhongNhat(['Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
        'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC áp dụng', 'Quy khô (kg)',
        'NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú'], dong);
+    xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx', xs[0], xs[1]);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -8031,9 +8110,9 @@ function csvXepHang() {
     var dong = d.rows.map(function (r, i) {
       return [i + 1, r.maCn, r.to, r.chucDanh, r.kg, r.quyKho, r.nhat, r.nsbq, r.soNgay, r.binhQuanNgay];
     });
-    xuatBangExcel('xep_hang_' + S.maDonVi + '.xlsx',
-      ['Hạng', 'Mã CN', 'Tổ', 'Chức danh', 'Tổng SL (kg)', 'Quy khô (kg)', 'Số nhát',
+    var xs = cotKhongNhat(['Hạng', 'Mã CN', 'Tổ', 'Chức danh', 'Tổng SL (kg)', 'Quy khô (kg)', 'Số nhát',
        'NSBQ (kg/nhát)', 'Số ngày', 'Bình quân/ngày'], dong);
+    xuatBangExcel('xep_hang_' + S.maDonVi + '.xlsx', xs[0], xs[1]);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -8136,8 +8215,8 @@ function moThemSanLuong() {
         '<select class="o" id="tCl">' + optTu(S.meta && S.meta.chatLuong) + '</select></div>' +
       '<div><label class="nhan" for="tKg">Sản lượng (kg)</label>' +
         '<input class="o" id="tKg" type="number" step="0.01" min="0" placeholder="0.00"></div>' +
-      '<div><label class="nhan" for="tNhat">Số nhát cạo</label>' +
-        '<input class="o" id="tNhat" type="number" step="1" min="0" value="2"></div>' +
+      '<div class="chi-nhat"><label class="nhan" for="tNhat">Số nhát cạo</label>' +
+        '<input class="o" id="tNhat" type="number" step="1" min="0" value="' + (CO_SO_NHAT ? '2' : '') + '"></div>' +
       '<div style="grid-column:1/-1"><label class="nhan" for="tGhiChu">Ghi chú</label>' +
         '<input class="o" id="tGhiChu" placeholder="Không bắt buộc"></div>' +
     '</div>' +
@@ -8477,7 +8556,7 @@ function dbVeKetQua(d) {
   d.dong.forEach(function (x) { tongNhat += Number(x.nhat) || 0; tongQk += Number(x.qk) || 0; });
   var h = '<div class="kpis" style="margin-bottom:10px">' +
     the_kpi('Tổng sản lượng', soVN(d.tongKg, 2), 'kg', d.dong.length + ' dòng · ' + ttChu) +
-    the_kpi('Quy khô', soVN(tongQk, 2), 'kg', 'Số nhát ' + soVN(tongNhat, 0)) +
+    the_kpi('Quy khô', soVN(tongQk, 2), 'kg', CO_SO_NHAT ? 'Số nhát ' + soVN(tongNhat, 0) : '') +
     the_kpi('Công nhân', soVN(Object.keys(d.dong.reduce(function (m, x) { m[x.maCn] = 1; return m; }, {})).length, 0), 'người',
       'Phiếu nội trạm ' + d.maPhieu) + '</div>';
 
@@ -8495,10 +8574,10 @@ function dbVeKetQua(d) {
     '</tbody></table></div>';
   h += '<h3 class="tieude-muc" style="margin:12px 0 6px">Chi tiết ' + d.dong.length + ' dòng</h3>' +
     '<div class="cuon cuon-doc" style="max-height:40vh"><table><thead><tr><th>#</th><th>Mã CN</th><th>Phần cạo</th><th>Phiên</th>' +
-    '<th>Loại mủ</th><th class="so">Kg</th><th class="so">Nhát</th><th class="so">Quy khô</th><th>Trạng thái</th></tr></thead><tbody>' +
+    '<th>Loại mủ</th><th class="so">Kg</th><th class="so chi-nhat">Nhát</th><th class="so">Quy khô</th><th>Trạng thái</th></tr></thead><tbody>' +
     d.dong.map(function (x, i) {
       return '<tr><td class="nhan-mo">' + (i + 1) + '</td><td><b>' + thoat(x.maCn) + '</b></td><td>' + thoat(x.pc) + '</td><td>' + thoat(x.phien) +
-        '</td><td>' + thoat(x.loai) + '</td><td class="so">' + soVN(x.kg, 2) + '</td><td class="so">' + soVN(x.nhat, 0) +
+        '</td><td>' + thoat(x.loai) + '</td><td class="so">' + soVN(x.kg, 2) + '</td><td class="so chi-nhat">' + soVN(x.nhat, 0) +
         '</td><td class="so">' + soVN(x.qk, 2) + '</td><td>' + thoat(tenTt[x.trangThai] || x.trangThai) + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   $('dbKetQua').innerHTML = h;
@@ -8669,22 +8748,22 @@ function moNhapCaTo() {
   var loai = chon(tam && tam.loai, m.loaiMu, chon('MU_DONG', m.loaiMu, m.loaiMu[0] ? m.loaiMu[0].ma : ''));
   var cl = chon(tam && tam.cl, m.chatLuong, m.chatLuong[0] ? m.chatLuong[0].ma : '');
   var ngay = (tam && tam.ngay) || nsHomNay();
-  var nhatMd = (tam && tam.nhat) || '2';
+  var nhatMd = CO_SO_NHAT ? ((tam && tam.nhat) || '2') : '';
 
   var h = '<div id="ntOff" class="nt-off"></div><div id="ntCapNhat" class="nt-cap-nhat"></div><div class="nt-dau">' +
     '<div><label class="nhan" for="ntNgay">Ngày</label><input class="o" id="ntNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
     '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
-    '<div><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
+    '<div class="chi-nhat"><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
     '<div class="nhan-mo nt-luu" id="ntTrangThaiLuu"></div>' +
     '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangNhapTo" class="bang-nt-sl"><thead><tr><th>#</th><th>Mã công nhân</th>' +
-    '<th>Sản lượng (kg)</th><th>Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
+    '<th>Sản lượng (kg)</th><th class="chi-nhat">Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
   for (var i = 0; i < ds.length; i++) {
     var d = tam && tam.dong && tam.dong[ds[i]];
     h += '<tr data-cn="' + thoat(ds[i]) + '"><td class="nhan-mo c-stt">' + (i + 1) + '</td><td class="c-ma"><b>' + thoat(ds[i]) + '</b><span class="nt-tag"></span></td>' +
       '<td class="c-kg" data-nhan="Sản lượng (kg)"><input class="o nt-kg" type="number" step="0.01" min="0" inputmode="decimal" enterkeyhint="next" aria-label="Sản lượng kg của ' + thoat(ds[i]) + '" value="' + thoat(d ? d.kg : '') + '"></td>' +
-      '<td class="c-nhat" data-nhan="Số nhát"><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
+      '<td class="c-nhat chi-nhat" data-nhan="Số nhát"><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
       '<td class="c-gc" data-nhan="Ghi chú"><input class="o nt-gc" maxlength="200" value="' + thoat(d ? d.gc : '') + '"></td></tr>';
   }
   h += '</tbody></table></div><div id="ntLoi"></div>' +
@@ -8784,12 +8863,14 @@ function ntTaiMau() {
     var x = d.dong[ds[i]] || {};
     dong.push([ds[i], x.kg === undefined || x.kg === '' ? '' : Number(x.kg), x.nhat === undefined || x.nhat === '' ? '' : Number(x.nhat), x.gc || '']);
   }
+  var xsTo = cotKhongNhat(dong[0], dong.slice(1));
+  dong = [xsTo[0]].concat(xsTo[1]);
   var ws = XLSX.utils.aoa_to_sheet(dong);
-  ws['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 36 }];
+  ws['!cols'] = dong[0].map(function (t) { return { wch: /Ghi/.test(t) ? 36 : 16 }; });
   var hd = XLSX.utils.aoa_to_sheet([
-    ['Chỉ điền cột "Sản lượng kg" (và số nhát / ghi chú nếu cần) ở sheet "Nhap ca to". Đừng sửa cột Mã công nhân, đừng đổi tên cột.'],
+    ['Chỉ điền cột "Sản lượng kg" (và ' + (CO_SO_NHAT ? 'số nhát / ' : '') + 'ghi chú nếu cần) ở sheet "Nhap ca to". Đừng sửa cột Mã công nhân, đừng đổi tên cột.'],
     ['Ngày, phiên cạo, loại mủ, chất lượng KHÔNG nằm trong file: chọn ở đầu bảng nhập trên web.'],
-    ['Hiện đang chọn: ngày ' + (d.ngay || '—') + ' · phiên ' + d.phien + ' · loại mủ ' + d.loai + ' · chất lượng ' + d.cl + ' · số nhát mặc định ' + d.nhat],
+    ['Hiện đang chọn: ngày ' + (d.ngay || '—') + ' · phiên ' + d.phien + ' · loại mủ ' + d.loai + ' · chất lượng ' + d.cl + (CO_SO_NHAT ? ' · số nhát mặc định ' + d.nhat : '')],
     ['Dòng kg để trống hoặc bằng 0 sẽ bị bỏ qua.']
   ]);
   hd['!cols'] = [{ wch: 110 }];
@@ -9463,6 +9544,7 @@ function taiMauExcel(loai) {
     var loaiMuMau = (S.meta && S.meta.loaiMu && S.meta.loaiMu[0] && S.meta.loaiMu[0].ma) || 'MU_DONG';
     cotTieuDe = ['Ngày (yyyy-mm-dd)', 'Mã công nhân', 'Loại mủ', 'Phiên cạo', 'Sản lượng kg', 'Chất lượng', 'Số nhát cạo', 'Ghi chú'];
     dongViDu = [[ngayMau, maCnMau, loaiMuMau, 'A', 12.5, '', 96, '']];
+    var xsMau = cotKhongNhat(cotTieuDe, dongViDu); cotTieuDe = xsMau[0]; dongViDu = xsMau[1];
   } else {
     tenSheet = 'Cham cong';
     var khMau = (S.meta && S.meta.loaiCong && S.meta.loaiCong[0] && S.meta.loaiCong[0].ma) || '+';
@@ -9641,7 +9723,7 @@ function moSuaSanLuong(r) {
     '<div class="bo-loc the" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="sKg">Sản lượng (kg)</label>' +
         '<input class="o" id="sKg" type="number" step="0.01" min="0" value="' + r.kg + '"></div>' +
-      '<div><label class="nhan" for="sNhat">Số nhát cạo</label>' +
+      '<div class="chi-nhat"><label class="nhan" for="sNhat">Số nhát cạo</label>' +
         '<input class="o" id="sNhat" type="number" step="1" min="0" value="' + (r.nhat || '') + '"></div>' +
       '<div><label class="nhan" for="sLoai">Loại mủ</label>' +
         '<select class="o" id="sLoai">' + optLoai + '</select></div>' +
