@@ -136,7 +136,9 @@ tbody tr{transition:background-color .12s}
   .btn:active:not(:disabled),.chip:active,.tab:active,.loc-chip:active{transform:scale(.97)}
   .kpi{transition:transform .2s ease,box-shadow .2s ease}
   .kpi:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
-  .vao{animation:hu-vao .28s ease-out both}                        /* đổi tab */
+  /* Đổi tab: chỉ mờ dần, KHÔNG dùng transform — trang có transform thì khung cố định bên trong (Bộ lọc trượt lên,
+     hộp thoại) bị tính theo trang thay vì màn hình, làm trang dài thêm và sidebar trôi theo */
+  .vao{animation:hu-hien .25s ease-out both}
   .kpi.vao-the{animation:hu-vao .35s ease-out both;animation-delay:calc(var(--i, 0) * 45ms)}
   .duong-ve{stroke-dasharray:1;stroke-dashoffset:1;animation:hu-ve-duong .9s ease-out .05s forwards}
   .vung-ve{animation:hu-hien .8s ease-out both}
@@ -176,7 +178,11 @@ tbody tr{transition:background-color .12s}
   --sb-active-bg:#FFFFFF; --sb-active-ink:#0F5A40;
   width:250px;flex:none;background:var(--sb-bg);color:var(--sb-ink);
   padding:20px 16px;display:flex;flex-direction:column;gap:16px;
-  position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40}
+  position:fixed;top:0;left:0;bottom:0;height:100vh;overflow-y:auto;z-index:40}
+/* Sidebar ghim cố định bên trái (không trôi theo trang) -> nội dung chừa lề bằng bề ngang sidebar */
+.noi-dung-chinh{margin-left:250px}
+@media (max-width:900px){.noi-dung-chinh{margin-left:0}}
+@media print{.noi-dung-chinh{margin-left:0}}
 .hieu{display:flex;align-items:center;gap:10px}
 /* Ô vuông chữ cái đầu (logo) bên trái tên hệ thống — kiểu sidebar tham khảo. */
 .hieu-logo{flex:none;width:34px;height:34px;border-radius:8px;background:var(--sb-active-bg);color:var(--sb-active-ink);
