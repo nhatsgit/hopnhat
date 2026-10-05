@@ -293,10 +293,14 @@ button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
    tấm rộng tối đa 980px giữa màn, điện thoại rộng hết. */
 .bo-loc-dau{display:flex;align-items:center;gap:10px;width:100%;padding:0;margin-bottom:14px;
   border:none;background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
-.bo-loc-dau .nut-loc-pill{display:inline-flex;align-items:center;gap:7px;flex:none;padding:7px 14px;
-  border:1px solid var(--line-2);background:var(--card);font-weight:600;font-size:13.5px;
-  border-radius:99px;box-shadow:var(--shadow)}
-.bo-loc-dau:hover .nut-loc-pill,.bo-loc-dau.dang-mo .nut-loc-pill{border-color:var(--leaf);color:var(--leaf)}
+/* Nút Bộ lọc nổi bật: viên thuốc tô màu lá (chữ lấy màu nền thẻ -> sáng/tối đều tương phản), bóng màu lá nhẹ */
+.bo-loc-dau .nut-loc-pill{display:inline-flex;align-items:center;gap:7px;flex:none;padding:8px 16px;
+  border:1px solid var(--leaf);background:var(--leaf);color:var(--card);font-weight:700;font-size:13.5px;
+  border-radius:99px;box-shadow:0 4px 12px -2px color-mix(in srgb,var(--leaf) 45%,transparent);
+  transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+.bo-loc-dau:hover .nut-loc-pill,.bo-loc-dau.dang-mo .nut-loc-pill{filter:brightness(1.08);transform:translateY(-1px);
+  box-shadow:0 6px 16px -2px color-mix(in srgb,var(--leaf) 55%,transparent)}
+.bo-loc-dau:active .nut-loc-pill{transform:scale(.97)}
 .bo-loc-dau .phieu-loc{flex:none}
 /* Bộ lọc đang dùng: mỗi điều kiện 1 chip, nằm bên phải nút (bấm vào cũng mở tấm lọc) */
 .bo-loc-dau .tom-tat{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
