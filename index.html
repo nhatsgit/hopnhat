@@ -11916,7 +11916,8 @@ $('nutVao').onclick = function () {
     nut.disabled = false; nut.textContent = 'Đăng nhập';
     S.lucDuLieu = banLuu.luc;
     vaoApp(banLuu.d, vtChon);
-    nsBaoOkChung('📴 Đang mất mạng — vào bằng dữ liệu lưu trên máy (lần đăng nhập ' + ntGio(banLuu.luc) + ' ' + ngayVN(nsHomNayTu(banLuu.luc)) +
+    // Thông báo mất mạng chỉ dành cho TỔ TRƯỞNG (người nhập ở vườn); các vai trò khác không cần thấy
+    if (S.vaiTro === 'TO_TRUONG') nsBaoOkChung('📴 Đang mất mạng — vào bằng dữ liệu lưu trên máy (lần đăng nhập ' + ntGio(banLuu.luc) + ' ' + ngayVN(nsHomNayTu(banLuu.luc)) +
       '). Vẫn nhập được sản lượng / chấm công cả tổ; số liệu xem sẽ cập nhật khi có sóng.');
   };
   if (!navigator.onLine) {
