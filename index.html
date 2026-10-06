@@ -10387,7 +10387,7 @@ function veNhomTab() {
     var nh = NHOM_TAB[i];
     var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
     if (!dsCon.length) continue;
-    if (dsCon.length === 1 && !daCoNhan) {
+    if (dsCon.length === 1) {   // nhóm chỉ có 1 trang (Tổng quan, Bản đồ, Báo cáo…): nút bấm thẳng, không xổ
       h += '<button class="tab' + (S.nhom === nh.id ? ' on' : '') + '" data-tab="' + dsCon[0] + '" data-nhom-cha="' + nh.id + '">' +
            '<span class="nhom-icon">' + (ICON_NHOM[nh.id] || '') + '</span><span class="nhom-ten">' + nh.ten + '</span>' +
            (hh[dsCon[0]] ? '<span class="huy-hieu">' + hh[dsCon[0]] + '</span>' : '') + '</button>';
