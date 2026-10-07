@@ -767,6 +767,8 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
         <option value="DOI_TRUONG">Đội trưởng</option>
         <option value="TRO_LY">Trợ lý (tạm thời, quyền ngang đội trưởng)</option>
         <option value="KTNN">Phòng KTNN (tạm thời, quyền ngang lãnh đạo)</option>
+        <option value="QLCL">Phòng QLCL (tạm thời, quyền ngang lãnh đạo)</option>
+        <option value="TCHC">Phòng TCHC (tạm thời, quyền ngang lãnh đạo)</option>
         <option value="BAN_LANH_DAO">Ban lãnh đạo</option>
         <option value="ADMIN">Admin (tạm thời, quyền ngang lãnh đạo)</option>
       </select>
@@ -10797,7 +10799,7 @@ function vaiTroThuc(vt) {
   var x = pqTimVaiTro(vt);
   if (x && x.heThong) return x.heThong;          // vai trò trong bảng DIM_VAI_TRO (kể cả vai trò tự thêm)
   if (vt === 'TRO_LY') return 'DOI_TRUONG';
-  if (vt === 'KTNN' || vt === 'ADMIN') return 'BAN_LANH_DAO';
+  if (vt === 'KTNN' || vt === 'QLCL' || vt === 'TCHC' || vt === 'ADMIN') return 'BAN_LANH_DAO';
   return vt;
 }
 
@@ -10822,6 +10824,8 @@ function tenVaiTro(vt) {
   if (vt === 'DOI_TRUONG') return 'Đội trưởng';
   if (vt === 'TRO_LY') return 'Trợ lý';
   if (vt === 'KTNN') return 'Phòng KTNN';
+  if (vt === 'QLCL') return 'Phòng QLCL';
+  if (vt === 'TCHC') return 'Phòng TCHC';
   if (vt === 'ADMIN') return 'Admin';
   return 'Ban lãnh đạo';
 }
