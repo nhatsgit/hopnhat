@@ -5549,22 +5549,13 @@ function veBanDoLo(canVua) {
     the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', CO_SO_NHAT ? 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát'
       : (sl('kg') ? 'DRC bình quân ' + soVN(sl('qk') / sl('kg') * 100, 1) + '%' : '')) +
     the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
-    the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo') +
-    the_kpi('Cập nhật bản đồ', _bdNgay(_bd.hinh.capNhat), '', 'Nạp từ file GeoJSON đã làm sạch');
+    the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo');
   if (_bdChon) { var xc = _bdTimLo(_bdChon); if (xc) veChiTietLo(xc); }
 }
 
 function _bdTimLo(ma) {
   for (var i = 0; i < _bd.hinh.lo.length; i++) if (_bd.hinh.lo[i].maLo === ma) return _bd.hinh.lo[i];
   return null;
-}
-
-/** Ngày cập nhật: chuỗi 'yyyy-mm-dd…' hoặc số seri ngày của Sheet (Cloud Run đọc thô). */
-function _bdNgay(v) {
-  if (v === '' || v === null || v === undefined) return '—';
-  var n = Number(v);
-  if (!isNaN(n) && n > 20000) { var d = new Date(Date.UTC(1899, 11, 30) + n * 86400000); return ngayVN(d.toISOString().substring(0, 10)); }
-  return ngayVN(String(v).substring(0, 10));
 }
 
 function veChiTietLo(x) {
