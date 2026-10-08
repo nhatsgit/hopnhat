@@ -206,7 +206,7 @@ tbody tr{transition:background-color .12s}
 .ben-duoi .btn.nho{width:100%;text-align:center}
 .ben-nut{display:flex;gap:6px}
 .ben-nut .btn.nho{flex:1;min-width:0}
-.phien-ban{position:absolute;right:6px;top:calc(100% + 1px);font-size:9px;line-height:1;color:rgba(255,255,255,.4);font-variant-numeric:tabular-nums;pointer-events:none}   /* nhỏ, nằm ngoài luồng: không đẩy thẻ nào lên */
+.phien-ban{position:absolute;left:6px;top:calc(100% + 1px);font-size:9px;line-height:1;color:rgba(255,255,255,.4);font-variant-numeric:tabular-nums;pointer-events:none}   /* nhỏ, nằm ngoài luồng: không đẩy thẻ nào lên */
 .the-nguoi-dung{position:relative;display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.08)}
 .avatar-nd{flex:none;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);color:var(--sb-ink);
   display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700}
@@ -940,6 +940,11 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
       <div class="the o-bieu-do" style="margin-bottom:20px">
         <h3 class="tieude-muc">Sản lượng theo ngày</h3>
         <div id="bdNgay"></div>
+      </div>
+      <!-- Chỉ người được xem DRC thật mới thấy khối này -->
+      <div class="the o-bieu-do" id="theQkThatNgay" style="margin-bottom:20px;display:none">
+        <h3 class="tieude-muc">Quy khô thật so với tạm tính theo ngày <span class="nhan-mo" style="text-transform:none;font-weight:400">(chỉ ngày đã có DRC thật + phiếu cân)</span></h3>
+        <div id="bdQkThatNgay"></div>
       </div>
       <div class="luoi-2 deu">
         <div class="the o-bieu-do">
@@ -2153,7 +2158,7 @@ function dsCnNhapTo() {
  */
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 182, PHIEN_BAN_BE = 99, PHIEN_BAN_AS = 184;
+var PHIEN_BAN_FE = 183, PHIEN_BAN_BE = 100, PHIEN_BAN_AS = 185;
 var PHIEN_BAN = 'v' + PHIEN_BAN_FE + '.' + PHIEN_BAN_BE + '.' + PHIEN_BAN_AS;
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
@@ -3057,6 +3062,17 @@ function taiTongQuan() {
     if (kt) goiCache('tongQuan', kt).then(function (dt) { if (_tqHienTai === d) veKpiTQ(d, dt); }).catch(function () {});
 
     veCot($('bdNgay'), d.theoNgay);
+    $('theQkThatNgay').style.display = d.kpi.that ? '' : 'none';
+    if (d.kpi.that) {
+      var tanQk = function (v) { return Math.round(v / 10) / 100; };
+      if ((d.theoNgayThat || []).length) {
+        veCotKep($('bdQkThatNgay'), d.theoNgayThat.map(function (x) {
+          return { nhan: x.ngay.substring(8, 10) + '/' + x.ngay.substring(5, 7), kh: tanQk(x.qkTam), th: tanQk(x.qkThat) };
+        }), { dv: 'tấn', tenKh: 'Quy khô tạm tính', tenTh: 'Quy khô thật', ten: 'Quy khô thật so với tạm tính theo ngày' });
+      } else {
+        $('bdQkThatNgay').innerHTML = '<div class="rong">' + CHUA_CO_DRC_THAT + ' trong khoảng đang lọc.</div>';
+      }
+    }
     veDonut($('bdLoai'), d.theoLoaiMu);
     veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
     veBangPhienTQ(d.theoPhien || []);
@@ -3214,6 +3230,7 @@ function veKpiTQ(d, dt) {
     the_kpi('Quy khô tạm tính mủ dây', soVN(muDay.quyKho, 2), 'kg', '',
             (muDay.kg ? NHAN_DRC_TAM + ' DRC ' + soVN(muDay.quyKho / muDay.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
             sosanh(muDay.quyKho, function () { return (qlt.MU_DAY || {}).quyKho; })) +
+    (k.that ? theQuyKhoThat({ MU_DONG: muChen, MU_DAY: muDay }, k.that.theoLoai) : '') +
     (CO_SO_NHAT ? the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', '', 'Trên dòng đã lọc' + sosanh(k.nsbq, function () { return kt.nsbq; })) : '') +
     the_kpi('Công nhân có sản lượng', soVN(k.soCongNhan, 0), 'người', '',
             soVN(k.soNgay, 0) + ' ngày có sản lượng' + sosanh(k.soCongNhan, function () { return kt.soCongNhan; })) +
@@ -3710,19 +3727,24 @@ function oDrcThat(r, cot) {
  * that = { MU_DONG: {kgSo, kgThat, qkThat}, ... } hoặc null khi người xem không có quyền Xem DRC thật.
  */
 function theQuyKhoTheoLoai(tam, that) {
-  var h = '', loai = [['MU_DONG', 'mủ chén'], ['MU_DAY', 'mủ dây']];
-  loai.forEach(function (l) {
+  var h = '';
+  [['MU_DONG', 'mủ chén'], ['MU_DAY', 'mủ dây']].forEach(function (l) {
     var t = (tam || {})[l[0]];
     h += t && t.kg > 0
       ? the_kpi('Quy khô tạm tính ' + l[1], soVN(t.quyKho, 0), 'kg', '', NHAN_DRC_TAM + ' DRC ' + soVN(t.quyKho / t.kg * 100, 1) + '% · ' + soVN(t.kg, 0) + ' kg tươi')
       : the_kpi('Quy khô tạm tính ' + l[1], '—', '', 'Không có sản lượng ' + l[1]);
   });
-  if (!that) return h;
-  loai.forEach(function (l) {
-    var t = (tam || {})[l[0]], x = that[l[0]];
+  return h + (that ? theQuyKhoThat(tam, that) : '');
+}
+
+/** 2 thẻ quy khô THẬT (mủ chén, mủ dây): DRC thật, kg cân, kg sổ + tỉ lệ chênh, phần phủ; thiếu thì ghi "chưa có DRC thật". */
+function theQuyKhoThat(tam, that) {
+  var h = '';
+  [['MU_DONG', 'mủ chén'], ['MU_DAY', 'mủ dây']].forEach(function (l) {
+    var t = (tam || {})[l[0]], x = (that || {})[l[0]];
     if (!t || !(t.kg > 0)) { h += the_kpi('Quy khô thật ' + l[1], '—', '', 'Không có sản lượng ' + l[1]); return; }
     if (!x || !(x.kgThat > 0)) { h += the_kpi('Quy khô thật ' + l[1], '—', '', '', CHUA_CO_DRC_THAT); return; }
-    var phu = x.kgSo ? t.kg ? Math.min(100, x.kgSo / t.kg * 100) : 100 : 0;
+    var phu = x.kgSo ? Math.min(100, x.kgSo / t.kg * 100) : 0;
     h += the_kpi('Quy khô thật ' + l[1], soVN(x.qkThat, 0), 'kg', '',
       NHAN_DRC_THAT + ' DRC ' + soVN(x.qkThat / x.kgThat * 100, 2) + '%<br>Cân ' + soVN(x.kgThat, 0) + ' kg · sổ ' + soVN(x.kgSo, 0) + ' (' +
       (x.kgThat >= x.kgSo ? '+' : '') + soVN(x.kgSo ? (x.kgThat - x.kgSo) / x.kgSo * 100 : 0, 1) + '%)' +
