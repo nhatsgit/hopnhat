@@ -2153,7 +2153,7 @@ function dsCnNhapTo() {
  */
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 181, PHIEN_BAN_BE = 99, PHIEN_BAN_AS = 184;
+var PHIEN_BAN_FE = 182, PHIEN_BAN_BE = 99, PHIEN_BAN_AS = 184;
 var PHIEN_BAN = 'v' + PHIEN_BAN_FE + '.' + PHIEN_BAN_BE + '.' + PHIEN_BAN_AS;
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
@@ -3780,8 +3780,8 @@ function veKpiSanLuong(d) {
   var kg = d.tongKg, qk = d.tongQuyKho;   // máy chủ tính trên cả tập đang lọc (kể cả khi bảng chỉ hiện dòng bất thường)
   var nc = tk.soNgayCong || 0;
   var h =
+    theQuyKhoTheoLoai(tk.theoLoai, tk.that ? tk.that.theoLoai : null) +   // 4 thẻ quy khô (tạm tính + thật, chén + dây) đứng đầu
     the_kpi('Sản lượng tươi', soVN(kg, 0), 'kg', soVN(tk.soDong !== undefined ? tk.soDong : d.tong, 0) + ' dòng') +
-    theQuyKhoTheoLoai(tk.theoLoai, tk.that ? tk.that.theoLoai : null) +
     the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(nc, 0) + ' ngày công cạo · ' + soVN(tk.soNgay, 0) + ' ngày') +
     (CO_SO_NHAT && tk.tongNhat
       ? the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo')
