@@ -3696,6 +3696,25 @@ function htmlDrcTamTheoLoai(kgC, qkC, kgD, qkD, kemQk) {
   return ds.length ? NHAN_DRC_TAM + ' ' + ds.join('<br>') : '';
 }
 
+/** Chỗ nào chưa có DRC thật (ngày chưa nhập / chưa có cân) thì ghi thẳng như vậy, không để trống hay đoán. */
+var CHUA_CO_DRC_THAT = '<span class="nhan-mo" title="Phòng QLCL chưa báo DRC (hoặc chưa có phiếu cân) cho ngày + đội + loại mủ này — nhập ở tab DRC thật">chưa có DRC thật</span>';
+
+/** 2 dòng DRC thật bình quân riêng mủ chén / mủ dây từ { MU_DONG: {kgThat, qkThat}, MU_DAY: ... }. */
+function htmlDrcThatTheoLoai(tl) {
+  var dong = function (ten, x) { return x && x.kgThat > 0 ? ten + ': DRC ' + soVN(x.qkThat / x.kgThat * 100, 2) + '%' : ''; };
+  var ds = [dong('Mủ chén', (tl || {}).MU_DONG), dong('Mủ dây', (tl || {}).MU_DAY)].filter(function (x) { return x; });
+  return ds.length ? NHAN_DRC_THAT + ' ' + ds.join('<br>') : '';
+}
+
+/** Ô DRC thật + sản lượng thật + quy khô thật của 1 dòng / 1 loại mủ (r.drcThat, r.kgThat, r.quyKhoThat). */
+function oDrcThat(r, cot) {
+  if (r.drcThat === undefined || r.drcThat === null) return '<td class="p">' + (cot === 'drcThat' ? CHUA_CO_DRC_THAT : '<span class="nhan-mo">—</span>') + '</td>';
+  if (cot === 'drcThat') return '<td class="p num">' + soVN(r.drcThat, 2) + '%</td>';
+  var v = cot === 'kgThat' ? r.kgThat : r.quyKhoThat;
+  if (v === null || v === undefined) return '<td class="p nhan-mo" title="Ngày này chưa có phiếu cân hoặc sổ tổ đã duyệt để quy ra số thật">chưa có cân</td>';
+  return '<td class="p num">' + (cot === 'quyKhoThat' ? '<b>' + soVN(v, 2) + '</b>' : soVN(v, 2)) + '</td>';
+}
+
 function the_kpi(ten, so, dv, phu, phuHtml) {
   var phuH = phuHtml !== undefined ? phuHtml : thoat(phu), nhan = '';
   var m = /\s*·\s*<span(?: class="(tang|giam)")?>([^<]*)<\/span>(?: so với kỳ trước)?\s*$/.exec(phuH);
@@ -3749,6 +3768,16 @@ function veKpiSanLuong(d) {
     the_kpi('Quy khô tạm tính', soVN(qk, 0), 'kg', '', tk.theoLoai
       ? htmlDrcTamTheoLoai((tk.theoLoai.MU_DONG || {}).kg, (tk.theoLoai.MU_DONG || {}).quyKho, (tk.theoLoai.MU_DAY || {}).kg, (tk.theoLoai.MU_DAY || {}).quyKho)
       : '') +
+    (tk.that ? the_kpi('Quy khô thật', tk.that.soDongCo ? soVN(tk.that.qkThat, 0) : '—', tk.that.soDongCo ? 'kg' : '', '',
+        tk.that.soDongCo
+          ? htmlDrcThatTheoLoai(tk.that.theoLoai) + '<br>Phủ ' + soVN(kg ? tk.that.kgSoCo / kg * 100 : 0, 0) + '% sản lượng đang lọc · hơn tạm tính ' +
+            soVN(tk.that.qkThat - tk.that.qkTamCo, 0) + ' kg' + (kg && tk.that.kgSoCo < kg ? '<br>Phần còn lại: ' + CHUA_CO_DRC_THAT : '')
+          : CHUA_CO_DRC_THAT) +
+      the_kpi('Sản lượng thật (cân)', tk.that.soDongCo ? soVN(tk.that.kgThat, 0) : '—', tk.that.soDongCo ? 'kg' : '', '',
+        tk.that.soDongCo
+          ? 'Trạm cân phân về tổ · sổ ghi ' + soVN(tk.that.kgSoCo, 0) + ' kg (' + (tk.that.kgThat >= tk.that.kgSoCo ? '+' : '') +
+            soVN(tk.that.kgSoCo ? (tk.that.kgThat - tk.that.kgSoCo) / tk.that.kgSoCo * 100 : 0, 1) + '%)'
+          : CHUA_CO_DRC_THAT) : '') +
     the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(nc, 0) + ' ngày công cạo · ' + soVN(tk.soNgay, 0) + ' ngày') +
     (CO_SO_NHAT && tk.tongNhat
       ? the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo')
@@ -3785,6 +3814,9 @@ var COT_SL = [
   { k: 'nhat', t: 'Nhát cạo', sx: true, p: true, nhat: true },
   { k: 'drc', t: 'DRC tạm tính', sx: false, p: true, tip: 'DRC tạm tính: mức cố định theo loại mủ, chưa phải DRC thật phòng QLCL báo' },
   { k: 'quyKho', t: 'Quy khô tạm tính (kg)', sx: true, p: true, tip: 'Kg tươi × DRC tạm tính. Quy khô thật xem ở tab DRC thật / Trạm cân' },
+  { k: 'drcThat', t: 'DRC thật', sx: false, p: true, that: true, tip: 'DRC phòng QLCL báo cho ngày + đội + loại mủ (tab DRC thật)' },
+  { k: 'kgThat', t: 'Sản lượng thật (kg)', sx: false, p: true, that: true, tip: 'Kg ghi sổ × (kg trạm cân của đội ÷ kg sổ đã duyệt của đội, cùng ngày + loại mủ)' },
+  { k: 'quyKhoThat', t: 'Quy khô thật (kg)', sx: false, p: true, that: true, tip: 'Sản lượng thật × DRC thật' },
   { k: 'nsbq', t: 'kg/nhát', sx: true, p: true, nhat: true },
   { k: 'trangThai', t: 'Trạng thái', sx: true },
   { k: '_sua', t: '', sx: false }
@@ -3803,10 +3835,11 @@ function taiSanLuong() {
   var bl = layBoLoc();
   bl.sapXep = S.sapXep; bl.chieu = S.chieu; bl.trang = S.trang; bl.moiTrang = 100;
   if (S.slBatThuong) bl.batThuong = '1';
-  var dsCot = COT_SL.filter(function (c) { return CO_SO_NHAT || !c.nhat; });
+  var dsCot;
 
   goiCache('sanLuong', bl).then(function (d) {
     var tkSL = d.thongKe || {};
+    dsCot = COT_SL.filter(function (c) { return (CO_SO_NHAT || !c.nhat) && (!c.that || tkSL.that); });
     $('tomTatSL').textContent = S.slBatThuong
       ? soVN(d.tong, 0) + ' dòng bất thường · ' + soVN(tkSL.kgBatThuong || 0, 2) + ' kg tươi'
       : soVN(d.tong, 0) + ' dòng · ' + soVN(d.tongKg, 2) + ' kg tươi · ' + soVN(d.tongQuyKho, 2) + ' kg khô';
@@ -3841,6 +3874,7 @@ function taiSanLuong() {
         nhat: '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>',
         drc: '<td class="p num">' + (r.drc ? soVN(r.drc * 100, 1) + '%' : '—') + '</td>',
         quyKho: '<td class="p num">' + soVN(r.quyKho, 2) + '</td>',
+        drcThat: oDrcThat(r, 'drcThat'), kgThat: oDrcThat(r, 'kgThat'), quyKhoThat: oDrcThat(r, 'quyKhoThat'),
         nsbq: '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>',
         trangThai: '<td>' + viTrangThai(r.trangThai) + '</td>',
         _sua: '<td style="white-space:nowrap">' + (r.trangThai === 'CHO_DUYET' && (coQuyen('sanLuong', 'SUA') || coQuyen('sanLuong', 'XOA'))
@@ -3939,17 +3973,26 @@ function taiPhieu() {
       the_kpi('Tổng phiếu', soVN(d.tong, 0), 'phiếu', 'Trong khoảng đang lọc') +
       the_kpi('Tổng khối lượng', soVN(d.tongKg, 2), 'kg', 'Cộng mọi phiếu') +
       the_kpi('Lệch đối chiếu', soVN(d.soLech, 0), 'phiếu', 'Tổng chi tiết khác tổng phiếu') +
-      the_kpi('Chờ duyệt', soVN(soChoDuyet, 0), 'phiếu', 'Còn dòng sản lượng chưa duyệt');
+      the_kpi('Chờ duyệt', soVN(soChoDuyet, 0), 'phiếu', 'Còn dòng sản lượng chưa duyệt') +
+      (d.that ? the_kpi('Sản lượng thật (cân)', d.that.soPhieuCo ? soVN(d.that.kgThat, 0) : '—', d.that.soPhieuCo ? 'kg' : '', '',
+          d.that.soPhieuCo ? 'Trạm cân phân về tổ · ' + soVN(d.that.soPhieuCo, 0) + '/' + soVN(d.tong, 0) + ' phiếu đã có DRC thật'
+                           : CHUA_CO_DRC_THAT) +
+        the_kpi('Quy khô thật', d.that.soPhieuCo ? soVN(d.that.qkThat, 0) : '—', d.that.soPhieuCo ? 'kg' : '', '',
+          d.that.soPhieuCo ? NHAN_DRC_THAT + ' hơn tạm tính ' + soVN(d.that.qkThat - d.that.qkTamCo, 0) + ' kg' : CHUA_CO_DRC_THAT) : '');
 
     $('tomTatPhieu').textContent = soVN(d.tong, 0) + ' phiếu · ' + soVN(d.tongKg, 2) + ' kg' +
       (d.soLech ? ' · ' + d.soLech + ' phiếu lệch chi tiết' : '');
 
+    var coThatP = !!d.that;
     var h = '<thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Tổ</th>' +
             '<th class="p">Tổng (kg)</th><th>Chi tiết theo loại mủ</th>' +
+            (coThatP ? '<th class="p" title="DRC phòng QLCL báo (tab DRC thật), từng loại mủ">DRC thật</th>' +
+              '<th class="p" title="Kg phiếu × (kg trạm cân của đội ÷ kg sổ đã duyệt của đội, cùng ngày + loại mủ)">Sản lượng thật (kg)</th>' +
+              '<th class="p" title="Sản lượng thật × DRC thật">Quy khô thật (kg)</th>' : '') +
             '<th>Trạng thái</th><th>Phiếu Base</th><th class="p">Đối chiếu</th><th></th></tr></thead><tbody>';
 
     if (!d.rows.length) {
-      h += '<tr><td colspan="9"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';
+      h += '<tr><td colspan="' + (coThatP ? 12 : 9) + '"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';
     }
     for (var i = 0; i < d.rows.length; i++) {
       var p = d.rows[i];
@@ -3966,6 +4009,11 @@ function taiPhieu() {
         '<td>' + thoat(p.to) + '</td>' +
         '<td class="p num">' + soVN(p.kg, 2) + '</td>' +
         '<td style="white-space:normal;min-width:240px">' + ct + '</td>' +
+        (coThatP ? '<td class="p" style="white-space:normal">' + (p.chiTiet.some(function (c) { return c.drcThat !== undefined; })
+              ? p.chiTiet.map(function (c) { return c.drcThat === undefined ? '' : thoat(TEN_NGAN_LOAI_MU[c.loaiMu] || c.tenLoai) + ' ' + soVN(c.drcThat, 2) + '%'; }).filter(function (x) { return x; }).join('<br>')
+              : CHUA_CO_DRC_THAT) + '</td>' +
+          '<td class="p num">' + (p.kgThat === null || p.kgThat === undefined ? '<span class="nhan-mo">—</span>' : soVN(p.kgThat, 2)) + '</td>' +
+          '<td class="p num">' + (p.quyKhoThat === null || p.quyKhoThat === undefined ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(p.quyKhoThat, 2) + '</b>') + '</td>' : '') +
         '<td>' + viTrangThai(p.trangThai) +
           (p.soDongChoDuyet ? ' <span class="nhan-mo">' + p.soDongChoDuyet + '/' +
              p.soDongSanLuong + ' dòng</span>' : '') + '</td>' +
@@ -4006,15 +4054,18 @@ function moPhieu(ma) {
       '<div><span>Tổng khối lượng</span><b>' + soVN(p.kg, 2) + ' kg</b></div>' +
       '</div>';
 
+    var coThatM = !!p.coThat;
     h += '<h3 class="tieude-muc">Chi tiết theo loại mủ</h3><div class="cuon"><table>' +
-         '<thead><tr><th>Loại mủ</th><th class="p">Khối lượng (kg)</th><th class="p">Tỷ trọng</th></tr></thead><tbody>';
+         '<thead><tr><th>Loại mủ</th><th class="p">Khối lượng (kg)</th><th class="p">Tỷ trọng</th>' +
+         (coThatM ? '<th class="p">DRC thật</th><th class="p">Sản lượng thật (kg)</th><th class="p">Quy khô thật (kg)</th>' : '') + '</tr></thead><tbody>';
     for (var i = 0; i < p.chiTiet.length; i++) {
       var c = p.chiTiet[i];
       h += '<tr><td><span class="vi ' + lopLoaiMu(c.loaiMu) + '">' + thoat(c.tenLoai) + '</span></td>' +
            '<td class="p num">' + soVN(c.kg, 2) + '</td>' +
-           '<td class="p num">' + (p.kg ? soVN(c.kg / p.kg * 100, 1) + '%' : '—') + '</td></tr>';
+           '<td class="p num">' + (p.kg ? soVN(c.kg / p.kg * 100, 1) + '%' : '—') + '</td>' +
+           (coThatM ? oDrcThat(c, 'drcThat') + oDrcThat(c, 'kgThat') + oDrcThat(c, 'quyKhoThat') : '') + '</tr>';
     }
-    if (!p.chiTiet.length) h += '<tr><td colspan="3"><div class="rong">Phiếu chưa có dòng chi tiết.</div></td></tr>';
+    if (!p.chiTiet.length) h += '<tr><td colspan="' + (coThatM ? 6 : 3) + '"><div class="rong">Phiếu chưa có dòng chi tiết.</div></td></tr>';
     h += '</tbody><tfoot><tr><td>Tổng chi tiết</td><td class="p num">' + soVN(p.tongChiTiet, 2) +
          '</td><td class="p">' + (p.khop ? '<span class="vi ok">Khớp phiếu</span>'
             : '<span class="vi canh">Lệch ' + soVN(Math.abs(p.tongChiTiet - p.kg), 2) + ' kg</span>') +
@@ -8447,13 +8498,19 @@ function csvSanLuong() {
       baoLoi('thongBao', 'Có ' + soVN(d.tong, 0) + ' dòng nhưng mỗi lần chỉ xuất tối đa ' + soVN(d.rows.length, 0) +
         ' dòng — thu hẹp khoảng ngày rồi xuất tiếp phần còn lại.');
     }
+    var coThat = !!d.coThat;
     var dong = d.rows.map(function (r) {
       return [r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
-              r.kg, r.nhat, r.drc, r.quyKho, r.nsbq, r.nguon, r.trangThai, r.ghiChu];
+              r.kg, r.nhat, r.drc, r.quyKho].concat(coThat ? [
+                r.drcThat === undefined ? 'chưa có DRC thật' : r.drcThat,
+                r.drcThat === undefined ? '' : (r.kgThat === null ? 'chưa có cân' : r.kgThat),
+                r.drcThat === undefined ? '' : (r.quyKhoThat === null ? 'chưa có cân' : r.quyKhoThat)] : [])
+              .concat([r.nsbq, r.nguon, r.trangThai, r.ghiChu]);
     });
     var xs = cotKhongNhat(['Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
-       'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC tạm tính áp dụng', 'Quy khô tạm tính (kg)',
-       'NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú'], dong);
+       'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC tạm tính áp dụng', 'Quy khô tạm tính (kg)']
+       .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [])
+       .concat(['NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú']), dong);
     xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx', xs[0], xs[1]);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
