@@ -3687,24 +3687,8 @@ var NHAN_DRC_TAM = '<span class="nhan-drc tam" title="DRC tạm tính: mức c�
 var CHU_GIAI_DRC = '<div class="chu-giai-drc">' + NHAN_DRC_THAT + ' DRC phòng QLCL báo theo ngày (tab DRC thật) &nbsp;·&nbsp; ' +
   NHAN_DRC_TAM + ' DRC cố định theo loại mủ, dùng cho sổ sản lượng, lương, giao khoán — chưa phải DRC thật</div>';
 
-/** 2 dòng DRC tạm tính riêng mủ chén / mủ dây (không gộp thành 1 số bình quân). Loại không có kg thì bỏ dòng. */
-function htmlDrcTamTheoLoai(kgC, qkC, kgD, qkD, kemQk) {
-  var dong = function (ten, kg, qk) {
-    return kg > 0 ? ten + ': ' + (kemQk ? soVN(qk, 0) + ' kg khô · ' : '') + 'DRC ' + soVN(qk / kg * 100, 1) + '%' : '';
-  };
-  var ds = [dong('Mủ chén', kgC, qkC), dong('Mủ dây', kgD, qkD)].filter(function (x) { return x; });
-  return ds.length ? NHAN_DRC_TAM + ' ' + ds.join('<br>') : '';
-}
-
 /** Chỗ nào chưa có DRC thật (ngày chưa nhập / chưa có cân) thì ghi thẳng như vậy, không để trống hay đoán. */
 var CHUA_CO_DRC_THAT = '<span class="nhan-mo" title="Phòng QLCL chưa báo DRC (hoặc chưa có phiếu cân) cho ngày + đội + loại mủ này — nhập ở tab DRC thật">chưa có DRC thật</span>';
-
-/** 2 dòng DRC thật bình quân riêng mủ chén / mủ dây từ { MU_DONG: {kgThat, qkThat}, MU_DAY: ... }. */
-function htmlDrcThatTheoLoai(tl) {
-  var dong = function (ten, x) { return x && x.kgThat > 0 ? ten + ': DRC ' + soVN(x.qkThat / x.kgThat * 100, 2) + '%' : ''; };
-  var ds = [dong('Mủ chén', (tl || {}).MU_DONG), dong('Mủ dây', (tl || {}).MU_DAY)].filter(function (x) { return x; });
-  return ds.length ? NHAN_DRC_THAT + ' ' + ds.join('<br>') : '';
-}
 
 /** Ô DRC thật + sản lượng thật + quy khô thật của 1 dòng / 1 loại mủ (r.drcThat, r.kgThat, r.quyKhoThat). */
 function oDrcThat(r, cot) {
@@ -3713,6 +3697,32 @@ function oDrcThat(r, cot) {
   var v = cot === 'kgThat' ? r.kgThat : r.quyKhoThat;
   if (v === null || v === undefined) return '<td class="p nhan-mo" title="Ngày này chưa có phiếu cân hoặc sổ tổ đã duyệt để quy ra số thật">chưa có cân</td>';
   return '<td class="p num">' + (cot === 'quyKhoThat' ? '<b>' + soVN(v, 2) + '</b>' : soVN(v, 2)) + '</td>';
+}
+
+/**
+ * Thẻ quy khô TẠM TÍNH + THẬT, mỗi loại mủ 1 thẻ riêng (chén, dây). tam = { MU_DONG: {kg, quyKho}, ... };
+ * that = { MU_DONG: {kgSo, kgThat, qkThat}, ... } hoặc null khi người xem không có quyền Xem DRC thật.
+ */
+function theQuyKhoTheoLoai(tam, that) {
+  var h = '', loai = [['MU_DONG', 'mủ chén'], ['MU_DAY', 'mủ dây']];
+  loai.forEach(function (l) {
+    var t = (tam || {})[l[0]];
+    h += t && t.kg > 0
+      ? the_kpi('Quy khô tạm tính ' + l[1], soVN(t.quyKho, 0), 'kg', '', NHAN_DRC_TAM + ' DRC ' + soVN(t.quyKho / t.kg * 100, 1) + '% · ' + soVN(t.kg, 0) + ' kg tươi')
+      : the_kpi('Quy khô tạm tính ' + l[1], '—', '', 'Không có sản lượng ' + l[1]);
+  });
+  if (!that) return h;
+  loai.forEach(function (l) {
+    var t = (tam || {})[l[0]], x = that[l[0]];
+    if (!t || !(t.kg > 0)) { h += the_kpi('Quy khô thật ' + l[1], '—', '', 'Không có sản lượng ' + l[1]); return; }
+    if (!x || !(x.kgThat > 0)) { h += the_kpi('Quy khô thật ' + l[1], '—', '', '', CHUA_CO_DRC_THAT); return; }
+    var phu = x.kgSo ? t.kg ? Math.min(100, x.kgSo / t.kg * 100) : 100 : 0;
+    h += the_kpi('Quy khô thật ' + l[1], soVN(x.qkThat, 0), 'kg', '',
+      NHAN_DRC_THAT + ' DRC ' + soVN(x.qkThat / x.kgThat * 100, 2) + '%<br>Cân ' + soVN(x.kgThat, 0) + ' kg · sổ ' + soVN(x.kgSo, 0) + ' (' +
+      (x.kgThat >= x.kgSo ? '+' : '') + soVN(x.kgSo ? (x.kgThat - x.kgSo) / x.kgSo * 100 : 0, 1) + '%)' +
+      (phu < 99.5 ? '<br>Phủ ' + soVN(phu, 0) + '% · phần còn lại: ' + CHUA_CO_DRC_THAT : ''));
+  });
+  return h;
 }
 
 function the_kpi(ten, so, dv, phu, phuHtml) {
@@ -3765,19 +3775,7 @@ function veKpiSanLuong(d) {
   var nc = tk.soNgayCong || 0;
   var h =
     the_kpi('Sản lượng tươi', soVN(kg, 0), 'kg', soVN(tk.soDong !== undefined ? tk.soDong : d.tong, 0) + ' dòng') +
-    the_kpi('Quy khô tạm tính', soVN(qk, 0), 'kg', '', tk.theoLoai
-      ? htmlDrcTamTheoLoai((tk.theoLoai.MU_DONG || {}).kg, (tk.theoLoai.MU_DONG || {}).quyKho, (tk.theoLoai.MU_DAY || {}).kg, (tk.theoLoai.MU_DAY || {}).quyKho)
-      : '') +
-    (tk.that ? the_kpi('Quy khô thật', tk.that.soDongCo ? soVN(tk.that.qkThat, 0) : '—', tk.that.soDongCo ? 'kg' : '', '',
-        tk.that.soDongCo
-          ? htmlDrcThatTheoLoai(tk.that.theoLoai) + '<br>Phủ ' + soVN(kg ? tk.that.kgSoCo / kg * 100 : 0, 0) + '% sản lượng đang lọc · hơn tạm tính ' +
-            soVN(tk.that.qkThat - tk.that.qkTamCo, 0) + ' kg' + (kg && tk.that.kgSoCo < kg ? '<br>Phần còn lại: ' + CHUA_CO_DRC_THAT : '')
-          : CHUA_CO_DRC_THAT) +
-      the_kpi('Sản lượng thật (cân)', tk.that.soDongCo ? soVN(tk.that.kgThat, 0) : '—', tk.that.soDongCo ? 'kg' : '', '',
-        tk.that.soDongCo
-          ? 'Trạm cân phân về tổ · sổ ghi ' + soVN(tk.that.kgSoCo, 0) + ' kg (' + (tk.that.kgThat >= tk.that.kgSoCo ? '+' : '') +
-            soVN(tk.that.kgSoCo ? (tk.that.kgThat - tk.that.kgSoCo) / tk.that.kgSoCo * 100 : 0, 1) + '%)'
-          : CHUA_CO_DRC_THAT) : '') +
+    theQuyKhoTheoLoai(tk.theoLoai, tk.that ? tk.that.theoLoai : null) +
     the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(nc, 0) + ' ngày công cạo · ' + soVN(tk.soNgay, 0) + ' ngày') +
     (CO_SO_NHAT && tk.tongNhat
       ? the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo')
@@ -3959,6 +3957,20 @@ function vePhanTrang(id, d, tong, chuyen) {
   }
 }
 
+/** Phiếu nội trạm: quy khô tạm tính / thật mỗi loại mủ 1 thẻ (phiếu chỉ có kg sổ theo loại, DRC thật từ tab DRC thật). */
+function theQuyKhoPhieu(d) {
+  var tl = d.that.theoLoai || {}, h = '';
+  [['MU_DONG', 'mủ chén'], ['MU_DAY', 'mủ dây']].forEach(function (l) {
+    var x = tl[l[0]];
+    if (!x || !(x.kgThat > 0)) { h += the_kpi('Quy khô thật ' + l[1], '—', '', '', CHUA_CO_DRC_THAT); return; }
+    h += the_kpi('Quy khô thật ' + l[1], soVN(x.qkThat, 0), 'kg', '',
+      NHAN_DRC_THAT + ' DRC ' + soVN(x.qkThat / x.kgThat * 100, 2) + '%<br>Cân ' + soVN(x.kgThat, 0) + ' kg · sổ ' + soVN(x.kgSo, 0) + ' (' +
+      (x.kgThat >= x.kgSo ? '+' : '') + soVN(x.kgSo ? (x.kgThat - x.kgSo) / x.kgSo * 100 : 0, 1) + '%)<br>' +
+      NHAN_DRC_TAM + ' ' + soVN(x.qkTam, 0) + ' kg · ' + soVN(d.that.soPhieuCo, 0) + '/' + soVN(d.tong, 0) + ' phiếu có DRC thật');
+  });
+  return h;
+}
+
 function taiPhieu() {
   $('bangPhieu').innerHTML = skBang();
   dangTai($('kpisPhieu'), true);
@@ -3974,11 +3986,7 @@ function taiPhieu() {
       the_kpi('Tổng khối lượng', soVN(d.tongKg, 2), 'kg', 'Cộng mọi phiếu') +
       the_kpi('Lệch đối chiếu', soVN(d.soLech, 0), 'phiếu', 'Tổng chi tiết khác tổng phiếu') +
       the_kpi('Chờ duyệt', soVN(soChoDuyet, 0), 'phiếu', 'Còn dòng sản lượng chưa duyệt') +
-      (d.that ? the_kpi('Sản lượng thật (cân)', d.that.soPhieuCo ? soVN(d.that.kgThat, 0) : '—', d.that.soPhieuCo ? 'kg' : '', '',
-          d.that.soPhieuCo ? 'Trạm cân phân về tổ · ' + soVN(d.that.soPhieuCo, 0) + '/' + soVN(d.tong, 0) + ' phiếu đã có DRC thật'
-                           : CHUA_CO_DRC_THAT) +
-        the_kpi('Quy khô thật', d.that.soPhieuCo ? soVN(d.that.qkThat, 0) : '—', d.that.soPhieuCo ? 'kg' : '', '',
-          d.that.soPhieuCo ? NHAN_DRC_THAT + ' hơn tạm tính ' + soVN(d.that.qkThat - d.that.qkTamCo, 0) + ' kg' : CHUA_CO_DRC_THAT) : '');
+      (d.that ? theQuyKhoPhieu(d) : '');
 
     $('tomTatPhieu').textContent = soVN(d.tong, 0) + ' phiếu · ' + soVN(d.tongKg, 2) + ' kg' +
       (d.soLech ? ' · ' + d.soLech + ' phiếu lệch chi tiết' : '');
@@ -5622,7 +5630,7 @@ function veBanDoLo(canVua) {
   var sl = function (k) { return ds.reduce(function (a, x) { var s = _bd.sl.lo[x.maLo]; return a + ((s && s[k]) || 0); }, 0); };
   var nhat = sl('nhat');
   $('kpisBd').innerHTML =
-    the_kpi('Quy khô tạm tính', soVN(sl('qk'), 0), 'kg', '', htmlDrcTamTheoLoai(sl('kgChen'), sl('qkChen'), sl('kgDay'), sl('qkDay'), true)) +
+    theQuyKhoTheoLoai({ MU_DONG: { kg: sl('kgChen'), quyKho: sl('qkChen') }, MU_DAY: { kg: sl('kgDay'), quyKho: sl('qkDay') } }, null) +
     the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', CO_SO_NHAT ? 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát' : '') +
     the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
     the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo');
