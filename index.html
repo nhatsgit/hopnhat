@@ -935,6 +935,7 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
          tuần tự (taiTongQuanPhu), không chặn phần sản lượng. -->
     <section id="pTongQuan">
       <h2 class="nhom-tq">Sản lượng <small id="phuNhomSL"></small></h2>
+      <div class="kpis" id="kpisQk"></div>   <!-- 4 thẻ quy khô (tạm tính + thật, chén + dây) cùng 1 hàng, nằm trên -->
       <div class="kpis" id="kpis"></div>
       <!-- Sản lượng theo ngày để riêng hẳn 1 hàng — đủ chỗ hiện nhãn TỪNG ngày. -->
       <div class="the o-bieu-do" style="margin-bottom:20px">
@@ -2167,7 +2168,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 185;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 186;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -3051,7 +3052,7 @@ function goiCache(action, thamSo) {
    Tab: Tổng quan
    ===================================================================== */
 function taiTongQuan() {
-  dangTai($('kpis'), true);
+  dangTai($('kpis'), true); $('kpisQk').innerHTML = '';
   $('bdNgay').innerHTML = skKhoi(); $('bdLoai').innerHTML = skKhoi();
   $('bdChatLuong').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
   $('bangPhien').innerHTML = skBang(3); $('bangTopCn').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
@@ -3182,7 +3183,7 @@ function taiTongQuan() {
     baoLoi('thongBao', '');
     taiTongQuanPhu(blTQ);
   }).catch(function (e) {
-    $('kpis').innerHTML = '';
+    $('kpis').innerHTML = ''; $('kpisQk').innerHTML = '';
     baoLoi('thongBao', e.message);
   });
 }
@@ -3230,15 +3231,16 @@ function veKpiTQ(d, dt) {
   var ql = theoLoai(d), qlt = dt ? theoLoai(dt) : null;
   var muChen = ql.MU_DONG || { kg: 0, quyKho: 0 }, muDay = ql.MU_DAY || { kg: 0, quyKho: 0 };
   var sosanh = function (nay, lay) { return kt ? chenhLechTQ(nay, lay()) : ''; };
-  $('kpis').innerHTML =
-    the_kpi('Tổng sản lượng tươi', soVN(k.tongKg, 2), 'kg', '', thoat(soVN(k.soDong, 0) + ' dòng') + sosanh(k.tongKg, function () { return kt.tongKg; })) +
+  $('kpisQk').innerHTML =
     the_kpi('Quy khô tạm tính mủ chén', soVN(muChen.quyKho, 2), 'kg', '',
             (muChen.kg ? NHAN_DRC_TAM + ' DRC ' + soVN(muChen.quyKho / muChen.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
             sosanh(muChen.quyKho, function () { return (qlt.MU_DONG || {}).quyKho; })) +
     the_kpi('Quy khô tạm tính mủ dây', soVN(muDay.quyKho, 2), 'kg', '',
             (muDay.kg ? NHAN_DRC_TAM + ' DRC ' + soVN(muDay.quyKho / muDay.kg * 100, 1) + '%' : 'Chưa có dữ liệu') +
             sosanh(muDay.quyKho, function () { return (qlt.MU_DAY || {}).quyKho; })) +
-    (k.that ? theQuyKhoThat({ MU_DONG: muChen, MU_DAY: muDay }, k.that.theoLoai) : '') +
+    (k.that ? theQuyKhoThat({ MU_DONG: muChen, MU_DAY: muDay }, k.that.theoLoai) : '');
+  $('kpis').innerHTML =
+    the_kpi('Tổng sản lượng tươi', soVN(k.tongKg, 2), 'kg', '', thoat(soVN(k.soDong, 0) + ' dòng') + sosanh(k.tongKg, function () { return kt.tongKg; })) +
     (CO_SO_NHAT ? the_kpi('Năng suất bình quân', soVN(k.nsbq, 3), 'kg/nhát', '', 'Trên dòng đã lọc' + sosanh(k.nsbq, function () { return kt.nsbq; })) : '') +
     the_kpi('Công nhân có sản lượng', soVN(k.soCongNhan, 0), 'người', '',
             soVN(k.soNgay, 0) + ' ngày có sản lượng' + sosanh(k.soCongNhan, function () { return kt.soCongNhan; })) +
@@ -3249,10 +3251,10 @@ function veKpiTQ(d, dt) {
     (chiCoDaDuyet() ? '' : the_kpi('Chờ duyệt', soVN(k.soChoDuyet || 0, 0), 'dòng',
             soVN(k.kgChoDuyet || 0, 2) + ' kg chưa được duyệt'));
   // Nhấn số liệu: thẻ sản lượng tươi có đường nhỏ theo ngày, thẻ quy khô có thanh DRC
-  var dsThe = $('kpis').children;
+  var dsThe = $('kpis').children, dsQk = $('kpisQk').children;
   if (dsThe[0]) dsThe[0].insertAdjacentHTML('beforeend', duongNho((d.theoNgay || []).map(function (x) { return x.kg; })));
-  if (dsThe[1] && muChen.kg) dsThe[1].insertAdjacentHTML('beforeend', thanhNho(muChen.quyKho / muChen.kg * 100));
-  if (dsThe[2] && muDay.kg) dsThe[2].insertAdjacentHTML('beforeend', thanhNho(muDay.quyKho / muDay.kg * 100));
+  if (dsQk[0] && muChen.kg) dsQk[0].insertAdjacentHTML('beforeend', thanhNho(muChen.quyKho / muChen.kg * 100));
+  if (dsQk[1] && muDay.kg) dsQk[1].insertAdjacentHTML('beforeend', thanhNho(muDay.quyKho / muDay.kg * 100));
 }
 
 function veBangPhienTQ(ds) {
