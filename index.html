@@ -3687,6 +3687,15 @@ var NHAN_DRC_TAM = '<span class="nhan-drc tam" title="DRC tạm tính: mức c�
 var CHU_GIAI_DRC = '<div class="chu-giai-drc">' + NHAN_DRC_THAT + ' DRC phòng QLCL báo theo ngày (tab DRC thật) &nbsp;·&nbsp; ' +
   NHAN_DRC_TAM + ' DRC cố định theo loại mủ, dùng cho sổ sản lượng, lương, giao khoán — chưa phải DRC thật</div>';
 
+/** 2 dòng DRC tạm tính riêng mủ chén / mủ dây (không gộp thành 1 số bình quân). Loại không có kg thì bỏ dòng. */
+function htmlDrcTamTheoLoai(kgC, qkC, kgD, qkD, kemQk) {
+  var dong = function (ten, kg, qk) {
+    return kg > 0 ? ten + ': ' + (kemQk ? soVN(qk, 0) + ' kg khô · ' : '') + 'DRC ' + soVN(qk / kg * 100, 1) + '%' : '';
+  };
+  var ds = [dong('Mủ chén', kgC, qkC), dong('Mủ dây', kgD, qkD)].filter(function (x) { return x; });
+  return ds.length ? NHAN_DRC_TAM + ' ' + ds.join('<br>') : '';
+}
+
 function the_kpi(ten, so, dv, phu, phuHtml) {
   var phuH = phuHtml !== undefined ? phuHtml : thoat(phu), nhan = '';
   var m = /\s*·\s*<span(?: class="(tang|giam)")?>([^<]*)<\/span>(?: so với kỳ trước)?\s*$/.exec(phuH);
@@ -3737,7 +3746,9 @@ function veKpiSanLuong(d) {
   var nc = tk.soNgayCong || 0;
   var h =
     the_kpi('Sản lượng tươi', soVN(kg, 0), 'kg', soVN(tk.soDong !== undefined ? tk.soDong : d.tong, 0) + ' dòng') +
-    the_kpi('Quy khô tạm tính', soVN(qk, 0), 'kg', '', kg ? NHAN_DRC_TAM + ' DRC bình quân ' + soVN(qk / kg * 100, 1) + '%' : '') +
+    the_kpi('Quy khô tạm tính', soVN(qk, 0), 'kg', '', tk.theoLoai
+      ? htmlDrcTamTheoLoai((tk.theoLoai.MU_DONG || {}).kg, (tk.theoLoai.MU_DONG || {}).quyKho, (tk.theoLoai.MU_DAY || {}).kg, (tk.theoLoai.MU_DAY || {}).quyKho)
+      : '') +
     the_kpi('Công nhân', soVN(tk.soCn, 0), 'người', soVN(nc, 0) + ' ngày công cạo · ' + soVN(tk.soNgay, 0) + ' ngày') +
     (CO_SO_NHAT && tk.tongNhat
       ? the_kpi('NSBQ', soVN(tk.nsbq, 3), 'kg/nhát', soVN(tk.tongNhat, 0) + ' nhát cạo')
@@ -5560,9 +5571,8 @@ function veBanDoLo(canVua) {
   var sl = function (k) { return ds.reduce(function (a, x) { var s = _bd.sl.lo[x.maLo]; return a + ((s && s[k]) || 0); }, 0); };
   var nhat = sl('nhat');
   $('kpisBd').innerHTML =
-    the_kpi('Quy khô tạm tính', soVN(sl('qk'), 0), 'kg', 'Chén ' + soVN(sl('qkChen'), 0) + ' · dây ' + soVN(sl('qkDay'), 0) + ' kg') +
-    the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', CO_SO_NHAT ? 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát'
-      : (sl('kg') ? 'DRC tạm tính bình quân ' + soVN(sl('qk') / sl('kg') * 100, 1) + '%' : '')) +
+    the_kpi('Quy khô tạm tính', soVN(sl('qk'), 0), 'kg', '', htmlDrcTamTheoLoai(sl('kgChen'), sl('qkChen'), sl('kgDay'), sl('qkDay'), true)) +
+    the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', CO_SO_NHAT ? 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát' : '') +
     the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
     the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo');
   if (_bdChon) { var xc = _bdTimLo(_bdChon); if (xc) veChiTietLo(xc); }
