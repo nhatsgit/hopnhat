@@ -206,6 +206,7 @@ tbody tr{transition:background-color .12s}
 .ben-duoi .btn.nho{width:100%;text-align:center}
 .ben-nut{display:flex;gap:6px}
 .ben-nut .btn.nho{flex:1;min-width:0}
+.phien-ban{margin-top:6px;text-align:center;font-size:11.5px;letter-spacing:.04em;color:var(--sb-ink-3,rgba(255,255,255,.55));font-variant-numeric:tabular-nums}
 .the-nguoi-dung{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.08)}
 .avatar-nd{flex:none;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);color:var(--sb-ink);
   display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700}
@@ -826,6 +827,7 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
           </div>
           <button class="nut-thoat-nho" id="nutThoat" type="button" title="Đổi người dùng" aria-label="Đổi người dùng"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5H4.5v13H8"/><path d="M12 6.5 15.5 10 12 13.5M15.5 10H8"/></svg></button>
         </div>
+        <div class="phien-ban" id="phienBan" data-khong-dich hidden></div>
       </div>
     </aside>
 
@@ -2149,6 +2151,8 @@ function dsCnNhapTo() {
  * Số nhát cạo / NSBQ kg/nhát: sổ sản lượng hằng ngày hiện KHÔNG ghi số nhát (cột trống 100%) nên mọi chỉ số theo
  * nhát đều ra 0 — tạm ẩn khỏi toàn hệ thống (bảng, thẻ, biểu đồ, form nhập, file xuất). Có nguồn số nhát thì đặt true.
  */
+/** Số phiên bản hiện ở chân thanh bên (chỉ Admin thấy) = số commit của repo giao diện (crck2-dashboard) SAU commit này. Tăng 1 mỗi lần commit. */
+var PHIEN_BAN = 'v177';
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -11243,6 +11247,7 @@ function vaoApp(d, vtChon) {
   var laAdmin = S.vaiTroHienThi === 'ADMIN';
   $('nutDongBoDM').style.display = laAdmin ? '' : 'none';
   $('nutDongBoPS').style.display = laAdmin ? '' : 'none';
+  $('phienBan').textContent = PHIEN_BAN; $('phienBan').hidden = !laAdmin;   // chỉ Admin thấy số phiên bản
 
   apDungQuyenGiaoDien();
   $('gatTrangThai').style.display = (d.toanCongTy && !S.laAdmin) ? 'none' : '';
