@@ -2167,7 +2167,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 184;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 185;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -5665,11 +5665,21 @@ function veBanDoLo(canVua) {
   var cay = ds.reduce(function (a, x) { var r = _bd.soLieu[x.maLo]; return a + ((r && r.cayCao) || 0); }, 0);
   var sl = function (k) { return ds.reduce(function (a, x) { var s = _bd.sl.lo[x.maLo]; return a + ((s && s[k]) || 0); }, 0); };
   var nhat = sl('nhat');
+  // Năm trồng nhỏ nhất – lớn nhất của các lô đang hiển thị (theo kiểm kê)
+  var nam = ds.map(function (x) { var r = _bd.soLieu[x.maLo]; return r && Number(r.namTrong) > 0 ? Number(r.namTrong) : 0; }).filter(function (v) { return v; });
+  var namMin = nam.length ? Math.min.apply(null, nam) : 0, namMax = nam.length ? Math.max.apply(null, nam) : 0;
+  // % hoàn thành giao khoán chung = tổng sản lượng tươi ÷ tổng kế hoạch, chỉ cộng lô đã có kế hoạch (để tử và mẫu cùng tập lô)
+  var gkLo = ds.filter(function (x) { var s2 = _bd.sl.lo[x.maLo]; return s2 && s2.gkKh > 0; });
+  var gkKh = gkLo.reduce(function (a, x) { return a + _bd.sl.lo[x.maLo].gkKh; }, 0);
+  var gkTh = gkLo.reduce(function (a, x) { return a + (_bd.sl.lo[x.maLo].gkTh || 0); }, 0);
   $('kpisBd').innerHTML =
-    theQuyKhoTheoLoai({ MU_DONG: { kg: sl('kgChen'), quyKho: sl('qkChen') }, MU_DAY: { kg: sl('kgDay'), quyKho: sl('qkDay') } }, null) +
     the_kpi('Sản lượng tươi', soVN(sl('kg'), 0), 'kg', CO_SO_NHAT ? 'NSBQ ' + (nhat ? soVN(sl('kgNhat') / nhat, 2) : '—') + ' kg/nhát' : '') +
     the_kpi('Lô trên bản đồ', soVN(ds.length, 0), 'lô', thieu.length ? thieu.length + ' lô trong phạm vi chưa có hình' : 'Đủ hình mọi lô trong phạm vi') +
-    the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo');
+    the_kpi('Diện tích', soVN(dtKk, 2), 'ha', 'Theo kiểm kê · ' + soVN(cay, 0) + ' cây cạo') +
+    the_kpi('Năm trồng', nam.length ? (namMin === namMax ? String(namMin) : namMin + ' – ' + namMax) : '—', '',
+      nam.length ? 'Theo kiểm kê · ' + soVN(nam.length, 0) + '/' + soVN(ds.length, 0) + ' lô có năm trồng' : 'Chưa có năm trồng') +
+    the_kpi('% hoàn thành giao khoán chung', gkKh ? soVN(gkTh / gkKh * 100, 1) : '—', gkKh ? '%' : '',
+      gkKh ? soVN(gkTh, 0) + ' / ' + soVN(gkKh, 0) + ' kg tươi · ' + soVN(gkLo.length, 0) + ' lô có kế hoạch' : 'Chưa có kế hoạch giao khoán');
   if (_bdChon) { var xc = _bdTimLo(_bdChon); if (xc) veChiTietLo(xc); }
 }
 
