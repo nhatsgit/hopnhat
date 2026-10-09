@@ -947,24 +947,10 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
         <h3 class="tieude-muc">Quy khô thật so với tạm tính theo ngày <span class="nhan-mo" style="text-transform:none;font-weight:400">(chỉ ngày đã có DRC thật + phiếu cân)</span></h3>
         <div id="bdQkThatNgay"></div>
       </div>
-      <div class="luoi-2 deu">
-        <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Cơ cấu loại mủ</h3>
-          <div id="bdLoai"></div>
-        </div>
-        <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Cơ cấu chất lượng mủ</h3>
-          <div id="bdChatLuong"></div>
-        </div>
-      </div>
-      <div class="luoi-2">
+      <div class="luoi-2 mot">
         <div class="the o-bieu-do">
           <h3 class="tieude-muc">Xu hướng quy khô theo tháng <span class="nhan-mo" style="text-transform:none;font-weight:400">(đã duyệt, 12 tháng gần nhất)</span></h3>
           <div id="bdXuHuong"></div>
-        </div>
-        <div class="the o-bieu-do">
-          <h3 class="tieude-muc">Theo phiên cạo</h3>
-          <div class="cuon"><table id="bangPhien"></table></div>
         </div>
       </div>
 
@@ -2168,7 +2154,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 186;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 187;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -2416,11 +2402,6 @@ function mauLoaiMu(ma) {
     MU_DONG: 'var(--latex)', MU_DAY: 'var(--leaf)', MU_DAT: 'var(--clay)',
     MU_NUOC: 'var(--sky)', MU_TAP: 'var(--ink-3)'
   };
-  return m[ma] || 'var(--ink-3)';
-}
-
-function mauChatLuong(ma) {
-  var m = { LOAI_I: 'var(--leaf)', LOAI_II: 'var(--latex)', KHONG_PHAN_LOAI: 'var(--ink-3)' };
   return m[ma] || 'var(--ink-3)';
 }
 
@@ -2961,49 +2942,6 @@ function veCotNhom(el, nhom, chuoi, tuy) {
   });
 }
 
-function veDonut(el, dl, layMau) {
-  layMau = layMau || mauLoaiMu;
-  var tong = 0, i;
-  for (i = 0; i < dl.length; i++) tong += dl[i].kg;
-  if (tong <= 0) { el.innerHTML = '<div class="rong">Không có dữ liệu.</div>'; return; }
-
-  var R = 42, r = 26, cx = 50, cy = 50, goc = -Math.PI / 2;
-  var svg = '<svg viewBox="0 0 100 100" style="width:100%;max-width:210px;height:auto;display:block;margin:0 auto" role="img" aria-label="Cơ cấu loại mủ">';
-
-  for (i = 0; i < dl.length; i++) {
-    var tl = dl[i].kg / tong;
-    var g2 = goc + tl * Math.PI * 2;
-    var lon = tl > 0.5 ? 1 : 0;
-    var x1 = cx + R * Math.cos(goc), y1 = cy + R * Math.sin(goc);
-    var x2 = cx + R * Math.cos(g2), y2 = cy + R * Math.sin(g2);
-    var x3 = cx + r * Math.cos(g2), y3 = cy + r * Math.sin(g2);
-    var x4 = cx + r * Math.cos(goc), y4 = cy + r * Math.sin(goc);
-
-    // Một lát chiếm trọn 100% thì vẽ 2 vòng tròn thay vì cung (tránh lỗi arc 360°)
-    if (tl > 0.999) {
-      svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ((R + r) / 2) + '" fill="none" stroke="' +
-             layMau(dl[i].ma) + '" stroke-width="' + (R - r) + '"><title>' +
-             thoat(dl[i].ten) + ': 100%</title></circle>';
-    } else {
-      svg += '<path d="M' + x1 + ',' + y1 + ' A' + R + ',' + R + ' 0 ' + lon + ',1 ' + x2 + ',' + y2 +
-             ' L' + x3 + ',' + y3 + ' A' + r + ',' + r + ' 0 ' + lon + ',0 ' + x4 + ',' + y4 + ' Z" fill="' +
-             layMau(dl[i].ma) + '"><title>' + thoat(dl[i].ten) + ': ' + soVN(dl[i].kg, 2) +
-             ' kg (' + soVN(tl * 100, 1) + '%)</title></path>';
-    }
-    goc = g2;
-  }
-  svg += '</svg>';
-
-  var ct = '<div class="chu-thich">';
-  for (i = 0; i < dl.length; i++) {
-    ct += '<span><i style="background:' + layMau(dl[i].ma) + '"></i>' +
-          thoat(dl[i].ten) + ' · <b>' + soVN(dl[i].kg / tong * 100, 1) + '%</b></span>';
-  }
-  ct += '</div>';
-
-  el.innerHTML = svg + ct;
-}
-
 /* =====================================================================
    Thu thập bộ lọc hiện hành
    ===================================================================== */
@@ -3053,9 +2991,8 @@ function goiCache(action, thamSo) {
    ===================================================================== */
 function taiTongQuan() {
   dangTai($('kpis'), true); $('kpisQk').innerHTML = '';
-  $('bdNgay').innerHTML = skKhoi(); $('bdLoai').innerHTML = skKhoi();
-  $('bdChatLuong').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
-  $('bangPhien').innerHTML = skBang(3); $('bangTopCn').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
+  $('bdNgay').innerHTML = skKhoi(); $('bangTo').innerHTML = skBang(3);
+  $('bangTopCn').innerHTML = skKhoi(); $('bangTopTo').innerHTML = skKhoi();
   if (S.toanCongTy) { $('bdXepDoi').innerHTML = skKhoi(); $('bdNsbqDoi').innerHTML = skKhoi(); }
 
   var blTQ = layBoLoc();
@@ -3082,9 +3019,6 @@ function taiTongQuan() {
         $('bdQkThatNgay').innerHTML = '<div class="rong">' + CHUA_CO_DRC_THAT + ' trong khoảng đang lọc.</div>';
       }
     }
-    veDonut($('bdLoai'), d.theoLoaiMu);
-    veDonut($('bdChatLuong'), d.theoChatLuong || [], mauChatLuong);
-    veBangPhienTQ(d.theoPhien || []);
     if (CO_SO_NHAT) veTopCn($('bangTopCn'), d);
 
     // Tổ trưởng chỉ quản 1 tổ — không có gì để "so sánh", ẩn hẳn khối này
@@ -3255,24 +3189,6 @@ function veKpiTQ(d, dt) {
   if (dsThe[0]) dsThe[0].insertAdjacentHTML('beforeend', duongNho((d.theoNgay || []).map(function (x) { return x.kg; })));
   if (dsQk[0] && muChen.kg) dsQk[0].insertAdjacentHTML('beforeend', thanhNho(muChen.quyKho / muChen.kg * 100));
   if (dsQk[1] && muDay.kg) dsQk[1].insertAdjacentHTML('beforeend', thanhNho(muDay.quyKho / muDay.kg * 100));
-}
-
-function veBangPhienTQ(ds) {
-  var coPhien = ds.filter(function (x) { return x.phien !== '?'; });
-  if (!ds.length) { $('bangPhien').innerHTML = '<tbody><tr><td><div class="rong">Không có dữ liệu.</div></td></tr></tbody>'; return; }
-  var tongQk = ds.reduce(function (s, x) { return s + x.quyKho; }, 0);
-  var h = '<thead><tr><th>Phiên</th><th class="p">CN</th><th class="p">Quy khô (kg)</th><th class="p">Tỷ trọng</th>' +
-          (CO_SO_NHAT ? '<th class="p">kg/nhát</th>' : '') + '</tr></thead><tbody>';
-  ds.forEach(function (x) {
-    h += '<tr><td><b>' + (x.phien === '?' ? '<span class="nhan-mo">Không ghi phiên</span>' : thoat(x.phien)) + '</b></td>' +
-         '<td class="p num">' + soVN(x.soCn, 0) + '</td>' +
-         '<td class="p num">' + soVN(x.quyKho, 1) + '</td>' +
-         '<td class="p num">' + (tongQk ? soVN(x.quyKho / tongQk * 100, 1) + '%' : '—') + '</td>' +
-         (CO_SO_NHAT ? '<td class="p num">' + (x.nhat ? soVN(x.nsbq, 3) : '<span class="nhan-mo">—</span>') + '</td>' : '') + '</tr>';
-  });
-  h += '</tbody>';
-  if (!coPhien.length) h += '<caption class="goi-y" style="caption-side:bottom;text-align:left;padding-top:8px">Dòng sản lượng trong kỳ chưa ghi phiên cạo.</caption>';
-  $('bangPhien').innerHTML = h;
 }
 
 /**
