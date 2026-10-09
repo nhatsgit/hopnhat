@@ -27,16 +27,9 @@
   } catch (e) { /* trình duyệt chặn bộ nhớ: giữ Tiếng Việt */ }
 })();
 </script>
-<!-- Đọc/ghi file Excel (.xlsx) ngay trên trình duyệt — dùng cho Nhập hàng
-     loạt và Tải mẫu Excel, không cần gửi file thô lên server. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
-  integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz"
-  crossorigin="anonymous"></script>
+<!-- ExcelJS và SheetJS (đọc/ghi .xlsx) KHÔNG tải lúc mở trang nữa (nặng, chặn hiển thị): tải khi cần hoặc nền sau khi vào app — xem napThuVien() -->
 <!-- Dựng file "Hồ sơ lương" đầy đủ theo biểu mẫu của đội (nhiều tab) — xem xuat_ho_so_luong.js -->
 <script src="xuat_ho_so_luong.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
-  integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
-  crossorigin="anonymous"></script>
 <style>
 /* =====================================================================
    Bảng màu dùng chung với dashboard-crck2-v2.html của dự án
@@ -1844,6 +1837,60 @@ html:not(.an-nhat) .khong-nhat{display:none !important}
 <script>
 'use strict';
 
+/* ---------------------------------------------------------------------
+   THƯ VIỆN EXCEL NẠP KHI CẦN. ExcelJS + SheetJS nặng (vài MB), trước đây tải mỗi lần mở trang dù ít người xuất / nhập Excel.
+   napThuVien('exceljs' | 'xlsx') tải 1 lần (có kiểm toàn vẹn SRI), dùng lại những lần sau; lỗi mạng thì lần sau thử lại.
+   Các hàm xuất / nhập Excel được bọc bằng canThuVien ở dưới: bấm nút là tự tải thư viện rồi mới chạy.
+   Sau khi vào app, nền tự tải sẵn (henNapThuVien) và service worker lưu bản đó -> mất mạng vẫn dùng được.
+   --------------------------------------------------------------------- */
+var THU_VIEN = {
+  exceljs: { src: 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', integrity: 'sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz', co: function () { return !!window.ExcelJS; } },
+  xlsx: { src: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', integrity: 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw', co: function () { return !!window.XLSX; } }
+};
+var _dangNapTV = {};
+function napThuVien(ten) {
+  var t = THU_VIEN[ten];
+  if (t.co()) return Promise.resolve();
+  if (_dangNapTV[ten]) return _dangNapTV[ten];
+  _dangNapTV[ten] = new Promise(function (ok, loi) {
+    var el = document.createElement('script');
+    el.src = t.src; el.integrity = t.integrity; el.crossOrigin = 'anonymous';
+    el.onload = function () {
+      if (t.co()) ok();
+      else { delete _dangNapTV[ten]; loi(new Error('Thư viện Excel tải về nhưng không dùng được, thử lại.')); }
+    };
+    el.onerror = function () {
+      delete _dangNapTV[ten]; el.remove();
+      loi(new Error('Chưa tải được thư viện Excel. Kiểm tra kết nối mạng rồi thử lại.'));
+    };
+    document.head.appendChild(el);
+  });
+  return _dangNapTV[ten];
+}
+
+/** Bọc hàm fn: đảm bảo các thư viện trong ds đã tải rồi mới chạy fn (giữ this và đối số). Trả Promise kết quả của fn. */
+function canThuVien(ds, fn) {
+  return function () {
+    var a = arguments, self = this;
+    if (ds.some(function (x) { return !THU_VIEN[x].co(); }) && typeof nsBaoOkChung === 'function') nsBaoOkChung('Đang tải thư viện Excel…');
+    return Promise.all(ds.map(napThuVien)).then(function () { return fn.apply(self, a); })
+      .catch(function (e) { baoLoi('thongBao', e.message); });
+  };
+}
+
+// Các điểm vào (nút bấm / chọn file) dùng thư viện. Hàm phụ trợ chạy đồng bộ bên trong (dungSoToTruong, _saoKieu...) KHÔNG bọc.
+['tcDocFile', 'xtXuatFile', 'xtXuatFileLuong', 'xuatHoSoLuong', 'kmTaiMauExcel', 'kmXuLyFile', 'xlTaiMauExcel', 'xlXuLyFile',
+ '_xuatSoTheoMau', 'drcXuatBangKe', 'xuatSoChamCong', 'xuatBangExcel'].forEach(function (ten) { window[ten] = canThuVien(['exceljs'], window[ten]); });
+['ntTaiMau', 'docFileExcel', 'taiMauExcel'].forEach(function (ten) { window[ten] = canThuVien(['xlsx'], window[ten]); });
+
+var _daHenNapTV = false;
+/** Sau khi vào app, 6 giây sau tải sẵn 2 thư viện ở nền (không chặn màn hình), để bấm Excel là chạy ngay và dùng được khi mất mạng. */
+function henNapThuVien() {
+  if (_daHenNapTV) return;
+  _daHenNapTV = true;
+  setTimeout(function () { napThuVien('exceljs').catch(function () {}); napThuVien('xlsx').catch(function () {}); }, 6000);
+}
+
 /* =====================================================================
    Bộ nhớ trình duyệt — có thể bị chặn (chế độ ẩn danh, mở file trực tiếp,
    chính sách của tổ chức). Luôn bọc try/catch để trang vẫn chạy được.
@@ -2154,7 +2201,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 188;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 189;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -11216,6 +11263,7 @@ function vaoApp(d, vtChon) {
   $('nutDongBoPS').style.display = laAdmin ? '' : 'none';
   $('phienBan').hidden = !laAdmin;   // chỉ Admin thấy số phiên bản
   if (laAdmin) taiPhienBan();
+  henNapThuVien();
 
   apDungQuyenGiaoDien();
   $('gatTrangThai').style.display = (d.toanCongTy && !S.laAdmin) ? 'none' : '';
