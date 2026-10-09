@@ -15,7 +15,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
 /* Ngôn ngữ giao diện: mặc định Tiếng Việt. Đã chọn ខ្មែរ thì nạp từ điển ngay khi mở trang (xem dichKm). */
 (function () {
@@ -23,6 +22,11 @@
     if (localStorage.getItem('crck2_ngon_ngu') === 'km') {
       document.documentElement.lang = 'km';
       document.write('<script src="tu_dien_km.js?v=3664c7a4"><\/script>');
+      // Phông Khmer chỉ tải khi giao diện đang là tiếng Khmer (tiếng Việt không cần, bớt một yêu cầu chặn hiển thị);
+      // đổi ngôn ngữ thì trang tải lại nên đoạn này chạy lại
+      var pk = document.createElement('link'); pk.rel = 'stylesheet';
+      pk.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap';
+      document.head.appendChild(pk);
     }
   } catch (e) { /* trình duyệt chặn bộ nhớ: giữ Tiếng Việt */ }
 })();
@@ -2201,7 +2205,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 189;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 190;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
