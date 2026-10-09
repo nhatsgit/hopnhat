@@ -2205,7 +2205,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 190;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 191;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -3055,8 +3055,6 @@ function taiTongQuan() {
     _tqHienTai = d;
     veKpiTQ(d, null);
     // So với kỳ liền trước cùng độ dài (vd 01–30/09 so với 02–31/08) — gọi sau, không chặn trang.
-    var kt = kyTruocTQ(blTQ);
-    if (kt) goiCache('tongQuan', kt).then(function (dt) { if (_tqHienTai === d) veKpiTQ(d, dt); }).catch(function () {});
 
     veCot($('bdNgay'), d.theoNgay);
     $('theQkThatNgay').style.display = d.kpi.that ? '' : 'none';
@@ -3166,7 +3164,11 @@ function taiTongQuan() {
     if (coTopTo) veTopTo($('bangTopTo'), d.theoTo);
 
     baoLoi('thongBao', '');
-    taiTongQuanPhu(blTQ);
+    // So với kỳ liền trước (chỉ để vẽ mũi tên ▲▼ trên các thẻ): gọi SAU CÙNG, khi xu hướng + giao khoán đã xong, không tranh máy chủ
+    taiTongQuanPhu(blTQ).then(function () {
+      var kt = kyTruocTQ(blTQ);
+      if (kt && _tqHienTai === d) return goiCache('tongQuan', kt).then(function (dt) { if (_tqHienTai === d) veKpiTQ(d, dt); });
+    }).catch(function () {});
   }).catch(function (e) {
     $('kpis').innerHTML = ''; $('kpisQk').innerHTML = '';
     baoLoi('thongBao', e.message);
@@ -3255,7 +3257,7 @@ function taiTongQuanPhu(blTQ) {
   var theoDoi = S.toanCongTy && !blTQ.doi;
   var loiKhoi = function (id) { return function (e) { $(id).innerHTML = '<div class="rong">' + thoat(e.message) + '</div>'; }; };
 
-  [
+  return [
     function () {
       return goiCache('xuHuongThang', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: blTQ.doi, to: blTQ.to, loaiMu: blTQ.loaiMu }).then(function (d) {
         veCotThang($('bdXuHuong'), d.theoThang,
@@ -10362,10 +10364,13 @@ function apDungLoc(loc) {
   dongBoChip();
 }
 
-/** Bộ lọc mặc định ban đầu của 1 tab — Tổng quan là "Tháng này", còn lại trống trơn. */
+/** Các tab lọc theo KHOẢNG NGÀY: mặc định mở lên là tháng của ngày có số liệu mới nhất (không tải cả lịch sử); bấm bộ lọc để đổi / chọn "Toàn bộ". */
+var TAB_MAC_DINH_THANG = { tongQuan: 1, tqNhanSu: 1, sanLuong: 1, phieu: 1, xepHang: 1, chamCong: 1, doiChieu: 1 };
+
+/** Bộ lọc mặc định ban đầu của 1 tab — các tab trong TAB_MAC_DINH_THANG là "Tháng này", còn lại trống trơn. */
 function macDinhChoTab(tab) {
   var rong = { tuNgay: '', denNgay: '', doi: '', to: '', maCn: '', loaiMu: '', phien: '', chatLuong: '', kyHieu: '', trangThai: trangThaiMacDinh(), slKy: '', lgKy: '' };
-  if (tab !== 'tongQuan' && tab !== 'tqNhanSu') return rong;
+  if (!TAB_MAC_DINH_THANG[tab]) return rong;
   var mocDen = (S.meta && S.meta.ngayMax) ? new Date(S.meta.ngayMax + 'T00:00:00') : new Date();
   mocDen.setHours(0, 0, 0, 0);
   var dauThang = new Date(mocDen.getFullYear(), mocDen.getMonth(), 1);
