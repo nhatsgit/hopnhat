@@ -2154,7 +2154,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 187;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 188;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -8490,18 +8490,25 @@ function csvSanLuong() {
 function csvPhieu() {
   baoLoi('thongBao', '');
   goiCache('phieu', layBoLoc()).then(function (d) {
-    var dong = [];
+    var dong = [], coThat = d.rows.some(function (p) { return p.coThat; });   // chỉ người được xem DRC thật mới có 3 cột thật
+    // DRC thật / sản lượng thật / quy khô thật của 1 loại mủ; ngày chưa có DRC thật thì ghi rõ
+    var cotThat = function (c) {
+      if (!coThat) return [];
+      if (c === null || c.drcThat === undefined || c.drcThat === null) return ['chưa có DRC thật', '', ''];
+      return [c.drcThat, c.kgThat === null || c.kgThat === undefined ? 'chưa có cân' : c.kgThat,
+              c.quyKhoThat === null || c.quyKhoThat === undefined ? 'chưa có cân' : c.quyKhoThat];
+    };
     d.rows.forEach(function (p) {
       if (!p.chiTiet.length) {
-        dong.push([p.ma, p.ngay, p.to, p.kg, '', '', p.khop ? 'KHOP' : 'LECH']);
+        dong.push([p.ma, p.ngay, p.to, p.kg, '', ''].concat(cotThat(null), [p.khop ? 'KHOP' : 'LECH']));
       }
       p.chiTiet.forEach(function (c) {
-        dong.push([p.ma, p.ngay, p.to, p.kg, c.loaiMu, c.kg, p.khop ? 'KHOP' : 'LECH']);
+        dong.push([p.ma, p.ngay, p.to, p.kg, c.loaiMu, c.kg].concat(cotThat(c), [p.khop ? 'KHOP' : 'LECH']));
       });
     });
     xuatBangExcel('phieu_noi_tram_' + S.maDonVi + '.xlsx',
-      ['Mã phiếu NT', 'Ngày', 'Đơn vị (tổ)', 'Tổng khối lượng (kg)', 'Loại mủ',
-       'Khối lượng loại mủ (kg)', 'Đối chiếu'], dong);
+      ['Mã phiếu NT', 'Ngày', 'Đơn vị (tổ)', 'Tổng khối lượng (kg)', 'Loại mủ', 'Khối lượng loại mủ (kg)']
+        .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [], ['Đối chiếu']), dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
