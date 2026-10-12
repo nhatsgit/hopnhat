@@ -2220,7 +2220,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 209;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 210;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3910,6 +3910,78 @@ function ganSuaXoaDong(kh, rows) {
   }
 }
 
+/** Cột bảng dòng sản lượng (giống hệt bảng "Sản lượng chi tiết" cũ) — dùng trong chi tiết phiếu và cửa sổ dòng bất thường. */
+var COT_SL = [
+  { k: 'base', t: 'Phiếu Base', tip: 'Phiếu duyệt sản lượng trên Base.vn của ngày + tổ này (bấm để mở) và trạng thái' },
+  { k: 'ngay', t: 'Ngày' },
+  { k: 'maCn', t: 'Mã công nhân' },
+  { k: 'to', t: 'Tổ' },
+  { k: 'phanCao', t: 'Phần cạo' },
+  { k: 'phien', t: 'Phiên' },
+  { k: 'loaiMu', t: 'Loại mủ' },
+  { k: 'chatLuong', t: 'Chất lượng' },
+  { k: 'kg', t: 'Sản lượng (kg)', p: true },
+  { k: 'nhat', t: 'Nhát cạo', p: true, nhat: true },
+  { k: 'drc', t: 'DRC tạm tính', p: true, tip: 'DRC tạm tính: mức cố định theo loại mủ, chưa phải DRC thật phòng QLCL báo' },
+  { k: 'quyKho', t: 'Quy khô tạm tính (kg)', p: true, tip: 'Kg tươi × DRC tạm tính. Quy khô thật xem ở tab DRC thật / Trạm cân' },
+  { k: 'drcThat', t: 'DRC thật', p: true, that: true, tip: 'DRC phòng QLCL báo cho ngày + đội + loại mủ (tab DRC thật)' },
+  { k: 'kgThat', t: 'Sản lượng thật (kg)', p: true, that: true, tip: 'Kg ghi sổ × (kg trạm cân của đội ÷ kg sổ đã duyệt của đội, cùng ngày + loại mủ)' },
+  { k: 'quyKhoThat', t: 'Quy khô thật (kg)', p: true, that: true, tip: 'Sản lượng thật × DRC thật' },
+  { k: 'nsbq', t: 'kg/nhát', p: true, nhat: true },
+  { k: 'trangThai', t: 'Trạng thái' },
+  { k: '_sua', t: '' }
+];
+
+/**
+ * Bảng dòng sản lượng (cuộn riêng, tiêu đề + dòng cộng dính). d = trả lời lệnh sanLuong (rows + thongKe);
+ * boCot = mã cột bỏ đi (vd 'base', 'to', 'ngay' khi cả bảng cùng 1 phiếu — thông tin chung đã hiện ở trên).
+ */
+function bangDongSanLuong(d, boCot) {
+  var tk = d.thongKe || {}, bo = boCot || [];
+  var dsCot = COT_SL.filter(function (c) {
+    return bo.indexOf(c.k) < 0 && (CO_SO_NHAT || !c.nhat || (c.k === 'nhat' && CO_NHAP_NHAT)) && (!c.that || tk.that);
+  });
+  var h = '<div class="cuon cuon-dong-sl"><table><thead><tr>' + dsCot.map(function (c) {
+    return '<th' + (c.p ? ' class="p"' : '') + (c.tip ? ' title="' + thoat(c.tip) + '"' : '') + '>' + thoat(c.t) + '</th>';
+  }).join('') + '</tr></thead><tbody>';
+  if (!d.rows.length) h += '<tr><td colspan="' + dsCot.length + '"><div class="rong">Không có dòng sản lượng.</div></td></tr>';
+  var tKg = 0, tKho = 0;
+  for (var i = 0; i < d.rows.length; i++) {
+    var r = d.rows[i], bt = NHAN_BAT_THUONG[r.batThuong];
+    tKg += r.kg || 0; tKho += r.quyKho || 0;
+    var o = {
+      base: '<td>' + veLinkBase(r.base) + '</td>',
+      ngay: '<td>' + ngayVN(r.ngay) + '</td>',
+      maCn: '<td><b>' + thoat(r.maCn) + '</b></td>',
+      to: '<td>' + thoat(r.to) + '</td>',
+      phanCao: '<td class="nhan-mo">' + (r.phanCao ? thoat(r.phanCao) : '—') + '</td>',
+      phien: '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>',
+      loaiMu: '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>',
+      chatLuong: '<td class="nhan-mo">' + thoat(r.chatLuong || '—') + '</td>',
+      kg: '<td class="p num" style="white-space:nowrap">' + soVN(r.kg, 2) +
+          (bt ? '<span class="vi-bt" title="' + bt[1] + '">' + bt[0] + '</span>' : '') + '</td>',
+      nhat: '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>',
+      drc: '<td class="p num">' + (r.drc ? soVN(r.drc * 100, 1) + '%' : '—') + '</td>',
+      quyKho: '<td class="p num">' + soVN(r.quyKho, 2) + '</td>',
+      drcThat: oDrcThat(r, 'drcThat'), kgThat: oDrcThat(r, 'kgThat'), quyKhoThat: oDrcThat(r, 'quyKhoThat'),
+      nsbq: '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>',
+      trangThai: '<td>' + viTrangThai(r.trangThai) + '</td>',
+      _sua: '<td style="white-space:nowrap">' + nutSuaXoaDong(r) + '</td>'
+    };
+    h += '<tr' + (bt ? ' class="bat-thuong"' : '') + '>' + dsCot.map(function (c) { return o[c.k]; }).join('') + '</tr>';
+  }
+  h += '</tbody>';
+  if (d.rows.length) {
+    h += '<tfoot><tr>' + dsCot.map(function (c, j) {
+      if (j === 0) return '<td>Cộng · ' + soVN(d.rows.length, 0) + ' dòng</td>';
+      if (c.k === 'kg') return '<td class="p num">' + soVN(tKg, 2) + '</td>';
+      if (c.k === 'quyKho') return '<td class="p num">' + soVN(tKho, 2) + '</td>';
+      return '<td></td>';
+    }).join('') + '</tr></tfoot>';
+  }
+  return h + '</table></div>';
+}
+
 /** Thẻ "Dòng bất thường": danh sách các dòng lệch mạnh trong bộ lọc hiện tại, sửa / xoá ngay tại đây. */
 function moDongBatThuong() {
   $('nutInPhieu').style.display = 'none';
@@ -3923,19 +3995,7 @@ function moDongBatThuong() {
     var h = '<p class="goi-y" style="margin-top:0">' + soVN(d.tong, 0) + ' dòng · ' + soVN(tk.kgBatThuong || 0, 2) + ' kg tươi. ' +
             'Lệch mạnh so với mức thường ngày của chính công nhân đó (cùng loại mủ, trong bộ lọc hiện tại)' +
             (d.tong > d.rows.length ? ' — hiện ' + soVN(d.rows.length, 0) + ' dòng đầu, thu hẹp bộ lọc để xem phần còn lại' : '') + '.</p>' +
-            '<div class="cuon cuon-dong-sl"><table><thead><tr><th>Ngày</th><th>Mã công nhân</th><th>Tổ</th><th>Phiên</th><th>Loại mủ</th>' +
-            '<th class="p">Sản lượng (kg)</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
-    if (!d.rows.length) h += '<tr><td colspan="8"><div class="rong">Không có dòng bất thường.</div></td></tr>';
-    for (var i = 0; i < d.rows.length; i++) {
-      var r = d.rows[i], bt = NHAN_BAT_THUONG[r.batThuong];
-      h += '<tr class="bat-thuong"><td>' + ngayVN(r.ngay) + '</td><td><b>' + thoat(r.maCn) + '</b></td><td>' + thoat(r.to) + '</td>' +
-           '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
-           '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>' +
-           '<td class="p num" style="white-space:nowrap">' + soVN(r.kg, 2) +
-             (bt ? '<span class="vi-bt" title="' + bt[1] + '">' + bt[0] + '</span>' : '') + '</td>' +
-           '<td>' + viTrangThai(r.trangThai) + '</td><td style="white-space:nowrap">' + nutSuaXoaDong(r) + '</td></tr>';
-    }
-    h += '</tbody></table></div>';
+            bangDongSanLuong(d);
     $('thanPhieu').innerHTML = h;
     ganSuaXoaDong($('thanPhieu'), d.rows);
   }).catch(function (e) {
@@ -4049,6 +4109,7 @@ function moPhieu(ma) {
       '<div><span>Ngày</span><b>' + ngayVN(p.ngay) + '</b></div>' +
       '<div><span>Tổ</span><b>' + thoat(p.to) + '</b></div>' +
       '<div><span>Tổng khối lượng</span><b>' + soVN(p.kg, 2) + ' kg</b></div>' +
+      '<div><span>Phiếu Base</span><b style="font-weight:500">' + veThongTinBase(p.base) + '</b></div>' +
       '</div>';
 
     var coThatM = !!p.coThat;
@@ -4068,31 +4129,26 @@ function moPhieu(ma) {
             : '<span class="vi canh">Lệch ' + soVN(Math.abs(p.tongChiTiet - p.kg), 2) + ' kg</span>') +
          '</td></tr></tfoot></table></div>';
 
-    h += '<h3 class="tieude-muc" style="margin-top:22px">Các dòng sản lượng cấu thành (' + d.dong.length + ')</h3>' +
-         '<div class="cuon cuon-dong-sl"><table><thead><tr><th>Mã công nhân</th><th>Phần cạo</th><th>Phiên</th>' +
-         '<th>Loại mủ</th><th class="p">kg</th><th class="p">Số nhát</th><th class="p">Quy khô</th><th>Trạng thái</th><th></th>' +   // cột Số nhát luôn hiện (ô nhập số nhát đã mở; trước đây tiêu đề ẩn theo CO_SO_NHAT làm lệch cột)
-         '</tr></thead><tbody>';
-    var tKg = 0, tKho = 0;
-    for (var j = 0; j < d.dong.length; j++) {
-      var r = d.dong[j];
-      tKg += r.kg; tKho += r.quyKho;
-      h += '<tr><td><b>' + thoat(r.maCn) + '</b></td>' +
-           '<td class="nhan-mo">' + (r.phanCao ? thoat(r.phanCao) : '—') + '</td>' +
-           '<td>' + (r.phien ? thoat(r.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
-           '<td><span class="vi ' + lopLoaiMu(r.loaiMu) + '">' + thoat(tenLoaiMu(r.loaiMu)) + '</span></td>' +
-           '<td class="p num">' + soVN(r.kg, 2) + '</td>' +
-           '<td class="p num">' + (r.nhat ? soVN(r.nhat, 0) : '—') + '</td>' +
-           '<td class="p num">' + soVN(r.quyKho, 2) + '</td>' +
-           '<td>' + viTrangThai(r.trangThai) + '</td><td style="white-space:nowrap">' + nutSuaXoaDong(r) + '</td></tr>';
-    }
-    if (!d.dong.length) h += '<tr><td colspan="9"><div class="rong">Không có dòng sản lượng.</div></td></tr>';
-    h += '</tbody><tfoot><tr><td colspan="4">Cộng</td><td class="p num">' + soVN(tKg, 2) +
-         '</td><td></td><td class="p num">' + soVN(tKho, 2) + '</td><td></td><td></td></tr></tfoot></table></div>';
-
+    // Các dòng sản lượng cấu thành: đủ cột như bảng sản lượng chi tiết cũ, lấy bằng lệnh sanLuong của đúng ngày + tổ của phiếu.
+    // Bỏ cột Phiếu Base / Ngày / Tổ vì chung cả phiếu (đã hiện ở trên).
+    h += '<h3 class="tieude-muc" style="margin-top:22px">Các dòng sản lượng cấu thành (' + soVN(d.dong.length, 0) + ')</h3>' +
+         '<div id="dongPhieuSL">' + skDong(4) + '</div>';
     h += '<p class="goi-y" style="margin-top:18px">Phiếu và chi tiết do Bot AppSheet tự tổng hợp từ sản lượng ngày — không nhập tay.</p>';
 
     $('thanPhieu').innerHTML = h;
-    ganSuaXoaDong($('thanPhieu'), d.dong);   // sửa / xoá dòng chờ duyệt ngay trong phiếu (bảng sản lượng chi tiết đã bỏ)
+    var bl = layBoLoc();
+    bl.tuNgay = p.ngay; bl.denNgay = p.ngay; bl.doi = ''; bl.to = p.to; bl.loaiMu = ''; bl.phien = ''; bl.chatLuong = ''; bl.maCn = '';
+    bl.trangThai = ''; bl.docSheet = S.laAdmin ? 1 : ''; bl.trang = 1; bl.moiTrang = 500; bl.sapXep = 'maCn'; bl.chieu = 'tang';
+    goiCache('sanLuong', bl).then(function (sl) {
+      var kh = $('dongPhieuSL');
+      if (!kh) return;
+      kh.innerHTML = bangDongSanLuong(sl, ['base', 'ngay', 'to']) +
+        (sl.tong > sl.rows.length ? '<p class="goi-y">Hiện ' + soVN(sl.rows.length, 0) + '/' + soVN(sl.tong, 0) + ' dòng.</p>' : '');
+      ganSuaXoaDong(kh, sl.rows);   // sửa / xoá dòng chờ duyệt ngay trong phiếu
+    }).catch(function (e) {
+      var kh = $('dongPhieuSL');
+      if (kh) kh.innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>';
+    });
   }).catch(function (e) {
     $('thanPhieu').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>';
   });
@@ -6022,6 +6078,14 @@ function veLinkBase(ds) {
     return tdTheBase(b.ma, lop, 'Phiếu Base #' + b.ma + ' · ' + (TEN_TT_BASE[b.trangThai] || b.trangThai) + (b.nguoi ? ' · ' + b.nguoi : '') + (b.luc ? ' · ' + b.luc : ''),
                      '#' + thoat(b.ma) + (b.trangThai === 'TU_CHOI' ? ' · từ chối' : b.trangThai === 'DA_TAO' ? ' · chờ duyệt' : ''));
   }).join(' ');
+}
+/** Phiếu Base của 1 phiếu nội trạm: link + trạng thái bằng chữ (người, lúc) — dùng đầu cửa sổ chi tiết phiếu. */
+function veThongTinBase(ds) {
+  if (!ds || !ds.length) return '<span class="nhan-mo">Chưa gửi lên Base</span>';
+  return ds.map(function (b) {
+    var ct = (TEN_TT_BASE[b.trangThai] || b.trangThai || '') + (b.nguoi ? ' · ' + b.nguoi : '') + (b.luc ? ' · ' + b.luc : '');
+    return veLinkBase([b]) + ' <span class="nhan-mo">' + thoat(ct) + '</span>';
+  }).join('<br>');
 }
 /** Phiếu Base thành chữ cho file xuất: "#123 (Đã duyệt); #124 (Chờ Base duyệt)". */
 function baoChuBase(ds) {
