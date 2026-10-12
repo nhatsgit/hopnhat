@@ -181,9 +181,9 @@ tbody tr{transition:background-color .12s}
 @media (max-width:900px){.noi-dung-chinh{margin-left:0}}
 @media print{.noi-dung-chinh{margin-left:0}}
 .hieu{display:flex;align-items:center;gap:10px}
-/* Ô vuông chữ cái đầu (logo) bên trái tên hệ thống — kiểu sidebar tham khảo. */
-.hieu-logo{flex:none;width:34px;height:34px;border-radius:8px;background:var(--sb-active-bg);color:var(--sb-active-ink);
-  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+/* Logo công ty (Vietnam Rubber Group) bo tròn bên trái tên hệ thống. */
+.hieu-logo{flex:none;width:38px;height:38px;border-radius:50%;background:#fff;object-fit:cover;display:block;
+  box-shadow:0 0 0 2px rgba(255,255,255,.18)}
 .hieu-chu{display:flex;flex-direction:column;line-height:1.2;min-width:0}
 .hieu b{font-weight:600;font-size:15px;letter-spacing:-.01em}
 .hieu-chu span{color:var(--ink-3);font-size:12px}
@@ -812,7 +812,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
          nội dung bên phải (#tabsCon), không lồng bên trong sidebar. -->
     <aside class="thanh-ben" id="thanhBen">
       <div class="hieu">
-        <div class="hieu-logo" aria-hidden="true" data-khong-dich>H</div>
+        <img class="hieu-logo" src="icon-192.png" alt="" width="38" height="38" aria-hidden="true" decoding="async">
         <div class="hieu-chu">
           <b>Hệ thống quản trị hợp nhất</b>
           <span id="dongDonVi">—</span>
@@ -2220,7 +2220,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 210;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 211;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
