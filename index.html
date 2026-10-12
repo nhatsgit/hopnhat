@@ -2211,7 +2211,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 199;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 198;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -9421,9 +9421,7 @@ function moNhapCaTo() {
     '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
     '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
-    '<div class="nhap-nhat"><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div>' +
-    '<div style="align-self:end"><button class="btn chinh" id="ntApDungNhat" type="button" title="Áp dụng phần phía trên (ngày, phiên cạo, loại mủ, chất lượng, số nhát) cho TẤT CẢ công nhân trong bảng — số nhát mặc định được điền vào ô Số nhát của từng người (ghi đè số đã gõ)">Áp dụng cho cả bảng</button></div></div>' +
-    '<div class="nhan-mo" id="ntApDungKq" style="margin:-4px 0 8px"></div>' +
+    '<div class="nhap-nhat"><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
     '<div class="nhan-mo nt-luu" id="ntTrangThaiLuu"></div>' +
     '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangNhapTo" class="bang-nt-sl"><thead><tr><th>#</th><th>Mã công nhân</th>' +
     '<th>Sản lượng (kg)</th><th class="nhap-nhat">Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
@@ -9457,24 +9455,10 @@ function moNhapCaTo() {
     $(id).onchange = function () {
       var np = $('bangNhapTo').querySelectorAll('.nt-nhat');
       for (var q = 0; q < np.length; q++) np[q].placeholder = $('ntNhat').value;
-      $('ntApDungKq').textContent = '';
       ntDanhDauCho();
       thayDoi();
     };
   });
-  // Áp dụng phần phía trên (ngày, phiên, loại mủ, chất lượng, số nhát) cho cả bảng. Ngày / phiên / loại mủ / chất lượng vốn áp cho mọi dòng khi gửi;
-  // số nhát mặc định thì ĐIỀN thẳng vào ô Số nhát của từng người (ghi đè), rồi lưu tạm như khi gõ tay.
-  $('ntApDungNhat').onclick = function () {
-    var v = $('ntNhat').value.trim(), np = $('bangNhapTo').querySelectorAll('.nt-nhat');
-    if (v !== '' && (isNaN(Number(v)) || Number(v) < 0)) { baoLoi('ntLoi', 'Số nhát mặc định phải là số không âm.'); return; }
-    baoLoi('ntLoi', '');
-    if (v !== '') for (var q = 0; q < np.length; q++) np[q].value = String(Number(v));
-    var ten = function (id) { var e = $(id); return e && e.selectedOptions && e.selectedOptions[0] ? e.selectedOptions[0].text : ''; };
-    $('ntApDungKq').textContent = 'Đã áp dụng cho ' + np.length + ' người: ngày ' + ngayVN($('ntNgay').value) + ' · ' + ten('ntPhien') + ' · ' + ten('ntLoai') +
-      ' · chất lượng ' + ten('ntCl') + (v !== '' ? ' · số nhát ' + Number(v) : '');
-    ntTongKet();
-    thayDoi();
-  };
   // Enter ở ô kg → xuống ô kg của người kế tiếp (gõ liền tay như bảng tính)
   var kgs = $('bangNhapTo').querySelectorAll('.nt-kg');
   for (var z = 0; z < kgs.length; z++) {
