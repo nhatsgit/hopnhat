@@ -2217,7 +2217,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 205;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 206;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -4625,6 +4625,7 @@ function xtSheetGiao(wb, tenSheet, ds, donVi, ky) {
   ws.mergeCells(9, 4, 10, 4); ws.mergeCells(9, 5, 9, 6); ws.mergeCells(9, 7, 9, 8);
   ws.mergeCells(9, 9, 10, 9); ws.mergeCells(9, 10, 10, 10);
   ws.getRow(9).height = 52; ws.getRow(10).height = 34;
+  ws.pageSetup.printTitlesRow = '9:10';   // sang trang thì lặp lại 2 dòng tiêu đề cột
 
   var rDau = 11;
   var tCay = 0, tNlC = 0, tQkC = 0, tNlD = 0, tQkD = 0, tTong = 0;
@@ -5093,6 +5094,7 @@ function kmTaiMauExcel() {
     { header: 'Số công khô miệng cạo', width: 20 }
   ];
   ws.getRow(1).font = { bold: true };
+  ws.pageSetup.printTitlesRow = '1:1';
   var ds = _kmDuLieu.rows;
   for (var i = 0; i < ds.length; i++) {
     var r = ds[i];
@@ -5254,6 +5256,7 @@ function xlTaiMauExcel() {
     { header: 'Xếp loại (' + _xlDuLieu.dsLoai.map(function (x) { return x.ma; }).join('/') + ')', width: 16 }
   ];
   ws.getRow(1).font = { bold: true };
+  ws.pageSetup.printTitlesRow = '1:1';
   var ds = _xlDuLieu.rows;
   for (var i = 0; i < ds.length; i++) {
     var r = ds[i];
@@ -6534,18 +6537,19 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
     // Theo KTNN (gop): 1 sheet "T{n}", các lát GỘP — mỗi ô = tổng kg công nhân trong ngày bốc; mỗi trang 8 ngày bốc, xếp dọc.
     vt.tenT = {};
     xoaTuDong(tSh[j], 1, SC_T + 8);
-    var dichGop = 1, gGop = null, dsKhoi = PHIEN_4;
+    var gGop = null, dsKhoi = PHIEN_4;
+    vt.sheetT = {};
     if (gop) {
       gGop = _gomNgay(sl.dong.filter(function (x) { return x.loai === 'MU_DONG' && toCuaMaCn(x.maCn) === to.ma; }));
       dsKhoi = PHIEN_4.slice(0, Math.min(4, Math.max(1, Math.ceil(gGop.ngays.length / 8))));
-      tSh[j].name = 'T' + n;
     }
     vt.dsKhoi = dsKhoi;
+    // Mỗi khối (lát hoặc 8 ngày bốc) 1 sheet riêng: khối dài qua trang 2 thì tiêu đề bảng (7 dòng đầu) lặp lại được ở đầu trang.
     dsKhoi.forEach(function (ph, kh) {
-      var w = gop ? tSh[j] : (ph === 'A' ? tSh[j] : _nhanDoiSheet(wb, tSh[j], nhanDoi));
-      if (!gop) w.name = 'T' + n + ' LÁT ' + ph;
-      vt.tenT[ph] = w.name;
-      var dich = gop ? dichGop : 1, g, oNgay, soLat = '';
+      var w = kh === 0 ? tSh[j] : _nhanDoiSheet(wb, tSh[j], nhanDoi);
+      w.name = gop ? 'T' + n + (dsKhoi.length > 1 ? ' (' + (kh + 1) + ')' : '') : 'T' + n + ' LÁT ' + ph;
+      vt.tenT[ph] = w.name; vt.sheetT[ph] = w;
+      var dich = 1, g, oNgay, soLat = '';
       if (gop) {
         g = gGop; oNgay = [];
         for (var q = 0; q < 8; q++) { var dn = g.ngays[kh * 8 + q]; oNgay.push(dn !== undefined ? [dn] : []); }
@@ -6583,24 +6587,22 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
       for (var s2 = 0; s2 < 8; s2++) { var cl = _cotChu(6 + 2 * s2); w.getCell(cl + rTong).value = { formula: 'SUM(' + cl + dau1 + ':' + cl + cuoi1 + ')' }; }
       w.getCell('V' + rTong).value = { formula: 'SUBTOTAL(9,V' + dau1 + ':V' + cuoi1 + ')' };
       dich = danVung(w, kT.cuoi, rTong + 1, SC_T);
-      if (gop) dichGop = dich;
     });
   });
 
-  // Mủ dây: mỗi tổ 1 sheet "T{n} MỦ DÂY" (riêng khỏi mủ đông). Mủ đất: mỗi tổ 1 khối trong sheet "Mủ đất".
+  // Mủ dây: mỗi tổ 1 sheet "T{n} MỦ DÂY" (riêng khỏi mủ đông). Mủ đất: mỗi tổ 1 sheet "T{n} MỦ ĐẤT".
+  // Mỗi sheet đúng 1 khối nên tiêu đề bảng lặp lại được khi khối dài qua trang.
   var dsSheetDay = [];
-  function khoiPhu(ws0, k, loai, khoaDong, riengTo) {
+  function khoiPhu(ws0, k, loai, khoaDong, hauTo, khoaTen) {
     xoaTuDong(ws0, 1, SC_D + 6);
+    if (!d.dsTo.length) dsSheetDay.push(ws0);
     var dich = 1;
     d.dsTo.forEach(function (to, jt) {
-      var ws = ws0;
-      if (riengTo) {
-        ws = jt === 0 ? ws0 : _nhanDoiSheet(wb, ws0, nhanDoi);
-        ws.name = 'T' + _soTo(to.ma) + ' MỦ DÂY';
-        viTri[to.ma].tenY = ws.name;
-        dsSheetDay.push(ws);
-        dich = 1;
-      }
+      var ws = jt === 0 ? ws0 : _nhanDoiSheet(wb, ws0, nhanDoi);
+      ws.name = 'T' + _soTo(to.ma) + ' ' + hauTo;
+      viTri[to.ma][khoaTen] = ws.name;
+      dsSheetDay.push(ws);
+      dich = 1;
       var vt = viTri[to.ma], cns = sl.cnCuaTo[to.ma] || [];
       var g = _gomNgay(sl.dong.filter(function (x) { return x.loai === loai && toCuaMaCn(x.maCn) === to.ma; })), oNgay = _chiaONgay(g.ngays, 5);
       var dau = dich;
@@ -6628,19 +6630,23 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
       dich = danVung(ws, k.cuoi, rTong + 1, SC_D);
     });
   }
-  khoiPhu(wDay, kY, 'MU_DAY', 'dongY', true);
-  khoiPhu(wDat, kR, 'MU_DAT', 'dongR', false);
+  khoiPhu(wDay, kY, 'MU_DAY', 'dongY', 'MỦ DÂY', 'tenY');
+  khoiPhu(wDat, kR, 'MU_DAT', 'dongR', 'MỦ ĐẤT', 'tenR');
 
-  // TỔNG: mỗi tổ 1 khối + bảng tổng các tổ ở cuối
+  // TỔNG: mỗi tổ 1 sheet ("TỔNG T{n}"; chỉ 1 tổ thì giữ tên "TỔNG"); bảng tổng các tổ nằm cuối sheet của tổ cuối.
   xoaTuDong(wTong, 1, SC_TG + 4);
-  var dich = 1, dongTongTo = [];
+  var dich = 1, dongTongTo = [], dsSheetTong = [], wCuoi = wTong;
+  if (!d.dsTo.length) dsSheetTong.push(wTong);
   var pt = function (x) { return Math.round(x * 1000) / 10; };
-  d.dsTo.forEach(function (to) {
+  d.dsTo.forEach(function (to, jt) {
     var vt = viTri[to.ma], cns = sl.cnCuaTo[to.ma] || [], n = _soTo(to.ma);
+    var wT = jt === 0 ? wTong : _nhanDoiSheet(wb, wTong, nhanDoi);
+    wT.name = d.dsTo.length > 1 ? 'TỔNG T' + n : 'TỔNG';
+    dsSheetTong.push(wT); wCuoi = wT; dich = 1;
     var dau = dich;
-    dich = danVung(wTong, kG.dau, dich, SC_TG);
+    dich = danVung(wT, kG.dau, dich, SC_TG);
     for (var r0 = dau; r0 < dich; r0++) {
-      wTong.getRow(r0).eachCell(function (ce) {
+      wT.getRow(r0).eachCell(function (ce) {
         var v = ce.value;
         if (v && typeof v === 'object' && v.formula && /!A1/.test(v.formula)) ce.value = _doiThangTieuDe(tSh[0].getCell('A1').value || '', thg, nam);
         if (typeof v !== 'string') return;
@@ -6653,7 +6659,7 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
     var loai2 = {};
     sl.dong.forEach(function (x) { if (x.loai === 'MU_DONG' && x.cl === 'LOAI_II') loai2[x.maCn] = (loai2[x.maCn] || 0) + x.kg; });
     cns.forEach(function (cn, i) {
-      var r = danVung(wTong, kG.dong, dich, SC_TG) - 1, row = wTong.getRow(r), rT = vt.dongT.A[cn.maCn];
+      var r = danVung(wT, kG.dong, dich, SC_TG) - 1, row = wT.getRow(r), rT = vt.dongT.A[cn.maCn];
       var tongDong = vt.dsKhoi.map(function (ph) { return "'" + vt.tenT[ph] + "'!V" + vt.dongT[ph][cn.maCn]; }).join('+');
       row.getCell(1).value = i + 1;
       row.getCell(2).value = { formula: "'" + vt.tenT.A + "'!D" + rT, result: cn.ten || '' };
@@ -6665,21 +6671,21 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
       row.getCell(8).value = { formula: "'" + vt.tenY + "'!N" + vt.dongY[cn.maCn] };
       row.getCell(9).value = { formula: 'H' + r + '*' + drcY };
       row.getCell(10).value = { formula: 'I' + r };
-      row.getCell(11).value = { formula: "'Mủ đất'!N" + vt.dongR[cn.maCn] };
+      row.getCell(11).value = { formula: "'" + vt.tenR + "'!N" + vt.dongR[cn.maCn] };
       row.getCell(12).value = { formula: 'K' + r + '*' + drcT };
       row.getCell(13).value = { formula: 'L' + r };
       row.getCell(14).value = { formula: 'G' + r + '+J' + r + '+M' + r };
       dich = r + 1;
     });
     var cuoi1 = Math.max(dau1, dich - 1);
-    var rTong = danVung(wTong, kG.tong, dich, SC_TG) - 1;
-    'DEFGHIJKLMN'.split('').forEach(function (cl) { wTong.getCell(cl + rTong).value = { formula: 'SUM(' + cl + dau1 + ':' + cl + cuoi1 + ')' }; });
-    dongTongTo.push({ n: n, r: rTong });
+    var rTong = danVung(wT, kG.tong, dich, SC_TG) - 1;
+    'DEFGHIJKLMN'.split('').forEach(function (cl) { wT.getCell(cl + rTong).value = { formula: 'SUM(' + cl + dau1 + ':' + cl + cuoi1 + ')' }; });
+    dongTongTo.push({ n: n, r: rTong, ten: wT.name });
     var dauCuoi = rTong + 1;
-    dich = danVung(wTong, kG.cuoi, dauCuoi, SC_TG);
+    dich = danVung(wT, kG.cuoi, dauCuoi, SC_TG);
     var sauKhu = false;
     for (var r1 = dauCuoi; r1 < dich; r1++) {
-      wTong.getRow(r1).eachCell(function (ce) {
+      wT.getRow(r1).eachCell(function (ce) {
         var v = ce.value;
         if (typeof v === 'string' && /^KHU VỰC/i.test(v)) { ce.value = 'KHU VỰC ' + n; sauKhu = r1; }
         else if (sauKhu && r1 > sauKhu && typeof v === 'string' && !/Zone|Manager|ĐỘI SẢN XUẤT|GHI CHÚ|…/i.test(v)) ce.value = null;  // tên người ký: để trống
@@ -6689,22 +6695,20 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
   if (dongTongTo.length > 1) {
     var r2 = dich + 2, dau2 = r2;
     dongTongTo.forEach(function (x) {
-      var row = wTong.getRow(r2);
+      var row = wCuoi.getRow(r2), q = x.ten === wCuoi.name ? '' : "'" + x.ten + "'!";   // tổng của tổ nằm ở sheet khác thì ghi tên sheet
       row.getCell(3).value = x.n;
-      row.getCell(4).value = { formula: 'D' + x.r }; row.getCell(6).value = { formula: 'D' + r2 + '-E' + r2 };
-      row.getCell(8).value = { formula: 'H' + x.r }; row.getCell(10).value = { formula: 'H' + r2 + '-I' + r2 };
-      row.getCell(12).value = { formula: 'K' + x.r }; row.getCell(14).value = { formula: 'N' + x.r };
+      row.getCell(4).value = { formula: q + 'D' + x.r }; row.getCell(6).value = { formula: 'D' + r2 + '-E' + r2 };
+      row.getCell(8).value = { formula: q + 'H' + x.r }; row.getCell(10).value = { formula: 'H' + r2 + '-I' + r2 };
+      row.getCell(12).value = { formula: q + 'K' + x.r }; row.getCell(14).value = { formula: q + 'N' + x.r };
       r2++;
     });
-    'DEFGHIJLN'.split('').forEach(function (cl) { wTong.getCell(cl + r2).value = { formula: 'SUM(' + cl + dau2 + ':' + cl + (r2 - 1) + ')' }; });
+    'DEFGHIJLN'.split('').forEach(function (cl) { wCuoi.getCell(cl + r2).value = { formula: 'SUM(' + cl + dau2 + ':' + cl + (r2 - 1) + ')' }; });
   }
   // Vùng in: mẫu gốc mang vùng in hỏng ($NaN:$NaN) và tiêu đề in lặp trỏ lung tung -> Excel báo "found a problem".
-  // Đặt lại theo nội dung thật. Tiêu đề in lặp (đầu bảng, 7 dòng) chỉ đặt cho sheet có ĐÚNG 1 khối: sổ ISO (mỗi lát 1 sheet) và
-  // mủ dây (mỗi tổ 1 sheet) — khối dài qua trang 2 thì trang sau vẫn có tiêu đề cột. Sheet nhiều khối (KTNN gộp, mủ đất, TỔNG) bỏ lặp
-  // vì mỗi khối đã có tiêu đề riêng, lặp khối 1 sẽ đè lên khối sau.
-  d.dsTo.forEach(function (to) { viTri[to.ma].dsKhoi.forEach(function (ph) { _datVungIn(wb.getWorksheet(viTri[to.ma].tenT[ph]), SC_T, gop ? null : '1:' + kT.soDongDau); }); });
+  // Đặt lại theo nội dung thật. Tiêu đề bảng (các dòng đầu của khối) lặp lại ở đầu mỗi trang in: mỗi sheet đúng 1 khối nên đặt được.
+  d.dsTo.forEach(function (to) { viTri[to.ma].dsKhoi.forEach(function (ph) { _datVungIn(viTri[to.ma].sheetT[ph], SC_T, '1:' + kT.soDongDau); }); });
   dsSheetDay.forEach(function (w) { _datVungIn(w, SC_D, '1:' + kY.soDongDau); });
-  _datVungIn(wDat, SC_D); _datVungIn(wTong, SC_TG);
+  dsSheetTong.forEach(function (w) { _datVungIn(w, SC_TG, '1:' + kG.soDongDau); });
   _xepThuTuSheet(wb, nhanDoi);
   return { boPhien: boPhien };
 }
@@ -6851,6 +6855,9 @@ function dungSoKtnn(wb, d) {
     });
     wt.getCell('O' + r5).value = 'Grand Total'; wt.getCell('P' + r5).value = demPc;
   }
+  // In nhiều trang: dòng tiêu đề cột (7–9) của sheet phiên và dòng 1 của sheet Du lieu lặp ở đầu mỗi trang
+  PHIEN_4.forEach(function (ph) { var w = wb.getWorksheet(ph); if (w) w.pageSetup.printTitlesRow = '7:9'; });
+  if (wd) wd.pageSetup.printTitlesRow = '1:1';
   return { boQua: boQua };
 }
 
@@ -7114,6 +7121,8 @@ function drcXuatBangKe() {
     return dongTong;
   };
   var rI = khoi('I. Mủ đông chén — Cup lump rubber', 'NL mủ đông chén (Tấn)', 'MU_DONG', false);
+  // Mỗi khối có tiêu đề riêng: cả tháng / nửa sau thì khối II sang trang mới để không bị cắt ngang giữa bảng (mất tiêu đề cột).
+  if (denN - tuN + 1 > 15) ws.getRow(r - 1).addPageBreak();
   var rII = khoi('II. Mủ dây — Tree lace rubber', 'NL mủ dây (Tấn)', 'MU_DAY', true);
   ws.mergeCells(r, 1, r, 3); var tc = ws.getCell(r, 1); tc.value = 'Tổng cộng (I + II) / Total'; tc.font = { bold: true }; tc.alignment = { horizontal: 'center' };
   ws.getCell(r, 4).value = { formula: 'D' + rI + '+D' + rII }; ws.getCell(r, 6).value = { formula: 'F' + rI + '+F' + rII };
@@ -7165,16 +7174,16 @@ var BAO_CAO = [
   {
     id: 'soToTruong', ten: 'Sổ ghi chép sản lượng của Tổ trưởng — theo ISO (tách lát)',
     moTa: 'Bản đưa vào hồ sơ ISO: bìa từng tổ; mủ đông TÁCH LÁT, mỗi lát A–D 1 sheet (kg + chất lượng Đ/KĐ, mã lô rừng, tên lô); ' +
-          'mủ dây mỗi tổ 1 sheet; mủ đất; bảng TỔNG quy khô từng công nhân (công thức sống).',
-    gom: 'Bìa · T1 LÁT A…D · T1 MỦ DÂY · … · TỔNG', phamVi: 'doiTo',
+          'mủ dây, mủ đất mỗi tổ 1 sheet; bảng TỔNG quy khô từng công nhân (công thức sống). Sang trang thì lặp lại tiêu đề bảng.',
+    gom: 'Bìa · T1 LÁT A…D · T1 MỦ DÂY · T1 MỦ ĐẤT · TỔNG T1 · …', phamVi: 'doiTo',
     duocXuat: function () { return true; },
     xuat: function (ch, nut) { return _xuatSoTheoMau('mau/so_to_truong.xlsx', function (wb, d) { return dungSoToTruong(wb, d, false); }, 'So_ghi_chep_SL_to_truong_ISO', ch, nut); }
   },
   {
     id: 'soToTruongKtnn', ten: 'Sổ ghi chép sản lượng của Tổ trưởng — theo KTNN (gộp lát)',
-    moTa: 'Số thật theo ngày bốc: các lát GỘP thành tổng kg của công nhân trong ngày bốc (không tách lát). Mỗi tổ 1 sheet mủ đông, ' +
-          'mỗi trang 8 ngày bốc; mủ dây; mủ đất; bảng TỔNG quy khô từng công nhân. Khớp số dùng tính lương.',
-    gom: 'Bìa · T1…Tn · T1 MỦ DÂY · … · TỔNG', phamVi: 'doiTo',
+    moTa: 'Số thật theo ngày bốc: các lát GỘP thành tổng kg của công nhân trong ngày bốc (không tách lát). Mỗi tổ 1 nhóm sheet mủ đông, ' +
+          'mỗi 8 ngày bốc 1 sheet; mủ dây; mủ đất; bảng TỔNG quy khô từng công nhân. Khớp số dùng tính lương.',
+    gom: 'Bìa · T1 (1)…(4) · T1 MỦ DÂY · T1 MỦ ĐẤT · TỔNG T1 · …', phamVi: 'doiTo',
     duocXuat: function () { return true; },
     xuat: function (ch, nut) { return _xuatSoTheoMau('mau/so_to_truong.xlsx', function (wb, d) { return dungSoToTruong(wb, d, true); }, 'So_ghi_chep_SL_to_truong_KTNN', ch, nut); }
   },
@@ -8171,6 +8180,7 @@ function dungSoChamCong(wb, dl, tenCn) {
   var ws = wb.worksheets[1];
   ws.name = 'T' + Number(thg);
   var M = CC_MAU, cc = M.cotCuoi;
+  ws.pageSetup.printTitlesRow = '9:' + (M.dongDau - 1);   // tiêu đề bảng (STT, họ tên, ngày) lặp ở mỗi trang
 
   // Chụp kiểu của 1 dòng dữ liệu mẫu và cả khối cuối (TỔNG, ghi chú, chữ ký) trước khi xoá.
   var kieuDong = [], caoDong = ws.getRow(M.dongDau).height;
@@ -8502,6 +8512,7 @@ function xuatBangExcel(ten, nhan, dong) {
     o.border = O_VIEN;
   });
   ws.views = [{ state: 'frozen', ySplit: 1 }];
+  ws.pageSetup.printTitlesRow = '1:1';   // in nhiều trang: dòng tiêu đề cột lặp ở đầu mỗi trang
 
   dong.forEach(function (r) {
     var hangDl = ws.addRow(r);
