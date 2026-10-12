@@ -2217,7 +2217,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 203;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 204;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3884,7 +3884,7 @@ function taiSanLuong() {
 
   goiCache('sanLuong', bl).then(function (d) {
     var tkSL = d.thongKe || {};
-    dsCot = COT_SL.filter(function (c) { return (CO_SO_NHAT || !c.nhat) && (!c.that || tkSL.that); });
+    dsCot = COT_SL.filter(function (c) { return (CO_SO_NHAT || !c.nhat || (c.k === 'nhat' && CO_NHAP_NHAT)) && (!c.that || tkSL.that); });
     $('tomTatSL').textContent = S.slBatThuong
       ? soVN(d.tong, 0) + ' dòng bất thường · ' + soVN(tkSL.kgBatThuong || 0, 2) + ' kg tươi'
       : soVN(d.tong, 0) + ' dòng · ' + soVN(d.tongKg, 2) + ' kg tươi · ' + soVN(d.tongQuyKho, 2) + ' kg khô';
@@ -8594,11 +8594,16 @@ function csvSanLuong() {
                 r.drcThat === undefined ? '' : (r.quyKhoThat === null ? 'chưa có cân' : r.quyKhoThat)] : [])
               .concat([r.nsbq, r.nguon, r.trangThai, r.ghiChu]);
     });
-    var xs = cotKhongNhat(['Phiếu Base', 'Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
+    var tieuDeSl = ['Phiếu Base', 'Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
        'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC tạm tính áp dụng', 'Quy khô tạm tính (kg)']
        .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [])
-       .concat(['NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú']), dong);
-    xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx', xs[0], xs[1]);
+       .concat(['NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú']);
+    if (!CO_SO_NHAT) {   // giữ cột số nhát (đã mở nhập), bỏ riêng NSBQ kg/nhát
+      var iNs = tieuDeSl.indexOf('NSBQ (kg/nhát)');
+      tieuDeSl.splice(iNs, 1);
+      dong.forEach(function (r) { r.splice(iNs, 1); });
+    }
+    xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx', tieuDeSl, dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
