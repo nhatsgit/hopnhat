@@ -468,7 +468,13 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 .nt-tag{font-size:11.5px;color:#b07d00;font-weight:600}
 /* Form nhập cả tổ / chấm công cả tổ: khung chọn chung, chân form (tổng kết + nút) */
 .nt-dau{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;padding:12px;
-  border:1px solid var(--line);background:var(--card)}
+  border:1px solid var(--leaf);border-left:4px solid var(--leaf);border-radius:6px;background:var(--leaf-soft)}
+/* Khối chọn chung ở đầu form: làm nổi bật + tiêu đề, vì nó áp cho CẢ bảng bên dưới (ngày, phiên, loại mủ, chất lượng, số nhát mặc định) */
+.nt-dau::before{content:"Áp dụng cho cả bảng";grid-column:1/-1;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--leaf)}
+.nt-dau .nhan{font-weight:600;color:var(--ink)}
+.nt-dau .o{background:var(--card);border-color:var(--leaf)}
+/* nút chân form: viền đậm hơn cho dễ nhìn */
+.nt-chan .btn:not(.chinh){border-color:var(--ink-3)}
 .nt-off:empty{display:none}
 .nt-off{margin-bottom:10px;padding:9px 12px;border-radius:6px;background:rgba(224,182,74,.2);border:1px solid rgba(224,182,74,.6);font-size:13.5px}
 .nt-luu{font-size:12.5px;margin-bottom:6px}
@@ -2211,7 +2217,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 198;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 201;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
