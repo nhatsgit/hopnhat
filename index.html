@@ -698,6 +698,7 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 .thanh-tren-dt{display:none}
 /* Phần chỉ có nghĩa khi có số nhát cạo (xem CO_SO_NHAT) */
 .an-nhat .chi-nhat{display:none !important}
+.tat-nhap-nhat .nhap-nhat{display:none !important}
 html:not(.an-nhat) .khong-nhat{display:none !important}
 /* Sản lượng chi tiết: dòng bất thường + thẻ đang dùng làm bộ lọc */
 #bangSL tr.bat-thuong td{background:var(--clay-soft)}
@@ -2210,8 +2211,12 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 194;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 195;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
+/* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
+   Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
+var CO_NHAP_NHAT = true;
+if (!CO_NHAP_NHAT) document.documentElement.classList.add('tat-nhap-nhat');
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('option.chi-nhat').forEach(function (o) { o.remove(); });
@@ -8699,7 +8704,7 @@ function moThemSanLuong() {
         '<select class="o" id="tCl">' + optTu(S.meta && S.meta.chatLuong) + '</select></div>' +
       '<div><label class="nhan" for="tKg">Sản lượng (kg)</label>' +
         '<input class="o" id="tKg" type="number" step="0.01" min="0" placeholder="0.00"></div>' +
-      '<div class="chi-nhat"><label class="nhan" for="tNhat">Số nhát cạo</label>' +
+      '<div class="nhap-nhat"><label class="nhan" for="tNhat">Số nhát cạo</label>' +
         '<input class="o" id="tNhat" type="number" step="1" min="0" value="' + (CO_SO_NHAT ? '2' : '') + '"></div>' +
       '<div style="grid-column:1/-1"><label class="nhan" for="tGhiChu">Ghi chú</label>' +
         '<input class="o" id="tGhiChu" placeholder="Không bắt buộc"></div>' +
@@ -9368,22 +9373,22 @@ function moNhapCaTo() {
   var loai = chon(tam && tam.loai, m.loaiMu, chon('MU_DONG', m.loaiMu, m.loaiMu[0] ? m.loaiMu[0].ma : ''));
   var cl = chon(tam && tam.cl, m.chatLuong, m.chatLuong[0] ? m.chatLuong[0].ma : '');
   var ngay = (tam && tam.ngay) || nsHomNay();
-  var nhatMd = CO_SO_NHAT ? ((tam && tam.nhat) || '2') : '';
+  var nhatMd = CO_SO_NHAT ? ((tam && tam.nhat) || '2') : ((tam && tam.nhat) || '');
 
   var h = '<div id="ntOff" class="nt-off"></div><div id="ntCapNhat" class="nt-cap-nhat"></div><div class="nt-dau">' +
     '<div><label class="nhan" for="ntNgay">Ngày</label><input class="o" id="ntNgay" type="date" value="' + thoat(ngay) + '"></div>' +
     '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
     '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
-    '<div class="chi-nhat"><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
+    '<div class="nhap-nhat"><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div></div>' +
     '<div class="nhan-mo nt-luu" id="ntTrangThaiLuu"></div>' +
     '<div class="cuon cuon-doc nt-bang" style="max-height:48vh"><table id="bangNhapTo" class="bang-nt-sl"><thead><tr><th>#</th><th>Mã công nhân</th>' +
-    '<th>Sản lượng (kg)</th><th class="chi-nhat">Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
+    '<th>Sản lượng (kg)</th><th class="nhap-nhat">Số nhát</th><th>Ghi chú</th></tr></thead><tbody>';
   for (var i = 0; i < ds.length; i++) {
     var d = tam && tam.dong && tam.dong[ds[i]];
     h += '<tr data-cn="' + thoat(ds[i]) + '"><td class="nhan-mo c-stt">' + (i + 1) + '</td><td class="c-ma"><b>' + thoat(ds[i]) + '</b><span class="nt-tag"></span></td>' +
       '<td class="c-kg" data-nhan="Sản lượng (kg)"><input class="o nt-kg" type="number" step="0.01" min="0" inputmode="decimal" enterkeyhint="next" aria-label="Sản lượng kg của ' + thoat(ds[i]) + '" value="' + thoat(d ? d.kg : '') + '"></td>' +
-      '<td class="c-nhat chi-nhat" data-nhan="Số nhát"><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
+      '<td class="c-nhat nhap-nhat" data-nhan="Số nhát"><input class="o nt-nhat" type="number" step="1" min="0" inputmode="numeric" placeholder="' + thoat(nhatMd) + '" value="' + thoat(d ? d.nhat : '') + '"></td>' +
       '<td class="c-gc" data-nhan="Ghi chú"><input class="o nt-gc" maxlength="200" value="' + thoat(d ? d.gc : '') + '"></td></tr>';
   }
   h += '</tbody></table></div><div id="ntLoi"></div>' +
@@ -9483,14 +9488,14 @@ function ntTaiMau() {
     var x = d.dong[ds[i]] || {};
     dong.push([ds[i], x.kg === undefined || x.kg === '' ? '' : Number(x.kg), x.nhat === undefined || x.nhat === '' ? '' : Number(x.nhat), x.gc || '']);
   }
-  var xsTo = cotKhongNhat(dong[0], dong.slice(1));
+  var xsTo = [dong[0], dong.slice(1)];   // file mẫu cả tổ giữ cột Số nhát (CO_NHAP_NHAT)
   dong = [xsTo[0]].concat(xsTo[1]);
   var ws = XLSX.utils.aoa_to_sheet(dong);
   ws['!cols'] = dong[0].map(function (t) { return { wch: /Ghi/.test(t) ? 36 : 16 }; });
   var hd = XLSX.utils.aoa_to_sheet([
-    ['Chỉ điền cột "Sản lượng kg" (và ' + (CO_SO_NHAT ? 'số nhát / ' : '') + 'ghi chú nếu cần) ở sheet "Nhap ca to". Đừng sửa cột Mã công nhân, đừng đổi tên cột.'],
+    ['Chỉ điền cột "Sản lượng kg" (và số nhát / ghi chú nếu cần) ở sheet "Nhap ca to". Đừng sửa cột Mã công nhân, đừng đổi tên cột.'],
     ['Ngày, phiên cạo, loại mủ, chất lượng KHÔNG nằm trong file: chọn ở đầu bảng nhập trên web.'],
-    ['Hiện đang chọn: ngày ' + (d.ngay || '—') + ' · phiên ' + d.phien + ' · loại mủ ' + d.loai + ' · chất lượng ' + d.cl + (CO_SO_NHAT ? ' · số nhát mặc định ' + d.nhat : '')],
+    ['Hiện đang chọn: ngày ' + (d.ngay || '—') + ' · phiên ' + d.phien + ' · loại mủ ' + d.loai + ' · chất lượng ' + d.cl + (d.nhat ? ' · số nhát mặc định ' + d.nhat : '')],
     ['Dòng kg để trống hoặc bằng 0 sẽ bị bỏ qua.']
   ]);
   hd['!cols'] = [{ wch: 110 }];
@@ -10164,7 +10169,7 @@ function taiMauExcel(loai) {
     var loaiMuMau = (S.meta && S.meta.loaiMu && S.meta.loaiMu[0] && S.meta.loaiMu[0].ma) || 'MU_DONG';
     cotTieuDe = ['Ngày (yyyy-mm-dd)', 'Mã công nhân', 'Loại mủ', 'Phiên cạo', 'Sản lượng kg', 'Chất lượng', 'Số nhát cạo', 'Ghi chú'];
     dongViDu = [[ngayMau, maCnMau, loaiMuMau, 'A', 12.5, '', 96, '']];
-    var xsMau = cotKhongNhat(cotTieuDe, dongViDu); cotTieuDe = xsMau[0]; dongViDu = xsMau[1];
+    // giữ cột "Số nhát cạo" trong file mẫu nhập hàng loạt (CO_NHAP_NHAT)
   } else {
     tenSheet = 'Cham cong';
     var khMau = (S.meta && S.meta.loaiCong && S.meta.loaiCong[0] && S.meta.loaiCong[0].ma) || '+';
@@ -10344,7 +10349,7 @@ function moSuaSanLuong(r) {
     '<div class="bo-loc the" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="sKg">Sản lượng (kg)</label>' +
         '<input class="o" id="sKg" type="number" step="0.01" min="0" value="' + r.kg + '"></div>' +
-      '<div class="chi-nhat"><label class="nhan" for="sNhat">Số nhát cạo</label>' +
+      '<div class="nhap-nhat"><label class="nhan" for="sNhat">Số nhát cạo</label>' +
         '<input class="o" id="sNhat" type="number" step="1" min="0" value="' + (r.nhat || '') + '"></div>' +
       '<div><label class="nhan" for="sLoai">Loại mủ</label>' +
         '<select class="o" id="sLoai">' + optLoai + '</select></div>' +
