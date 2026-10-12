@@ -1378,4 +1378,5 @@ window.TU_DIEN_KM = {"bỏ":"រំលង",
 "phiên đăng nhập google đã hết hạn hoặc không hợp lệ — đăng nhập lại":"វគ្គចូលប្រើ Google ផុតកំណត់ ឬមិនត្រឹមត្រូវ — សូមចូលម្តងទៀត",
 "cần đăng nhập bằng google (phiên đăng nhập) để dùng hệ thống":"ត្រូវចូលប្រើដោយ Google ដើម្បីប្រើប្រព័ន្ធ",
 "không tải được dịch vụ đăng nhập google — kiểm tra mạng":"មិនអាចផ្ទុកសេវាចូលប្រើ Google — ពិនិត្យអ៊ីនធឺណិត",
-"google không xác nhận được lần đăng nhập này — thử lại":"Google មិនអាចបញ្ជាក់ការចូលប្រើនេះ — សាកម្តងទៀត"};
+"google không xác nhận được lần đăng nhập này — thử lại":"Google មិនអាចបញ្ជាក់ការចូលប្រើនេះ — សាកម្តងទៀត",
+"vườn cây":"ចម្ការ"};
