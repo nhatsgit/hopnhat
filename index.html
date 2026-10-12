@@ -2217,7 +2217,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 204;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 205;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -6699,9 +6699,11 @@ function dungSoToTruong(wb, d, gop) {   // gop = true: sổ theo KTNN (gộp lá
     'DEFGHIJLN'.split('').forEach(function (cl) { wTong.getCell(cl + r2).value = { formula: 'SUM(' + cl + dau2 + ':' + cl + (r2 - 1) + ')' }; });
   }
   // Vùng in: mẫu gốc mang vùng in hỏng ($NaN:$NaN) và tiêu đề in lặp trỏ lung tung -> Excel báo "found a problem".
-  // Đặt lại theo nội dung thật; bỏ tiêu đề lặp (mỗi sheet nhiều khối, mỗi khối có tiêu đề riêng).
-  d.dsTo.forEach(function (to) { viTri[to.ma].dsKhoi.forEach(function (ph) { _datVungIn(wb.getWorksheet(viTri[to.ma].tenT[ph]), SC_T); }); });
-  dsSheetDay.forEach(function (w) { _datVungIn(w, SC_D); });
+  // Đặt lại theo nội dung thật. Tiêu đề in lặp (đầu bảng, 7 dòng) chỉ đặt cho sheet có ĐÚNG 1 khối: sổ ISO (mỗi lát 1 sheet) và
+  // mủ dây (mỗi tổ 1 sheet) — khối dài qua trang 2 thì trang sau vẫn có tiêu đề cột. Sheet nhiều khối (KTNN gộp, mủ đất, TỔNG) bỏ lặp
+  // vì mỗi khối đã có tiêu đề riêng, lặp khối 1 sẽ đè lên khối sau.
+  d.dsTo.forEach(function (to) { viTri[to.ma].dsKhoi.forEach(function (ph) { _datVungIn(wb.getWorksheet(viTri[to.ma].tenT[ph]), SC_T, gop ? null : '1:' + kT.soDongDau); }); });
+  dsSheetDay.forEach(function (w) { _datVungIn(w, SC_D, '1:' + kY.soDongDau); });
   _datVungIn(wDat, SC_D); _datVungIn(wTong, SC_TG);
   _xepThuTuSheet(wb, nhanDoi);
   return { boPhien: boPhien };
@@ -6737,8 +6739,8 @@ function _xepThuTuSheet(wb, dangKy) {
   ra.forEach(function (w, i) { w.orderNo = i + 1; });
 }
 
-function _datVungIn(ws, soCot) {
-  if (!ws) return;
+function _datVungIn(ws, soCot, dongLap) {
+  if (!ws) return;   // dongLap: '1:7' = các dòng tiêu đề lặp lại ở đầu mỗi trang in (chỉ dùng cho sheet có đúng 1 khối)
   // Dòng cuối = dòng cuối CÓ CHỮ (sheet lấy từ mẫu còn sót các dòng trống của các khối cũ, rowCount lớn hơn nội dung thật)
   var cuoi = 1;
   ws.eachRow({ includeEmpty: false }, function (row, r) {
@@ -6749,6 +6751,7 @@ function _datVungIn(ws, soCot) {
   ws.pageSetup.printArea = 'A1:' + _cotChu(soCot) + Math.max(1, cuoi + 1);
   delete ws.pageSetup.printTitlesRow;
   delete ws.pageSetup.printTitlesColumn;
+  if (dongLap) ws.pageSetup.printTitlesRow = dongLap;
 }
 
 var KTNN_TONG = {   // công thức tổng cột CX..DE của mẫu (đầu tháng = ngày 1–15, cuối tháng = 16–31)
