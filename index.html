@@ -2217,7 +2217,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 202;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 203;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -4129,7 +4129,7 @@ function moPhieu(ma) {
 
     h += '<h3 class="tieude-muc" style="margin-top:22px">Các dòng sản lượng cấu thành (' + d.dong.length + ')</h3>' +
          '<div class="cuon"><table><thead><tr><th>Mã công nhân</th><th>Phần cạo</th><th>Phiên</th>' +
-         '<th>Loại mủ</th><th class="p">kg</th>' + (CO_SO_NHAT ? '<th class="p">Nhát</th>' : '') + '<th class="p">Quy khô</th>' +
+         '<th>Loại mủ</th><th class="p">kg</th><th class="p">Số nhát</th><th class="p">Quy khô</th>' +   // cột Số nhát luôn hiện (ô nhập số nhát đã mở; trước đây tiêu đề ẩn theo CO_SO_NHAT làm lệch cột)
          '</tr></thead><tbody>';
     var tKg = 0, tKho = 0;
     for (var j = 0; j < d.dong.length; j++) {
