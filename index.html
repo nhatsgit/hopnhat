@@ -2211,7 +2211,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 196;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 197;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3371,6 +3371,23 @@ function veTramCan(d) {
   veBangTramCan();
 }
 
+/** Trạng thái duyệt của 1 phiếu cân trên Base: nhãn chữ. Phiếu nạp từ file Excel (không qua Base) = ''. */
+function tcTrangThaiBase(x) {
+  if (!x.maBase) return '';
+  if (x.ttBase === 'TU_CHOI') return 'Từ chối — sửa trên Base';
+  if (x.trangThai === 'DANG_DUYET') return 'Đang duyệt';
+  if (x.trangThai === 'DA_DUYET') return x.ttBase === 'DA_DUYET_CO_LOI' ? 'Đã duyệt (có lưu ý)' : 'Đã duyệt';
+  return x.trangThai || '';
+}
+
+/** Ô "Phiếu Base": link sang phiếu trên Base + trạng thái; phiếu nạp từ file thì để —. */
+function tcOPhieuBase(x) {
+  if (!x.maBase) return '<span class="nhan-mo">—</span>';
+  var tt = tcTrangThaiBase(x), loi = x.ttBase === 'TU_CHOI';
+  return '<a href="' + tdLinkBase(x.maBase) + '" target="_blank" rel="noopener" title="Mở phiếu trên Base">#' + thoat(x.maBase) + ' ↗</a> ' +
+         '<span class="td-nguon"' + (loi ? ' style="color:var(--clay)"' : '') + '>' + thoat(tt) + '</span>';
+}
+
 function veBangTramCan() {
   var ds = (_tc && _tc.phieu) || [];
   if (!ds.length) {
@@ -3383,7 +3400,8 @@ function veBangTramCan() {
   _tcTrang = _tc.trang || 1;
   var h = '<thead><tr><th>Số phiếu</th><th>Giờ cân</th><th>Đội</th><th>Tổ · phiên</th><th>Lô</th><th>Phiếu nội trạm</th>' +
           '<th>Xe</th><th>Tài xế</th><th>Hàng</th><th class="p">Cân tổng</th><th class="p">Cân bì</th><th class="p">Hàng (kg)</th>' +
-          '<th class="p" title="DRC thật: phòng QLCL báo cho ngày + đội + loại mủ của phiếu (nhập ở tab DRC thật)">DRC thật (%)</th><th class="p" title="Hàng × DRC thật">Quy khô thật (kg)</th></tr></thead><tbody>';
+          '<th class="p" title="DRC thật: phòng QLCL báo cho ngày + đội + loại mủ của phiếu (nhập ở tab DRC thật)">DRC thật (%)</th><th class="p" title="Hàng × DRC thật">Quy khô thật (kg)</th>' +
+          '<th title="Phiếu duyệt trên Base.vn của phiếu cân (gửi từ nút &quot;Gửi duyệt Base&quot;) và trạng thái">Phiếu Base</th></tr></thead><tbody>';
   ds.forEach(function (x) {
     var zs = x.zones || [];
     h += '<tr><td class="num">' + thoat(x.ma) + (zs.length > 1 ? ' <span class="td-nguon" title="Một chuyến chở mủ của ' + zs.length + ' tổ">gộp ' + zs.length + '</span>' : '') +
@@ -3395,7 +3413,8 @@ function veBangTramCan() {
          '</td><td>' + thoat(TEN_NGAN_LOAI_MU[x.loaiMu] || x.hang) + '</td><td class="p num">' + soVN(x.canTong, 0) +
          '</td><td class="p num">' + soVN(x.canBi, 0) + '</td><td class="p num"><b>' + soVN(x.kg, 0) + '</b></td>' +
          '<td class="p num">' + (x.drc === null || x.drc === undefined ? '<span class="nhan-mo">—</span>' : soVN(x.drc, 2)) + '</td>' +
-         '<td class="p num">' + (x.quyKho === null || x.quyKho === undefined ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(x.quyKho, 0) + '</b>') + '</td></tr>';
+         '<td class="p num">' + (x.quyKho === null || x.quyKho === undefined ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(x.quyKho, 0) + '</b>') + '</td>' +
+         '<td>' + tcOPhieuBase(x) + '</td></tr>';
   });
   $('bangTC').innerHTML = h + '</tbody>';
   $('phanTrangTC').innerHTML = soTrang > 1
@@ -3428,13 +3447,14 @@ function _xuatTramCan(dAll) {
   var ds = (dAll && dAll.phieu) || [];
   if (!ds.length) { baoLoi('thongBao', 'Không có phiếu cân để xuất.'); return; }
   var nhan = ['Số phiếu', 'Giờ cân tổng', 'Giờ cân bì', 'Đội', 'Tổ', 'Phiên', 'Lô', 'Số phiếu nội trạm', 'Biển số xe', 'Tài xế',
-              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'DRC thật (%)', 'Quy khô thật (kg)', 'Ghi chú'];
+              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'DRC thật (%)', 'Quy khô thật (kg)', 'Ghi chú',
+              'Phiếu Base', 'Trạng thái duyệt'];
   var dong = ds.map(function (x) {
     var zs = x.zones || [];
     return [x.ma, x.gioTong, x.gioBi, x.doi, zs.map(function (z) { return z.to || 'Zone ' + z.zone; }).join('; '),
             zs.map(function (z) { return z.phien; }).join('; '), zs.map(function (z) { return z.lo; }).join(' | '), x.nt, x.xe, x.taiXe,
             x.hang, x.canTong, x.canBi, x.kg, x.drc === null || x.drc === undefined ? '' : x.drc,
-            x.quyKho === null || x.quyKho === undefined ? '' : x.quyKho, x.ghiChu];
+            x.quyKho === null || x.quyKho === undefined ? '' : x.quyKho, x.ghiChu, x.maBase || '', tcTrangThaiBase(x)];
   });
   xuatBangExcel('tram_can_' + String(dAll.tu || '') + '_' + String(dAll.den || '') + '.xlsx', nhan, dong);
 }
