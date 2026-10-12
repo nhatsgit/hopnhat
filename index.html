@@ -708,6 +708,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 html:not(.an-nhat) .khong-nhat{display:none !important}
 /* Vườn cây: dòng bất thường (cửa sổ mở từ thẻ "Dòng bất thường") */
 tr.bat-thuong td{background:var(--clay-soft)}
+/* Bảng phiếu nội trạm: cột nút Xem dính mép phải, luôn thấy kể cả khi bảng rộng phải cuộn ngang */
+#bangPhieu th:last-child,#bangPhieu td.td-xem{position:sticky;right:0;z-index:1;background:var(--card);box-shadow:-8px 0 8px -8px rgba(0,0,0,.2)}
+#bangPhieu th:last-child{background:var(--paper);z-index:2}
+#bangPhieu tbody tr:hover td.td-xem{background:var(--leaf-soft)}
 .vi-bt{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;font-size:11px;font-weight:600;
   background:var(--clay-soft);color:var(--clay);white-space:nowrap}
 .kpi.bam-duoc{cursor:pointer}
@@ -2212,7 +2216,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 207;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 208;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -2450,6 +2454,12 @@ function lopLoaiMu(ma) {
 /** Thứ tự + tên ngắn loại mủ cho tiêu đề bảng so sánh (mủ chén/mủ dây là 2 loại chính). */
 var THU_TU_LOAI_MU = ['MU_DONG', 'MU_DAY', 'MU_DAT', 'MU_TAP', 'MU_NUOC'];
 var TEN_NGAN_LOAI_MU = { MU_DONG: 'Mủ chén', MU_DAY: 'Mủ dây', MU_DAT: 'Mủ đất', MU_TAP: 'Mủ tạp', MU_NUOC: 'Mủ nước' };
+
+/** Đặt lại tên hiển thị cho gọn thống nhất: MU_DONG = "Mủ đông chén" (danh mục gốc ghi "Mủ đông (mủ chén)"). */
+function chuanMeta(m) {
+  ((m && m.loaiMu) || []).forEach(function (x) { if (x.ma === 'MU_DONG') x.ten = 'Mủ đông chén'; });
+  return m;
+}
 
 function tenLoaiMu(ma) {
   if (!S.meta) return ma;
@@ -3975,17 +3985,17 @@ function taiBangPhieu() {
             (coThatP ? '<th class="p" title="DRC phòng QLCL báo (tab DRC thật), từng loại mủ">DRC thật</th>' +
               '<th class="p" title="Kg phiếu × (kg trạm cân của đội ÷ kg sổ đã duyệt của đội, cùng ngày + loại mủ)">Sản lượng thật (kg)</th>' +
               '<th class="p" title="Sản lượng thật × DRC thật">Quy khô thật (kg)</th>' : '') +
-            '<th>Trạng thái</th><th class="p">Đối chiếu</th><th></th></tr></thead><tbody>';
+            '<th>Trạng thái</th><th></th></tr></thead><tbody>';
 
     if (!d.rows.length) {
-      h += '<tr><td colspan="' + (coThatP ? 12 : 9) + '"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';   // (số cột không đổi: Phiếu Base chuyển lên đầu)
+      h += '<tr><td colspan="' + (coThatP ? 11 : 8) + '"><div class="rong">Không có phiếu nào trong khoảng đã chọn.</div></td></tr>';
     }
     for (var i = 0; i < d.rows.length; i++) {
       var p = d.rows[i];
       var ct = '';
       for (var j = 0; j < p.chiTiet.length; j++) {
         ct += '<span class="vi ' + lopLoaiMu(p.chiTiet[j].loaiMu) + '" style="margin-right:4px">' +
-              thoat(p.chiTiet[j].tenLoai) + ' ' + soVN(p.chiTiet[j].kg, 1) + '</span>';
+              thoat(tenLoaiMu(p.chiTiet[j].loaiMu)) + ' ' + soVN(p.chiTiet[j].kg, 1) + '</span>';
       }
       if (!ct) ct = '<span class="nhan-mo">Chưa có dòng chi tiết</span>';
 
@@ -4004,10 +4014,7 @@ function taiBangPhieu() {
         '<td>' + viTrangThai(p.trangThai) +
           (p.soDongChoDuyet ? ' <span class="nhan-mo">' + p.soDongChoDuyet + '/' +
              p.soDongSanLuong + ' dòng</span>' : '') + '</td>' +
-        '<td class="p">' + (p.khop
-            ? '<span class="vi ok">Khớp</span>'
-            : '<span class="vi canh">Lệch ' + soVN(Math.abs(p.tongChiTiet - p.kg), 2) + '</span>') + '</td>' +
-        '<td><button class="btn nho" data-phieu="' + thoat(p.ma) + '">Xem</button></td>' +
+        '<td class="td-xem"><button class="btn nho" data-phieu="' + thoat(p.ma) + '">Xem</button></td>' +
         '</tr>';
     }
     h += '</tbody>';
@@ -4046,7 +4053,7 @@ function moPhieu(ma) {
          (coThatM ? '<th class="p">DRC thật</th><th class="p">Sản lượng thật (kg)</th><th class="p">Quy khô thật (kg)</th>' : '') + '</tr></thead><tbody>';
     for (var i = 0; i < p.chiTiet.length; i++) {
       var c = p.chiTiet[i];
-      h += '<tr><td><span class="vi ' + lopLoaiMu(c.loaiMu) + '">' + thoat(c.tenLoai) + '</span></td>' +
+      h += '<tr><td><span class="vi ' + lopLoaiMu(c.loaiMu) + '">' + thoat(tenLoaiMu(c.loaiMu)) + '</span></td>' +
            '<td class="p num">' + soVN(c.kg, 2) + '</td>' +
            '<td class="p num">' + (p.kg ? soVN(c.kg / p.kg * 100, 1) + '%' : '—') + '</td>' +
            (coThatM ? oDrcThat(c, 'drcThat') + oDrcThat(c, 'kgThat') + oDrcThat(c, 'quyKhoThat') : '') + '</tr>';
@@ -11450,7 +11457,7 @@ function vaoApp(d, vtChon) {
   // Sóng yếu: có bản lưu thì không chờ quá 8 giây
   if (metaLuu && navigator.onLine) huaMeta = Promise.race([huaMeta, new Promise(function (ok) { setTimeout(function () { ok(metaLuu); }, 8000); })]);
   huaMeta.then(function (m) {
-    S.meta = m;
+    S.meta = chuanMeta(m);
 
     var sl = $('fLoaiMu');
     sl.innerHTML = '<option value="">Tất cả</option>';
@@ -12075,7 +12082,7 @@ ganSuKienBaoCaoTD();
  */
 function moNhanh(ham, nut) {
   if (!S.meta) {
-    try { var luu = JSON.parse(docLS('crck2_meta_offline') || 'null'); if (luu) S.meta = luu; } catch (e) { /* bỏ qua */ }
+    try { var luu = JSON.parse(docLS('crck2_meta_offline') || 'null'); if (luu) S.meta = chuanMeta(luu); } catch (e) { /* bỏ qua */ }
   }
   if (S.meta && S.dsCn && S.dsCn.length) { ham(); return; }
   if (!navigator.onLine) {
