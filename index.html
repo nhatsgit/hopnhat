@@ -2210,7 +2210,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 193;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 194;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 if (!CO_SO_NHAT) document.documentElement.classList.add('an-nhat');
 if (!CO_SO_NHAT) document.addEventListener('DOMContentLoaded', function () {
@@ -3319,7 +3319,9 @@ function taiTramCan() {
   $('kpisTC').innerHTML = skKpis(4);
   $('bdTcNgay').innerHTML = skKhoi(); $('bdTcDoi').innerHTML = skKhoi();
   $('bangTcXe').innerHTML = skBang(3); $('bangTC').innerHTML = skBang(6); $('phanTrangTC').innerHTML = '';
-  _tcThamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay, doi: bl.doi, to: bl.to, loaiMu: bl.loaiMu };
+  // trangThai + docSheet: "Chưa duyệt" gồm cả phiếu cân đang duyệt trên Base (Admin: docSheet=1 để đọc Sheet, BigQuery chỉ có dòng đã duyệt)
+  _tcThamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay, doi: bl.doi, to: bl.to, loaiMu: bl.loaiMu,
+                trangThai: bl.trangThai, docSheet: bl.docSheet };
   _tcTrang = 1;
   goiCache('tramCan', Object.assign({ trang: 1, moiTrang: TC_MOI_TRANG }, _tcThamSo))
     .then(function (d) {
@@ -3380,6 +3382,7 @@ function veBangTramCan() {
   ds.forEach(function (x) {
     var zs = x.zones || [];
     h += '<tr><td class="num">' + thoat(x.ma) + (zs.length > 1 ? ' <span class="td-nguon" title="Một chuyến chở mủ của ' + zs.length + ' tổ">gộp ' + zs.length + '</span>' : '') +
+         (x.trangThai && x.trangThai !== 'DA_DUYET' ? ' <span class="td-nguon" title="Phiếu cân đang chờ duyệt trên Base — duyệt xong mới tính vào số liệu đã duyệt">đang duyệt</span>' : '') +
          '</td><td>' + thoat(x.gioTong.substring(8, 10) + '/' + x.gioTong.substring(5, 7) + ' ' + x.gioTong.substring(11)) +
          '</td><td>' + thoat(x.doi) + '</td><td>' + zs.map(function (z) { return thoat((z.to || 'Zone ' + z.zone) + (z.phien ? ' · ' + z.phien : '')); }).join('<br>') +
          '</td><td>' + zs.map(function (z) { return thoat(z.lo); }).join('<br>') +
