@@ -708,6 +708,10 @@ tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line
 html:not(.an-nhat) .khong-nhat{display:none !important}
 /* Vườn cây: dòng bất thường (cửa sổ mở từ thẻ "Dòng bất thường") */
 tr.bat-thuong td{background:var(--clay-soft)}
+/* Đầu cửa sổ chi tiết phiếu / dòng bất thường: thay "In phiếu" bằng "Xuất Excel" bảng dòng sản lượng */
+#nutXuatPhieu{display:none}
+#nenPhieu.co-xuat #nutXuatPhieu{display:inline-block}
+#nenPhieu.co-xuat #nutInPhieu{display:none !important}
 /* Cửa sổ chi tiết phiếu: danh sách dòng sản lượng cuộn riêng (tiêu đề + dòng cộng dính trên/dưới), phần tóm tắt phía trên đứng yên */
 .cuon-dong-sl{overflow:auto;max-height:min(440px,50vh);-webkit-overflow-scrolling:touch}
 .cuon-dong-sl thead th{position:sticky;top:0;z-index:2}
@@ -1841,6 +1845,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
   <div class="hop-thoai">
     <div class="dau-hop">
       <h2 id="tieuDePhieu">Phiếu nội trạm</h2>
+      <button class="btn nho" id="nutXuatPhieu" title="Xuất bảng dòng sản lượng bên dưới ra Excel">Xuất Excel</button>
       <button class="btn nho" id="nutInPhieu">In phiếu</button>
       <button class="btn nho" id="nutDongPhieu">Đóng</button>
     </div>
@@ -2220,7 +2225,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 211;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 212;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3986,6 +3991,7 @@ function bangDongSanLuong(d, boCot) {
 function moDongBatThuong() {
   $('nutInPhieu').style.display = 'none';
   $('nenPhieu').classList.add('hien');
+  batNutXuatCuaSo('san_luong_bat_thuong_' + S.maDonVi + '.xlsx');
   $('tieuDePhieu').textContent = 'Dòng sản lượng bất thường';
   $('thanPhieu').innerHTML = skDong(4);
   var bl = layBoLoc();
@@ -3997,6 +4003,7 @@ function moDongBatThuong() {
             (d.tong > d.rows.length ? ' — hiện ' + soVN(d.rows.length, 0) + ' dòng đầu, thu hẹp bộ lọc để xem phần còn lại' : '') + '.</p>' +
             bangDongSanLuong(d);
     $('thanPhieu').innerHTML = h;
+    sanSangXuatCuaSo(d.rows, !!(d.thongKe && d.thongKe.that));
     ganSuaXoaDong($('thanPhieu'), d.rows);
   }).catch(function (e) {
     $('thanPhieu').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>';
@@ -4097,8 +4104,22 @@ function taiBangPhieu() {
   });
 }
 
+/** Dữ liệu nút "Xuất Excel" của cửa sổ phiếu / dòng bất thường: bảng dòng sản lượng đang hiện. */
+var _xuatDongCuaSo = null;
+function batNutXuatCuaSo(ten) {
+  _xuatDongCuaSo = null;
+  $('nutXuatPhieu').disabled = true;
+  $('nutXuatPhieu').dataset.ten = ten;
+  $('nenPhieu').classList.add('co-xuat');
+}
+function sanSangXuatCuaSo(rows, coThat) {
+  _xuatDongCuaSo = { rows: rows, coThat: coThat };
+  $('nutXuatPhieu').disabled = !rows.length;
+}
+
 function moPhieu(ma) {
   $('nenPhieu').classList.add('hien');
+  batNutXuatCuaSo('san_luong_' + ma + '.xlsx');
   $('tieuDePhieu').textContent = 'Phiếu ' + ma;
   $('thanPhieu').innerHTML = skDong(4);
 
@@ -4142,6 +4163,7 @@ function moPhieu(ma) {
     goiCache('sanLuong', bl).then(function (sl) {
       var kh = $('dongPhieuSL');
       if (!kh) return;
+      sanSangXuatCuaSo(sl.rows, !!(sl.thongKe && sl.thongKe.that));
       kh.innerHTML = bangDongSanLuong(sl, ['base', 'ngay', 'to']) +
         (sl.tong > sl.rows.length ? '<p class="goi-y">Hiện ' + soVN(sl.rows.length, 0) + '/' + soVN(sl.tong, 0) + ' dòng.</p>' : '');
       ganSuaXoaDong(kh, sl.rows);   // sửa / xoá dòng chờ duyệt ngay trong phiếu
@@ -8599,6 +8621,28 @@ function csvLuongTatCa(bl) {
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
+/** Xuất danh sách dòng sản lượng (rows từ lệnh sanLuong / xuatTatCa) ra Excel — dùng cho nút Xuất của tab và của cửa sổ phiếu. */
+function xuatDongSanLuongExcel(rows, coThat, tenFile) {
+  var dong = rows.map(function (r) {
+    return [baoChuBase(r.base), r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
+            r.kg, r.nhat, r.drc, r.quyKho].concat(coThat ? [
+              r.drcThat === undefined ? 'chưa có DRC thật' : r.drcThat,
+              r.drcThat === undefined ? '' : (r.kgThat === null ? 'chưa có cân' : r.kgThat),
+              r.drcThat === undefined ? '' : (r.quyKhoThat === null ? 'chưa có cân' : r.quyKhoThat)] : [])
+            .concat([r.nsbq, r.nguon, r.trangThai, r.ghiChu]);
+  });
+  var tieuDeSl = ['Phiếu Base', 'Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
+     'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC tạm tính áp dụng', 'Quy khô tạm tính (kg)']
+     .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [])
+     .concat(['NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú']);
+  if (!CO_SO_NHAT) {   // giữ cột số nhát (đã mở nhập), bỏ riêng NSBQ kg/nhát
+    var iNs = tieuDeSl.indexOf('NSBQ (kg/nhát)');
+    tieuDeSl.splice(iNs, 1);
+    dong.forEach(function (r) { r.splice(iNs, 1); });
+  }
+  xuatBangExcel(tenFile, tieuDeSl, dong);
+}
+
 function csvSanLuong() {
   baoLoi('thongBao', '');
   goiAPI('xuatTatCa', layBoLoc()).then(function (d) {
@@ -8606,25 +8650,7 @@ function csvSanLuong() {
       baoLoi('thongBao', 'Có ' + soVN(d.tong, 0) + ' dòng nhưng mỗi lần chỉ xuất tối đa ' + soVN(d.rows.length, 0) +
         ' dòng — thu hẹp khoảng ngày rồi xuất tiếp phần còn lại.');
     }
-    var coThat = !!d.coThat;
-    var dong = d.rows.map(function (r) {
-      return [baoChuBase(r.base), r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
-              r.kg, r.nhat, r.drc, r.quyKho].concat(coThat ? [
-                r.drcThat === undefined ? 'chưa có DRC thật' : r.drcThat,
-                r.drcThat === undefined ? '' : (r.kgThat === null ? 'chưa có cân' : r.kgThat),
-                r.drcThat === undefined ? '' : (r.quyKhoThat === null ? 'chưa có cân' : r.quyKhoThat)] : [])
-              .concat([r.nsbq, r.nguon, r.trangThai, r.ghiChu]);
-    });
-    var tieuDeSl = ['Phiếu Base', 'Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
-       'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC tạm tính áp dụng', 'Quy khô tạm tính (kg)']
-       .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [])
-       .concat(['NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú']);
-    if (!CO_SO_NHAT) {   // giữ cột số nhát (đã mở nhập), bỏ riêng NSBQ kg/nhát
-      var iNs = tieuDeSl.indexOf('NSBQ (kg/nhát)');
-      tieuDeSl.splice(iNs, 1);
-      dong.forEach(function (r) { r.splice(iNs, 1); });
-    }
-    xuatBangExcel('san_luong_' + S.maDonVi + '.xlsx', tieuDeSl, dong);
+    xuatDongSanLuongExcel(d.rows, !!d.coThat, 'san_luong_' + S.maDonVi + '.xlsx');
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -10410,6 +10436,7 @@ var _dangSua = null;
 
 function moSuaSanLuong(r) {
   _dangSua = r;
+  $('nenPhieu').classList.remove('co-xuat');
   $('tieuDePhieu').textContent = 'Sửa sản lượng ' + r.ma;
   $('nutInPhieu').style.display = 'none';
   $('nenPhieu').classList.add('hien');
@@ -12227,6 +12254,7 @@ new MutationObserver(function () {
   // Chỉ gỡ khi đang có: classList.remove luôn ghi lại thuộc tính class -> tự kích hoạt observer -> lặp vô tận
   var c = $('nenPhieu').classList;
   if (!c.contains('hien') && c.contains('form-to')) c.remove('form-to');
+  if (!c.contains('hien') && c.contains('co-xuat')) c.remove('co-xuat');
 }).observe($('nenPhieu'), { attributes: true, attributeFilter: ['class'] });
 
 $('oMaDonVi').onkeydown = function (ev) { if (ev.key === 'Enter') $('nutVao').click(); };
@@ -12475,6 +12503,10 @@ $('nutCsvXH').onclick = csvXepHang;
 
 $('nutDongPhieu').onclick = function () { dongSuaSanLuong(); };
 $('nutInPhieu').onclick = function () { window.print(); };
+$('nutXuatPhieu').onclick = function () {
+  if (!_xuatDongCuaSo || !_xuatDongCuaSo.rows.length) return;
+  xuatDongSanLuongExcel(_xuatDongCuaSo.rows, _xuatDongCuaSo.coThat, this.dataset.ten || 'san_luong.xlsx');
+};
 $('nenPhieu').onclick = function (ev) {
   if (ev.target === this) this.classList.remove('hien');
 };
