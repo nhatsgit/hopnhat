@@ -1080,6 +1080,27 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <div class="cuon cuon-doc"><table id="bangTC"></table></div>
         <div class="phan-trang" id="phanTrangTC"></div>
       </div>
+
+      <!-- Phiếu cân nhà máy (SCADA) CHƯA duyệt — mọi công ty (CRCK2 / BHCK / mua ngoài), kể cả phiếu chưa gửi Base. Quyền: scadaPhieuCan. -->
+      <div class="the" id="theScada" style="margin-top:20px;display:none">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatScada">Phiếu cân SCADA chưa duyệt</h3>
+          <select class="o" id="scCongTy" style="width:auto" title="Lọc theo công ty"></select>
+          <select class="o" id="scTrangThai" style="width:auto" title="Lọc theo trạng thái duyệt">
+            <option value="">Mọi trạng thái chưa duyệt</option>
+            <option value="CHUA_GUI">Chưa gửi duyệt</option>
+            <option value="DANG_DUYET">Đang duyệt (Base)</option>
+            <option value="SUA_SAU_DUYET">Sửa sau duyệt</option>
+            <option value="LOAI">Đã loại khỏi phiếu</option>
+          </select>
+          <button class="btn nho" id="nutScadaTai" title="Tải lại từ SCADA">Tải lại</button>
+          <button class="btn nho" id="nutScadaXuat">Xuất Excel</button>
+        </div>
+        <div class="kpis" id="kpisScada" style="padding:0 16px 12px"></div>
+        <div class="cuon cuon-doc"><table id="bangScada"></table></div>
+        <p class="goi-y" id="ghiChuScada" style="padding:0 16px"></p>
+        <div class="phan-trang" id="phanTrangScada"></div>
+      </div>
     </section>
 
     <!-- Tab: DRC thật (nhóm Sản lượng) — nhập DRC phòng QLCL báo mỗi ngày mỗi đội; quy khô thật = phiếu cân của đội × DRC -->
@@ -2225,7 +2246,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 212;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 213;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3348,6 +3369,7 @@ function taiTramCan() {
   _tcThamSo = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay, doi: bl.doi, to: bl.to, loaiMu: bl.loaiMu,
                 trangThai: bl.trangThai, docSheet: bl.docSheet };
   _tcTrang = 1;
+  taiScadaChuaDuyet(bl);
   goiCache('tramCan', Object.assign({ trang: 1, moiTrang: TC_MOI_TRANG }, _tcThamSo))
     .then(function (d) {
       if (lan !== _tcLan) return;
@@ -3358,6 +3380,95 @@ function taiTramCan() {
       $('kpisTC').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
       ['bdTcNgay', 'bdTcDoi', 'bangTcXe', 'bangTC'].forEach(function (id) { $(id).innerHTML = ''; });
     });
+}
+
+/* ---------- Phiếu cân SCADA chưa duyệt (mọi công ty) — bảng cuối tab Trạm cân ---------- */
+var _scada = null, _scadaLan = 0, _scadaTrang = 1;
+var SC_MOI_TRANG = 100;
+var TEN_CONG_TY_PC = { CRCK2: 'CRCK2', BHCK: 'BHCK', MUA_NGOAI: 'Mua ngoài', KHAC: 'Khác' };
+var TEN_TT_SCADA = { CHUA_GUI: 'Chưa gửi duyệt', DANG_DUYET: 'Đang duyệt (Base)', SUA_SAU_DUYET: 'Sửa sau duyệt', LOAI: 'Đã loại khỏi phiếu' };
+
+function scKhoaTrangThai(x) { return x.trangThai || 'CHUA_GUI'; }
+
+function taiScadaChuaDuyet(bl) {
+  var the = $('theScada');
+  if (!coQuyen('scadaPhieuCan', 'XEM')) { the.style.display = 'none'; return; }
+  the.style.display = '';
+  var lan = ++_scadaLan;
+  _scadaTrang = 1;
+  $('bangScada').innerHTML = skBang(6); $('kpisScada').innerHTML = skKpis(4); $('phanTrangScada').innerHTML = ''; $('ghiChuScada').textContent = '';
+  $('nutScadaTai').onclick = function () { _cacheFE = {}; taiScadaChuaDuyet(layBoLoc()); };
+  $('nutScadaXuat').onclick = xuatScada;
+  $('scCongTy').onchange = $('scTrangThai').onchange = function () { _scadaTrang = 1; veScada(); };
+  goiAPI('danhSachScada', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: bl.tuNgay, denNgay: bl.denNgay }, 120000).then(function (d) {
+    if (lan !== _scadaLan) return;
+    _scada = d;
+    var cu = $('scCongTy').value;
+    var h = '<option value="">Tất cả công ty</option>';
+    Object.keys(d.theoCongTy || {}).sort().forEach(function (c) {
+      h += '<option value="' + thoat(c) + '">' + thoat(TEN_CONG_TY_PC[c] || c) + ' (' + soVN(d.theoCongTy[c].soPhieu, 0) + ' phiếu)</option>';
+    });
+    $('scCongTy').innerHTML = h;
+    if (cu && d.theoCongTy && d.theoCongTy[cu]) $('scCongTy').value = cu;
+    veScada();
+  }).catch(function (e) {
+    if (lan !== _scadaLan) return;
+    _scada = null;
+    $('kpisScada').innerHTML = '';
+    $('bangScada').innerHTML = '<tbody><tr><td><div class="bao-loi">' + thoat(e.message) + '</div></td></tr></tbody>';
+  });
+}
+
+function scDongDangLoc() {
+  if (!_scada) return [];
+  var ct = $('scCongTy').value, tt = $('scTrangThai').value;
+  return (_scada.dong || []).filter(function (x) { return (!ct || x.congTy === ct) && (!tt || scKhoaTrangThai(x) === tt); });
+}
+
+function veScada() {
+  var d = _scada;
+  if (!d) return;
+  var ds = scDongDangLoc(), dem = {}, kg = 0;
+  ds.forEach(function (x) { var k = scKhoaTrangThai(x); dem[k] = (dem[k] || 0) + 1; kg += x.khoiLuongMu || 0; });
+  $('tomTatScada').textContent = 'Phiếu cân SCADA chưa duyệt · ' + (d.tu ? ngayVN(d.tu) : '…') + ' – ' + (d.den ? ngayVN(d.den) : '…') +
+    ' · ' + soVN(ds.length, 0) + ' phiếu';
+  $('kpisScada').innerHTML =
+    the_kpi_kg('Chưa duyệt', kg, soVN(ds.length, 0) + ' phiếu') +
+    the_kpi('Chưa gửi duyệt', soVN(dem.CHUA_GUI || 0, 0), 'phiếu', 'Chưa đưa lên Base') +
+    the_kpi('Đang duyệt (Base)', soVN(dem.DANG_DUYET || 0, 0), 'phiếu', 'Đã gửi Base, chờ duyệt — vẫn tính là chưa duyệt') +
+    the_kpi_canh((dem.SUA_SAU_DUYET || 0) > 0, 'Sửa sau duyệt', soVN(dem.SUA_SAU_DUYET || 0, 0), 'phiếu', 'SCADA gửi bản mới sau khi đã duyệt') +
+    the_kpi('Đã duyệt trong kỳ', soVN((d.dem && d.dem.daDuyet) || 0, 0), 'phiếu', 'Không liệt kê ở bảng này');
+  var tr = (_scadaTrang - 1) * SC_MOI_TRANG, trang = ds.slice(tr, tr + SC_MOI_TRANG);
+  var h = '<thead><tr><th>Phiếu Base</th><th>Số phiếu</th><th>Giờ cân</th><th>Công ty</th><th>Nguồn gốc</th><th>Biển số</th><th>Tài xế</th>' +
+          '<th>Lát cạo / zone</th><th>Tên lô</th><th class="p">Khối lượng mủ (kg)</th><th>Trạng thái</th></tr></thead><tbody>';
+  if (!trang.length) h += '<tr><td colspan="11"><div class="rong">Không có phiếu cân SCADA chưa duyệt trong khoảng đã chọn.</div></td></tr>';
+  trang.forEach(function (x) {
+    var k = scKhoaTrangThai(x);
+    var lop = k === 'CHUA_GUI' ? 'canh' : (k === 'LOAI' ? 'nhan-mo' : 'canh');
+    h += '<tr><td>' + (x.maPhieuBase ? tdTheBase(x.maPhieuBase, 'tay', 'Phiếu Base #' + x.maPhieuBase, '#' + thoat(x.maPhieuBase)) : '<span class="nhan-mo">—</span>') + '</td>' +
+      '<td><b>' + thoat(x.ma) + '</b></td><td>' + thoat(x.gioCanTong || x.thoiGian) + '</td>' +
+      '<td>' + thoat(TEN_CONG_TY_PC[x.congTy] || x.congTy) + '</td><td>' + thoat(x.nguonGoc) + '</td>' +
+      '<td>' + thoat(x.bienSoXe) + '</td><td>' + thoat(x.taiXe) + '</td><td>' + thoat(x.latCao) + '</td><td>' + thoat(x.tenLo) + '</td>' +
+      '<td class="p num">' + (x.khoiLuongMu === null || x.khoiLuongMu === undefined ? '—' : soVN(x.khoiLuongMu, 2)) + '</td>' +
+      '<td><span class="vi ' + lop + '">' + thoat(TEN_TT_SCADA[k] || k) + '</span></td></tr>';
+  });
+  $('bangScada').innerHTML = h + '</tbody>';
+  var soTrang = Math.max(1, Math.ceil(ds.length / SC_MOI_TRANG));
+  vePhanTrang('phanTrangScada', { trang: _scadaTrang, soTrang: soTrang }, ds.length, function (t) { _scadaTrang = t; veScada(); });
+  $('ghiChuScada').textContent = d.cat ? 'Chỉ hiện ' + soVN(d.dong.length, 0) + '/' + soVN(d.tong, 0) + ' phiếu mới nhất — thu hẹp khoảng ngày để xem phần còn lại.' :
+    'Dữ liệu SCADA nhà máy gửi sang; phiếu đã duyệt không liệt kê. Gửi duyệt qua nút "Gửi duyệt Base" phía trên.';
+}
+
+function xuatScada() {
+  var ds = scDongDangLoc();
+  if (!ds.length) { baoLoi('thongBao', 'Không có phiếu nào để xuất.'); return; }
+  var nhan = ['Số phiếu', 'Ngày', 'Giờ cân tổng', 'Công ty', 'Nguồn gốc', 'Biển số xe', 'Tài xế', 'Lát cạo / zone', 'Tên lô', 'Số phiếu nội trạm',
+              'Chủng loại', 'Khối lượng mủ (kg)', 'Trạng thái', 'Mã phiếu Base'];
+  var dong = ds.map(function (x) {
+    return [x.ma, x.ngay, x.gioCanTong || x.thoiGian, TEN_CONG_TY_PC[x.congTy] || x.congTy, x.nguonGoc, x.bienSoXe, x.taiXe, x.latCao, x.tenLo,
+            x.soPhieuNt, x.chungLoai, x.khoiLuongMu, TEN_TT_SCADA[scKhoaTrangThai(x)] || '', x.maPhieuBase];
+  });
+  xuatBangExcel('phieu_can_scada_chua_duyet_' + (_scada.tu || '') + '_' + (_scada.den || '') + '.xlsx', nhan, dong);
 }
 
 function veTramCan(d) {
