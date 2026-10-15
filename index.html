@@ -286,6 +286,10 @@ button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
   gap:12px;padding:16px;overflow-y:auto}
 .bo-loc .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap;
   position:sticky;bottom:0;background:var(--card);padding-top:8px;margin-top:4px}
+/* Khung nhập trong cửa sổ (sửa/nhập 1 người, sửa chấm công, đề xuất biến động…): lưới ô nhập. Trước đây dùng nhầm class .bo-loc
+   (nay là tấm lọc trượt từ dưới, mặc định ẩn) nên cửa sổ hiện trống. */
+.form-luoi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px}
+.form-luoi .hanh-dong{display:flex;gap:8px;align-items:flex-end;grid-column:1/-1;flex-wrap:wrap}
 /* Bộ lọc mặc định THU GỌN thành nút nhỏ (icon phễu + "Bộ lọc") + chip điều kiện đang lọc bên phải — giống nhau
    ở mọi màn. Bấm thì khung lọc TRƯỢT LÊN TỪ DƯỚI kèm nền mờ (đóng bằng ✕ / nền mờ / Esc / Áp dụng); màn rộng
    tấm rộng tối đa 980px giữa màn, điện thoại rộng hết. */
@@ -2246,7 +2250,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 213;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 214;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -8556,7 +8560,7 @@ function moSuaChamCong(r) {
       '<div><span>Công nhân</span><b>' + thoat(r.maCn) + '</b></div>' +
       '<div><span>Tổ</span><b>' + thoat(r.to) + '</b></div>' +
     '</div>' +
-    '<div class="bo-loc the" style="margin-bottom:16px">' + formChamCong(r) + '</div>' +
+    '<div class="the form-luoi" style="margin-bottom:16px">' + formChamCong(r) + '</div>' +
     '<div id="loiCC"></div>' +
     '<p class="goi-y">Số công tự lấy theo ký hiệu. Phần cạo tự suy từ giao khoán theo phiên đã chọn.</p>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
@@ -8584,7 +8588,7 @@ function moThemChamCong() {
   if (!dsCn.length) for (var j = 0; j < S.dsCn.length; j++) dsCn.push({ ma: S.dsCn[j], ten: S.dsCn[j] });
 
   $('thanPhieu').innerHTML =
-    '<div class="bo-loc the" style="margin-bottom:16px">' +
+    '<div class="the form-luoi" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="cNgay">Ngày</label>' +
         '<input class="o" id="cNgay" type="date" value="' + thoat($('fDenNgay').value || '') + '"></div>' +
       '<div><label class="nhan" for="cCn">Công nhân</label>' +
@@ -8901,7 +8905,7 @@ function moThemSanLuong() {
   var ngayMD = $('fDenNgay').value || (S.meta && S.meta.ngayMax) || '';
 
   $('thanPhieu').innerHTML =
-    '<div class="bo-loc the" style="margin-bottom:16px">' +
+    '<div class="the form-luoi" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="tNgay">Ngày</label>' +
         '<input class="o" id="tNgay" type="date" value="' + thoat(ngayMD) + '"></div>' +
       '<div><label class="nhan" for="tCn">Công nhân</label>' +
@@ -10574,7 +10578,7 @@ function moSuaSanLuong(r) {
       '<div><span>Tổ</span><b>' + thoat(r.to) + '</b></div>' +
       '<div><span>Phiên</span><b>' + thoat(r.phien || '—') + '</b></div>' +
     '</div>' +
-    '<div class="bo-loc the" style="margin-bottom:16px">' +
+    '<div class="the form-luoi" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="sKg">Sản lượng (kg)</label>' +
         '<input class="o" id="sKg" type="number" step="0.01" min="0" value="' + r.kg + '"></div>' +
       '<div class="nhap-nhat"><label class="nhan" for="sNhat">Số nhát cạo</label>' +
@@ -12040,7 +12044,7 @@ function nsMoDeXuat(loai, r) {
   var mo = function (dsViTri) {
     var h = '<div class="dong-tt"><div><span>Người</span><b>' + thoat(r.ten) + '</b></div><div><span>Mã hiện tại</span><b>' + thoat(r.maCn || '—') +
       '</b></div><div><span>Đơn vị</span><b>' + thoat(r.to || r.doi || '—') + '</b></div></div>' +
-      '<div class="bo-loc the" style="margin-bottom:12px">' +
+      '<div class="the form-luoi" style="margin-bottom:12px">' +
       (can ? '<div style="grid-column:1/-1"><label class="nhan" for="dxMa">Mã vị trí trống' + (loai === 'CHUYEN_TO' ? ' (tổ khác, cùng đội)' : '') + '</label><select class="o" id="dxMa">' +
         nsOptViTri(dsViTri, loai === 'CHUYEN_TO' ? r.to : '') + '</select></div>' : '') +
       nsKhungChung(loai === 'NGHI_VIEC' ? 'Lý do nghỉ việc' : 'Ghi chú') + '</div>' +
@@ -12083,7 +12087,7 @@ function nsMoTuyenMoi() {
   nsGoi('viTriNS', { trangThai: 'CHUA_GIAO', moiTrang: 300 }).then(function (d) {
     var dsTo = '<option value="">— chọn tổ —</option>';
     for (var i = 0; i < S.dsTo.length; i++) dsTo += '<option value="' + thoat(S.dsTo[i].ma) + '">' + thoat(S.dsTo[i].ma) + '</option>';
-    var h = '<div class="bo-loc the" style="margin-bottom:12px">' +
+    var h = '<div class="the form-luoi" style="margin-bottom:12px">' +
       '<div><label class="nhan" for="tmCccd">Số căn cước (9 chữ số)</label><input class="o" id="tmCccd" maxlength="9" inputmode="numeric"></div>' +
       '<div><label class="nhan" for="tmTen">Họ tên (chữ Latin)</label><input class="o" id="tmTen" maxlength="60"></div>' +
       '<div><label class="nhan" for="tmGt">Giới tính</label><select class="o" id="tmGt"><option value="">—</option><option value="NAM">Nam</option><option value="NU">Nữ</option></select></div>' +
@@ -12110,7 +12114,7 @@ function nsMoTuyenMoi() {
 
 function nsMoCapNhat(r) {
   var h = '<div class="dong-tt"><div><span>Người</span><b>' + thoat(r.ten) + '</b></div><div><span>Số căn cước</span><b>' + thoat(r.cccd) + '</b></div></div>' +
-    '<div class="bo-loc the" style="margin-bottom:12px">' +
+    '<div class="the form-luoi" style="margin-bottom:12px">' +
     '<div><label class="nhan" for="cnNssf">Số NSSF</label><input class="o" id="cnNssf" maxlength="40" placeholder="1900725-4446402-ក"></div>' +
     '<div><label class="nhan" for="cnDia">Quê quán</label><input class="o" id="cnDia" maxlength="60"></div></div>' +
     '<div id="cnLoi"></div><p class="goi-y">Chỉ điền ô nào cần đổi. Bỏ trống thì giữ nguyên.</p>' +
@@ -12153,7 +12157,7 @@ function nsTaiBienDong() {
 }
 
 function nsKhungXuLy() {
-  return '<div class="bo-loc the" style="margin-bottom:12px">' +
+  return '<div class="the form-luoi" style="margin-bottom:12px">' +
     '<div><label class="nhan" for="pinTen">Họ tên người xử lý</label><input class="o" id="pinTen" maxlength="60" value="' + thoat(docLS('crck2_ns_nguoi') || '') + '"></div>' +
     '<div style="grid-column:1/-1"><label class="nhan" for="pinGhi">Ghi chú / cách đã xử lý</label><input class="o" id="pinGhi" maxlength="200"></div></div>' +
     '<div id="pinLoi"></div>';
