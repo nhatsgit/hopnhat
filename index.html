@@ -1062,6 +1062,10 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <div class="thanh-nhap-chu"><b>Ngày chia cân theo kế hoạch</b><span>Tổng cân thật của đội chia về tổ theo số kế hoạch nhập, thay cho chia theo sổ tổ</span></div>
         <button class="btn chinh" id="nutKeHoachCan" title="Chọn đội + ngày + loại mủ, nhập kế hoạch từng tổ">Nhập kế hoạch</button>
       </div>
+      <div class="thanh-nhap" id="thanhDemoPC" style="display:none">
+        <div class="thanh-nhap-chu"><b>Dữ liệu demo (chỉ Admin)</b><span>Sinh phiếu cân giả của 1 ngày từ phiếu nội trạm đã nhập ngày đó</span></div>
+        <button class="btn nho" id="nutSinhPcGia">Sinh phiếu cân giả</button>
+      </div>
       <div id="tcLoi"></div>
       <div id="chuGiaiTC"></div>
       <div class="kpis" id="kpisTC"></div>
@@ -1156,6 +1160,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
           <button class="btn nho" id="nutDayBase" style="display:none" title="Chọn tổ + ngày, xem dữ liệu rồi tạo phiếu duyệt trên Base">Đẩy lên Base</button>
           <button class="btn nho" id="nutCsvPhieu" title="Xuất danh sách phiếu nội trạm ra Excel">Xuất phiếu (Excel)</button>
           <button class="btn nho" id="nutCsvSL" title="Xuất từng dòng sản lượng (công nhân × ngày × loại mủ) ra Excel">Xuất sản lượng chi tiết</button>
+          <button class="btn nho" id="nutSinhSlGia" style="display:none" title="Chỉ Admin: sinh sản lượng ngày + phiếu nội trạm giả cho vài tổ để demo">Sinh sản lượng demo</button>
         </div>
         <p class="goi-y" id="ghiChuSL" style="padding:0 16px"></p>
         <div class="cuon cuon-doc"><table id="bangPhieu"></table></div>
@@ -2255,7 +2260,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 219;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 220;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3369,6 +3374,8 @@ function taiTramCan() {
   $('nutPCBase').onclick = moPCBase;
   $('thanhKeHoachCan').style.display = coQuyen('keHoachCan', 'XEM') ? '' : 'none';
   $('nutKeHoachCan').onclick = moKeHoachCan;
+  $('thanhDemoPC').style.display = S.laAdmin ? '' : 'none';
+  $('nutSinhPcGia').onclick = function () { moSinhGia('pc'); };
   $('nutNapTC').style.display = coQuyen('tramCan', 'THEM') ? '' : 'none';
   $('nutNapTC').onclick = function () { $('fileTC').value = ''; $('fileTC').click(); };
   $('fileTC').onchange = function () { tcDocFile(Array.prototype.slice.call(this.files || [])); };
@@ -3391,6 +3398,44 @@ function taiTramCan() {
       $('kpisTC').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
       ['bdTcNgay', 'bdTcDoi', 'bangTcXe', 'bangTC'].forEach(function (id) { $(id).innerHTML = ''; });
     });
+}
+
+/* ---------- Dữ liệu giả để demo (CHỈ ADMIN) ---------- */
+function moSinhGia(loai) {
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+  var pc = loai === 'pc';
+  $('tieuDePhieu').textContent = pc ? 'Sinh phiếu cân giả (demo)' : 'Sinh sản lượng giả (demo)';
+  var dsDoi = (S.dsDoi || []).slice();
+  $('thanPhieu').innerHTML =
+    '<p class="goi-y" style="margin-top:0">' + (pc
+      ? 'Tạo phiếu cân giả cho 1 ngày dựa trên sổ tổ (phiếu nội trạm) đã nhập ngày đó: mỗi tổ 1 chuyến (vài chuyến gộp 2 tổ), khối lượng lệch ngẫu nhiên ±3% so với sổ, ' +
+        'đánh dấu nguồn DEMO_GIA và đẩy luôn BigQuery. Chạy lại cùng ngày sẽ thay bộ giả cũ; đội đã có phiếu cân thật ngày đó thì bỏ qua.'
+      : 'Tạo sản lượng ngày (trạng thái chờ duyệt) cho vài tổ CHƯA có số ngày đó, theo giao khoán thật (công nhân, phiên): mủ đông 45–85 kg/người, ~30% có mủ dây. ' +
+        'Phiếu nội trạm và phần cạo tự sinh như nhập thật; ghi chú "Dữ liệu giả (demo)", xoá được như dòng chờ duyệt bình thường.') + '</p>' +
+    '<div class="the form-luoi" style="margin-bottom:12px">' +
+      '<div><label class="nhan" for="sgNgay">Ngày</label><input class="o" id="sgNgay" type="date" value="' + thoat($('fDenNgay').value || (S.meta && S.meta.ngayMax) || '') + '"></div>' +
+      '<div><label class="nhan" for="sgDoi">Đội</label><select class="o" id="sgDoi"><option value="">' + (pc ? 'Tất cả đội' : 'Đội bất kỳ') + '</option>' +
+        dsDoi.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('') + '</select></div>' +
+      (pc ? '' : '<div><label class="nhan" for="sgSoTo">Số tổ</label><input class="o" id="sgSoTo" type="number" min="1" max="10" value="3"></div>') +
+      '<div class="hanh-dong"><button class="btn chinh" id="sgChay">' + (pc ? 'Sinh phiếu cân giả' : 'Sinh sản lượng giả') + '</button></div>' +
+    '</div><div id="sgKq"></div>';
+  $('sgChay').onclick = function () {
+    var nut = this; nut.disabled = true; nut.textContent = 'Đang sinh… (có thể mất 30–60 giây)';
+    var ts = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ngay: $('sgNgay').value, doi: $('sgDoi').value, nguoi: tenVaiTro(S.vaiTroHienThi) };
+    if (!pc) ts.soTo = $('sgSoTo').value;
+    goiAPI(pc ? 'sinhPhieuCanGia' : 'sinhSanLuongGia', ts, 300000).then(function (d) {
+      _cacheFE = {};
+      nut.disabled = false; nut.textContent = pc ? 'Sinh lại' : 'Sinh thêm';
+      $('sgKq').innerHTML = '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' + (pc
+        ? 'Đã sinh ' + soVN(d.soPhieu, 0) + ' phiếu cân giả ngày ' + thoat(ngayVN(d.ngay)) + (d.thayCu ? ' (thay ' + d.thayCu + ' phiếu giả cũ)' : '') + ': ' +
+          Object.keys(d.theoDoi).map(function (k) { var x = d.theoDoi[k]; return thoat(tenDoiNgan(k)) + ' ' + x.soPhieu + ' phiếu, cân ' + soVN(x.kgCan, 0) + ' / sổ ' + soVN(x.kgSo, 0) + ' kg'; }).join(' · ') +
+          (d.boQua && d.boQua.length ? '<br>Bỏ qua (đã có phiếu cân thật): ' + thoat(d.boQua.join(', ')) : '') + (d.bqLoi ? '<br><b>Đẩy BigQuery lỗi</b> — bấm đẩy tay ở Quản trị.' : '')
+        : 'Đã sinh ' + soVN(d.soDong, 0) + '/' + soVN(d.tong, 0) + ' dòng sản lượng ngày ' + thoat(ngayVN(d.ngay)) + ' cho ' + thoat(d.dsTo.join(', ')) + ' (' + soVN(d.kg, 1) + ' kg).' +
+          (d.loi && d.loi.length ? '<br>Lỗi: ' + thoat(d.loi.join('; ')) : '')) + '</div>';
+      taiTab();
+    }).catch(function (e) { nut.disabled = false; nut.textContent = pc ? 'Sinh phiếu cân giả' : 'Sinh sản lượng giả'; $('sgKq').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+  };
 }
 
 /* ---------- Ngày chia cân theo kế hoạch (tab Trạm cân) ---------- */
@@ -11457,6 +11502,7 @@ function apDungQuyenGiaoDien() {
   var slThem = coQuyen('sanLuong', 'THEM'), ccThem = coQuyen('chamCong', 'THEM');
   hienNeu(['nutThemSL', 'nutNhapTo', 'nutHangLoatSL'], slThem);
   hienNeu(['nutDayBase'], coQuyen('dayBase', 'THEM'));
+  hienNeu(['nutSinhSlGia'], !!S.laAdmin);   // dữ liệu giả để demo: chỉ Admin (máy chủ cũng chặn)
   hienNeu(['thanhBaseCC'], coQuyen('dayChamCongBase', 'THEM'));
   // Thanh nhập nhanh: chỉ tổ trưởng (vai trò nhập cho đúng 1 tổ của mình)
   $('thanhNhapNhanh').style.display = S.vaiTro === 'TO_TRUONG' && (slThem || ccThem) ? '' : 'none';
@@ -12744,6 +12790,7 @@ $('ccThang').onchange = taiBangChamCongThang;
 
 $('nutThemSL').onclick = moThemSanLuong;
 $('nutCsvSL').onclick = csvSanLuong;
+$('nutSinhSlGia').onclick = function () { moSinhGia('sl'); };
 $('nutMauSL').onclick = function () { taiMauExcel('sanLuong'); };
 $('nutHangLoatSL').onclick = function () { moNhapHangLoat('sanLuong'); };
 $('nutNhapTo').onclick = moNhapCaTo;
