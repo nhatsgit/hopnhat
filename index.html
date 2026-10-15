@@ -1057,6 +1057,11 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <div class="thanh-nhap-chu"><b>Duyệt phiếu cân nhà máy</b><span>Gửi phiếu cân SCADA theo ngày × công ty lên Base (đang thử — chỉ Admin)</span></div>
         <button class="btn chinh" id="nutPCBase" title="Chọn ngày + công ty, xem phiếu cân rồi tạo phiếu duyệt trên Base">Gửi duyệt Base</button>
       </div>
+      <!-- Ngày đặc biệt: tổng cân thật của đội chia về tổ theo SỐ KẾ HOẠCH nhập tay (thay cho theo sổ tổ). Quyền: keHoachCan. -->
+      <div class="thanh-nhap" id="thanhKeHoachCan" style="display:none">
+        <div class="thanh-nhap-chu"><b>Ngày chia cân theo kế hoạch</b><span>Tổng cân thật của đội chia về tổ theo số kế hoạch nhập, thay cho chia theo sổ tổ</span></div>
+        <button class="btn chinh" id="nutKeHoachCan" title="Chọn đội + ngày + loại mủ, nhập kế hoạch từng tổ">Nhập kế hoạch</button>
+      </div>
       <div id="tcLoi"></div>
       <div id="chuGiaiTC"></div>
       <div class="kpis" id="kpisTC"></div>
@@ -2006,7 +2011,7 @@ var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
-  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1,
+  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -2250,7 +2255,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 218;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 219;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -2269,7 +2274,7 @@ function cotKhongNhat(tieuDe, dong) {
 
 var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1, xoaChamCong: 1,
                        themSanLuong: 1, nhapHangLoatSanLuong: 1, suaSanLuong: 1, xoaSanLuong: 1,
-                       chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1 };
+                       chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho) {
@@ -3362,6 +3367,8 @@ function taiTramCan() {
   var lan = ++_tcLan, bl = layBoLoc();
   $('thanhBasePC').style.display = coQuyen('dayPhieuCanBase', 'THEM') ? '' : 'none';
   $('nutPCBase').onclick = moPCBase;
+  $('thanhKeHoachCan').style.display = coQuyen('keHoachCan', 'XEM') ? '' : 'none';
+  $('nutKeHoachCan').onclick = moKeHoachCan;
   $('nutNapTC').style.display = coQuyen('tramCan', 'THEM') ? '' : 'none';
   $('nutNapTC').onclick = function () { $('fileTC').value = ''; $('fileTC').click(); };
   $('fileTC').onchange = function () { tcDocFile(Array.prototype.slice.call(this.files || [])); };
@@ -3384,6 +3391,104 @@ function taiTramCan() {
       $('kpisTC').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
       ['bdTcNgay', 'bdTcDoi', 'bangTcXe', 'bangTC'].forEach(function (id) { $(id).innerHTML = ''; });
     });
+}
+
+/* ---------- Ngày chia cân theo kế hoạch (tab Trạm cân) ---------- */
+var _kh = null;
+function moKeHoachCan() {
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+  $('tieuDePhieu').textContent = 'Ngày chia cân theo kế hoạch';
+  var dsDoi = (S.dsDoi && S.dsDoi.length ? S.dsDoi : []).slice();
+  if (!dsDoi.length) (S.dsTo || []).forEach(function (t) { var d = doiCuaTo(t.ma || t); if (dsDoi.indexOf(d) < 0) dsDoi.push(d); });
+  var ngayMd = $('fDenNgay').value || (S.meta && S.meta.ngayMax) || '';
+  $('thanPhieu').innerHTML =
+    '<p class="goi-y" style="margin-top:0">Ngày có kế hoạch: tổng cân thật (phiếu cân đã duyệt) của đội chia về từng tổ theo tỉ lệ số kế hoạch dưới đây, ' +
+    'trong tổ vẫn chia xuống công nhân theo sổ. Tổ không nhập kế hoạch = 0. Phiếu cân gốc không đổi; bỏ kế hoạch là quay lại chia theo sổ tổ.</p>' +
+    '<div class="the form-luoi" style="margin-bottom:12px">' +
+      '<div><label class="nhan" for="khDoi">Đội</label><select class="o" id="khDoi">' +
+        dsDoi.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('') + '</select></div>' +
+      '<div><label class="nhan" for="khNgay">Ngày</label><input class="o" id="khNgay" type="date" value="' + thoat(ngayMd) + '"></div>' +
+      '<div><label class="nhan" for="khLoai">Loại mủ</label><select class="o" id="khLoai"><option value="MU_DONG">' + thoat(tenLoaiMu('MU_DONG')) +
+        '</option><option value="MU_DAY">' + thoat(tenLoaiMu('MU_DAY')) + '</option></select></div>' +
+      '<div class="hanh-dong"><button class="btn chinh" id="khXem">Xem</button></div>' +
+    '</div><div id="khKetQua"></div>';
+  $('khXem').onclick = khXem;
+  ['khDoi', 'khNgay', 'khLoai'].forEach(function (id) { $(id).onchange = khXem; });
+  if (ngayMd) khXem();
+}
+
+function khXem() {
+  var ch = { doi: $('khDoi').value, ngay: $('khNgay').value, loaiMu: $('khLoai').value };
+  if (!ch.doi || !ch.ngay) return;
+  $('khKetQua').innerHTML = skDong(3);
+  goiAPI('keHoachCan', Object.assign({ vaiTro: S.vaiTro, maDonVi: S.maDonVi }, ch)).then(function (d) {
+    _kh = d;
+    var sua = coQuyen('keHoachCan', 'THEM'), xoa = coQuyen('keHoachCan', 'XOA');
+    var tongSo = d.dsTo.reduce(function (s, x) { return s + x.kgSo; }, 0);
+    var h = '<div class="dong-tt"><div><span>Tổng cân thật của đội</span><b>' + soVN(d.kgCan, 0) + ' kg</b></div>' +
+            '<div><span>Số phiếu cân (đã duyệt)</span><b>' + soVN(d.soPhieuCan, 0) + '</b></div>' +
+            '<div><span>Sổ tổ đã duyệt</span><b>' + soVN(tongSo, 0) + ' kg</b></div>' +
+            '<div><span>Trạng thái</span><b>' + (d.coKeHoach ? '<span class="vi canh">Đang chia theo kế hoạch</span>' : '<span class="vi ok">Chia theo sổ tổ</span>') + '</b></div></div>' +
+            (d.coKeHoach ? '<p class="goi-y">Lý do: ' + thoat(d.lyDo || '—') + ' · ' + thoat(d.nguoi || '') + ' · ' + thoat(d.luc || '') + '</p>' : '') +
+            (d.kgCan > 0 ? '' : '<p class="goi-y" style="color:var(--clay)">Ngày này đội chưa có phiếu cân đã duyệt — lưu kế hoạch vẫn được, có cân thì tự chia.</p>') +
+            '<div class="cuon"><table><thead><tr><th>Tổ</th><th class="p">Sổ tổ (kg)</th><th class="p">Chia theo sổ (kg)</th>' +
+            '<th class="p">Kế hoạch (kg)</th><th class="p">Chia theo kế hoạch (kg)</th><th class="p">Chênh (kg)</th></tr></thead><tbody>';
+    d.dsTo.forEach(function (x, i) {
+      var v = x.kgKeHoach === null ? '' : String(x.kgKeHoach);
+      h += '<tr><td><b>' + thoat(x.to) + '</b></td><td class="p num">' + soVN(x.kgSo, 0) + '</td>' +
+           '<td class="p num">' + (tongSo > 0 ? soVN(d.kgCan * x.kgSo / tongSo, 0) : '—') + '</td>' +
+           '<td class="p">' + (sua ? '<input class="o kh-in" inputmode="decimal" style="width:110px;text-align:right" data-i="' + i + '" value="' + thoat(v) + '">'
+                                   : (v === '' ? '—' : soVN(x.kgKeHoach, 0))) + '</td>' +
+           '<td class="p num kh-chia" data-i="' + i + '">—</td><td class="p num kh-chenh" data-i="' + i + '">—</td></tr>';
+    });
+    h += '</tbody><tfoot><tr><td>Cộng</td><td class="p num">' + soVN(tongSo, 0) + '</td><td class="p num">' + (tongSo > 0 ? soVN(d.kgCan, 0) : '—') +
+         '</td><td class="p num" id="khTongKh">—</td><td class="p num" id="khTongChia">—</td><td></td></tr></tfoot></table></div>';
+    if (sua) h += '<div class="the form-luoi" style="margin-top:12px"><div style="grid-column:1/-1"><label class="nhan" for="khLyDo">Lý do chia theo kế hoạch (bắt buộc)</label>' +
+                  '<input class="o" id="khLyDo" value="' + thoat(d.lyDo || '') + '" placeholder="vd: cân gộp nhiều tổ, mưa không tách được xe…"></div>' +
+                  '<div class="hanh-dong"><button class="btn chinh" id="khLuu">Lưu kế hoạch</button>' +
+                  (d.coKeHoach && xoa ? '<button class="btn nho nut-xoa" id="khBo">Bỏ kế hoạch ngày này</button>' : '') + '</div></div>';
+    h += '<div id="khLoi" style="margin-top:8px"></div>';
+    $('khKetQua').innerHTML = h;
+    var tinh = function () {
+      var ins = $('khKetQua').querySelectorAll('.kh-in'), kh = [], tong = 0;
+      d.dsTo.forEach(function (x, i) { kh[i] = x.kgKeHoach || 0; });
+      for (var j = 0; j < ins.length; j++) {   // "3.000" = 3000, "3.000,5" = 3000,5 (giống máy chủ _soKieuViet)
+        var s = String(ins[j].value).trim().replace(/\s/g, '');
+        s = s.indexOf(',') > -1 ? s.replace(/\./g, '').replace(',', '.') : (/^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : s);
+        var n = Number(s); kh[+ins[j].getAttribute('data-i')] = isFinite(n) && n > 0 ? n : 0;
+      }
+      kh.forEach(function (v) { tong += v; });
+      d.dsTo.forEach(function (x, i) {
+        var chia = tong > 0 ? d.kgCan * kh[i] / tong : null, theoSo = tongSo > 0 ? d.kgCan * x.kgSo / tongSo : 0;
+        $('khKetQua').querySelector('.kh-chia[data-i="' + i + '"]').textContent = chia === null ? '—' : soVN(chia, 0);
+        $('khKetQua').querySelector('.kh-chenh[data-i="' + i + '"]').textContent = chia === null ? '—' : ((chia - theoSo >= 0 ? '+' : '') + soVN(chia - theoSo, 0));
+      });
+      $('khTongKh').textContent = soVN(tong, 0); $('khTongChia').textContent = tong > 0 ? soVN(d.kgCan, 0) : '—';
+    };
+    var ins = $('khKetQua').querySelectorAll('.kh-in');
+    for (var k = 0; k < ins.length; k++) ins[k].oninput = tinh;
+    tinh();
+    if ($('khLuu')) $('khLuu').onclick = function () { khLuu(false); };
+    if ($('khBo')) $('khBo').onclick = function () { khLuu(true); };
+  }).catch(function (e) { $('khKetQua').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+
+function khLuu(boHet) {
+  if (!_kh) return;
+  var dong = [];
+  if (!boHet) {
+    var ins = $('khKetQua').querySelectorAll('.kh-in');
+    for (var i = 0; i < ins.length; i++) dong.push({ to: _kh.dsTo[+ins[i].getAttribute('data-i')].to, kg: ins[i].value });
+  }
+  var nut = $(boHet ? 'khBo' : 'khLuu'); nut.disabled = true; nut.textContent = 'Đang lưu…';
+  goiAPI('keHoachCanLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: _kh.doi, ngay: _kh.ngay, loaiMu: _kh.loaiMu, dong: JSON.stringify(dong),
+                            lyDo: boHet ? '' : $('khLyDo').value, nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi) }).then(function (r) {
+    _cacheFE = {};
+    nsBaoOkChung(r.boKeHoach ? 'Đã bỏ kế hoạch ngày ' + ngayVN(_kh.ngay) + ' — quay lại chia theo sổ tổ.'
+                             : 'Đã lưu kế hoạch ngày ' + ngayVN(_kh.ngay) + ': ' + r.soTo + ' tổ, tổng ' + soVN(r.tongKeHoach, 0) + ' kg.');
+    khXem();
+  }).catch(function (e) { nut.disabled = false; nut.textContent = boHet ? 'Bỏ kế hoạch ngày này' : 'Lưu kế hoạch'; $('khLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
 
 /* ---------- Phiếu cân SCADA chưa duyệt (mọi công ty) — bảng cuối tab Trạm cân ---------- */
@@ -7145,7 +7250,9 @@ function veDrc(d) {
       var a = x.loai[ma];
       if (chiNgayCo && !(a.kgCan > 0 || a.drc !== null)) return;
       n++;
-      hh += '<tr data-ngay="' + x.ngay + '"><td>' + thoat(ngayVN(x.ngay)) + '</td><td class="p num">' + soVN(a.soPhieu, 0) + '</td>' +
+      hh += '<tr data-ngay="' + x.ngay + '"><td>' + thoat(ngayVN(x.ngay)) +
+            (a.keHoach ? ' <span class="td-nguon" title="' + thoat('Ngày chia cân theo kế hoạch (tổng ' + soVN(a.kgKeHoach, 0) + ' kg): ' + (a.lyDoKeHoach || '')) + '">kế hoạch</span>' : '') +
+            '</td><td class="p num">' + soVN(a.soPhieu, 0) + '</td>' +
             '<td class="p num">' + soVN(a.kgCan, 0) + '</td><td class="p num">' + soVN(a.kgSo, 0) + '</td>' + oNhap(x, ma) +
             '<td class="p num qk-that" data-qk="' + ma + '">' + (a.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(a.qkThat, 0) + '</b>') + '</td>' +
             '<td class="p num nhan-mo">' + soVN(a.qkTam, 0) + '</td></tr>';
