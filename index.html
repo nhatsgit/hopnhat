@@ -33,7 +33,7 @@
 </script>
 <!-- ExcelJS và SheetJS (đọc/ghi .xlsx) KHÔNG tải lúc mở trang nữa (nặng, chặn hiển thị): tải khi cần hoặc nền sau khi vào app — xem napThuVien() -->
 <!-- Dựng file "Hồ sơ lương" đầy đủ theo biểu mẫu của đội (nhiều tab) — xem xuat_ho_so_luong.js -->
-<script src="xuat_ho_so_luong.js"></script>
+<script src="xuat_ho_so_luong.js?v=ce7a3e78"></script>
 <style>
 /* =====================================================================
    Bảng màu dùng chung với dashboard-crck2-v2.html của dự án
@@ -2308,7 +2308,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 232;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 233;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -2460,10 +2460,11 @@ function soVN(n, le) {
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: le, maximumFractionDigits: le });
 }
 
+/** Ngày hiển thị toàn hệ thống: dd/mm/yy (16/10/2026: user chốt định dạng 2 số năm). */
 function ngayVN(s) {
   if (!s) return '—';
   var p = String(s).split('-');
-  return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : s;
+  return p.length === 3 ? (p[2].substring(0, 2) + '/' + p[1] + '/' + p[0].slice(-2)) : s;
 }
 
 function thoat(s) {
@@ -6845,7 +6846,7 @@ function _suaDauKhoi(ws, tu, den, soCot, thg, nam, oNgay, phien) {
       } else if (/Phiên cạo/i.test(v) && phien) ce.value = v.replace(/Phiên cạo.*$/i, 'Phiên cạo ' + phien);
       else if (/^\s*TỔNG\s*(?:\d+|[….]+)?\s*NGÀY\s*$/i.test(v)) ce.value = 'TỔNG ' + dsNgay.length + ' NGÀY';   // Total Days (mẫu: "TỔNG 0 NGÀY" hoặc "TỔNG …… NGÀY")
       else if (/^\s*From[\s….]*(?:to|top)\b/i.test(v)) {   // mẫu: "From…..top …..." -> "From 01/08/2026 to 26/08/2026"
-        ce.value = dsNgay.length ? 'From ' + _hai(dsNgay[0]) + '/' + _hai(thg) + '/' + nam + ' to ' + _hai(dsNgay[dsNgay.length - 1]) + '/' + _hai(thg) + '/' + nam : v;
+        ce.value = dsNgay.length ? 'From ' + _hai(dsNgay[0]) + '/' + _hai(thg) + '/' + String(nam).slice(-2) + ' to ' + _hai(dsNgay[dsNgay.length - 1]) + '/' + _hai(thg) + '/' + String(nam).slice(-2) : v;
       } else if (/Từ ngày/i.test(v)) ce.value = dsNgay.length ? '(Từ ngày ' + dsNgay[0] + ' đến ngày ' + dsNgay[dsNgay.length - 1] + ')' : v;
     }
   }
@@ -7594,7 +7595,7 @@ function drcXuatBangKe() {
   dong('SUMMARY TABLE DETAILS FIELD GRADE COAGULUM FOLLOWING WEIGHBRIDGE RECEIPT', { co: 12 });
   dong('BẢNG TỔNG HỢP CHI TIẾT MỦ NGUYÊN LIỆU THEO PHIẾU CÂN', { co: 12 });
   dong('(Đính kèm theo biên bản số: ............/BBNL/' + d.doi + '  ngày ...... tháng ' + d.thang.substring(5) + ' năm ' + d.thang.substring(0, 4) + ')', { dam: false });
-  dong('Đội sản xuất: ' + d.doi + ' — Từ ' + hai(tuN) + '/' + d.thang.substring(5) + '/' + d.thang.substring(0, 4) + ' đến ' + hai(denN) + '/' + d.thang.substring(5) + '/' + d.thang.substring(0, 4), { dam: false });
+  dong('Đội sản xuất: ' + d.doi + ' — Từ ' + hai(tuN) + '/' + d.thang.substring(5) + '/' + d.thang.substring(2, 4) + ' đến ' + hai(denN) + '/' + d.thang.substring(5) + '/' + d.thang.substring(2, 4), { dam: false });
   r++;
   var tieuDe = function (ten, tenTan) {
     ws.mergeCells(r, 1, r, 7); var c0 = ws.getCell(r, 1); c0.value = ten; c0.font = { bold: true }; r++;
@@ -7614,7 +7615,7 @@ function drcXuatBangKe() {
       var kg = a ? a.kgCan : 0, drc = a ? a.drc : null, qk = a && a.qkThat !== null ? a.qkThat : 0;
       var ghi = '';
       if (kg > 0 && drc === null) { ghi = 'CHƯA CÓ DRC'; thieu++; }
-      var vals = [++stt, d.doi, hai(n) + '/' + d.thang.substring(5) + '/' + d.thang.substring(0, 4), kg / 1000, kg > 0 && drc !== null ? drc : 0, Math.round(qk) / 1000, ghi];
+      var vals = [++stt, d.doi, hai(n) + '/' + d.thang.substring(5) + '/' + d.thang.substring(2, 4), kg / 1000, kg > 0 && drc !== null ? drc : 0, Math.round(qk) / 1000, ghi];
       vals.forEach(function (v, i) {
         var c = ws.getCell(r, i + 1); c.value = v; c.border = vien;
         c.alignment = { horizontal: i >= 3 && i <= 5 ? 'right' : 'center', vertical: 'middle' };
@@ -10653,8 +10654,8 @@ function chuanNgayTuExcel(v) {
   var s = String(v == null ? '' : v).trim();
   var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return m[1] + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]) + '-' + (m[3].length < 2 ? '0' + m[3] : m[3]);
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m) return m[3] + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]) + '-' + (m[1].length < 2 ? '0' + m[1] : m[1]);
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?!\d)/);   // dd/mm/yyyy hoặc dd/mm/yy
+  if (m) return (m[3].length === 2 ? '20' + m[3] : m[3]) + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]) + '-' + (m[1].length < 2 ? '0' + m[1] : m[1]);
   return s;
 }
 

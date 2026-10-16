@@ -145,7 +145,7 @@
           else if (typeof spec.v === 'string') v = dt(spec.v);
           else if (typeof spec.v === 'number') v = spec.v;
           var cell = dat(row, +ck, spec, v);
-          if (spec.d === 'ngay1' && !(cell.numFmt)) cell.numFmt = 'd/m/yyyy';
+          if (spec.d === 'ngay1' && !(cell.numFmt)) cell.numFmt = 'dd/mm/yy';
         });
       };
 
