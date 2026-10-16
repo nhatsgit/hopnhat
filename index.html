@@ -310,9 +310,9 @@ button.nhan-muc.xo .mui-ten-nhom{transform:rotate(90deg)}
 .o.o-noi-bat:hover,.o.o-noi-bat:focus{transform:translateY(-1px);box-shadow:0 6px 16px -2px color-mix(in srgb,var(--leaf) 50%,transparent);outline:none}
 .o.o-noi-bat::-webkit-calendar-picker-indicator{cursor:pointer}
 .bang-drc .nhom-drc{text-align:center;border-bottom:1px solid var(--line)}
-.bang-drc .drc-in{width:88px;text-align:right;padding:5px 8px;font-variant-numeric:tabular-nums}
-.bang-drc .drc-in.da-sua{border-color:var(--leaf);background:var(--leaf-soft);font-weight:700}
-.bang-drc .drc-in.loi-o{border-color:#c0392b;background:color-mix(in srgb,#c0392b 12%,transparent)}
+.bang-drc .drc-in,.bang-drc .drc-hn{width:88px;text-align:right;padding:5px 8px;font-variant-numeric:tabular-nums}
+.bang-drc .drc-in.da-sua,.bang-drc .drc-hn.da-sua{border-color:var(--leaf);background:var(--leaf-soft);font-weight:700}
+.bang-drc .drc-in.loi-o,.bang-drc .drc-hn.loi-o{border-color:#c0392b;background:color-mix(in srgb,#c0392b 12%,transparent)}
 .bang-drc tr.dong-tong td{border-top:2px solid var(--line);background:color-mix(in srgb,var(--leaf) 6%,transparent)}
 #bangDrcTo tr.dong-tong td{border-top:2px solid var(--line);font-weight:600}
 .bo-loc-dau .phieu-loc{flex:none}
@@ -1119,6 +1119,17 @@ tr.bat-thuong td{background:var(--clay-soft)}
     <!-- Tab: DRC thật (nhóm Sản lượng) — nhập DRC phòng QLCL báo mỗi ngày mỗi đội; quy khô thật = phiếu cân của đội × DRC -->
     <section id="pDrc" style="display:none">
       <div id="chuGiaiDrc"></div>
+      <!-- DRC hôm nay: 1 dòng mỗi đội, nhập nhanh DRC trong ngày cho cả 4 đội (cùng lệnh drcNgay / drcLuu của bảng từng đội) -->
+      <div class="the" style="margin-bottom:20px">
+        <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatDrcHn">DRC hôm nay</h3>
+          <label class="nhan" for="drcHnNgay" style="margin:0">Ngày</label>
+          <input class="o o-noi-bat" id="drcHnNgay" type="date" style="width:auto">
+          <button class="btn chinh nho" id="nutLuuDrcHn" style="display:none">Lưu DRC</button>
+        </div>
+        <div class="cuon"><table id="bangDrcHn" class="bang-drc"></table></div>
+        <p class="goi-y" id="ghiChuDrcHn" style="padding:8px 16px"></p>
+      </div>
       <div class="kpis" id="kpisDrc"></div>
       <div class="the" style="margin-bottom:20px">
         <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -2260,7 +2271,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 220;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 221;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -7332,6 +7343,132 @@ function veDrc(d) {
   drcGanOnhap();
 }
 
+/**
+ * Bảng "DRC hôm nay" (trên bảng từng đội): luôn có sẵn 1 dòng cho mỗi đội trong phạm vi, ô DRC mủ đông + mủ dây để nhập ngay
+ * kể cả khi phiếu cân chưa về. Đọc drcNgay từng đội (song song), lưu drcLuu từng đội có thay đổi (lần lượt).
+ */
+var _drcHn = null, _drcHnLan = 0;
+function taiDrcHomNay() {
+  var lan = ++_drcHnLan, homNay = nsHomNayTu(Date.now()), oNgay = $('drcHnNgay');
+  if (!oNgay.value) oNgay.value = homNay;
+  oNgay.max = homNay;
+  oNgay.onchange = taiDrcHomNay;
+  var ngay = oNgay.value, sua = coQuyen('drc', 'THEM') || coQuyen('drc', 'SUA');
+  $('tomTatDrcHn').textContent = (ngay === homNay ? 'DRC hôm nay' : 'DRC ngày') + ' — ' + ngayVN(ngay);
+  $('nutLuuDrcHn').style.display = sua ? '' : 'none';
+  $('nutLuuDrcHn').onclick = drcLuuHomNay;
+  var dsDoi = (S.dsDoi || []).filter(function (d) { return /^Đ\d+$/.test(d); });
+  if (!dsDoi.length) { $('bangDrcHn').innerHTML = '<tr><td><div class="rong">Không có đội nào trong phạm vi của bạn.</div></td></tr>'; return; }
+  $('bangDrcHn').innerHTML = skBang(dsDoi.length);
+  Promise.all(dsDoi.map(function (doi) {
+    return goiAPI('drcNgay', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: doi, thang: ngay.substring(0, 7) })
+      .then(function (d) { return { doi: doi, d: d }; }, function (e) { return { doi: doi, loi: e.message }; });
+  })).then(function (ds) {
+    if (lan !== _drcHnLan) return;
+    _drcHn = { ngay: ngay, ds: ds, min: 0, max: 100 };
+    ds.some(function (x) { if (x.d) { _drcHn.min = x.d.drcMin; _drcHn.max = x.d.drcMax; return true; } });
+    veDrcHomNay(sua);
+  });
+}
+
+function veDrcHomNay(sua) {
+  var h = _drcHn, rong = { soPhieu: 0, kgCan: 0, kgSo: 0, drc: null, qkThat: null };
+  var hh = '<thead><tr><th rowspan="2">Đội</th><th class="p nhom-drc" colspan="4">Mủ đông chén</th><th class="p nhom-drc" colspan="4">Mủ dây</th><th class="p" rowspan="2">Tổng quy khô thật (kg)</th></tr>' +
+    '<tr><th class="p">Số phiếu</th><th class="p">Cân (kg)</th><th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th>' +
+    '<th class="p">Số phiếu</th><th class="p">Cân (kg)</th><th class="p">DRC (%)</th><th class="p">Quy khô thật (kg)</th></tr></thead><tbody>';
+  var tong = { MU_DONG: { kg: 0, qk: 0 }, MU_DAY: { kg: 0, qk: 0 } };
+  h.ds.forEach(function (x) {
+    if (x.loi) { hh += '<tr><td>' + thoat(tenDoiNgan(x.doi)) + '</td><td colspan="9"><span class="giam">' + thoat(x.loi) + '</span></td></tr>'; return; }
+    var dong = (x.d.ngay || []).filter(function (n) { return n.ngay === h.ngay; })[0], qkDoi = 0;
+    hh += '<tr data-doi="' + thoat(x.doi) + '"><td><b>' + thoat(tenDoiNgan(x.doi)) + '</b>' +
+          (dong && (dong.loai.MU_DONG.keHoach || dong.loai.MU_DAY.keHoach) ? ' <span class="td-nguon">kế hoạch</span>' : '') + '</td>';
+    ['MU_DONG', 'MU_DAY'].forEach(function (ma) {
+      var a = (dong && dong.loai[ma]) || rong, nhan = a.drc === null ? '' : String(a.drc).replace('.', ',');
+      var goiY = x.d.goiY && x.d.goiY[ma] ? String(x.d.goiY[ma].drc).replace('.', ',') : (ma === 'MU_DAY' ? '61,8' : '52,3');
+      tong[ma].kg += a.kgCan; if (a.qkThat !== null) { tong[ma].qk += a.qkThat; qkDoi += a.qkThat; }
+      hh += '<td class="p num">' + (a.soPhieu ? soVN(a.soPhieu, 0) : '<span class="nhan-mo">0</span>') + '</td><td class="p num">' + soVN(a.kgCan, 0) + '</td>' +
+            (sua ? '<td class="p"><input class="o drc-hn" inputmode="decimal" autocomplete="off" data-doi="' + thoat(x.doi) + '" data-loai="' + ma +
+                   '" data-goc="' + nhan + '" data-can="' + a.kgCan + '" value="' + nhan + '" placeholder="' + goiY + '"' +
+                   (a.luc ? ' title="' + thoat((a.nguoi || '') + ' · ' + a.luc) + '"' : '') + '></td>'
+                 : '<td class="p num">' + (a.drc === null ? '—' : soVN(a.drc, 2)) + '</td>') +
+            '<td class="p num qk-that" data-qk="' + ma + '" data-v="' + (a.qkThat || 0) + '">' + (a.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(a.qkThat, 0) + '</b>') + '</td>';
+    });
+    hh += '<td class="p num qk-tong"><b>' + soVN(qkDoi, 0) + '</b></td></tr>';
+  });
+  hh += '<tr class="dong-tong"><td><b>Cộng</b></td><td></td><td class="p num"><b>' + soVN(tong.MU_DONG.kg, 0) + '</b></td><td></td><td class="p num tc-MU_DONG"><b>' + soVN(tong.MU_DONG.qk, 0) +
+        '</b></td><td></td><td class="p num"><b>' + soVN(tong.MU_DAY.kg, 0) + '</b></td><td></td><td class="p num tc-MU_DAY"><b>' + soVN(tong.MU_DAY.qk, 0) +
+        '</b></td><td class="p num tc-tong"><b>' + soVN(tong.MU_DONG.qk + tong.MU_DAY.qk, 0) + '</b></td></tr></tbody>';
+  $('bangDrcHn').innerHTML = hh;
+  $('ghiChuDrcHn').textContent = sua
+    ? 'Mỗi đội 1 dòng, nhập được cả khi phiếu cân chưa về. Gõ DRC phòng QLCL báo (Enter sang ô kế), bấm "Lưu DRC". Để trống ô rồi lưu = xoá DRC ngày đó.'
+    : 'Bạn chỉ có quyền xem DRC.';
+  drcHnGanO();
+}
+
+function drcHnGanO() {
+  var ins = $('bangDrcHn').querySelectorAll('input.drc-hn');
+  var capNhat = function () {
+    var n = $('bangDrcHn').querySelectorAll('input.drc-hn.da-sua').length;
+    $('nutLuuDrcHn').textContent = n ? 'Lưu DRC (' + n + ' thay đổi)' : 'Lưu DRC';
+    $('nutLuuDrcHn').disabled = !n;
+  };
+  for (var i = 0; i < ins.length; i++) {
+    ins[i].oninput = function () {
+      var v = drcSoNhap(this.value), tr = this.closest('tr');
+      this.classList.toggle('da-sua', String(this.value).trim() !== this.getAttribute('data-goc'));
+      var sai = String(this.value).trim() !== '' && (v === null || v < _drcHn.min || v > _drcHn.max);
+      this.classList.toggle('loi-o', sai);
+      var qk = (v === null || sai) ? null : Number(this.getAttribute('data-can')) * v / 100;
+      var oQ = tr.querySelector('td.qk-that[data-qk="' + this.getAttribute('data-loai') + '"]');
+      oQ.innerHTML = qk === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(qk, 0) + '</b>';
+      oQ.setAttribute('data-v', qk || 0);
+      var s = 0, oQk = tr.querySelectorAll('td.qk-that');
+      for (var k = 0; k < oQk.length; k++) s += Number(oQk[k].getAttribute('data-v')) || 0;
+      tr.querySelector('td.qk-tong').innerHTML = '<b>' + soVN(s, 0) + '</b>';
+      var cong = { MU_DONG: 0, MU_DAY: 0 }, tatQk = $('bangDrcHn').querySelectorAll('td.qk-that');
+      for (var q = 0; q < tatQk.length; q++) cong[tatQk[q].getAttribute('data-qk')] += Number(tatQk[q].getAttribute('data-v')) || 0;
+      $('bangDrcHn').querySelector('td.tc-MU_DONG').innerHTML = '<b>' + soVN(cong.MU_DONG, 0) + '</b>';
+      $('bangDrcHn').querySelector('td.tc-MU_DAY').innerHTML = '<b>' + soVN(cong.MU_DAY, 0) + '</b>';
+      $('bangDrcHn').querySelector('td.tc-tong').innerHTML = '<b>' + soVN(cong.MU_DONG + cong.MU_DAY, 0) + '</b>';
+      capNhat();
+    };
+    ins[i].onkeydown = function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var tat = Array.prototype.slice.call($('bangDrcHn').querySelectorAll('input.drc-hn')), k = tat.indexOf(this);
+      if (tat[k + 1]) { tat[k + 1].focus(); tat[k + 1].select(); }
+    };
+  }
+  capNhat();
+}
+
+function drcLuuHomNay() {
+  var ins = $('bangDrcHn').querySelectorAll('input.drc-hn.da-sua'), theoDoi = {}, sai = 0;
+  for (var i = 0; i < ins.length; i++) {
+    var t = String(ins[i].value).trim(), v = drcSoNhap(t), doi = ins[i].getAttribute('data-doi');
+    if (t !== '' && (v === null || v < _drcHn.min || v > _drcHn.max)) { sai++; continue; }
+    (theoDoi[doi] = theoDoi[doi] || []).push({ ngay: _drcHn.ngay, loaiMu: ins[i].getAttribute('data-loai'), drc: t === '' ? '' : v });
+  }
+  if (sai) { baoLoi('thongBao', sai + ' ô DRC ngoài khoảng ' + _drcHn.min + '–' + _drcHn.max + ' % — sửa các ô viền đỏ rồi lưu lại.'); return; }
+  var dsDoi = Object.keys(theoDoi);
+  if (!dsDoi.length) return;
+  var nut = $('nutLuuDrcHn'); nut.disabled = true; nut.textContent = 'Đang lưu…';
+  var kq = [], loi = [], nguoi = docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi);
+  // Lần lượt từng đội (máy chủ khoá ghi theo bảng, gửi song song chỉ phải chờ nhau)
+  dsDoi.reduce(function (p, doi) {
+    return p.then(function () {
+      return goiAPI('drcLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: doi, dong: JSON.stringify(theoDoi[doi]), nguoi: nguoi })
+        .then(function (r) { kq.push(tenDoiNgan(doi) + ' (' + ((r.them || 0) + (r.sua || 0) + (r.xoa || 0)) + ')'); },
+              function (e) { loi.push(tenDoiNgan(doi) + ': ' + e.message); });
+    });
+  }, Promise.resolve()).then(function () {
+    _cacheFE = {};
+    if (kq.length) nsBaoOkChung('Đã lưu DRC ngày ' + ngayVN(_drcHn.ngay) + ': ' + kq.join(', ') + '.');
+    if (loi.length) baoLoi('thongBao', 'Chưa lưu được — ' + loi.join(' · '));
+    taiDrcHomNay(); taiDrc();
+  });
+}
+
 /** Ô DRC: sửa thì tô nổi + tính quy khô thật ngay; Enter xuống ngày kế; nút Lưu đếm số ô đã đổi. */
 function drcGanOnhap() {
   var ins = $('pDrc').querySelectorAll('input.drc-in');
@@ -7375,7 +7512,7 @@ function drcLuu() {
                      nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi) }).then(function (r) {
     _cacheFE = {};
     nsBaoOkChung('Đã lưu DRC ' + tenDoiNgan(_drc.doi) + ': thêm ' + (r.them || 0) + ', sửa ' + (r.sua || 0) + ', xoá ' + (r.xoa || 0) + '.');
-    taiDrc();
+    taiDrcHomNay(); taiDrc();
   }).catch(function (e) { nut.disabled = false; baoLoi('thongBao', e.message); drcGanOnhap(); });
 }
 
@@ -10834,7 +10971,7 @@ function taiTab() {
   if (S.tab === 'tongQuan') taiTongQuan();
   else if (S.tab === 'tqNhanSu') taiTqNhanSu();
   else if (S.tab === 'tramCan') taiTramCan();
-  else if (S.tab === 'drc') taiDrc();
+  else if (S.tab === 'drc') { taiDrcHomNay(); taiDrc(); }
   else if (S.tab === 'sanLuong') taiSanLuong();
   else if (S.tab === 'chamCong') taiChamCong();
   else if (S.tab === 'doiChieu') taiDoiChieu();
