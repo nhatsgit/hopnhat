@@ -2271,7 +2271,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 223;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 224;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -11649,10 +11649,11 @@ function apDungQuyenGiaoDien() {
   hienNeu(['nutDayBase'], coQuyen('dayBase', 'THEM'));
   hienNeu(['nutSinhSlGia'], !!S.laAdmin);   // dữ liệu giả để demo: chỉ Admin (máy chủ cũng chặn)
   hienNeu(['thanhBaseCC'], coQuyen('dayChamCongBase', 'THEM'));
-  // Thanh nhập nhanh: chỉ tổ trưởng (vai trò nhập cho đúng 1 tổ của mình)
-  $('thanhNhapNhanh').style.display = S.vaiTro === 'TO_TRUONG' && (slThem || ccThem) ? '' : 'none';
-  $('nnSanLuong').style.display = slThem ? '' : 'none';
-  $('nnChamCong').style.display = ccThem ? '' : 'none';
+  // Thanh nhập nhanh: 2 nút nhập chỉ tổ trưởng (nhập cho đúng 1 tổ của mình); nút "Cài lên điện thoại" thêm cho đội trưởng + trợ lý
+  var laTT = S.vaiTro === 'TO_TRUONG';
+  $('nnSanLuong').style.display = laTT && slThem ? '' : 'none';
+  $('nnChamCong').style.display = laTT && ccThem ? '' : 'none';
+  capNhatThanhNhanh();
   hienNeu(['nutThemCC', 'nutChamCongTo', 'nutHangLoatCC', 'thanhNhapCC'], ccThem);
   hienNeu(['nutKmLuu', 'nutKmNhapFile'], coQuyen('khoMieng', 'SUA'));
   hienNeu(['nutXlLuu', 'nutXlNhapFile', 'nutXlDienA'], coQuyen('xepLoai', 'SUA'));
@@ -12687,15 +12688,23 @@ document.addEventListener('visibilitychange', function () { if (document.visibil
 window.addEventListener('online', function () { kiemBanMoi(true); });
 setInterval(function () { if (document.visibilityState === 'visible') kiemBanMoi(); }, 3 * 3600000);
 // Nút cài app: Android/Chrome có hộp cài sẵn; iPhone (Safari) chỉ cài được qua Chia sẻ -> Thêm vào MH chính
-var _hoiCai = null;
+var _hoiCai = null, _coTheCai = false;
 var _daCai = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-window.addEventListener('beforeinstallprompt', function (ev) { ev.preventDefault(); _hoiCai = ev; $('nnCaiApp').style.display = ''; });
-if (!_daCai && /iphone|ipad|ipod/i.test(navigator.userAgent)) $('nnCaiApp').style.display = '';
+/** Vai trò được thấy nút cài app: tổ trưởng, đội trưởng, trợ lý. */
+function vaiTroCaiApp() { return S.vaiTro === 'TO_TRUONG' || S.vaiTro === 'DOI_TRUONG' || S.vaiTroHienThi === 'TRO_LY'; }
+/** Nút cài hiện khi máy cài được + đúng vai trò; cả thanh ẩn khi không còn nút nào (tránh khoảng trống). */
+function capNhatThanhNhanh() {
+  $('nnCaiApp').style.display = _coTheCai && vaiTroCaiApp() ? '' : 'none';
+  var co = ['nnSanLuong', 'nnChamCong', 'nnCaiApp'].some(function (id) { return $(id).style.display !== 'none'; });
+  $('thanhNhapNhanh').style.display = S.vaiTro && co ? '' : 'none';
+}
+window.addEventListener('beforeinstallprompt', function (ev) { ev.preventDefault(); _hoiCai = ev; _coTheCai = true; capNhatThanhNhanh(); });
+if (!_daCai && /iphone|ipad|ipod/i.test(navigator.userAgent)) _coTheCai = true;
 $('nnCaiApp').onclick = function () {
-  if (_hoiCai) { _hoiCai.prompt(); _hoiCai.userChoice.then(function () { _hoiCai = null; $('nnCaiApp').style.display = 'none'; }); return; }
+  if (_hoiCai) { _hoiCai.prompt(); _hoiCai.userChoice.then(function () { _hoiCai = null; _coTheCai = false; capNhatThanhNhanh(); }); return; }
   alert('Cài lên iPhone: mở trang này bằng Safari → bấm nút Chia sẻ (ô vuông có mũi tên lên) → chọn \u0022Thêm vào MH chính\u0022 → Thêm.\nSau đó mở app từ biểu tượng CRCK2 trên màn hình chính.');
 };
-window.addEventListener('appinstalled', function () { $('nnCaiApp').style.display = 'none'; });
+window.addEventListener('appinstalled', function () { _coTheCai = false; capNhatThanhNhanh(); });
 new MutationObserver(function () {
   // Chỉ gỡ khi đang có: classList.remove luôn ghi lại thuộc tính class -> tự kích hoạt observer -> lặp vô tận
   var c = $('nenPhieu').classList;
