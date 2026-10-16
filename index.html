@@ -2308,7 +2308,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 238;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 239;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3139,7 +3139,8 @@ function chiCoDaDuyet() { return S.toanCongTy && !(S.laAdmin && S.trangThai !== 
    Cache phía trình duyệt — đổi qua đổi lại giữa các tab với cùng bộ lọc
    thì không gọi lại backend. Nút "Tải lại" xoá sạch cache này.
    ===================================================================== */
-var CACHE_FE_MS = 5 * 60 * 1000;
+// Bộ đệm phía trình duyệt ngắn (máy chủ đã có bộ đệm kết quả, tự xoá khi có dữ liệu mới) — để đổi gạt / quay lại tab thấy số mới
+var CACHE_FE_MS = 60 * 1000;
 var _cacheFE = {};
 
 function goiCache(action, thamSo) {
@@ -11000,6 +11001,7 @@ function veGatTrangThai() {
   var nuts = el.querySelectorAll('button[data-tt]');
   for (var j = 0; j < nuts.length; j++) {
     nuts[j].onclick = function () {
+      _cacheFE = {};   // đổi Tất cả / Chưa duyệt / Đã duyệt: luôn hỏi lại máy chủ, không dùng kết quả cũ trong trình duyệt
       S.trangThai = this.getAttribute('data-tt');
       S.trang = 1;
       veGatTrangThai();
