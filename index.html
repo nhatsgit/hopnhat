@@ -2308,7 +2308,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 233;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 234;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -12830,7 +12830,7 @@ function capNhatThanhNhanh() {
 }
 window.addEventListener('beforeinstallprompt', function (ev) { ev.preventDefault(); _hoiCai = ev; _coTheCai = true; capNhatThanhNhanh(); });
 if (!_daCai && /iphone|ipad|ipod/i.test(navigator.userAgent)) _coTheCai = true;
-/* ---------- Thông báo nổi nhắc chấm công (Web Push) — chỉ tổ trưởng ----------
+/* ---------- Thông báo nổi (Web Push) — tổ trưởng: nhắc chấm công · trợ lý: tổ trưởng vừa gửi sản lượng / chấm công ----------
    Bật: xin quyền thông báo -> đăng ký push với khoá VAPID của Cloud Run -> gửi đăng ký kèm tổ (dangKyThongBao).
    Đã cho phép từ trước: mỗi lần vào app tự đăng ký lại (cập nhật tổ nếu máy đổi người dùng). iPhone: chỉ chạy khi đã cài app ra màn hình chính. */
 function tbHoTro() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
@@ -12839,8 +12839,10 @@ function tbKhoaUint8(b64) {
   for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i);
   return a;
 }
+/** Vai trò nhận thông báo: tổ trưởng (nhắc chấm công) và trợ lý (tổ trưởng vừa gửi). */
+function tbNhan() { return S.vaiTro === 'TO_TRUONG' || S.vaiTroHienThi === 'TRO_LY'; }
 function tbDangKy(hoi) {
-  if (!tbHoTro() || S.vaiTro !== 'TO_TRUONG') return Promise.resolve(false);
+  if (!tbHoTro() || !tbNhan()) return Promise.resolve(false);
   var xin = hoi && Notification.permission === 'default' ? Notification.requestPermission() : Promise.resolve(Notification.permission);
   return xin.then(function (q) {
     if (q !== 'granted') return false;
@@ -12860,24 +12862,31 @@ function tbDangKy(hoi) {
 /** Nút "Bật nhắc chấm công": hiện cho tổ trưởng khi máy hỗ trợ mà chưa cho phép; đã cho phép thì âm thầm đăng ký lại. */
 function tbKiemDangKy() {
   var nut = $('nnThongBao');
-  var laTT = S.vaiTro === 'TO_TRUONG', ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var laNhan = tbNhan(), ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  nut.textContent = S.vaiTroHienThi === 'TRO_LY' ? '🔔 Bật thông báo tổ gửi số' : '🔔 Bật nhắc chấm công';
+  nut.title = S.vaiTroHienThi === 'TRO_LY' ? 'Nhận thông báo trên máy này mỗi khi tổ trưởng trong đội gửi sản lượng / chấm công'
+                                           : 'Nhận thông báo nhắc chấm công trên máy này (từ 7h, mỗi giờ 1 lần nếu tổ chưa chấm công)';
   // Chưa cho phép (kể cả đã lỡ chặn — bấm sẽ hướng dẫn mở lại) thì hiện nút; iPhone chưa cài app thì hiện để hướng dẫn cài
-  var hien = laTT && ((tbHoTro() && Notification.permission !== 'granted') || (ios && !_daCai && !tbHoTro()));
+  var hien = laNhan && ((tbHoTro() && Notification.permission !== 'granted') || (ios && !_daCai && !tbHoTro()));
   nut.style.display = hien ? '' : 'none';
   capNhatThanhNhanh();
-  if (laTT && tbHoTro() && Notification.permission === 'granted') tbDangKy(false).catch(function () { /* thử lại lần vào app sau */ });
+  if (laNhan && tbHoTro() && Notification.permission === 'granted') tbDangKy(false).catch(function () { /* thử lại lần vào app sau */ });
 }
 $('nnThongBao').onclick = function () {
   if (!tbHoTro()) {
     alert('iPhone chỉ nhận được thông báo khi đã cài app: mở trang bằng Safari → nút Chia sẻ → "Thêm vào MH chính", rồi mở app từ biểu tượng CRCK2 và bấm lại nút này.');
     return;
   }
-  var nut = this; nut.disabled = true; nut.textContent = 'Đang bật…';
+  var nut = this, chuCu = nut.textContent; nut.disabled = true; nut.textContent = 'Đang bật…';
   tbDangKy(true).then(function (ok) {
-    nut.disabled = false; nut.textContent = '🔔 Bật nhắc chấm công';
-    if (ok) { nut.style.display = 'none'; capNhatThanhNhanh(); nsBaoOkChung('Đã bật nhắc chấm công: từ 7h, mỗi giờ 1 thông báo nếu tổ ' + S.maDonVi + ' chưa chấm công.'); }
+    nut.disabled = false; nut.textContent = chuCu;
+    if (ok) {
+      nut.style.display = 'none'; capNhatThanhNhanh();
+      nsBaoOkChung(S.vaiTroHienThi === 'TRO_LY' ? 'Đã bật thông báo: mỗi khi tổ trưởng trong ' + S.maDonVi + ' gửi sản lượng / chấm công, máy này sẽ nhận thông báo.'
+                                                : 'Đã bật nhắc chấm công: từ 7h, mỗi giờ 1 thông báo nếu tổ ' + S.maDonVi + ' chưa chấm công.');
+    }
     else if (Notification.permission === 'denied') baoLoi('thongBao', 'Máy đang chặn thông báo của trang này — vào cài đặt trình duyệt / ứng dụng cho phép Thông báo rồi thử lại.');
-  }).catch(function (e) { nut.disabled = false; nut.textContent = '🔔 Bật nhắc chấm công'; baoLoi('thongBao', 'Chưa bật được thông báo: ' + e.message); });
+  }).catch(function (e) { nut.disabled = false; nut.textContent = chuCu; baoLoi('thongBao', 'Chưa bật được thông báo: ' + e.message); });
 };
 
 $('nnCaiApp').onclick = function () {
@@ -12949,8 +12958,8 @@ $('nutVao').onclick = function () {
 };
 
 $('nutThoat').onclick = function () {
-  // Tổ trưởng đổi người dùng: máy này thôi nhận nhắc chấm công của tổ (đăng nhập lại tổ trưởng là tự đăng ký lại)
-  if (S.vaiTro === 'TO_TRUONG' && tbHoTro() && Notification.permission === 'granted') {
+  // Tổ trưởng / trợ lý đổi người dùng: máy này thôi nhận thông báo (đăng nhập lại là tự đăng ký lại)
+  if (tbNhan() && tbHoTro() && Notification.permission === 'granted') {
     var vtCu = S.vaiTro, dvCu = S.maDonVi;
     navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
       if (sub) return goiAPI('huyThongBao', { vaiTro: vtCu, maDonVi: dvCu, endpoint: sub.endpoint });
