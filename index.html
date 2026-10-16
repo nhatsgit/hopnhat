@@ -1087,10 +1087,10 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <div class="thanh-nhap-chu"><b>Duyệt phiếu cân nhà máy</b><span>Gửi phiếu cân SCADA theo ngày × công ty lên Base (đang thử — chỉ Admin)</span></div>
         <button class="btn chinh" id="nutPCBase" title="Chọn ngày + công ty, xem phiếu cân rồi tạo phiếu duyệt trên Base">Gửi duyệt Base</button>
       </div>
-      <!-- Ngày đặc biệt: tổng cân thật của đội chia về tổ theo SỐ KẾ HOẠCH nhập tay (thay cho theo sổ tổ). Quyền: keHoachCan. -->
+      <!-- Ngày cân theo kế hoạch: sản lượng tổng KTNN (nhập tay) rải vào các phiếu cân đã duyệt của ngày theo tỉ lệ kg. Quyền: keHoachCan. -->
       <div class="thanh-nhap" id="thanhKeHoachCan" style="display:none">
-        <div class="thanh-nhap-chu"><b>Ngày chia cân theo kế hoạch</b><span>Tổng cân thật của đội chia về tổ theo số kế hoạch nhập, thay cho chia theo sổ tổ</span></div>
-        <button class="btn chinh" id="nutKeHoachCan" title="Chọn đội + ngày + loại mủ, nhập kế hoạch từng tổ">Nhập kế hoạch</button>
+        <div class="thanh-nhap-chu"><b>Ngày cân theo kế hoạch</b><span>Sản lượng tổng KTNN rải vào các phiếu cân đã có của ngày theo tỉ lệ kg từng phiếu</span></div>
+        <button class="btn chinh" id="nutKeHoachCan" title="Chọn ngày + loại mủ, nhập sản lượng tổng KTNN">Nhập số kế hoạch</button>
       </div>
       <div class="thanh-nhap" id="thanhDemoPC" style="display:none">
         <div class="thanh-nhap-chu"><b>Dữ liệu demo (chỉ Admin)</b><span>Sinh phiếu cân giả của 1 ngày từ phiếu nội trạm đã nhập ngày đó</span></div>
@@ -2301,7 +2301,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 226;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 227;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3479,81 +3479,83 @@ function moSinhGia(loai) {
   };
 }
 
-/* ---------- Ngày chia cân theo kế hoạch (tab Trạm cân) ---------- */
+/* ---------- Ngày cân theo kế hoạch (tab Trạm cân) ----------
+   KTNN có 1 số sản lượng tổng (kg tươi, cả công ty) cho ngày × loại mủ — tạm thời nhập tay. Lưu xong, số đó RẢI vào các phiếu cân
+   ĐÃ DUYỆT của ngày theo tỉ lệ kg từng phiếu; chia về tổ, quy khô, DRC trạm cân tính theo số đã rải. Phiếu cân gốc không đổi. */
 var _kh = null;
 function moKeHoachCan() {
   $('nutInPhieu').style.display = 'none';
   $('nenPhieu').classList.add('hien');
-  $('tieuDePhieu').textContent = 'Ngày chia cân theo kế hoạch';
-  var dsDoi = (S.dsDoi && S.dsDoi.length ? S.dsDoi : []).slice();
-  if (!dsDoi.length) (S.dsTo || []).forEach(function (t) { var d = doiCuaTo(t.ma || t); if (dsDoi.indexOf(d) < 0) dsDoi.push(d); });
+  $('tieuDePhieu').textContent = 'Ngày cân theo kế hoạch';
   var ngayMd = $('fDenNgay').value || (S.meta && S.meta.ngayMax) || '';
   $('thanPhieu').innerHTML =
-    '<p class="goi-y" style="margin-top:0">Ngày có kế hoạch: tổng cân thật (phiếu cân đã duyệt) của đội chia về từng tổ theo tỉ lệ số kế hoạch dưới đây, ' +
-    'trong tổ vẫn chia xuống công nhân theo sổ. Tổ không nhập kế hoạch = 0. Phiếu cân gốc không đổi; bỏ kế hoạch là quay lại chia theo sổ tổ.</p>' +
+    '<p class="goi-y" style="margin-top:0">Nhập <b>sản lượng tổng của KTNN</b> (kg tươi, cả công ty) cho ngày chạy theo số kế hoạch. Hệ thống rải số này vào ' +
+    'các phiếu cân đã duyệt của ngày theo tỉ lệ kg từng phiếu (vd phiếu 3.000 và 1.000 kg, tổng KTNN 4.400 → 3.300 và 1.100). Sau đó cân của đội, ' +
+    'chia về tổ (theo sổ), quy khô, DRC trạm cân đều tính theo số đã rải. Phiếu cân gốc không đổi; bỏ kế hoạch là quay lại số cân.</p>' +
     '<div class="the form-luoi" style="margin-bottom:12px">' +
-      '<div><label class="nhan" for="khDoi">Đội</label><select class="o" id="khDoi">' +
-        dsDoi.map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('') + '</select></div>' +
       '<div><label class="nhan" for="khNgay">Ngày</label><input class="o" id="khNgay" type="date" value="' + thoat(ngayMd) + '"></div>' +
       '<div><label class="nhan" for="khLoai">Loại mủ</label><select class="o" id="khLoai"><option value="MU_DONG">' + thoat(tenLoaiMu('MU_DONG')) +
         '</option><option value="MU_DAY">' + thoat(tenLoaiMu('MU_DAY')) + '</option></select></div>' +
       '<div class="hanh-dong"><button class="btn chinh" id="khXem">Xem</button></div>' +
     '</div><div id="khKetQua"></div>';
   $('khXem').onclick = khXem;
-  ['khDoi', 'khNgay', 'khLoai'].forEach(function (id) { $(id).onchange = khXem; });
+  ['khNgay', 'khLoai'].forEach(function (id) { $(id).onchange = khXem; });
   if (ngayMd) khXem();
 }
 
+/** "33.000" / "33.000,5" / "33000.5" -> số (giống máy chủ _soKieuViet); không hợp lệ -> NaN. */
+function khSo(v) {
+  var s = String(v === undefined || v === null ? '' : v).trim().replace(/\s/g, '');
+  s = s.indexOf(',') > -1 ? s.replace(/\./g, '').replace(',', '.') : (/^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : s);
+  return s === '' ? NaN : Number(s);
+}
+
 function khXem() {
-  var ch = { doi: $('khDoi').value, ngay: $('khNgay').value, loaiMu: $('khLoai').value };
-  if (!ch.doi || !ch.ngay) return;
+  var ch = { ngay: $('khNgay').value, loaiMu: $('khLoai').value };
+  if (!ch.ngay) return;
   $('khKetQua').innerHTML = skDong(3);
   goiAPI('keHoachCan', Object.assign({ vaiTro: S.vaiTro, maDonVi: S.maDonVi }, ch)).then(function (d) {
     _kh = d;
     var sua = coQuyen('keHoachCan', 'THEM'), xoa = coQuyen('keHoachCan', 'XOA');
-    var tongSo = d.dsTo.reduce(function (s, x) { return s + x.kgSo; }, 0);
-    var h = '<div class="dong-tt"><div><span>Tổng cân thật của đội</span><b>' + soVN(d.kgCan, 0) + ' kg</b></div>' +
-            '<div><span>Số phiếu cân (đã duyệt)</span><b>' + soVN(d.soPhieuCan, 0) + '</b></div>' +
-            '<div><span>Sổ tổ đã duyệt</span><b>' + soVN(tongSo, 0) + ' kg</b></div>' +
-            '<div><span>Trạng thái</span><b>' + (d.coKeHoach ? '<span class="vi canh">Đang chia theo kế hoạch</span>' : '<span class="vi ok">Chia theo sổ tổ</span>') + '</b></div></div>' +
-            (d.coKeHoach ? '<p class="goi-y">Lý do: ' + thoat(d.lyDo || '—') + ' · ' + thoat(d.nguoi || '') + ' · ' + thoat(d.luc || '') + '</p>' : '') +
-            (d.kgCan > 0 ? '' : '<p class="goi-y" style="color:var(--clay)">Ngày này đội chưa có phiếu cân đã duyệt — lưu kế hoạch vẫn được, có cân thì tự chia.</p>') +
-            '<div class="cuon"><table><thead><tr><th>Tổ</th><th class="p">Sổ tổ (kg)</th><th class="p">Chia theo sổ (kg)</th>' +
-            '<th class="p">Kế hoạch (kg)</th><th class="p">Chia theo kế hoạch (kg)</th><th class="p">Chênh (kg)</th></tr></thead><tbody>';
-    d.dsTo.forEach(function (x, i) {
-      var v = x.kgKeHoach === null ? '' : String(x.kgKeHoach);
-      h += '<tr><td><b>' + thoat(x.to) + '</b></td><td class="p num">' + soVN(x.kgSo, 0) + '</td>' +
-           '<td class="p num">' + (tongSo > 0 ? soVN(d.kgCan * x.kgSo / tongSo, 0) : '—') + '</td>' +
-           '<td class="p">' + (sua ? '<input class="o kh-in" inputmode="decimal" style="width:110px;text-align:right" data-i="' + i + '" value="' + thoat(v) + '">'
-                                   : (v === '' ? '—' : soVN(x.kgKeHoach, 0))) + '</td>' +
-           '<td class="p num kh-chia" data-i="' + i + '">—</td><td class="p num kh-chenh" data-i="' + i + '">—</td></tr>';
-    });
-    h += '</tbody><tfoot><tr><td>Cộng</td><td class="p num">' + soVN(tongSo, 0) + '</td><td class="p num">' + (tongSo > 0 ? soVN(d.kgCan, 0) : '—') +
-         '</td><td class="p num" id="khTongKh">—</td><td class="p num" id="khTongChia">—</td><td></td></tr></tfoot></table></div>';
-    if (sua) h += '<div class="the form-luoi" style="margin-top:12px"><div style="grid-column:1/-1"><label class="nhan" for="khLyDo">Lý do chia theo kế hoạch (bắt buộc)</label>' +
-                  '<input class="o" id="khLyDo" value="' + thoat(d.lyDo || '') + '" placeholder="vd: cân gộp nhiều tổ, mưa không tách được xe…"></div>' +
-                  '<div class="hanh-dong"><button class="btn chinh" id="khLuu">Lưu kế hoạch</button>' +
-                  (d.coKeHoach && xoa ? '<button class="btn nho nut-xoa" id="khBo">Bỏ kế hoạch ngày này</button>' : '') + '</div></div>';
+    var h = '<div class="dong-tt"><div><span>Tổng cân đã duyệt (cả công ty)</span><b>' + soVN(d.kgCan, 0) + ' kg</b></div>' +
+            '<div><span>Số phiếu cân</span><b>' + soVN(d.soPhieuCan, 0) + '</b></div>' +
+            '<div><span>Trạng thái</span><b>' + (d.coKeHoach ? '<span class="vi canh">Theo kế hoạch KTNN</span>' : '<span class="vi ok">Theo số cân</span>') + '</b></div></div>' +
+            (d.coKeHoach ? '<p class="goi-y">Đang dùng sản lượng tổng KTNN <b>' + soVN(d.kgTong, 0) + ' kg</b> · lý do: ' + thoat(d.lyDo || '—') + ' · ' +
+                           thoat(d.nguoi || '') + ' · ' + thoat(d.luc || '') + '</p>' : '') +
+            (d.soChuaDuyet ? '<p class="goi-y" style="color:var(--clay)">' + soVN(d.soChuaDuyet, 0) + ' phiếu cân ngày này chưa duyệt — chỉ rải vào phiếu đã duyệt; ' +
+                             'duyệt thêm phiếu thì hệ số tự tính lại.</p>' : '') +
+            (d.kgCan > 0 ? '' : '<p class="goi-y" style="color:var(--clay)">Ngày này chưa có phiếu cân đã duyệt — lưu số kế hoạch vẫn được, có phiếu cân thì tự rải.</p>');
+    if (sua) h += '<div class="the form-luoi" style="margin-bottom:12px">' +
+                  '<div><label class="nhan" for="khKg">Sản lượng tổng KTNN (kg tươi)</label><input class="o" id="khKg" inputmode="decimal" style="text-align:right" ' +
+                    'value="' + (d.kgTong === null ? '' : thoat(String(d.kgTong))) + '" placeholder="vd 33.000"></div>' +
+                  '<div style="grid-column:span 2"><label class="nhan" for="khLyDo">Lý do (bắt buộc)</label><input class="o" id="khLyDo" value="' + thoat(d.lyDo || '') +
+                    '" placeholder="vd: trạm cân chạy theo số kế hoạch ngày này"></div></div>';
+    h += '<div class="dong-tt" id="khHeSo"></div>' +
+         '<div class="cuon"><table><thead><tr><th>Đội</th><th class="p">Số phiếu</th><th class="p">Cân (kg)</th><th class="p">Theo kế hoạch (kg)</th><th class="p">Chênh (kg)</th></tr></thead>' +
+         '<tbody id="khBang"></tbody></table></div>';
+    if (sua) h += '<div class="hanh-dong" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn chinh" id="khLuu">Lưu số kế hoạch</button>' +
+                  (d.coKeHoach && xoa ? '<button class="btn nho nut-xoa" id="khBo">Bỏ kế hoạch ngày này</button>' : '') + '</div>';
     h += '<div id="khLoi" style="margin-top:8px"></div>';
     $('khKetQua').innerHTML = h;
     var tinh = function () {
-      var ins = $('khKetQua').querySelectorAll('.kh-in'), kh = [], tong = 0;
-      d.dsTo.forEach(function (x, i) { kh[i] = x.kgKeHoach || 0; });
-      for (var j = 0; j < ins.length; j++) {   // "3.000" = 3000, "3.000,5" = 3000,5 (giống máy chủ _soKieuViet)
-        var s = String(ins[j].value).trim().replace(/\s/g, '');
-        s = s.indexOf(',') > -1 ? s.replace(/\./g, '').replace(',', '.') : (/^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : s);
-        var n = Number(s); kh[+ins[j].getAttribute('data-i')] = isFinite(n) && n > 0 ? n : 0;
-      }
-      kh.forEach(function (v) { tong += v; });
-      d.dsTo.forEach(function (x, i) {
-        var chia = tong > 0 ? d.kgCan * kh[i] / tong : null, theoSo = tongSo > 0 ? d.kgCan * x.kgSo / tongSo : 0;
-        $('khKetQua').querySelector('.kh-chia[data-i="' + i + '"]').textContent = chia === null ? '—' : soVN(chia, 0);
-        $('khKetQua').querySelector('.kh-chenh[data-i="' + i + '"]').textContent = chia === null ? '—' : ((chia - theoSo >= 0 ? '+' : '') + soVN(chia - theoSo, 0));
+      var kgTong = $('khKg') ? khSo($('khKg').value) : (d.kgTong === null ? NaN : d.kgTong);
+      var he = d.kgCan > 0 && kgTong > 0 ? kgTong / d.kgCan : null;
+      $('khHeSo').innerHTML = he === null ? '' : '<div><span>Hệ số rải</span><b>× ' + soVN(he, 4) + '</b></div>' +
+        '<div><span>Chênh so với cân (cả công ty)</span><b>' + (kgTong - d.kgCan >= 0 ? '+' : '') + soVN(kgTong - d.kgCan, 0) + ' kg (' +
+        (he >= 1 ? '+' : '') + soVN((he - 1) * 100, 1) + '%)</b></div>';
+      var b = '', tC = 0, tK = 0;
+      d.theoDoi.forEach(function (x) {
+        var kh = he === null ? null : x.kgCan * he;
+        tC += x.kgCan; tK += kh === null ? 0 : kh;
+        b += '<tr><td><b>' + thoat(tenDoiNgan(x.doi)) + '</b></td><td class="p num">' + soVN(x.soPhieu, 0) + '</td><td class="p num">' + soVN(x.kgCan, 0) + '</td>' +
+             '<td class="p num">' + (kh === null ? '—' : '<b>' + soVN(kh, 0) + '</b>') + '</td><td class="p num">' + (kh === null ? '—' : (kh - x.kgCan >= 0 ? '+' : '') + soVN(kh - x.kgCan, 0)) + '</td></tr>';
       });
-      $('khTongKh').textContent = soVN(tong, 0); $('khTongChia').textContent = tong > 0 ? soVN(d.kgCan, 0) : '—';
+      if (!d.theoDoi.length) b = '<tr><td colspan="5"><div class="rong">Đội trong phạm vi của bạn không có phiếu cân đã duyệt ngày này.</div></td></tr>';
+      else if (d.theoDoi.length > 1) b += '<tr class="dong-tong"><td><b>Cộng</b></td><td></td><td class="p num"><b>' + soVN(tC, 0) + '</b></td><td class="p num"><b>' +
+                                         (he === null ? '—' : soVN(tK, 0)) + '</b></td><td></td></tr>';
+      $('khBang').innerHTML = b;
     };
-    var ins = $('khKetQua').querySelectorAll('.kh-in');
-    for (var k = 0; k < ins.length; k++) ins[k].oninput = tinh;
+    if ($('khKg')) $('khKg').oninput = tinh;
     tinh();
     if ($('khLuu')) $('khLuu').onclick = function () { khLuu(false); };
     if ($('khBo')) $('khBo').onclick = function () { khLuu(true); };
@@ -3562,19 +3564,18 @@ function khXem() {
 
 function khLuu(boHet) {
   if (!_kh) return;
-  var dong = [];
-  if (!boHet) {
-    var ins = $('khKetQua').querySelectorAll('.kh-in');
-    for (var i = 0; i < ins.length; i++) dong.push({ to: _kh.dsTo[+ins[i].getAttribute('data-i')].to, kg: ins[i].value });
-  }
+  var kg = boHet ? '' : $('khKg').value;
+  if (!boHet && !(khSo(kg) > 0)) { $('khLoi').innerHTML = '<div class="bao-loi">Nhập sản lượng tổng KTNN (kg tươi, lớn hơn 0).</div>'; return; }
+  if (boHet && !confirm('Bỏ kế hoạch ngày ' + ngayVN(_kh.ngay) + '? Số liệu quay lại theo số cân.')) return;
   var nut = $(boHet ? 'khBo' : 'khLuu'); nut.disabled = true; nut.textContent = 'Đang lưu…';
-  goiAPI('keHoachCanLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, doi: _kh.doi, ngay: _kh.ngay, loaiMu: _kh.loaiMu, dong: JSON.stringify(dong),
+  goiAPI('keHoachCanLuu', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ngay: _kh.ngay, loaiMu: _kh.loaiMu, kg: kg,
                             lyDo: boHet ? '' : $('khLyDo').value, nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi) }).then(function (r) {
     _cacheFE = {};
-    nsBaoOkChung(r.boKeHoach ? 'Đã bỏ kế hoạch ngày ' + ngayVN(_kh.ngay) + ' — quay lại chia theo sổ tổ.'
-                             : 'Đã lưu kế hoạch ngày ' + ngayVN(_kh.ngay) + ': ' + r.soTo + ' tổ, tổng ' + soVN(r.tongKeHoach, 0) + ' kg.');
+    nsBaoOkChung(r.boKeHoach ? 'Đã bỏ kế hoạch ngày ' + ngayVN(_kh.ngay) + ' — quay lại theo số cân.'
+                             : 'Đã lưu sản lượng tổng KTNN ngày ' + ngayVN(_kh.ngay) + ': ' + soVN(r.kgTong, 0) + ' kg — đã rải vào các phiếu cân.');
     khXem();
-  }).catch(function (e) { nut.disabled = false; nut.textContent = boHet ? 'Bỏ kế hoạch ngày này' : 'Lưu kế hoạch'; $('khLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+    if (S.tab === 'tramCan') taiTab();
+  }).catch(function (e) { nut.disabled = false; nut.textContent = boHet ? 'Bỏ kế hoạch ngày này' : 'Lưu số kế hoạch'; $('khLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
 
 /* ---------- Phiếu cân SCADA chưa duyệt (mọi công ty) — bảng cuối tab Trạm cân ---------- */
@@ -3672,7 +3673,8 @@ function veTramCan(d) {
   var phuLoai = Object.keys(tl).map(function (m) { return (TEN_NGAN_LOAI_MU[m] || tenLoaiMu(m) || m) + ' ' + soVN(tl[m] / 1000, 1) + ' t'; }).join(' · ');
   $('chuGiaiTC').innerHTML = CHU_GIAI_DRC;
   $('kpisTC').innerHTML =
-    the_kpi_kg('Qua trạm cân', k.kgCan || 0, soVN(k.soPhieu || 0, 0) + ' phiếu · ' + soVN(k.soXe || 0, 0) + ' xe' + (phuLoai ? ' · ' + phuLoai : '')) +
+    the_kpi_kg('Qua trạm cân', k.kgCan || 0, soVN(k.soPhieu || 0, 0) + ' phiếu · ' + soVN(k.soXe || 0, 0) + ' xe' + (phuLoai ? ' · ' + phuLoai : '') +
+               (k.soPhieuKeHoach ? '<br><span class="td-nguon">kế hoạch</span> ' + soVN(k.soPhieuKeHoach, 0) + ' phiếu theo số KTNN → tổng ' + soVN(k.kgSauKeHoach, 0) + ' kg' : '')) +
     the_kpi_kg('Sổ sản lượng tổ', k.kgSo || 0, 'Đã duyệt, cùng ngày và loại mủ') +
     the_kpi(k.coLocTo ? 'Chênh lệch (chuyến 1 tổ)' : 'Chênh lệch cân − sổ', (chenh >= 0 ? '+' : '') + soVN(chenh, 0), 'kg', '',
             pt === null ? 'Sổ chưa có sản lượng trong kỳ' :
@@ -3712,6 +3714,15 @@ function tcOPhieuBase(x) {
   var tt = tcTrangThaiBase(x), loi = x.ttBase === 'TU_CHOI';
   return '<a href="' + tdLinkBase(x.maBase) + '" target="_blank" rel="noopener" title="Mở phiếu trên Base">#' + thoat(x.maBase) + ' ↗</a> ' +
          '<span class="td-nguon"' + (loi ? ' style="color:var(--clay)"' : '') + '>' + thoat(tt) + '</span>';
+}
+
+/** Ô "Hàng (kg)": ngày cân theo kế hoạch thì số đã rải (đậm, nhãn "kế hoạch") + số cân gốc mờ bên dưới. */
+function tcOKg(x) {
+  if (x.kgKeHoach === null || x.kgKeHoach === undefined) return '<b>' + soVN(x.kg, 0) + '</b>';
+  var tip = 'Ngày cân theo kế hoạch: sản lượng tổng KTNN ' + soVN(x.keHoach.kgTong, 0) + ' kg rải vào ' + soVN(x.keHoach.kgCan, 0) +
+            ' kg cân cả công ty (× ' + soVN(x.keHoach.kgTong / x.keHoach.kgCan, 4) + ')' + (x.keHoach.lyDo ? ' — ' + x.keHoach.lyDo : '');
+  return '<b title="' + thoat(tip) + '">' + soVN(x.kgKeHoach, 0) + '</b> <span class="td-nguon" title="' + thoat(tip) + '">kế hoạch</span>' +
+         '<br><span class="nhan-mo" title="Số cân gốc">cân ' + soVN(x.kg, 0) + '</span>';
 }
 
 /** Ô "Sản lượng tổ": số trên phiếu nội trạm của từng tổ (zone) của phiếu cân; chuyến gộp nhiều tổ có thêm dòng cộng. */
@@ -3764,7 +3775,7 @@ function veBangTramCan() {
          '</td><td>' + zs.map(function (z) { return thoat(z.lo); }).join('<br>') +
          '</td><td>' + thoat(x.nt) + '</td><td>' + thoat(x.xe) + '</td><td>' + thoat(x.taiXe) +
          '</td><td>' + thoat(TEN_NGAN_LOAI_MU[x.loaiMu] || x.hang) + '</td><td class="p num">' + soVN(x.canTong, 0) +
-         '</td><td class="p num">' + soVN(x.canBi, 0) + '</td><td class="p num"><b>' + soVN(x.kg, 0) + '</b></td>' +
+         '</td><td class="p num">' + soVN(x.canBi, 0) + '</td><td class="p num">' + tcOKg(x) + '</td>' +
          '<td class="p num">' + tcOSanLuongTo(x) + '</td>' +
          '<td class="p num">' + tcOChenhLech(x) + '</td>' +
          '<td class="p num">' + (x.drc === null || x.drc === undefined ? '<span class="nhan-mo">—</span>' : soVN(x.drc, 2)) + '</td>' +
@@ -3801,12 +3812,12 @@ function _xuatTramCan(dAll) {
   var ds = (dAll && dAll.phieu) || [];
   if (!ds.length) { baoLoi('thongBao', 'Không có phiếu cân để xuất.'); return; }
   var nhan = ['Phiếu Base', 'Trạng thái duyệt', 'Số phiếu', 'Giờ cân tổng', 'Giờ cân bì', 'Đội', 'Tổ', 'Phiên', 'Lô', 'Số phiếu nội trạm', 'Biển số xe', 'Tài xế',
-              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Sản lượng tổ - phiếu nội trạm (kg)', 'Chênh lệch tổ / cân (%)', 'DRC trạm cân (%)', 'Quy khô thật (kg)', 'Ghi chú'];
+              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Theo kế hoạch KTNN (kg)', 'Sản lượng tổ - phiếu nội trạm (kg)', 'Chênh lệch tổ / cân (%)', 'DRC trạm cân (%)', 'Quy khô thật (kg)', 'Ghi chú'];
   var dong = ds.map(function (x) {
     var zs = x.zones || [];
     return [x.maBase || '', tcTrangThaiBase(x), x.ma, x.gioTong, x.gioBi, x.doi, zs.map(function (z) { return z.to || 'Zone ' + z.zone; }).join('; '),
             zs.map(function (z) { return z.phien; }).join('; '), zs.map(function (z) { return z.lo; }).join(' | '), x.nt, x.xe, x.taiXe,
-            x.hang, x.canTong, x.canBi, x.kg, x.kgTo === null || x.kgTo === undefined ? '' : x.kgTo, x.ptLech === null || x.ptLech === undefined ? '' : x.ptLech, x.drc === null || x.drc === undefined ? '' : x.drc,
+            x.hang, x.canTong, x.canBi, x.kg, x.kgKeHoach === null || x.kgKeHoach === undefined ? '' : x.kgKeHoach, x.kgTo === null || x.kgTo === undefined ? '' : x.kgTo, x.ptLech === null || x.ptLech === undefined ? '' : x.ptLech, x.drc === null || x.drc === undefined ? '' : x.drc,
             x.quyKho === null || x.quyKho === undefined ? '' : x.quyKho, x.ghiChu];
   });
   xuatBangExcel('tram_can_' + String(dAll.tu || '') + '_' + String(dAll.den || '') + '.xlsx', nhan, dong);
@@ -7338,7 +7349,8 @@ function veDrc(d) {
       if (chiNgayCo && !(a.kgCan > 0 || a.drc !== null)) return;
       n++;
       hh += '<tr data-ngay="' + x.ngay + '"><td>' + thoat(ngayVN(x.ngay)) +
-            (a.keHoach ? ' <span class="td-nguon" title="' + thoat('Ngày chia cân theo kế hoạch (tổng ' + soVN(a.kgKeHoach, 0) + ' kg): ' + (a.lyDoKeHoach || '')) + '">kế hoạch</span>' : '') +
+            (a.keHoach ? ' <span class="td-nguon" title="' + thoat('Ngày cân theo kế hoạch: cân gốc ' + soVN(a.kgCanGoc, 0) + ' kg → ' + soVN(a.kgCan, 0) +
+              ' kg (sản lượng tổng KTNN cả công ty ' + soVN(a.kgTongKeHoach, 0) + ' kg rải theo tỉ lệ kg phiếu cân)' + (a.lyDoKeHoach ? ': ' + a.lyDoKeHoach : '')) + '">kế hoạch</span>' : '') +
             '</td><td class="p num">' + soVN(a.soPhieu, 0) + '</td>' +
             '<td class="p num">' + soVN(a.kgCan, 0) + '</td><td class="p num">' + soVN(a.kgSo, 0) + '</td>' + oNhap(x, ma) +
             '<td class="p num qk-that" data-qk="' + ma + '">' + (a.qkThat === null ? '<span class="nhan-mo">—</span>' : '<b>' + soVN(a.qkThat, 0) + '</b>') + '</td>' +
