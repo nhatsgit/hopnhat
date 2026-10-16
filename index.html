@@ -720,6 +720,36 @@ tr.bat-thuong td{background:var(--clay-soft)}
 .cuon-dong-sl{overflow:auto;max-height:min(440px,50vh);-webkit-overflow-scrolling:touch}
 .cuon-dong-sl thead th{position:sticky;top:0;z-index:2}
 .cuon-dong-sl tfoot td{position:sticky;bottom:0;z-index:1;background:var(--paper);font-weight:600;box-shadow:0 -1px 0 var(--line)}
+/* Cột Sửa / Xoá dính mép phải: bảng rộng kéo ngang vẫn thấy nút */
+.cuon-dong-sl .o-sua{position:sticky;right:0;z-index:1;white-space:nowrap;background:var(--paper);box-shadow:-8px 0 8px -8px rgba(0,0,0,.25)}
+.cuon-dong-sl tbody td.o-sua{background:var(--card)}
+.cuon-dong-sl tbody tr.bat-thuong td.o-sua{background:linear-gradient(var(--clay-soft),var(--clay-soft)),var(--card)}
+.cuon-dong-sl thead th.o-sua{z-index:3}
+.cuon-dong-sl tfoot td.o-sua{z-index:2}
+@media (max-width:700px){
+  /* Điện thoại: hộp thoại gần trọn màn hình (trước đây lề 24px + đệm 20px chỉ còn ~290px cho bảng) */
+  .nen-mo{padding:8px}
+  .dau-hop{padding:12px 14px}
+  .than-hop{padding:14px 12px}
+  /* Nút / chip đủ lớn để bấm bằng ngón tay */
+  .btn.nho{min-height:34px}
+  .chip{min-height:32px}
+  /* Cột Sửa / Xoá dính phải: chỉ còn biểu tượng để chừa chỗ cho số liệu */
+  .o-sua .btn{font-size:0;width:36px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+  .o-sua .btn[data-sua]::before{content:"✎";font-size:16px}
+  .o-sua .btn.nut-xoa::before{content:"✕";font-size:14px}
+  /* Bảng rộng kéo ngang: cột đầu (tên tổ / công nhân / ngày) dính trái để biết đang xem dòng nào */
+  .cuon > table > thead > tr:first-child > th:first-child,
+  .cuon > table > tbody > tr > td:first-child:not([colspan]),
+  .cuon > table > tfoot > tr > td:first-child{position:sticky;left:0;z-index:1;box-shadow:8px 0 8px -8px rgba(0,0,0,.25)}
+  .cuon > table > tbody > tr > td:first-child:not([colspan]){background:var(--card)}
+  .cuon > table > thead > tr:first-child > th:first-child{z-index:3}
+  .cuon > table > tfoot > tr > td:first-child{z-index:2}
+  /* Cột đầu "Phiếu Base" (Vườn cây, Trạm cân, SCADA) ẩn trên điện thoại -> cột mã phiếu / số phiếu lên đầu và dính trái */
+  #bangPhieu tr > :first-child:not([colspan]),#bangTC tr > :first-child:not([colspan]),#bangScada tr > :first-child:not([colspan]){display:none}
+  #bangPhieu tbody tr > td:nth-child(2),#bangTC tbody tr > td:nth-child(2),#bangScada tbody tr > td:nth-child(2){position:sticky;left:0;z-index:1;background:var(--card);box-shadow:8px 0 8px -8px rgba(0,0,0,.25)}
+  #bangPhieu thead tr > th:nth-child(2),#bangTC thead tr > th:nth-child(2),#bangScada thead tr > th:nth-child(2){position:sticky;left:0;z-index:3}
+}
 /* Bảng phiếu nội trạm: cột nút Xem dính mép phải, luôn thấy kể cả khi bảng rộng phải cuộn ngang */
 #bangPhieu th:last-child,#bangPhieu td.td-xem{position:sticky;right:0;z-index:1;background:var(--card);box-shadow:-8px 0 8px -8px rgba(0,0,0,.2)}
 #bangPhieu th:last-child{background:var(--paper);z-index:2}
@@ -1166,8 +1196,8 @@ tr.bat-thuong td{background:var(--clay-soft)}
           <h3 class="tieude-muc" style="margin:0;margin-right:auto" id="tomTatSL">—</h3>
           <button class="btn chinh nho" id="nutNhapTo" title="Nhập sản lượng cho cả tổ trong một bảng, có lưu tạm">Nhập cả tổ</button>
           <button class="btn nho" id="nutThemSL">+ Nhập 1 người</button>
-          <button class="btn nho" id="nutMauSL" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
-          <button class="btn nho" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
+          <button class="btn nho an-dt" id="nutMauSL" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
+          <button class="btn nho an-dt" id="nutHangLoatSL" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
           <button class="btn nho" id="nutDayBase" style="display:none" title="Chọn tổ + ngày, xem dữ liệu rồi tạo phiếu duyệt trên Base">Đẩy lên Base</button>
           <button class="btn nho" id="nutCsvPhieu" title="Xuất danh sách phiếu nội trạm ra Excel">Xuất phiếu (Excel)</button>
           <button class="btn nho" id="nutCsvSL" title="Xuất từng dòng sản lượng (công nhân × ngày × loại mủ) ra Excel">Xuất sản lượng chi tiết</button>
@@ -1186,8 +1216,8 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <div class="thanh-nhap-chu"><b>Chấm công</b><span>Dòng mới vào trạng thái chờ duyệt</span></div>
         <button class="btn chinh" id="nutThemCC">+ Chấm 1 người</button>
         <button class="btn chinh" id="nutChamCongTo" title="Chấm công cho cả tổ trong một bảng, có lưu tạm">Chấm công cả tổ</button>
-        <button class="btn chinh" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
-        <button class="btn nho" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
+        <button class="btn chinh an-dt" id="nutHangLoatCC" title="Nhập nhiều dòng cùng lúc từ file Excel">Nhập từ Excel</button>
+        <button class="btn nho an-dt" id="nutMauCC" title="Tải file Excel mẫu để điền hàng loạt">Tải mẫu Excel</button>
       </div>
       <!-- Thanh riêng (không nằm trong thanh nhập — thanh nhập ẩn với Trợ lý): gửi phiếu duyệt chấm công lên Base -->
       <div class="thanh-nhap" id="thanhBaseCC" style="display:none">
@@ -2271,7 +2301,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 225;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 226;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -4202,8 +4232,8 @@ function nutSuaXoaDong(r) {
   var coSua = coQuyen('sanLuong', 'SUA'), coXoa = coQuyen('sanLuong', 'XOA');
   // Admin sửa / xoá được mọi trạng thái (máy chủ cũng cho Admin qua); vai trò khác chỉ dòng chờ duyệt
   if ((r.trangThai !== 'CHO_DUYET' && !S.laAdmin) || (!coSua && !coXoa)) return '<span class="nhan-mo" title="Đã duyệt / đang duyệt thì khoá">—</span>';
-  return (coSua ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button> ' : '') +
-         (coXoa ? '<button class="btn nho nut-xoa" data-xoasl="' + thoat(r.ma) + '">Xoá</button>' : '');
+  return (coSua ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '" title="Sửa" aria-label="Sửa">Sửa</button> ' : '') +
+         (coXoa ? '<button class="btn nho nut-xoa" data-xoasl="' + thoat(r.ma) + '" title="Xoá" aria-label="Xoá">Xoá</button>' : '');
 }
 
 /** Gắn Sửa / Xoá cho các nút nutSuaXoaDong trong khung `kh` (rows = các dòng đã vẽ). Xoá xong thì đóng cửa sổ. */
@@ -4253,7 +4283,7 @@ function bangDongSanLuong(d, boCot) {
     return bo.indexOf(c.k) < 0 && (CO_SO_NHAT || !c.nhat || (c.k === 'nhat' && CO_NHAP_NHAT)) && (!c.that || tk.that);
   });
   var h = '<div class="cuon cuon-dong-sl"><table><thead><tr>' + dsCot.map(function (c) {
-    return '<th' + (c.p ? ' class="p"' : '') + (c.tip ? ' title="' + thoat(c.tip) + '"' : '') + '>' + thoat(c.t) + '</th>';
+    return '<th' + (c.p ? ' class="p"' : c.k === '_sua' ? ' class="o-sua"' : '') + (c.tip ? ' title="' + thoat(c.tip) + '"' : '') + '>' + thoat(c.t) + '</th>';
   }).join('') + '</tr></thead><tbody>';
   if (!d.rows.length) h += '<tr><td colspan="' + dsCot.length + '"><div class="rong">Không có dòng sản lượng.</div></td></tr>';
   var tKg = 0, tKho = 0;
@@ -4277,7 +4307,7 @@ function bangDongSanLuong(d, boCot) {
       drcThat: oDrcThat(r, 'drcThat'), kgThat: oDrcThat(r, 'kgThat'), quyKhoThat: oDrcThat(r, 'quyKhoThat'),
       nsbq: '<td class="p num">' + (r.nsbq ? soVN(r.nsbq, 3) : '—') + '</td>',
       trangThai: '<td>' + viTrangThai(r.trangThai) + '</td>',
-      _sua: '<td style="white-space:nowrap">' + nutSuaXoaDong(r) + '</td>'
+      _sua: '<td class="o-sua">' + nutSuaXoaDong(r) + '</td>'
     };
     h += '<tr' + (bt ? ' class="bat-thuong"' : '') + '>' + dsCot.map(function (c) { return o[c.k]; }).join('') + '</tr>';
   }
@@ -4287,7 +4317,7 @@ function bangDongSanLuong(d, boCot) {
       if (j === 0) return '<td>Cộng · ' + soVN(d.rows.length, 0) + ' dòng</td>';
       if (c.k === 'kg') return '<td class="p num">' + soVN(tKg, 2) + '</td>';
       if (c.k === 'quyKho') return '<td class="p num">' + soVN(tKho, 2) + '</td>';
-      return '<td></td>';
+      return c.k === '_sua' ? '<td class="o-sua"></td>' : '<td></td>';
     }).join('') + '</tr></tfoot>';
   }
   return h + '</table></div>';
