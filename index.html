@@ -2271,7 +2271,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 222;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 223;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -9469,8 +9469,9 @@ function hcSua(it) {
    tạm trong trình duyệt (NT_HAN_MS) để tắt tab / mất mạng không mất số đã
    gõ; "Gửi xử lý" đẩy qua đúng API nhập hàng loạt đã có (lỗi từng dòng
    không huỷ cả lô), người nào gửi thành công thì được gỡ khỏi bản tạm.
+   Bản tạm sản lượng KHÔNG hết hạn: giữ đến khi gửi xử lý thành công (hoặc bấm "Xoá bản tạm").
    ===================================================================== */
-var NT_HAN_MS = 6 * 60 * 60 * 1000;      // bản lưu tạm giữ 6 giờ
+var NT_HAN_MS = 6 * 60 * 60 * 1000;      // bản lưu tạm chấm công cả tổ giữ 6 giờ
 
 function ntKhoa() { return 'crck2_nhapto_' + toNhapCaTo(); }
 
@@ -9479,7 +9480,7 @@ function ntDocTam() {
   if (!raw) return null;
   try {
     var j = JSON.parse(raw);
-    if (!j || !j.luc || Date.now() - j.luc > NT_HAN_MS) { xoaLS(ntKhoa()); return null; }
+    if (!j || !j.luc) { xoaLS(ntKhoa()); return null; }
     return j;
   } catch (e) { return null; }
 }
@@ -9487,6 +9488,11 @@ function ntDocTam() {
 function ntGio(ms) {
   var d = new Date(ms);
   return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+}
+/** "HH:mm" nếu là hôm nay, khác ngày thì "HH:mm dd/MM" (bản tạm sản lượng giữ qua nhiều ngày). */
+function ngayGioNgan(ms) {
+  var d = new Date(ms);
+  return ntGio(ms) + (nsHomNayTu(ms) === nsHomNayTu(Date.now()) ? '' : ' ' + ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2));
 }
 
 /** Đọc toàn bộ bảng đang gõ → object lưu tạm. */
@@ -9505,7 +9511,7 @@ function ntLuuTam(thongBao) {
   d.luc = Date.now();
   var coDL = Object.keys(d.dong).length > 0;
   if (coDL) ghiLS(ntKhoa(), JSON.stringify(d)); else xoaLS(ntKhoa());
-  $('ntTrangThaiLuu').textContent = coDL ? 'Đã lưu tạm lúc ' + ntGio(d.luc) + ' (giữ ' + (NT_HAN_MS / 3600000) + ' giờ trong trình duyệt này)' : 'Chưa có gì để lưu tạm';
+  $('ntTrangThaiLuu').textContent = coDL ? 'Đã lưu tạm lúc ' + ntGio(d.luc) + ' — giữ trên máy này đến khi gửi xử lý' : 'Chưa có gì để lưu tạm';
   if (thongBao) nsBaoOkChung(coDL ? 'Đã lưu tạm ' + Object.keys(d.dong).length + ' người.' : 'Bảng đang trống.');
 }
 
@@ -9928,7 +9934,7 @@ function moNhapCaTo() {
       '<td class="c-gc" data-nhan="Ghi chú"><input class="o nt-gc" maxlength="200" value="' + thoat(d ? d.gc : '') + '"></td></tr>';
   }
   h += '</tbody></table></div><div id="ntLoi"></div>' +
-    '<p class="goi-y an-dt">Chỉ người có <b>kg &gt; 0</b> mới được gửi. Bảng tự lưu tạm khi gõ; đóng cửa sổ hay tải lại trang vẫn còn trong ' + (NT_HAN_MS / 3600000) + ' giờ. ' +
+    '<p class="goi-y an-dt">Chỉ người có <b>kg &gt; 0</b> mới được gửi. Bảng tự lưu tạm liên tục khi gõ; đóng cửa sổ, tải lại trang hay tắt máy vẫn còn đến khi gửi xử lý. ' +
     'Ngày / phiên / loại mủ áp cho cả bảng — người cạo đúp hoặc có thêm loại mủ khác thì nhập thêm một lượt riêng.</p>' +
     '<div class="nt-chan"><span id="ntTongKet" class="nt-tong"></span>' +
       '<span class="an-dt">' + nsNut('ntMau', 'Tải file mẫu', false) + '</span><button class="btn an-dt" id="ntChonFile">Nhập từ file</button>' +
@@ -9940,7 +9946,7 @@ function moNhapCaTo() {
   veNtCapNhat();
   ntDanhDauCho();
   ntTongKet();
-  $('ntTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
+  $('ntTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ngayGioNgan(tam.luc) : '';
 
   var hen = null;
   var thayDoi = function () { ntTongKet(); clearTimeout(hen); hen = setTimeout(function () { ntLuuTam(false); }, 600); };
@@ -10922,6 +10928,7 @@ function moSuaSanLuong(r) {
 }
 
 function dongSuaSanLuong() {
+  ntLuuKhiRoi();
   _dangSua = null;
   $('nenPhieu').classList.remove('hien', 'form-to');
   $('nutInPhieu').style.display = '';
@@ -12667,6 +12674,10 @@ function kiemBanMoi(batBuoc) {
       if (_vanTayTrang(new DOMParser().parseFromString(html, 'text/html')) !== _vanTayDangChay) $('thanhBanMoi').hidden = false;
     }).catch(function () { /* mất mạng: lần sau kiểm */ });
 }
+// Nhập sản lượng cả tổ đang mở: lưu tạm ngay khi rời trang / chuyển app (không đợi 0,6 giây sau phím cuối)
+function ntLuuKhiRoi() { try { if ($('bangNhapTo')) ntLuuTam(false); } catch (e) { /* đã tự lưu khi gõ */ } }
+window.addEventListener('pagehide', ntLuuKhiRoi);
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') ntLuuKhiRoi(); });
 $('thanhBanMoi').onclick = function () {
   if (_hcDangGui) { alert('Đang gửi phiếu chờ — đợi gửi xong rồi bấm cập nhật.'); return; }
   try { if ($('bangNhapTo')) ntLuuTam(false); if ($('bangCCTo')) ccLuuTam(); } catch (e) { /* bản nhập dở vốn đã tự lưu khi gõ */ }
@@ -12944,10 +12955,10 @@ $('nutXuatPhieu').onclick = function () {
   xuatDongSanLuongExcel(_xuatDongCuaSo.rows, _xuatDongCuaSo.coThat, this.dataset.ten || 'san_luong.xlsx');
 };
 $('nenPhieu').onclick = function (ev) {
-  if (ev.target === this) this.classList.remove('hien');
+  if (ev.target === this) { ntLuuKhiRoi(); this.classList.remove('hien'); }
 };
 document.addEventListener('keydown', function (ev) {
-  if (ev.key === 'Escape') $('nenPhieu').classList.remove('hien');
+  if (ev.key === 'Escape') { ntLuuKhiRoi(); $('nenPhieu').classList.remove('hien'); }
 });
 
 // Tab giờ dựng động theo nhóm (xem veNhomTab/veTabCon) — mỗi lần dựng lại đã tự gắn onclick,
