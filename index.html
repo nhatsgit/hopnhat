@@ -2308,7 +2308,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 231;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 232;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -12860,7 +12860,8 @@ function tbDangKy(hoi) {
 function tbKiemDangKy() {
   var nut = $('nnThongBao');
   var laTT = S.vaiTro === 'TO_TRUONG', ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  var hien = laTT && ((tbHoTro() && Notification.permission === 'default') || (ios && !_daCai && !tbHoTro()));
+  // Chưa cho phép (kể cả đã lỡ chặn — bấm sẽ hướng dẫn mở lại) thì hiện nút; iPhone chưa cài app thì hiện để hướng dẫn cài
+  var hien = laTT && ((tbHoTro() && Notification.permission !== 'granted') || (ios && !_daCai && !tbHoTro()));
   nut.style.display = hien ? '' : 'none';
   capNhatThanhNhanh();
   if (laTT && tbHoTro() && Notification.permission === 'granted') tbDangKy(false).catch(function () { /* thử lại lần vào app sau */ });
