@@ -2308,7 +2308,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 234;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 235;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -8988,7 +8988,7 @@ function moThemChamCong() {
   $('thanPhieu').innerHTML =
     '<div class="the form-luoi" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="cNgay">Ngày</label>' +
-        '<input class="o" id="cNgay" type="date" value="' + thoat($('fDenNgay').value || '') + '"></div>' +
+        oNgayNhap('cNgay', $('fDenNgay').value || '') + '</div>' +
       '<div><label class="nhan" for="cCn">Công nhân</label>' +
         '<select class="o" id="cCn">' + optTu(dsCn) + '</select></div>' +
       formChamCong(null) +
@@ -9305,7 +9305,7 @@ function moThemSanLuong() {
   $('thanPhieu').innerHTML =
     '<div class="the form-luoi" style="margin-bottom:16px">' +
       '<div><label class="nhan" for="tNgay">Ngày</label>' +
-        '<input class="o" id="tNgay" type="date" value="' + thoat(ngayMD) + '"></div>' +
+        oNgayNhap('tNgay', ngayMD) + '</div>' +
       '<div><label class="nhan" for="tCn">Công nhân</label>' +
         '<select class="o" id="tCn">' + optTu(dsCn) + '</select></div>' +
       '<div><label class="nhan" for="tPhien">Phiên cạo</label>' +
@@ -9514,6 +9514,15 @@ function moHangCho() {
       moHangCho();
     } else hcSua(it);
   };
+}
+
+/**
+ * Ô "Ngày" của form nhập sản lượng / chấm công: chỉ Admin chọn được ngày; vai trò khác khoá cứng ngày HÔM NAY (16/10/2026).
+ * Trả HTML ô input (id cho trước). giaTri: ngày mặc định khi là Admin.
+ */
+function oNgayNhap(id, giaTri) {
+  if (S.laAdmin) return '<input class="o" id="' + id + '" type="date" value="' + thoat(giaTri || nsHomNay()) + '">';
+  return '<input class="o" id="' + id + '" type="date" value="' + thoat(nsHomNay()) + '" disabled title="Chỉ nhập cho ngày hôm nay">';
 }
 
 function nsHomNayTu(ms) {
@@ -10012,7 +10021,7 @@ function moNhapCaTo() {
   var nhatMd = CO_SO_NHAT ? ((tam && tam.nhat) || '2') : ((tam && tam.nhat) || '');
 
   var h = '<div id="ntOff" class="nt-off"></div><div id="ntCapNhat" class="nt-cap-nhat"></div><div class="nt-dau">' +
-    '<div><label class="nhan" for="ntNgay">Ngày</label><input class="o" id="ntNgay" type="date" value="' + thoat(ngay) + '"></div>' +
+    '<div><label class="nhan" for="ntNgay">Ngày</label>' + oNgayNhap('ntNgay', ngay) + '</div>' +
     '<div><label class="nhan" for="ntPhien">Phiên cạo</label><select class="o" id="ntPhien">' + optTu(m.phien, phien) + '</select></div>' +
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
     '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
@@ -10429,7 +10438,7 @@ function moChamCongCaTo() {
   };
 
   var h = '<div id="ccOff" class="nt-off"></div><div id="ccCapNhat" class="nt-cap-nhat"></div><div class="nt-dau">' +
-    '<div><label class="nhan" for="ccNgay">Ngày</label><input class="o" id="ccNgay" type="date" value="' + thoat(ngay) + '"></div>' +
+    '<div><label class="nhan" for="ccNgay">Ngày</label>' + oNgayNhap('ccNgay', ngay) + '</div>' +
     '<div><label class="nhan" for="ccKhMd">Ký hiệu mặc định</label><select class="o" id="ccKhMd">' + optKh(khMd) + '</select></div>' +
     '<div><label class="nhan">Phiên cạo mặc định <span class="nhan-mo">(tối đa 2 nếu cạo đúp)</span></label>' +
       ccChipPhien(phMd, '', 'ccPhMd') + '</div>' +
@@ -10786,6 +10795,15 @@ async function xuLyNhapHangLoat(loai, file) {
       'Kiểm tra lại tên cột ở dòng tiêu đề có đúng như file mẫu không.</div>';
     nutBatDau.disabled = false; oFile.disabled = false;
     return;
+  }
+  if (!S.laAdmin) {   // chỉ Admin nhập được ngày khác hôm nay
+    var homNayX = nsHomNay(), khacNgay = dsDong.filter(function (x) { return x.ngay && x.ngay !== homNayX; });
+    if (khacNgay.length) {
+      khuKQ.innerHTML = '<div class="bao-loi">' + khacNgay.length + ' dòng có ngày khác hôm nay (' + thoat(ngayVN(homNayX)) + '), vd ' +
+        thoat(ngayVN(khacNgay[0].ngay)) + ' — chỉ được nhập cho ngày hôm nay. Sửa cột ngày trong file rồi chọn lại.</div>';
+      nutBatDau.disabled = false; oFile.disabled = false;
+      return;
+    }
   }
   if (dsDong.length > 2000) {
     khuKQ.innerHTML = '<div class="bao-loi">File có ' + dsDong.length + ' dòng — mỗi lần nhập tối đa 2000 dòng, tách bớt file.</div>';
@@ -12529,6 +12547,12 @@ function nsGuiDeXuat(t) {
   nsGoi('deXuatBienDong', t).then(function (d) {
     dongSuaSanLuong();
     var b = d.base || {};
+    if (d.duyetTrenWeb) {   // tạm thời: biến động áp dụng ngay trên web, không qua Base
+      if (d.trangThai === 'DA_DUYET') nsBaoOk('Đã chuyển ' + d.ma + ' (' + nsTenLoai(d.loai) + (d.maCn ? ' · ' + d.maCn : '') + ') — áp dụng ngay, không qua Base.');
+      else baoLoi('thongBao', 'Đã ghi ' + d.ma + ' nhưng CHƯA áp dụng được: ' + (d.loiApDung || '') + ' — báo quản trị.');
+      taiNhanSu(true);
+      return;
+    }
     nsBaoOk('Đã gửi đề xuất ' + d.ma + ' (' + nsTenLoai(d.loai) + (d.maCn ? ' · ' + d.maCn : '') + ') — ' +
       (b.ok ? 'đã tạo phiếu duyệt trên Base (#' + b.ticketId + ').'
             : (b.chuaCauHinh ? 'CHƯA tạo được phiếu Base vì chưa cấu hình dịch vụ Base duyệt nhân sự (báo quản trị).'
