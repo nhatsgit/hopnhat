@@ -2271,7 +2271,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 221;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 222;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -4200,7 +4200,8 @@ var NHAN_BAT_THUONG = { '0': ['kg = 0', 'Sản lượng bằng 0'], cao: ['cao b
 /** Nút Sửa / Xoá của 1 dòng sản lượng — chỉ dòng chờ duyệt, theo quyền (giống bảng sản lượng chi tiết trước đây). */
 function nutSuaXoaDong(r) {
   var coSua = coQuyen('sanLuong', 'SUA'), coXoa = coQuyen('sanLuong', 'XOA');
-  if (r.trangThai !== 'CHO_DUYET' || (!coSua && !coXoa)) return '<span class="nhan-mo" title="Đã duyệt / đang duyệt thì khoá">—</span>';
+  // Admin sửa / xoá được mọi trạng thái (máy chủ cũng cho Admin qua); vai trò khác chỉ dòng chờ duyệt
+  if ((r.trangThai !== 'CHO_DUYET' && !S.laAdmin) || (!coSua && !coXoa)) return '<span class="nhan-mo" title="Đã duyệt / đang duyệt thì khoá">—</span>';
   return (coSua ? '<button class="btn nho" data-sua="' + thoat(r.ma) + '">Sửa</button> ' : '') +
          (coXoa ? '<button class="btn nho nut-xoa" data-xoasl="' + thoat(r.ma) + '">Xoá</button>' : '');
 }
@@ -8316,7 +8317,7 @@ function taiChamCong() {
         '<td>' + (w.phien ? thoat(w.phien) : '<span class="nhan-mo">—</span>') + '</td>' +
         '<td class="nhan-mo">' + (w.phanCao ? thoat(w.phanCao) : '—') + '</td>' +
         '<td>' + viTrangThai(w.trangThai) + '</td>' +
-        '<td style="white-space:nowrap">' + (w.trangThai === 'CHO_DUYET' && (coQuyen('chamCong', 'SUA') || coQuyen('chamCong', 'XOA'))
+        '<td style="white-space:nowrap">' + ((w.trangThai === 'CHO_DUYET' || S.laAdmin) && (coQuyen('chamCong', 'SUA') || coQuyen('chamCong', 'XOA'))
             ? (coQuyen('chamCong', 'SUA') ? '<button class="btn nho" data-suacc="' + thoat(w.ma) + '">Sửa</button> ' : '') +
               (coQuyen('chamCong', 'XOA') ? '<button class="btn nho nut-xoa" data-xoacc="' + thoat(w.ma) + '">Xoá</button>' : '')
             : '<span class="nhan-mo">—</span>') + '</td></tr>';
