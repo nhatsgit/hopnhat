@@ -978,6 +978,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
       <button class="btn chinh" id="nnSanLuong" type="button">＋ Nhập sản lượng cả tổ</button>
       <button class="btn chinh" id="nnChamCong" type="button">＋ Chấm công cả tổ</button>
       <button class="btn" id="nnCaiApp" type="button" style="display:none">📲 Cài lên điện thoại</button>
+      <button class="btn" id="nnThongBao" type="button" style="display:none" title="Nhận thông báo nhắc chấm công trên máy này (từ 7h, mỗi giờ 1 lần nếu tổ chưa chấm công)">🔔 Bật nhắc chấm công</button>
     </div>
     <!-- Hàng chờ gửi (nhập lúc mất mạng): nút nổi dưới màn hình -->
     <button type="button" id="thanhHangCho" class="thanh-hang-cho" hidden></button>
@@ -2063,7 +2064,7 @@ var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
-  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1,
+  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1,
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
 };
@@ -2307,7 +2308,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 229;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 230;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -2326,7 +2327,8 @@ function cotKhongNhat(tieuDe, dong) {
 
 var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1, xoaChamCong: 1,
                        themSanLuong: 1, nhapHangLoatSanLuong: 1, suaSanLuong: 1, xoaSanLuong: 1,
-                       chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1 };
+                       chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1,
+                       dangKyThongBao: 1, huyThongBao: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho) {
@@ -11658,6 +11660,11 @@ function apThamSoURL() {
 
   if (coApDung) dongBoChip();
   if (q.tab && !tabAn(tabCu(q.tab))) S.tab = tabCu(q.tab);
+  // Bấm thông báo "Nhắc chấm công" (./?nhanh=chamCong): mở luôn form chấm công cả tổ
+  if (q.nhanh === 'chamCong' && S.vaiTro === 'TO_TRUONG') {
+    delete q.nhanh;
+    setTimeout(function () { moNhanh(moChamCongCaTo, $('nnChamCong')); }, 600);
+  }
   return coApDung;
 }
 
@@ -11775,6 +11782,7 @@ function apDungQuyenGiaoDien() {
   $('nnSanLuong').style.display = laTT && slThem ? '' : 'none';
   $('nnChamCong').style.display = laTT && ccThem ? '' : 'none';
   capNhatThanhNhanh();
+  tbKiemDangKy();
   hienNeu(['nutThemCC', 'nutChamCongTo', 'nutHangLoatCC', 'thanhNhapCC'], ccThem);
   hienNeu(['nutKmLuu', 'nutKmNhapFile'], coQuyen('khoMieng', 'SUA'));
   hienNeu(['nutXlLuu', 'nutXlNhapFile', 'nutXlDienA'], coQuyen('xepLoai', 'SUA'));
@@ -12816,11 +12824,60 @@ function vaiTroCaiApp() { return S.vaiTro === 'TO_TRUONG' || S.vaiTro === 'DOI_T
 /** Nút cài hiện khi máy cài được + đúng vai trò; cả thanh ẩn khi không còn nút nào (tránh khoảng trống). */
 function capNhatThanhNhanh() {
   $('nnCaiApp').style.display = _coTheCai && vaiTroCaiApp() ? '' : 'none';
-  var co = ['nnSanLuong', 'nnChamCong', 'nnCaiApp'].some(function (id) { return $(id).style.display !== 'none'; });
+  var co = ['nnSanLuong', 'nnChamCong', 'nnCaiApp', 'nnThongBao'].some(function (id) { return $(id).style.display !== 'none'; });
   $('thanhNhapNhanh').style.display = S.vaiTro && co ? '' : 'none';
 }
 window.addEventListener('beforeinstallprompt', function (ev) { ev.preventDefault(); _hoiCai = ev; _coTheCai = true; capNhatThanhNhanh(); });
 if (!_daCai && /iphone|ipad|ipod/i.test(navigator.userAgent)) _coTheCai = true;
+/* ---------- Thông báo nổi nhắc chấm công (Web Push) — chỉ tổ trưởng ----------
+   Bật: xin quyền thông báo -> đăng ký push với khoá VAPID của Cloud Run -> gửi đăng ký kèm tổ (dangKyThongBao).
+   Đã cho phép từ trước: mỗi lần vào app tự đăng ký lại (cập nhật tổ nếu máy đổi người dùng). iPhone: chỉ chạy khi đã cài app ra màn hình chính. */
+function tbHoTro() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function tbKhoaUint8(b64) {
+  var s = (b64 + '===='.substring(0, (4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'), raw = atob(s), a = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i);
+  return a;
+}
+function tbDangKy(hoi) {
+  if (!tbHoTro() || S.vaiTro !== 'TO_TRUONG') return Promise.resolve(false);
+  var xin = hoi && Notification.permission === 'default' ? Notification.requestPermission() : Promise.resolve(Notification.permission);
+  return xin.then(function (q) {
+    if (q !== 'granted') return false;
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (sub) return sub;
+        return goiAPI('vapidKey', {}).then(function (d) {
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: tbKhoaUint8(d.khoa) });
+        });
+      });
+    }).then(function (sub) {
+      return goiAPI('dangKyThongBao', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, sub: JSON.stringify(sub),
+                                        nguoi: docLS('crck2_ns_nguoi') || tenVaiTro(S.vaiTroHienThi) }).then(function () { return true; });
+    });
+  });
+}
+/** Nút "Bật nhắc chấm công": hiện cho tổ trưởng khi máy hỗ trợ mà chưa cho phép; đã cho phép thì âm thầm đăng ký lại. */
+function tbKiemDangKy() {
+  var nut = $('nnThongBao');
+  var laTT = S.vaiTro === 'TO_TRUONG', ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var hien = laTT && ((tbHoTro() && Notification.permission === 'default') || (ios && !_daCai && !tbHoTro()));
+  nut.style.display = hien ? '' : 'none';
+  capNhatThanhNhanh();
+  if (laTT && tbHoTro() && Notification.permission === 'granted') tbDangKy(false).catch(function () { /* thử lại lần vào app sau */ });
+}
+$('nnThongBao').onclick = function () {
+  if (!tbHoTro()) {
+    alert('iPhone chỉ nhận được thông báo khi đã cài app: mở trang bằng Safari → nút Chia sẻ → "Thêm vào MH chính", rồi mở app từ biểu tượng CRCK2 và bấm lại nút này.');
+    return;
+  }
+  var nut = this; nut.disabled = true; nut.textContent = 'Đang bật…';
+  tbDangKy(true).then(function (ok) {
+    nut.disabled = false; nut.textContent = '🔔 Bật nhắc chấm công';
+    if (ok) { nut.style.display = 'none'; capNhatThanhNhanh(); nsBaoOkChung('Đã bật nhắc chấm công: từ 7h, mỗi giờ 1 thông báo nếu tổ ' + S.maDonVi + ' chưa chấm công.'); }
+    else if (Notification.permission === 'denied') baoLoi('thongBao', 'Máy đang chặn thông báo của trang này — vào cài đặt trình duyệt / ứng dụng cho phép Thông báo rồi thử lại.');
+  }).catch(function (e) { nut.disabled = false; nut.textContent = '🔔 Bật nhắc chấm công'; baoLoi('thongBao', 'Chưa bật được thông báo: ' + e.message); });
+};
+
 $('nnCaiApp').onclick = function () {
   if (_hoiCai) { _hoiCai.prompt(); _hoiCai.userChoice.then(function () { _hoiCai = null; _coTheCai = false; capNhatThanhNhanh(); }); return; }
   alert('Cài lên iPhone: mở trang này bằng Safari → bấm nút Chia sẻ (ô vuông có mũi tên lên) → chọn \u0022Thêm vào MH chính\u0022 → Thêm.\nSau đó mở app từ biểu tượng CRCK2 trên màn hình chính.');
@@ -12890,6 +12947,13 @@ $('nutVao').onclick = function () {
 };
 
 $('nutThoat').onclick = function () {
+  // Tổ trưởng đổi người dùng: máy này thôi nhận nhắc chấm công của tổ (đăng nhập lại tổ trưởng là tự đăng ký lại)
+  if (S.vaiTro === 'TO_TRUONG' && tbHoTro() && Notification.permission === 'granted') {
+    var vtCu = S.vaiTro, dvCu = S.maDonVi;
+    navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      if (sub) return goiAPI('huyThongBao', { vaiTro: vtCu, maDonVi: dvCu, endpoint: sub.endpoint });
+    }).catch(function () { /* bỏ qua */ });
+  }
   S.vaiTro = ''; S.maDonVi = ''; S.vaiTroHienThi = '';
   S.phienDN = ''; S.emailDN = ''; S.hoTenDN = ''; xoaLS('crck2_phien_dn');
   try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) { /* bỏ qua */ }

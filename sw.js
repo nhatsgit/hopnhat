@@ -48,3 +48,26 @@ self.addEventListener('fetch', (ev) => {
     })));
   }
 });
+
+// ---------------------------------------------------------------------
+// THÔNG BÁO NỔI (Web Push — Cloud Run nhacChamCong gửi): hiện thông báo kể cả khi app đang đóng; bấm vào thì mở app
+// (đã mở thì đưa lên trước) ở đúng địa chỉ kèm theo, vd ./?nhanh=chamCong -> mở luôn form chấm công cả tổ.
+// ---------------------------------------------------------------------
+self.addEventListener('push', (ev) => {
+  let d = {};
+  try { d = ev.data ? ev.data.json() : {}; } catch (e) { d = { body: ev.data ? ev.data.text() : '' }; }
+  ev.waitUntil(self.registration.showNotification(d.title || 'CRCK2', {
+    body: d.body || '', tag: d.tag || 'crck2', renotify: true, requireInteraction: true,
+    icon: './icon-192.png', badge: './favicon-64.png', data: { url: d.url || './' }
+  }));
+});
+
+self.addEventListener('notificationclick', (ev) => {
+  ev.notification.close();
+  const dich = new URL((ev.notification.data && ev.notification.data.url) || './', self.registration.scope).href;
+  ev.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ds) => {
+    const co = ds.find((c) => c.url.indexOf(self.registration.scope) === 0);
+    if (co) return co.navigate(dich).then((c) => (c || co).focus()).catch(() => co.focus());
+    return self.clients.openWindow(dich);
+  }));
+});
