@@ -100,6 +100,19 @@ a{color:var(--leaf)}
   border-radius:50%;font-size:16px;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 .nut-theme:hover{border-color:var(--leaf)}
+/* Chuông thông báo (cạnh nút sáng/tối) + danh sách lịch sử */
+.nut-chuong{right:58px;font-size:16px;line-height:1}
+.so-chua-doc{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#d93025;color:#fff;
+  font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.tb-ngay{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink-3);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.tb-dong{display:flex;gap:12px;padding:10px 8px;border-radius:8px;cursor:pointer;align-items:flex-start}
+.tb-dong:hover{background:var(--leaf-soft)}
+.tb-dong.moi{background:color-mix(in srgb,var(--leaf) 10%,transparent)}
+.tb-icon{flex:0 0 34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--paper);font-size:17px}
+.tb-than{flex:1;min-width:0}
+.tb-than b{display:block;font-size:14px;margin-bottom:2px}
+.tb-than span{display:block;font-size:13px;color:var(--ink-2);line-height:1.4}
+.tb-than i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-3);margin-top:3px}
 
 label.nhan{display:block;font-size:12px;color:var(--ink-3);margin-bottom:4px;
   text-transform:uppercase;letter-spacing:.04em}
@@ -792,6 +805,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
 
 <!-- Nổi trên mọi màn hình (cấu hình / đăng nhập / ứng dụng) -->
 <button class="nut-theme" id="nutTheme" type="button" aria-label="Đổi giao diện sáng/tối"></button>
+<button class="nut-theme nut-chuong" id="nutChuong" type="button" aria-label="Thông báo" title="Thông báo" style="display:none">🔔<span class="so-chua-doc" id="soChuaDoc" hidden></span></button>
 
 <!-- ===================== MÀN HÌNH CẤU HÌNH ===================== -->
 <div class="man-hinh" id="manCauHinh" style="display:none">
@@ -2064,7 +2078,7 @@ var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
-  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1,
+  xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1, thongBaoDs: 1,
   hoSoLuong: 1,   // 16/10/2026: Cloud Run (trước Apps Script ~40 giây, Sheet chỉ 3 tháng nên kỳ cũ thiếu số)
   // Nhân sự: Cloud Run đọc từ BigQuery (Apps Script đẩy lên sau mỗi lần ghi)
   nhanSuTongQuan: 1, nhanSu: 1, bienDongNS: 1, viTriNS: 1, canhBaoNS: 1, lichSuNS: 1
@@ -2309,7 +2323,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 240;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 241;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -12869,7 +12883,10 @@ function tbKhoaUint8(b64) {
   return a;
 }
 /** Vai trò nhận thông báo: tổ trưởng (nhắc chấm công) và trợ lý (tổ trưởng vừa gửi). */
-function tbNhan() { return S.vaiTro === 'TO_TRUONG' || S.vaiTroHienThi === 'TRO_LY'; }
+function tbNhan() {
+  var v = S.vaiTroHienThi;
+  return S.vaiTro === 'TO_TRUONG' || v === 'TRO_LY' || v === 'DOI_TRUONG' || v === 'QLCL' || v === 'TCHC' || !!S.laAdmin;
+}
 function tbDangKy(hoi) {
   if (!tbHoTro() || !tbNhan()) return Promise.resolve(false);
   var xin = hoi && Notification.permission === 'default' ? Notification.requestPermission() : Promise.resolve(Notification.permission);
@@ -12888,13 +12905,75 @@ function tbDangKy(hoi) {
     });
   });
 }
+/* ---------- Trung tâm thông báo (nút 🔔): lịch sử 60 ngày từ Cloud Run (thongBaoDs), số chưa đọc theo máy ---------- */
+var _tb = { ds: [], lan: 0 };
+var TB_ICON = { NHAC_CC: '⏰', TO_GUI_SL: '🌿', TO_GUI_CC: '📝', BASE_DUYET: '✅', BASE_TU_CHOI: '↩️', BASE_CAP_NHAT: '✏️',
+                NHAC_DRC: '🧪', TONG_HOP_NGAY: '📋', NHAN_SU: '👤', LOI_DONG_BO: '⚠️' };
+function tbKhoaDoc() { return 'crck2_tb_doc_' + (S.vaiTroHienThi || S.vaiTro) + '_' + S.maDonVi; }
+function tbVeSo() {
+  var daDoc = docLS(tbKhoaDoc()) || '', n = _tb.ds.filter(function (x) { return x.luc > daDoc; }).length, o = $('soChuaDoc');
+  o.hidden = !n; o.textContent = n > 99 ? '99+' : String(n);
+}
+function tbTaiDs() {
+  if (!S.vaiTro) return Promise.resolve();
+  var lan = ++_tb.lan;
+  return goiAPI('thongBaoDs', { vaiTro: S.vaiTro, maDonVi: S.maDonVi }, 30000).then(function (d) {
+    if (lan !== _tb.lan) return;
+    _tb.ds = d.ds || []; tbVeSo();
+    if ($('nenPhieu').classList.contains('hien') && $('tbDanhSach')) tbVeDs();
+  }).catch(function () { /* mất mạng: lần sau tải lại */ });
+}
+function tbVeDs() {
+  var daDoc = $('tbDanhSach').getAttribute('data-da-doc') || '', h = '', ngayTruoc = '', homNay = nsHomNay();
+  if (!_tb.ds.length) h = '<div class="rong">Chưa có thông báo nào.</div>';
+  _tb.ds.forEach(function (x, i) {
+    var ng = x.luc.substring(0, 10);
+    if (ng !== ngayTruoc) { h += '<div class="tb-ngay"><span>' + ngayVN(ng) + '</span><span>' + (ng === homNay ? 'Hôm nay' : '') + '</span></div>'; ngayTruoc = ng; }
+    h += '<div class="tb-dong' + (x.luc > daDoc ? ' moi' : '') + '" data-i="' + i + '"><div class="tb-icon">' + (TB_ICON[x.loai] || '🔔') + '</div>' +
+         '<div class="tb-than"><b>' + thoat(x.tieuDe) + '</b><span>' + thoat(x.noiDung) + '</span><i>' + thoat(x.luc.substring(11, 16)) + ' ' + ngayVN(ng) + '</i></div></div>';
+  });
+  $('tbDanhSach').innerHTML = h;
+  var dong = $('tbDanhSach').querySelectorAll('.tb-dong');
+  for (var k = 0; k < dong.length; k++) dong[k].onclick = function () { tbMo(_tb.ds[+this.getAttribute('data-i')]); };
+}
+function moTrungTamThongBao() {
+  $('nutInPhieu').style.display = 'none';
+  $('nenPhieu').classList.add('hien');
+  $('tieuDePhieu').textContent = 'Thông báo';
+  var daDoc = docLS(tbKhoaDoc()) || '';
+  $('thanPhieu').innerHTML = '<div id="tbDanhSach" data-da-doc="' + thoat(daDoc) + '">' + skDong(4) + '</div>' +
+    '<p class="goi-y" style="margin-top:14px">Lịch sử 60 ngày gần nhất của vai trò này. Muốn nhận thông báo nổi trên điện thoại: bấm "🔔 Bật thông báo" ở đầu trang (iPhone: cài app ra màn hình chính trước).</p>';
+  tbTaiDs().then(function () {
+    if (!$('tbDanhSach')) return;
+    tbVeDs();
+    if (_tb.ds.length) { ghiLS(tbKhoaDoc(), _tb.ds[0].luc); tbVeSo(); }   // mở xem = đã đọc hết
+  });
+}
+/** Bấm 1 thông báo: mở đúng trang (tab + lọc tổ / ngày trong địa chỉ của thông báo). */
+function tbMo(x) {
+  if (!x) return;
+  $('nenPhieu').classList.remove('hien');
+  var q = {}, s = String(x.url || '').split('?')[1] || '';
+  s.split('&').forEach(function (c) { var kv = c.split('='); if (kv[0]) { try { q[decodeURIComponent(kv[0])] = decodeURIComponent((kv[1] || '').replace(/\+/g, ' ')); } catch (e) { /* bỏ */ } } });
+  if (q.nhanh === 'chamCong') { moNhanh(moChamCongCaTo, $('nnChamCong')); return; }
+  S.thamSoURL = q;
+  apThamSoURL();
+  if (q.tab && !tabAn(tabCu(q.tab))) chuyenTab(tabCu(q.tab)); else taiTab();
+}
+$('nutChuong').onclick = moTrungTamThongBao;
+setInterval(function () { if (document.visibilityState === 'visible' && S.vaiTro) tbTaiDs(); }, 2 * 60 * 1000);
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && S.vaiTro) tbTaiDs(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (ev) { if (ev.data && ev.data.loai === 'thongBao') tbTaiDs(); });
+
 /** Nút "Bật nhắc chấm công": hiện cho tổ trưởng khi máy hỗ trợ mà chưa cho phép; đã cho phép thì âm thầm đăng ký lại. */
 function tbKiemDangKy() {
   var nut = $('nnThongBao');
   var laNhan = tbNhan(), ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  nut.textContent = S.vaiTroHienThi === 'TRO_LY' ? '🔔 Bật thông báo tổ gửi số' : '🔔 Bật nhắc chấm công';
-  nut.title = S.vaiTroHienThi === 'TRO_LY' ? 'Nhận thông báo trên máy này mỗi khi tổ trưởng trong đội gửi sản lượng / chấm công'
-                                           : 'Nhận thông báo nhắc chấm công trên máy này (từ 7h, mỗi giờ 1 lần nếu tổ chưa chấm công)';
+  nut.textContent = S.vaiTro === 'TO_TRUONG' ? '🔔 Bật nhắc chấm công' : '🔔 Bật thông báo';
+  nut.title = S.vaiTro === 'TO_TRUONG' ? 'Nhận thông báo nhắc chấm công, kết quả duyệt Base của tổ trên máy này'
+                                       : 'Nhận thông báo nổi trên máy này (tổ gửi số, Base duyệt, nhắc DRC, biến động nhân sự… theo vai trò)';
+  $('nutChuong').style.display = S.vaiTro ? '' : 'none';
+  tbTaiDs();
   // Chưa cho phép (kể cả đã lỡ chặn — bấm sẽ hướng dẫn mở lại) thì hiện nút; iPhone chưa cài app thì hiện để hướng dẫn cài
   var hien = laNhan && ((tbHoTro() && Notification.permission !== 'granted') || (ios && !_daCai && !tbHoTro()));
   nut.style.display = hien ? '' : 'none';
@@ -12911,8 +12990,8 @@ $('nnThongBao').onclick = function () {
     nut.disabled = false; nut.textContent = chuCu;
     if (ok) {
       nut.style.display = 'none'; capNhatThanhNhanh();
-      nsBaoOkChung(S.vaiTroHienThi === 'TRO_LY' ? 'Đã bật thông báo: mỗi khi tổ trưởng trong ' + S.maDonVi + ' gửi sản lượng / chấm công, máy này sẽ nhận thông báo.'
-                                                : 'Đã bật nhắc chấm công: từ 7h, mỗi giờ 1 thông báo nếu tổ ' + S.maDonVi + ' chưa chấm công.');
+      nsBaoOkChung(S.vaiTro === 'TO_TRUONG' ? 'Đã bật thông báo: nhắc chấm công từ 7h (mỗi giờ nếu tổ ' + S.maDonVi + ' chưa chấm công) và kết quả duyệt Base của tổ.'
+                                            : 'Đã bật thông báo nổi trên máy này. Lịch sử mọi thông báo xem ở nút 🔔 góc trên.');
     }
     else if (Notification.permission === 'denied') baoLoi('thongBao', 'Máy đang chặn thông báo của trang này — vào cài đặt trình duyệt / ứng dụng cho phép Thông báo rồi thử lại.');
   }).catch(function (e) { nut.disabled = false; nut.textContent = chuCu; baoLoi('thongBao', 'Chưa bật được thông báo: ' + e.message); });
@@ -12995,6 +13074,7 @@ $('nutThoat').onclick = function () {
     }).catch(function () { /* bỏ qua */ });
   }
   S.vaiTro = ''; S.maDonVi = ''; S.vaiTroHienThi = '';
+  $('nutChuong').style.display = 'none'; _tb.ds = [];
   S.phienDN = ''; S.emailDN = ''; S.hoTenDN = ''; xoaLS('crck2_phien_dn');
   try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) { /* bỏ qua */ }
   xoaLS('crck2_dangnhap');

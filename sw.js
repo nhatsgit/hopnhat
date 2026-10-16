@@ -56,6 +56,8 @@ self.addEventListener('fetch', (ev) => {
 self.addEventListener('push', (ev) => {
   let d = {};
   try { d = ev.data ? ev.data.json() : {}; } catch (e) { d = { body: ev.data ? ev.data.text() : '' }; }
+  // Trang đang mở: tải lại danh sách 🔔 (số chưa đọc)
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ds) => ds.forEach((c) => c.postMessage({ loai: 'thongBao' })));
   ev.waitUntil(self.registration.showNotification(d.title || 'CRCK2', {
     body: d.body || '', tag: d.tag || 'crck2', renotify: true, requireInteraction: true,
     icon: './icon-192.png', badge: './favicon-64.png', data: { url: d.url || './' }
