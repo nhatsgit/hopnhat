@@ -21,7 +21,7 @@
   try {
     if (localStorage.getItem('crck2_ngon_ngu') === 'km') {
       document.documentElement.lang = 'km';
-      document.write('<script src="tu_dien_km.js?v=0830c5ac"><\/script>');
+      document.write('<script src="tu_dien_km.js?v=4656ce1a"><\/script>');
       // Phông Khmer chỉ tải khi giao diện đang là tiếng Khmer (tiếng Việt không cần, bớt một yêu cầu chặn hiển thị);
       // đổi ngôn ngữ thì trang tải lại nên đoạn này chạy lại
       var pk = document.createElement('link'); pk.rel = 'stylesheet';
@@ -962,9 +962,9 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <h3 class="tieude-muc">Sản lượng theo ngày</h3>
         <div id="bdNgay"></div>
       </div>
-      <!-- Chỉ người được xem DRC thật mới thấy khối này -->
+      <!-- Chỉ người được xem DRC trạm cân mới thấy khối này -->
       <div class="the o-bieu-do" id="theQkThatNgay" style="margin-bottom:20px;display:none">
-        <h3 class="tieude-muc">Quy khô thật so với tạm tính theo ngày <span class="nhan-mo" style="text-transform:none;font-weight:400">(chỉ ngày đã có DRC thật + phiếu cân)</span></h3>
+        <h3 class="tieude-muc">Quy khô thật so với tạm tính theo ngày <span class="nhan-mo" style="text-transform:none;font-weight:400">(chỉ ngày đã có DRC trạm cân + phiếu cân)</span></h3>
         <div id="bdQkThatNgay"></div>
       </div>
       <div class="luoi-2 mot">
@@ -1116,7 +1116,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
       </div>
     </section>
 
-    <!-- Tab: DRC thật (nhóm Sản lượng) — nhập DRC phòng QLCL báo mỗi ngày mỗi đội; quy khô thật = phiếu cân của đội × DRC -->
+    <!-- Tab: DRC trạm cân (nhóm Sản lượng) — nhập DRC phòng QLCL báo mỗi ngày mỗi đội; quy khô thật = phiếu cân của đội × DRC -->
     <section id="pDrc" style="display:none">
       <div id="chuGiaiDrc"></div>
       <!-- DRC hôm nay: 1 dòng mỗi đội, nhập nhanh DRC trong ngày cho cả 4 đội (cùng lệnh drcNgay / drcLuu của bảng từng đội) -->
@@ -2271,7 +2271,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 224;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 225;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3724,7 +3724,7 @@ function veBangTramCan() {
           '<th>Xe</th><th>Tài xế</th><th>Hàng</th><th class="p">Cân tổng</th><th class="p">Cân bì</th><th class="p">Hàng (kg)</th>' +
           '<th class="p" title="Sản lượng của tổ trên phiếu nội trạm (sổ tổ) cùng ngày, cùng loại mủ với phiếu cân — để so với khối lượng cân">Sản lượng tổ (kg)</th>' +
           '<th class="p" title="(Sản lượng tổ − khối lượng cân) ÷ khối lượng cân. Nhiều chuyến của cùng tổ / chuyến gộp nhiều tổ thì tính chung cả nhóm. Lệch quá 5% tô đỏ">Chênh lệch tổ / cân</th>' +
-          '<th class="p" title="DRC thật: phòng QLCL báo cho ngày + đội + loại mủ của phiếu (nhập ở tab DRC thật)">DRC thật (%)</th><th class="p" title="Hàng × DRC thật">Quy khô thật (kg)</th></tr></thead><tbody>';
+          '<th class="p" title="DRC trạm cân: phòng QLCL báo cho ngày + đội + loại mủ của phiếu (nhập ở tab DRC trạm cân)">DRC trạm cân (%)</th><th class="p" title="Hàng × DRC trạm cân">Quy khô thật (kg)</th></tr></thead><tbody>';
   ds.forEach(function (x) {
     var zs = x.zones || [];
     h += '<tr><td>' + tcOPhieuBase(x) + '</td><td class="num">' + thoat(x.ma) + (zs.length > 1 ? ' <span class="td-nguon" title="Một chuyến chở mủ của ' + zs.length + ' tổ">gộp ' + zs.length + '</span>' : '') +
@@ -3771,7 +3771,7 @@ function _xuatTramCan(dAll) {
   var ds = (dAll && dAll.phieu) || [];
   if (!ds.length) { baoLoi('thongBao', 'Không có phiếu cân để xuất.'); return; }
   var nhan = ['Phiếu Base', 'Trạng thái duyệt', 'Số phiếu', 'Giờ cân tổng', 'Giờ cân bì', 'Đội', 'Tổ', 'Phiên', 'Lô', 'Số phiếu nội trạm', 'Biển số xe', 'Tài xế',
-              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Sản lượng tổ - phiếu nội trạm (kg)', 'Chênh lệch tổ / cân (%)', 'DRC thật (%)', 'Quy khô thật (kg)', 'Ghi chú'];
+              'Hàng hoá', 'Cân tổng (kg)', 'Cân bì (kg)', 'Trọng lượng hàng (kg)', 'Sản lượng tổ - phiếu nội trạm (kg)', 'Chênh lệch tổ / cân (%)', 'DRC trạm cân (%)', 'Quy khô thật (kg)', 'Ghi chú'];
   var dong = ds.map(function (x) {
     var zs = x.zones || [];
     return [x.maBase || '', tcTrangThaiBase(x), x.ma, x.gioTong, x.gioBi, x.doi, zs.map(function (z) { return z.to || 'Zone ' + z.zone; }).join('; '),
@@ -4041,16 +4041,16 @@ function iconKpi(ten, dv) {
  * phuHtml (tuỳ chọn): dòng phụ đã là HTML an toàn (vd mũi tên tăng/giảm có màu) thay cho phu.
  * "· ▲ x% so với kỳ trước" (chenhLechTQ) ở cuối dòng phụ được tách thành nhãn ở góc trên phải thẻ.
  */
-/** Nhãn phân biệt DRC thật (phòng QLCL báo theo ngày, nhập ở tab DRC thật) với DRC tạm tính (cố định theo loại mủ). */
-var NHAN_DRC_THAT = '<span class="nhan-drc that" title="DRC thật: phòng QLCL báo theo ngày + đội + loại mủ (nhập ở tab DRC thật)">thật</span>';
-var NHAN_DRC_TAM = '<span class="nhan-drc tam" title="DRC tạm tính: mức cố định theo loại mủ (mặc định mủ chén 49%, mủ dây 60%) dùng cho sổ sản lượng, lương, giao khoán — chưa phải DRC thật">tạm tính</span>';
-var CHU_GIAI_DRC = '<div class="chu-giai-drc">' + NHAN_DRC_THAT + ' DRC phòng QLCL báo theo ngày (tab DRC thật) &nbsp;·&nbsp; ' +
-  NHAN_DRC_TAM + ' DRC cố định theo loại mủ, dùng cho sổ sản lượng, lương, giao khoán — chưa phải DRC thật</div>';
+/** Nhãn phân biệt DRC trạm cân (phòng QLCL báo theo ngày, nhập ở tab DRC trạm cân) với DRC tạm tính (cố định theo loại mủ). */
+var NHAN_DRC_THAT = '<span class="nhan-drc that" title="DRC trạm cân: phòng QLCL báo theo ngày + đội + loại mủ (nhập ở tab DRC trạm cân)">thật</span>';
+var NHAN_DRC_TAM = '<span class="nhan-drc tam" title="DRC tạm tính: mức cố định theo loại mủ (mặc định mủ chén 49%, mủ dây 60%) dùng cho sổ sản lượng, lương, giao khoán — chưa phải DRC trạm cân">tạm tính</span>';
+var CHU_GIAI_DRC = '<div class="chu-giai-drc">' + NHAN_DRC_THAT + ' DRC phòng QLCL báo theo ngày (tab DRC trạm cân) &nbsp;·&nbsp; ' +
+  NHAN_DRC_TAM + ' DRC cố định theo loại mủ, dùng cho sổ sản lượng, lương, giao khoán — chưa phải DRC trạm cân</div>';
 
-/** Chỗ nào chưa có DRC thật (ngày chưa nhập / chưa có cân) thì ghi thẳng như vậy, không để trống hay đoán. */
-var CHUA_CO_DRC_THAT = '<span class="nhan-mo" title="Phòng QLCL chưa báo DRC (hoặc chưa có phiếu cân) cho ngày + đội + loại mủ này — nhập ở tab DRC thật">chưa có DRC thật</span>';
+/** Chỗ nào chưa có DRC trạm cân (ngày chưa nhập / chưa có cân) thì ghi thẳng như vậy, không để trống hay đoán. */
+var CHUA_CO_DRC_THAT = '<span class="nhan-mo" title="Phòng QLCL chưa báo DRC (hoặc chưa có phiếu cân) cho ngày + đội + loại mủ này — nhập ở tab DRC trạm cân">chưa có DRC trạm cân</span>';
 
-/** Ô DRC thật + sản lượng thật + quy khô thật của 1 dòng / 1 loại mủ (r.drcThat, r.kgThat, r.quyKhoThat). */
+/** Ô DRC trạm cân + sản lượng thật + quy khô thật của 1 dòng / 1 loại mủ (r.drcThat, r.kgThat, r.quyKhoThat). */
 function oDrcThat(r, cot) {
   if (r.drcThat === undefined || r.drcThat === null) return '<td class="p">' + (cot === 'drcThat' ? CHUA_CO_DRC_THAT : '<span class="nhan-mo">—</span>') + '</td>';
   if (cot === 'drcThat') return '<td class="p num">' + soVN(r.drcThat, 2) + '%</td>';
@@ -4061,7 +4061,7 @@ function oDrcThat(r, cot) {
 
 /**
  * Thẻ quy khô TẠM TÍNH + THẬT, mỗi loại mủ 1 thẻ riêng (chén, dây). tam = { MU_DONG: {kg, quyKho}, ... };
- * that = { MU_DONG: {kgSo, kgThat, qkThat}, ... } hoặc null khi người xem không có quyền Xem DRC thật.
+ * that = { MU_DONG: {kgSo, kgThat, qkThat}, ... } hoặc null khi người xem không có quyền Xem DRC trạm cân.
  */
 function theQuyKhoTheoLoai(tam, that) {
   var h = '';
@@ -4074,7 +4074,7 @@ function theQuyKhoTheoLoai(tam, that) {
   return h + (that ? theQuyKhoThat(tam, that) : '');
 }
 
-/** 2 thẻ quy khô THẬT (mủ chén, mủ dây): DRC thật, kg cân, kg sổ + tỉ lệ chênh, phần phủ; thiếu thì ghi "chưa có DRC thật". */
+/** 2 thẻ quy khô THẬT (mủ chén, mủ dây): DRC trạm cân, kg cân, kg sổ + tỉ lệ chênh, phần phủ; thiếu thì ghi "chưa có DRC trạm cân". */
 function theQuyKhoThat(tam, that) {
   var h = '';
   [['MU_DONG', 'mủ chén'], ['MU_DAY', 'mủ dây']].forEach(function (l) {
@@ -4233,11 +4233,11 @@ var COT_SL = [
   { k: 'chatLuong', t: 'Chất lượng' },
   { k: 'kg', t: 'Sản lượng (kg)', p: true },
   { k: 'nhat', t: 'Nhát cạo', p: true, nhat: true },
-  { k: 'drc', t: 'DRC tạm tính', p: true, tip: 'DRC tạm tính: mức cố định theo loại mủ, chưa phải DRC thật phòng QLCL báo' },
-  { k: 'quyKho', t: 'Quy khô tạm tính (kg)', p: true, tip: 'Kg tươi × DRC tạm tính. Quy khô thật xem ở tab DRC thật / Trạm cân' },
-  { k: 'drcThat', t: 'DRC thật', p: true, that: true, tip: 'DRC phòng QLCL báo cho ngày + đội + loại mủ (tab DRC thật)' },
+  { k: 'drc', t: 'DRC tạm tính', p: true, tip: 'DRC tạm tính: mức cố định theo loại mủ, chưa phải DRC trạm cân phòng QLCL báo' },
+  { k: 'quyKho', t: 'Quy khô tạm tính (kg)', p: true, tip: 'Kg tươi × DRC tạm tính. Quy khô thật xem ở tab DRC trạm cân / Trạm cân' },
+  { k: 'drcThat', t: 'DRC trạm cân', p: true, that: true, tip: 'DRC phòng QLCL báo cho ngày + đội + loại mủ (tab DRC trạm cân)' },
   { k: 'kgThat', t: 'Sản lượng thật (kg)', p: true, that: true, tip: 'Kg ghi sổ × (kg trạm cân của đội ÷ kg sổ đã duyệt của đội, cùng ngày + loại mủ)' },
-  { k: 'quyKhoThat', t: 'Quy khô thật (kg)', p: true, that: true, tip: 'Sản lượng thật × DRC thật' },
+  { k: 'quyKhoThat', t: 'Quy khô thật (kg)', p: true, that: true, tip: 'Sản lượng thật × DRC trạm cân' },
   { k: 'nsbq', t: 'kg/nhát', p: true, nhat: true },
   { k: 'trangThai', t: 'Trạng thái' },
   { k: '_sua', t: '' }
@@ -4359,9 +4359,9 @@ function taiBangPhieu() {
     var coThatP = !!d.that;
     var h = '<thead><tr><th>Phiếu Base</th><th>Mã phiếu</th><th>Ngày</th><th>Tổ</th>' +
             '<th class="p">Tổng (kg)</th><th>Chi tiết theo loại mủ</th>' +
-            (coThatP ? '<th class="p" title="DRC phòng QLCL báo (tab DRC thật), từng loại mủ">DRC thật</th>' +
+            (coThatP ? '<th class="p" title="DRC phòng QLCL báo (tab DRC trạm cân), từng loại mủ">DRC trạm cân</th>' +
               '<th class="p" title="Kg phiếu × (kg trạm cân của đội ÷ kg sổ đã duyệt của đội, cùng ngày + loại mủ)">Sản lượng thật (kg)</th>' +
-              '<th class="p" title="Sản lượng thật × DRC thật">Quy khô thật (kg)</th>' : '') +
+              '<th class="p" title="Sản lượng thật × DRC trạm cân">Quy khô thật (kg)</th>' : '') +
             '<th>Trạng thái</th><th></th></tr></thead><tbody>';
 
     if (!d.rows.length) {
@@ -4442,7 +4442,7 @@ function moPhieu(ma) {
     var coThatM = !!p.coThat;
     h += '<h3 class="tieude-muc">Chi tiết theo loại mủ</h3><div class="cuon"><table>' +
          '<thead><tr><th>Loại mủ</th><th class="p">Khối lượng (kg)</th><th class="p">Tỷ trọng</th>' +
-         (coThatM ? '<th class="p">DRC thật</th><th class="p">Sản lượng thật (kg)</th><th class="p">Quy khô thật (kg)</th>' : '') + '</tr></thead><tbody>';
+         (coThatM ? '<th class="p">DRC trạm cân</th><th class="p">Sản lượng thật (kg)</th><th class="p">Quy khô thật (kg)</th>' : '') + '</tr></thead><tbody>';
     for (var i = 0; i < p.chiTiet.length; i++) {
       var c = p.chiTiet[i];
       h += '<tr><td><span class="vi ' + lopLoaiMu(c.loaiMu) + '">' + thoat(tenLoaiMu(c.loaiMu)) + '</span></td>' +
@@ -7229,7 +7229,7 @@ function _xuatSoTheoMau(tenMau, dung, tenFile, ch, nut) {
 }
 
 /* =====================================================================
-   Tab DRC THẬT (nhóm Sản lượng): xe cân xong vài tiếng, phòng QLCL báo DRC -> Admin nhập MỖI NGÀY MỖI ĐỘI 1 DRC cho
+   Tab DRC TRẠM CÂN (nhóm Sản lượng): xe cân xong vài tiếng, phòng QLCL báo DRC -> Admin nhập MỖI NGÀY MỖI ĐỘI 1 DRC cho
    từng loại mủ. Quy khô thật của đội trong ngày = tổng phiếu cân của đội × DRC; phân về tổ theo tỉ lệ sổ tổ đã duyệt.
    Máy chủ: drcNgay (đọc, Cloud Run) · drcLuu (ghi, Cloud Run — lỗi thì Apps Script, bảng FACT_DRC_NGAY_DOI). Để trống ô = xoá DRC ngày đó.
    ===================================================================== */
@@ -7284,8 +7284,8 @@ function veDrc(d) {
   $('chuGiaiDrc').innerHTML = CHU_GIAI_DRC;
   $('kpisDrc').innerHTML =
     the_kpi_kg('Quy khô thật ' + tenDoiNgan(d.doi), qkThat, 'Phiếu cân × DRC, ' + soVN(coCan - thieu, 0) + '/' + soVN(coCan, 0) + ' ngày-loại mủ đã có DRC') +
-    the_kpi('DRC thật bình quân mủ đông', tm.drcBq === null ? '—' : soVN(tm.drcBq, 2), '%', '', tm.drcBq === null ? 'Chưa nhập DRC nào trong tháng' : NHAN_DRC_THAT + ' gia quyền theo kg cân' + lech) +
-    the_kpi('DRC thật bình quân mủ dây', td.drcBq === null ? '—' : soVN(td.drcBq, 2), '%', '', td.drcBq === null ? 'Chưa nhập DRC nào trong tháng' : NHAN_DRC_THAT + ' gia quyền theo kg cân · ' + NHAN_DRC_TAM + ' ' + soVN(d.drcTam.MU_DAY * 100, 1) + '%') +
+    the_kpi('DRC trạm cân bình quân mủ đông', tm.drcBq === null ? '—' : soVN(tm.drcBq, 2), '%', '', tm.drcBq === null ? 'Chưa nhập DRC nào trong tháng' : NHAN_DRC_THAT + ' gia quyền theo kg cân' + lech) +
+    the_kpi('DRC trạm cân bình quân mủ dây', td.drcBq === null ? '—' : soVN(td.drcBq, 2), '%', '', td.drcBq === null ? 'Chưa nhập DRC nào trong tháng' : NHAN_DRC_THAT + ' gia quyền theo kg cân · ' + NHAN_DRC_TAM + ' ' + soVN(d.drcTam.MU_DAY * 100, 1) + '%') +
     the_kpi('Ngày còn thiếu DRC', soVN(thieu, 0), 'ngày-loại mủ', '', thieu ? '<span class="giam">Có phiếu cân nhưng chưa nhập DRC</span>' : 'Đủ DRC mọi ngày có cân');
   $('tomTatDrc').textContent = 'DRC từng ngày — ' + tenDoiNgan(d.doi) + ' · tháng ' + d.thang.substring(5) + '/' + d.thang.substring(0, 4);
 
@@ -7301,7 +7301,7 @@ function veDrc(d) {
   // Mỗi loại mủ 1 bảng: Ngày | Số phiếu | Cân | Sổ tổ | DRC | Quy khô thật | Tạm tính. Mủ dây chỉ liệt kê ngày có cân / có DRC.
   var bangLoai = function (ma, chiNgayCo) {
     var t = d.tong[ma], hh = '<thead><tr><th>Ngày</th><th class="p">Số phiếu cân</th><th class="p">Cân (kg)</th><th class="p">Sổ tổ (kg)</th>' +
-      '<th class="p">DRC thật (%) ' + NHAN_DRC_THAT + '</th><th class="p">Quy khô thật (kg) ' + NHAN_DRC_THAT + '</th><th class="p">Quy khô tạm tính (kg) ' + NHAN_DRC_TAM + '</th></tr></thead><tbody>';
+      '<th class="p">DRC trạm cân (%) ' + NHAN_DRC_THAT + '</th><th class="p">Quy khô thật (kg) ' + NHAN_DRC_THAT + '</th><th class="p">Quy khô tạm tính (kg) ' + NHAN_DRC_TAM + '</th></tr></thead><tbody>';
     var n = 0;
     d.ngay.forEach(function (x) {
       var a = x.loai[ma];
@@ -7327,7 +7327,7 @@ function veDrc(d) {
   drcChonLoai(_drcLoai);
   if ($('drcNhayThang')) $('drcNhayThang').onclick = function () { $('drcThang').value = this.getAttribute('data-thang'); taiDrc(); };
   $('ghiChuDrc').textContent = (sua ? 'Gõ DRC phòng QLCL báo vào ô của ngày (Enter xuống ngày kế), xong bấm "Lưu DRC". Để trống ô rồi lưu = xoá DRC ngày đó. ' : 'Bạn chỉ có quyền xem DRC. ') +
-    'Quy khô thật = kg phiếu cân của đội × DRC thật; ngày chưa có DRC thật để trống, không đoán. Cột "tạm tính" là cách cũ (DRC cố định theo loại mủ) để so. ' +
+    'Quy khô thật = kg phiếu cân của đội × DRC trạm cân; ngày chưa có DRC trạm cân để trống, không đoán. Cột "tạm tính" là cách cũ (DRC cố định theo loại mủ) để so. ' +
     'Sổ sản lượng, lương, giao khoán vẫn dùng DRC tạm tính cho đến khi chốt.';
 
   var g = '<thead><tr><th>Tổ</th><th class="p">Mủ đông: sổ tươi (kg)</th><th class="p">Quy khô thật (kg)</th><th class="p">Mủ dây: sổ tươi (kg)</th><th class="p">Quy khô thật (kg)</th><th class="p">Tổng quy khô thật (kg)</th></tr></thead><tbody>';
@@ -9060,14 +9060,14 @@ function xuatDongSanLuongExcel(rows, coThat, tenFile) {
   var dong = rows.map(function (r) {
     return [baoChuBase(r.base), r.ma, r.ngay, r.maCn, r.to, r.phanCao, r.phien, r.loaiMu, r.chatLuong,
             r.kg, r.nhat, r.drc, r.quyKho].concat(coThat ? [
-              r.drcThat === undefined ? 'chưa có DRC thật' : r.drcThat,
+              r.drcThat === undefined ? 'chưa có DRC trạm cân' : r.drcThat,
               r.drcThat === undefined ? '' : (r.kgThat === null ? 'chưa có cân' : r.kgThat),
               r.drcThat === undefined ? '' : (r.quyKhoThat === null ? 'chưa có cân' : r.quyKhoThat)] : [])
             .concat([r.nsbq, r.nguon, r.trangThai, r.ghiChu]);
   });
   var tieuDeSl = ['Phiếu Base', 'Mã bản ghi', 'Ngày', 'Mã CN', 'Tổ', 'Phần cao', 'Phiên cạo', 'Loại mủ',
      'Chất lượng', 'Sản lượng (kg)', 'Số nhát cạo', 'DRC tạm tính áp dụng', 'Quy khô tạm tính (kg)']
-     .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [])
+     .concat(coThat ? ['DRC trạm cân (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [])
      .concat(['NSBQ (kg/nhát)', 'Nguồn ghi', 'Trạng thái', 'Ghi chú']);
   if (!CO_SO_NHAT) {   // giữ cột số nhát (đã mở nhập), bỏ riêng NSBQ kg/nhát
     var iNs = tieuDeSl.indexOf('NSBQ (kg/nhát)');
@@ -9091,11 +9091,11 @@ function csvSanLuong() {
 function csvPhieu() {
   baoLoi('thongBao', '');
   goiCache('phieu', layBoLoc()).then(function (d) {
-    var dong = [], coThat = d.rows.some(function (p) { return p.coThat; });   // chỉ người được xem DRC thật mới có 3 cột thật
-    // DRC thật / sản lượng thật / quy khô thật của 1 loại mủ; ngày chưa có DRC thật thì ghi rõ
+    var dong = [], coThat = d.rows.some(function (p) { return p.coThat; });   // chỉ người được xem DRC trạm cân mới có 3 cột thật
+    // DRC trạm cân / sản lượng thật / quy khô thật của 1 loại mủ; ngày chưa có DRC trạm cân thì ghi rõ
     var cotThat = function (c) {
       if (!coThat) return [];
-      if (c === null || c.drcThat === undefined || c.drcThat === null) return ['chưa có DRC thật', '', ''];
+      if (c === null || c.drcThat === undefined || c.drcThat === null) return ['chưa có DRC trạm cân', '', ''];
       return [c.drcThat, c.kgThat === null || c.kgThat === undefined ? 'chưa có cân' : c.kgThat,
               c.quyKhoThat === null || c.quyKhoThat === undefined ? 'chưa có cân' : c.quyKhoThat];
     };
@@ -9109,7 +9109,7 @@ function csvPhieu() {
     });
     xuatBangExcel('phieu_noi_tram_' + S.maDonVi + '.xlsx',
       ['Phiếu Base', 'Mã phiếu NT', 'Ngày', 'Đơn vị (tổ)', 'Tổng khối lượng (kg)', 'Loại mủ', 'Khối lượng loại mủ (kg)']
-        .concat(coThat ? ['DRC thật (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [], ['Đối chiếu']), dong);
+        .concat(coThat ? ['DRC trạm cân (%)', 'Sản lượng thật (kg)', 'Quy khô thật (kg)'] : [], ['Đối chiếu']), dong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 
@@ -11126,7 +11126,7 @@ var NHOM_TAB = [
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
-  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Vườn cây', tramCan: 'Trạm cân', drc: 'DRC thật',
+  tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Vườn cây', tramCan: 'Trạm cân', drc: 'DRC trạm cân',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
