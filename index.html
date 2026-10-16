@@ -2324,7 +2324,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 246;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 247;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -4504,7 +4504,9 @@ function moPhieu(ma) {
       '<div><span>Ngày</span><b>' + ngayVN(p.ngay) + '</b></div>' +
       '<div><span>Tổ</span><b>' + thoat(p.to) + '</b></div>' +
       '<div><span>Tổng khối lượng</span><b>' + soVN(p.kg, 2) + ' kg</b></div>' +
-      '<div><span>Phiếu Base</span><b style="font-weight:500">' + veThongTinBase(p.base) + '</b></div>' +
+      '<div><span>Phiếu Base</span><b style="font-weight:500">' + veThongTinBase(p.base) + '</b>' +
+        ((!p.base || !p.base.length) && p.trangThai !== 'DA_DUYET' && coQuyen('dayBase', 'THEM')
+          ? '<button class="btn nho chinh" type="button" id="nutDayBasePhieu" style="margin-top:6px">Đẩy lên Base</button>' : '') + '</div>' +
       '</div>';
 
     var coThatM = !!p.coThat;
@@ -4531,6 +4533,7 @@ function moPhieu(ma) {
     h += '<p class="goi-y" style="margin-top:18px">Phiếu và chi tiết do Bot AppSheet tự tổng hợp từ sản lượng ngày — không nhập tay.</p>';
 
     $('thanPhieu').innerHTML = h;
+    if ($('nutDayBasePhieu')) $('nutDayBasePhieu').onclick = function () { moDayBase({ to: p.to, ngay: String(p.ngay).slice(0, 10) }); };
     var bl = layBoLoc();
     bl.tuNgay = p.ngay; bl.denNgay = p.ngay; bl.doi = ''; bl.to = p.to; bl.loaiMu = ''; bl.phien = ''; bl.chatLuong = ''; bl.maCn = '';
     bl.trangThai = ''; bl.docSheet = S.laAdmin ? 1 : ''; bl.trang = 1; bl.moiTrang = 500; bl.sapXep = 'maCn'; bl.chieu = 'tang';
@@ -8429,7 +8432,9 @@ function moNgayToCC(g) {
       '<div><span>Phiên cạo</span><b>' + (g.phien ? thoat(g.phien) : '—') + '</b></div>' +
       '<div><span>Số người</span><b>' + soVN(g.soNguoi, 0) + '</b></div><div><span>Tổng công</span><b>' + soVN(d.kpi.tongCong, 1) + '</b></div>' +
       '<div><span>Trạng thái</span><b style="font-weight:500">' + viTrangThaiNhom(g) + '</b></div>' +
-      '<div><span>Phiếu Base</span><b style="font-weight:500">' + veThongTinBase(base) + '</b></div></div>';
+      '<div><span>Phiếu Base</span><b style="font-weight:500">' + veThongTinBase(base) + '</b>' +
+        (!base && ((g.demTrangThai || {}).CHO_DUYET || g.trangThai === 'CHO_DUYET') && coQuyen('dayChamCongBase', 'THEM')
+          ? '<button class="btn nho chinh" type="button" id="nutCCBasePhieu" style="margin-top:6px">Gửi lên Base</button>' : '') + '</div></div>';
     h += '<h3 class="tieude-muc">Các dòng chấm công (' + soVN(rows.length, 0) + ')</h3>' +
          '<div class="cuon cuon-dong-sl"><table><thead><tr><th>Mã công nhân</th><th>Ký hiệu</th><th class="p">Số công</th><th>Phiên cạo</th><th>Phần cạo</th>' +
          '<th>Trạng thái</th><th class="o-sua"></th></tr></thead><tbody>';
@@ -8447,6 +8452,7 @@ function moNgayToCC(g) {
     h += '</tbody>' + (rows.length ? '<tfoot><tr><td>Cộng · ' + soVN(rows.length, 0) + ' dòng</td><td></td><td class="p num">' + soVN(d.kpi.tongCong, 1) +
          '</td><td></td><td></td><td></td><td class="o-sua"></td></tr></tfoot>' : '') + '</table></div>';
     $('thanPhieu').innerHTML = h;
+    if ($('nutCCBasePhieu')) $('nutCCBasePhieu').onclick = function () { moCCBase({ to: g.to, ngay: String(g.ngay).slice(0, 10) }); };
     var kh = $('thanPhieu');
     ganNutXoa(kh, 'data-xoacc', 'xoaChamCong', function (ma) {
       var w = rows.filter(function (x) { return x.ma === ma; })[0];
@@ -9668,27 +9674,81 @@ function ntTongKet() {
    --------------------------------------------------------------------- */
 var _dbXem = null;
 
-function moDayBase() {
+/* Danh sách phiếu (sản lượng: phiếu nội trạm · chấm công: ngày × tổ) còn dòng CHỜ DUYỆT trong khoảng ngày — bấm "Chọn" để xem trước rồi đẩy.
+   o = { tien: 'db'|'ccb', loai: 'sl'|'cc', chon: { to, ngay } (mở sẵn 1 phiếu, vd từ nút trong phiếu), xem: hàm xem trước } */
+function dsPhieuDayHtml(tien) {
+  var homNay = nsHomNay(), tu = nsHomNayTu(Date.now() - 7 * 86400000);
+  return '<p class="goi-y" style="margin-top:0">Các phiếu còn dòng <b>chờ duyệt</b>. Bấm <b>Chọn</b> để xem dữ liệu rồi đẩy lên Base.</p>' +
+    '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div><label class="nhan" for="' + tien + 'TuNgay">Từ ngày</label><input class="o" id="' + tien + 'TuNgay" type="date" style="width:auto" value="' + tu + '"></div>' +
+      '<div><label class="nhan" for="' + tien + 'DenNgay">Đến ngày</label><input class="o" id="' + tien + 'DenNgay" type="date" style="width:auto" value="' + homNay + '"></div>' +
+    '</div>' +
+    '<input type="hidden" id="' + tien + 'To"><input type="hidden" id="' + tien + 'Ngay">' +
+    '<div class="cuon" id="' + tien + 'Ds" style="max-height:38vh;overflow:auto;margin-bottom:12px"></div>' +
+    '<div style="display:none">' + nsNut(tien + 'Xem', 'Xem dữ liệu', true) + '</div>';
+}
+function dsPhieuDayTai(o) {
+  var hop = $(o.tien + 'Ds');
+  if (!hop) return;
+  var tu = $(o.tien + 'TuNgay').value, den = $(o.tien + 'DenNgay').value;
+  hop.innerHTML = '<p class="goi-y">Đang tải danh sách phiếu…</p>';
+  var ts = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: tu, denNgay: den, trangThai: 'CHO_DUYET', docSheet: '1' };
+  if (o.loai === 'sl') ts.layHet = '1'; else { ts.nhom = 'ngayTo'; ts.moiTrang = '500'; }
+  goiAPI(o.loai === 'sl' ? 'phieu' : 'chamCong', ts, 60000).then(function (d) {
+    if (!$(o.tien + 'Ds')) return;
+    var ds = (d.rows || []).filter(function (x) {
+      return o.loai === 'sl' ? (x.soDongChoDuyet || 0) > 0 : ((x.demTrangThai || {}).CHO_DUYET || 0) > 0;
+    });
+    if (!ds.length) { hop.innerHTML = '<p class="goi-y">Không có phiếu nào còn dòng chờ duyệt trong khoảng ngày này.</p>'; return; }
+    var h = '<table><thead><tr><th>Ngày</th><th>Tổ</th><th class="so">' + (o.loai === 'sl' ? 'Tổng (kg)' : 'Người · công') + '</th><th class="so">Dòng chờ duyệt</th>' +
+      (o.loai === 'sl' ? '<th>Phiếu Base</th>' : '') + '<th></th></tr></thead><tbody>';
+    ds.forEach(function (x, i) {
+      var cho = o.loai === 'sl' ? x.soDongChoDuyet : x.demTrangThai.CHO_DUYET;
+      var base = (x.base || []).map(function (b) { return '<a href="' + tdLinkBase(b.ma) + '" target="_blank" rel="noopener">#' + thoat(b.ma) + '</a>'; }).join(', ');
+      h += '<tr data-i="' + i + '"><td>' + thoat(ngayVN(x.ngay)) + '</td><td><b>' + thoat(x.to) + '</b></td>' +
+        '<td class="so">' + (o.loai === 'sl' ? soVN(x.kg, 2) : soVN(x.soNguoi, 0) + ' · ' + soVN(x.soCong, 2)) + '</td>' +
+        '<td class="so">' + soVN(cho, 0) + '</td>' + (o.loai === 'sl' ? '<td>' + (base || '<span class="goi-y">chưa có</span>') + '</td>' : '') +
+        '<td><button class="btn nho" type="button" data-i="' + i + '">Chọn</button></td></tr>';
+    });
+    hop.innerHTML = h + '</tbody></table>';
+    var chonDong = function (i) {
+      var x = ds[i];
+      hop.querySelectorAll('tr[data-i]').forEach(function (tr) { tr.style.background = tr.getAttribute('data-i') === String(i) ? 'var(--leaf-soft)' : ''; });
+      $(o.tien + 'To').value = x.to; $(o.tien + 'Ngay').value = String(x.ngay).slice(0, 10);
+      o.xem();
+    };
+    hop.querySelectorAll('button[data-i]').forEach(function (b) { b.onclick = function () { chonDong(+b.getAttribute('data-i')); }; });
+    if (o.chon) {   // mở sẵn 1 phiếu
+      var k = -1;
+      ds.forEach(function (x, i) { if (k < 0 && x.to === o.chon.to && String(x.ngay).slice(0, 10) === o.chon.ngay) k = i; });
+      o.chon = null;
+      if (k >= 0) chonDong(k);
+    }
+  }).catch(function (e) { if ($(o.tien + 'Ds')) hop.innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+
+var _dbDs = null;
+function moDayBase(chon) {
   if (!coQuyen('dayBase', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền đẩy phiếu lên Base.'); return; }
-  var dsTo = (S.dsTo || []).map(function (t) { return t.ma; });
-  var toMd = $('fTo').value || (S.vaiTro === 'TO_TRUONG' ? S.maDonVi : '');
-  var h = '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">' +
-    '<div><label class="nhan" for="dbTo">Tổ</label><select class="o" id="dbTo" style="width:auto"><option value="">— Chọn tổ —</option>' +
-      dsTo.map(function (t) { return '<option value="' + thoat(t) + '"' + (t === toMd ? ' selected' : '') + '>' + thoat(t) + '</option>'; }).join('') +
-    '</select></div>' +
-    '<div><label class="nhan" for="dbNgay">Ngày</label><input class="o" id="dbNgay" type="date" style="width:auto" value="' + thoat(nsHomNay()) + '"></div>' +
-    '<div>' + nsNut('dbXem', 'Xem dữ liệu', true) + '</div></div>' +
+  if (chon && chon.type) chon = null;   // gọi từ nút (tham số là sự kiện click)
+  var h = dsPhieuDayHtml('db') +
     '<div id="dbLoi"></div><div id="dbKetQua"></div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
       nsNut('dbDong', 'Đóng', false) + '<button class="btn chinh" id="dbDay" style="display:none">Đẩy lên Base</button></div>';
   nsMoModal('Đẩy phiếu duyệt sản lượng lên Base', h);
   _dbXem = null;
-  var boKq = function () { _dbXem = null; $('dbKetQua').innerHTML = ''; $('dbDay').style.display = 'none'; baoLoi('dbLoi', ''); };
-  $('dbTo').onchange = boKq;
-  $('dbNgay').onchange = boKq;
+  if (chon && chon.ngay) {   // mở từ 1 phiếu: khoảng ngày phủ ngày của phiếu
+    if (chon.ngay < $('dbTuNgay').value) $('dbTuNgay').value = chon.ngay;
+    if (chon.ngay > $('dbDenNgay').value) $('dbDenNgay').value = chon.ngay;
+  }
+  _dbDs = { tien: 'db', loai: 'sl', chon: chon || null, xem: dbXemDuLieu };
+  var boKq = function () { _dbXem = null; $('dbKetQua').innerHTML = ''; $('dbDay').style.display = 'none'; baoLoi('dbLoi', ''); dsPhieuDayTai(_dbDs); };
+  $('dbTuNgay').onchange = boKq;
+  $('dbDenNgay').onchange = boKq;
   $('dbXem').onclick = dbXemDuLieu;
   $('dbDay').onclick = dbDayLen;
   $('dbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
+  dsPhieuDayTai(_dbDs);
 }
 
 function dbXemDuLieu() {
@@ -9783,6 +9843,7 @@ function dbDayLen() {
       soVN(kq.tongKg, 2) + ' kg, ' + kq.soDong + ' dòng.' +
       (kq.loiBang ? '<br><b>Lưu ý:</b> điền bảng vào phiếu có lỗi — ' + thoat(kq.dienBang) : '') + '</div>');
     _dbXem = null;
+    if (_dbDs) dsPhieuDayTai(_dbDs);
   }).catch(function (e) {
     nut.disabled = false;
     nut.textContent = 'Đẩy lên Base (' + d.dong.length + ' dòng · ' + soVN(d.tongKg, 2) + ' kg)';
@@ -9796,27 +9857,28 @@ function dbDayLen() {
    --------------------------------------------------------------------- */
 var _ccbXem = null;
 
-function moCCBase() {
+var _ccbDs = null;
+function moCCBase(chon) {
   if (!coQuyen('dayChamCongBase', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền gửi phiếu chấm công lên Base.'); return; }
-  var dsTo = (S.dsTo || []).map(function (t) { return t.ma; });
-  var toMd = $('fTo').value || (S.vaiTro === 'TO_TRUONG' ? S.maDonVi : '');
-  var h = '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">' +
-    '<div><label class="nhan" for="ccbTo">Tổ</label><select class="o" id="ccbTo" style="width:auto"><option value="">— Chọn tổ —</option>' +
-      dsTo.map(function (t) { return '<option value="' + thoat(t) + '"' + (t === toMd ? ' selected' : '') + '>' + thoat(t) + '</option>'; }).join('') +
-    '</select></div>' +
-    '<div><label class="nhan" for="ccbNgay">Ngày</label><input class="o" id="ccbNgay" type="date" style="width:auto" value="' + thoat(nsHomNay()) + '"></div>' +
-    '<div>' + nsNut('ccbXem', 'Xem dữ liệu', true) + '</div></div>' +
+  if (chon && chon.type) chon = null;   // gọi từ nút (tham số là sự kiện click)
+  var h = dsPhieuDayHtml('ccb') +
     '<div id="ccbLoi"></div><div id="ccbKetQua"></div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">' +
       nsNut('ccbDong', 'Đóng', false) + '<button class="btn chinh" id="ccbGui" style="display:none">Gửi duyệt lên Base</button></div>';
   nsMoModal('Gửi phiếu duyệt chấm công lên Base', h);
   _ccbXem = null;
-  var boKq = function () { _ccbXem = null; $('ccbKetQua').innerHTML = ''; $('ccbGui').style.display = 'none'; baoLoi('ccbLoi', ''); };
-  $('ccbTo').onchange = boKq;
-  $('ccbNgay').onchange = boKq;
+  if (chon && chon.ngay) {
+    if (chon.ngay < $('ccbTuNgay').value) $('ccbTuNgay').value = chon.ngay;
+    if (chon.ngay > $('ccbDenNgay').value) $('ccbDenNgay').value = chon.ngay;
+  }
+  _ccbDs = { tien: 'ccb', loai: 'cc', chon: chon || null, xem: ccbXemDuLieu };
+  var boKq = function () { _ccbXem = null; $('ccbKetQua').innerHTML = ''; $('ccbGui').style.display = 'none'; baoLoi('ccbLoi', ''); dsPhieuDayTai(_ccbDs); };
+  $('ccbTuNgay').onchange = boKq;
+  $('ccbDenNgay').onchange = boKq;
   $('ccbXem').onclick = ccbXemDuLieu;
   $('ccbGui').onclick = ccbGuiLen;
   $('ccbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
+  dsPhieuDayTai(_ccbDs);
 }
 
 function ccbXemDuLieu() {
@@ -9901,6 +9963,7 @@ function ccbGuiLen() {
       kq.soNguoi + ' người, ' + soVN(kq.tongCong, 1) + ' công.' +
       (kq.loiBang ? '<br><b>Lưu ý:</b> điền bảng vào phiếu có lỗi — ' + thoat(kq.dienBang) : '') + '</div>');
     _ccbXem = null;
+    if (_ccbDs) dsPhieuDayTai(_ccbDs);
   }).catch(function (e) {
     nut.disabled = false;
     nut.textContent = 'Gửi duyệt lên Base (' + d.soNguoi + ' người · ' + soVN(d.tongCong, 1) + ' công)';
