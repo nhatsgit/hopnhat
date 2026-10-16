@@ -476,6 +476,12 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 /* Khối chọn chung ở đầu form: làm nổi bật + tiêu đề, vì nó áp cho CẢ bảng bên dưới (ngày, phiên, loại mủ, chất lượng, số nhát mặc định) */
 .nt-dau::before{content:"Áp dụng cho cả bảng";grid-column:1/-1;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--leaf)}
 .nt-dau .nhan{font-weight:600;color:var(--ink)}
+/* Lớp che "đang gửi xử lý" (nhập cả tổ): chặn bấm thêm, có vòng xoay + chữ tiến độ */
+.lop-cho{position:fixed;inset:0;z-index:300;background:rgba(10,20,15,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;font-weight:600;text-align:center;padding:20px}
+.lop-cho .xoay{width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;animation:lop-xoay .8s linear infinite}
+@keyframes lop-xoay{to{transform:rotate(360deg)}}
+.bang-nt-sl tr.nt-thieu td{background:color-mix(in srgb,#c0392b 12%,transparent)}
+.bang-nt-sl tr.nt-thieu .nt-kg{border-color:#c0392b}
 .nt-dau .o{background:var(--card);border-color:var(--leaf)}
 /* nút chân form: viền đậm hơn cho dễ nhìn */
 .nt-chan .btn:not(.chinh){border-color:var(--ink-3)}
@@ -2301,7 +2307,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 228;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 229;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -9573,7 +9579,7 @@ function ntThuThap() {
     if (kg !== '' || nh !== '' || gc !== '') dong[tr[i].getAttribute('data-cn')] = { kg: kg, nhat: nh, gc: gc };
   }
   return { ngay: $('ntNgay').value, phien: $('ntPhien').value, loai: $('ntLoai').value, cl: $('ntCl').value,
-           nhat: $('ntNhat').value, dong: dong };
+           nhat: $('ntNhat').value, dc: $('ntTongDc') ? $('ntTongDc').value : '', dong: dong };
 }
 
 function ntLuuTam(thongBao) {
@@ -9589,15 +9595,32 @@ function nsBaoOkChung(txt) {
   $('thongBao').innerHTML = '<div class="bao-loi" style="background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf)">' + thoat(txt) + '</div>';
 }
 
-function ntTongKet() {
-  var tr = $('bangNhapTo').querySelectorAll('tr[data-cn]'), n = 0, kg = 0;
+/** Tổng của bảng nhập cả tổ: số người đã nhập (kể cả 0), số người có sản lượng, tổng kg, lệch với "Tổng đối chiếu". */
+function ntTinh() {
+  var tr = $('bangNhapTo').querySelectorAll('tr[data-cn]'), r = { canNhap: 0, daNhap: 0, coKg: 0, kg: 0, thieu: [] };
   for (var i = 0; i < tr.length; i++) {
-    var v = parseFloat(tr[i].querySelector('.nt-kg').value);
-    if (v > 0) { n++; kg += v; }
+    var o = tr[i].querySelector('.nt-kg');
+    if (o.disabled || tr[i].classList.contains('nt-co')) continue;   // người đang chờ gửi / vừa gửi xong: không tính thiếu
+    r.canNhap++;
+    var t = String(o.value).trim(), v = parseFloat(t);
+    if (t === '') { r.thieu.push(tr[i].getAttribute('data-cn')); continue; }
+    r.daNhap++;
+    if (v > 0) { r.coKg++; r.kg += v; }
   }
-  $('ntTongKet').innerHTML = 'Đã nhập <b>' + n + '</b>/' + tr.length + ' người · tổng <b>' + soVN(kg, 2) + '</b> kg';
-  $('ntGui').textContent = 'Gửi xử lý (' + n + ' người)';
-  $('ntGui').disabled = n === 0;
+  r.kg = Math.round(r.kg * 100) / 100;
+  var dc = $('ntTongDc') ? String($('ntTongDc').value).trim() : '';
+  r.dc = dc === '' ? null : Number(dc);
+  r.lech = r.dc === null || isNaN(r.dc) ? null : Math.round((r.kg - r.dc) * 100) / 100;
+  return r;
+}
+
+function ntTongKet() {
+  var r = ntTinh();
+  $('ntTongKet').innerHTML = 'Đã nhập <b>' + r.daNhap + '</b>/' + r.canNhap + ' người · tổng <b>' + soVN(r.kg, 2) + '</b> kg' +
+    (r.lech === null ? '' : ' · đối chiếu ' + soVN(r.dc, 2) + ' kg: ' + (Math.abs(r.lech) < 0.005
+      ? '<span class="tang">khớp</span>' : '<b style="color:#b3261e">lệch ' + (r.lech > 0 ? '+' : '') + soVN(r.lech, 2) + ' kg</b>'));
+  $('ntGui').textContent = 'Gửi xử lý (' + r.coKg + ' người)';
+  $('ntGui').disabled = r.coKg === 0;
 }
 
 /* ---------------------------------------------------------------------
@@ -9991,6 +10014,8 @@ function moNhapCaTo() {
     '<div><label class="nhan" for="ntLoai">Loại mủ</label><select class="o" id="ntLoai">' + optTu(m.loaiMu, loai) + '</select></div>' +
     '<div><label class="nhan" for="ntCl">Chất lượng</label><select class="o" id="ntCl">' + optTu(m.chatLuong, cl) + '</select></div>' +
     '<div class="nhap-nhat"><label class="nhan" for="ntNhat">Số nhát (mặc định)</label><input class="o" id="ntNhat" type="number" min="0" step="1" value="' + thoat(nhatMd) + '"></div>' +
+    '<div><label class="nhan" for="ntTongDc" title="Tổng sản lượng của tổ theo sổ / phiếu giấy — chỉ để đối chiếu với tổng các dòng nhập bên dưới, không gửi đi">Tổng đối chiếu (kg)</label>' +
+      '<input class="o" id="ntTongDc" type="number" step="0.01" min="0" inputmode="decimal" placeholder="vd 701" value="' + thoat((tam && tam.dc) || '') + '"></div>' +
     '<div style="align-self:end"><button class="btn chinh" id="ntApDungNhat" type="button" title="Áp dụng phần phía trên (ngày, phiên cạo, loại mủ, chất lượng, số nhát) cho TẤT CẢ công nhân trong bảng — số nhát mặc định được điền vào ô Số nhát của từng người (ghi đè số đã gõ)">Áp dụng cho cả bảng</button></div></div>' +
     '<div class="nhan-mo" id="ntApDungKq" style="margin:-4px 0 8px"></div>' +
     '<div class="nhan-mo nt-luu" id="ntTrangThaiLuu"></div>' +
@@ -10053,6 +10078,7 @@ function moNhapCaTo() {
       };
     })(z);
   }
+  $('ntTongDc').oninput = function () { ntTongKet(); clearTimeout(hen); hen = setTimeout(function () { ntLuuTam(false); }, 600); };
   $('ntDong').onclick = function () { ntLuuTam(false); dongSuaSanLuong(); };
   $('ntLuu').onclick = function () { ntLuuTam(true); };
   $('ntXoaTam').onclick = function () {
@@ -10176,24 +10202,44 @@ async function ntNhapFile(file, thayDoi) {
 async function ntGui() {
   var d = ntThuThap();
   if (!d.ngay) { baoLoi('ntLoi', 'Chưa chọn ngày.'); return; }
+  // Bắt buộc nhập ĐỦ mọi công nhân (không có sản lượng thì gõ 0) mới được gửi
+  var tinh = ntTinh();
+  var trAll = $('bangNhapTo').querySelectorAll('tr[data-cn]');
+  for (var t0 = 0; t0 < trAll.length; t0++) trAll[t0].classList.toggle('nt-thieu', tinh.thieu.indexOf(trAll[t0].getAttribute('data-cn')) > -1);
+  if (tinh.thieu.length) {
+    baoLoi('ntLoi', 'Còn ' + tinh.thieu.length + ' công nhân chưa nhập sản lượng: ' + tinh.thieu.slice(0, 15).join(', ') + (tinh.thieu.length > 15 ? '…' : '') +
+                    '. Nhập đủ cả bảng (không có sản lượng thì gõ 0) rồi gửi lại.');
+    var o1 = $('bangNhapTo').querySelector('tr.nt-thieu .nt-kg'); if (o1) o1.focus();
+    return;
+  }
+  baoLoi('ntLoi', '');
   var tr = $('bangNhapTo').querySelectorAll('tr[data-cn]'), dsDong = [], sai = [];
   for (var i = 0; i < tr.length; i++) {
     tr[i].classList.remove('nt-loi', 'nt-co');
     var kgTxt = tr[i].querySelector('.nt-kg').value;
     if (kgTxt === '') continue;
     var kg = parseFloat(kgTxt);
+    if (kg === 0) continue;   // 0 = không có sản lượng, không gửi dòng
     if (!(kg > 0) || kg > 100000) { tr[i].classList.add('nt-loi'); sai.push(tr[i].getAttribute('data-cn')); continue; }
     var nh = tr[i].querySelector('.nt-nhat').value;
     dsDong.push({ ngay: d.ngay, maCn: tr[i].getAttribute('data-cn'), loaiMu: d.loai, phien: d.phien, kg: String(kg),
                   chatLuong: d.cl, nhat: nh !== '' ? nh : d.nhat, ghiChu: tr[i].querySelector('.nt-gc').value });
   }
-  if (sai.length) { baoLoi('ntLoi', 'Sản lượng không hợp lệ ở: ' + sai.join(', ') + ' (phải > 0 và < 100.000 kg).'); return; }
+  if (sai.length) { baoLoi('ntLoi', 'Sản lượng không hợp lệ ở: ' + sai.join(', ') + ' (phải ≥ 0 và < 100.000 kg).'); return; }
   if (!dsDong.length) { baoLoi('ntLoi', 'Chưa có ai có sản lượng > 0.'); return; }
   var tongKg = dsDong.reduce(function (t, x) { return t + Number(x.kg); }, 0);
-  if (!confirm('Gửi ' + dsDong.length + ' người, tổng ' + soVN(tongKg, 2) + ' kg, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '?')) return;
+  // Lệch "Tổng đối chiếu": báo rõ nhưng vẫn cho gửi
+  var baoLech = tinh.lech !== null && Math.abs(tinh.lech) >= 0.005
+    ? '⚠ LỆCH ĐỐI CHIẾU: tổng nhập ' + soVN(tongKg, 2) + ' kg, tổng đối chiếu ' + soVN(tinh.dc, 2) + ' kg (' + (tinh.lech > 0 ? '+' : '') + soVN(tinh.lech, 2) + ' kg).\n\n' : '';
+  if (!confirm(baoLech + 'Gửi ' + dsDong.length + ' người, tổng ' + soVN(tongKg, 2) + ' kg, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '?' +
+               (baoLech ? '\n\nVẫn gửi dù lệch?' : ''))) return;
 
   baoLoi('ntLoi', '');
   $('ntGui').disabled = true;
+  var lop = document.createElement('div');
+  lop.className = 'lop-cho'; lop.innerHTML = '<div class="xoay"></div><div id="lopChoChu">Đang gửi xử lý ' + dsDong.length + ' người…</div>';
+  document.body.appendChild(lop);
+  try {
   // Mỗi lô 1 mã gửi: mất mạng (từ đầu hoặc giữa chừng) thì lô đó trở đi vào hàng chờ, giữ NGUYÊN mã gửi —
   // lô đã tới máy chủ mà mất phản hồi, lúc gửi lại máy chủ trả đúng kết quả cũ, không ghi đôi.
   var lo = chiaLoTheoDoDai(dsDong, 5000).map(function (x) { return { id: hcMaGui(), dong: x }; });
@@ -10201,6 +10247,7 @@ async function ntGui() {
   for (var b = 0; b < lo.length; b++) {
     if (!navigator.onLine) { choGui = lo.slice(b); break; }
     $('ntTongKet').innerHTML = 'Đang gửi đợt ' + (b + 1) + '/' + lo.length + '…';
+    if ($('lopChoChu')) $('lopChoChu').textContent = 'Đang gửi xử lý' + (lo.length > 1 ? ' đợt ' + (b + 1) + '/' + lo.length : '') + '… (' + dsDong.length + ' người)';
     try {
       var kq = await goiAPI('nhapHangLoatSanLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, dong: JSON.stringify(lo[b].dong), maGui: lo[b].id }, 60000);
       tongOK += kq.thanhCong;
@@ -10223,12 +10270,12 @@ async function ntGui() {
     choGui.forEach(function (l) { l.dong.forEach(function (r) { xong[r.maCn] = 'cho'; soCho++; }); });
   }
   _cacheFE = {};
-  // Người đã gửi thành công: gỡ khỏi bảng + bản tạm; người lỗi: giữ nguyên để sửa rồi gửi lại
+  // Người đã gửi thành công (và người nhập 0): gỡ khỏi bảng + bản tạm; người lỗi: giữ nguyên để sửa rồi gửi lại
   var bao = {}, i2;
   for (i2 = 0; i2 < loi.length; i2++) bao[loi[i2].cn] = loi[i2].loi;
   for (i2 = 0; i2 < tr.length; i2++) {
-    var cnI = tr[i2].getAttribute('data-cn');
-    if (xong[cnI]) {
+    var cnI = tr[i2].getAttribute('data-cn'), la0 = String(tr[i2].querySelector('.nt-kg').value).trim() !== '' && parseFloat(tr[i2].querySelector('.nt-kg').value) === 0;
+    if (xong[cnI] || (la0 && tongOK)) {
       tr[i2].querySelector('.nt-kg').value = ''; tr[i2].querySelector('.nt-nhat').value = ''; tr[i2].querySelector('.nt-gc').value = '';
       tr[i2].classList.add('nt-co');
     } else if (bao[cnI] !== undefined) tr[i2].classList.add('nt-loi');
@@ -10240,7 +10287,10 @@ async function ntGui() {
   if (!loi.length) {
     dongSuaSanLuong();
     nsBaoOkChung((tongOK ? 'Đã gửi xử lý ' + tongOK + ' người, ngày ' + ngayVN(d.ngay) + ', phiên ' + d.phien + '.' : '') + baoCho);
-    if (tongOK) taiTab();
+    if (tongOK) {
+      taiTab();
+      moPhieu('PNT-' + d.ngay.replace(/-/g, '') + '-' + toNhapCaTo());   // hiện luôn phiếu nội trạm vừa tạo / cập nhật
+    }
     return;
   }
   var h = '<div class="bao-loi">Đã gửi <b>' + tongOK + '</b> người; <b>' + loi.length + ' lỗi</b> (tô đỏ trong bảng, đã giữ lại để sửa):' +
@@ -10248,6 +10298,7 @@ async function ntGui() {
   for (var q = 0; q < loi.length; q++) h += '<li><b>' + thoat(loi[q].cn) + '</b>: ' + thoat(loi[q].loi) + '</li>';
   $('ntLoi').innerHTML = h + '</ul></div>';
   if (tongOK > 0) taiTab();
+  } finally { lop.remove(); }
 }
 
 /* =====================================================================
