@@ -2323,7 +2323,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 241;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 242;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -8413,6 +8413,13 @@ function moNgayToCC(g) {
   var bl = Object.assign(layBoLocCC(), { tuNgay: g.ngay, denNgay: g.ngay, doi: '', to: g.to, trang: 1, moiTrang: 500 });
   goiCache('chamCong', bl).then(function (d) {
     var rows = d.rows.slice().sort(function (a, b) { return a.maCn < b.maCn ? -1 : a.maCn > b.maCn ? 1 : 0; });
+    if (g.soNguoi === undefined) {   // mở từ thông báo (chỉ có ngày + tổ): tự tính người, phiên, trạng thái từ các dòng
+      var cnG = {}, ttG = {}, phG = {};
+      rows.forEach(function (r) { cnG[r.maCn] = 1; ttG[r.trangThai] = (ttG[r.trangThai] || 0) + 1; if (r.phien) phG[r.phien] = 1; });
+      var dsTt = Object.keys(ttG);
+      g = Object.assign({}, g, { soNguoi: Object.keys(cnG).length, phien: Object.keys(phG).sort().join(', '), demTrangThai: ttG,
+                                 trangThai: dsTt.length === 1 ? dsTt[0] : 'NHIEU' });
+    }
     var base = (rows.filter(function (x) { return x.base; })[0] || {}).base;
     var coSua = coQuyen('chamCong', 'SUA'), coXoa = coQuyen('chamCong', 'XOA');
     var h = '<div class="dong-tt">' +
@@ -11696,6 +11703,16 @@ function apThamSoURL() {
 
   if (coApDung) dongBoChip();
   if (q.tab && !tabAn(tabCu(q.tab))) S.tab = tabCu(q.tab);
+  // Bấm thông báo có phiếu (mo=1 + tổ + ngày): xem mọi trạng thái rồi mở luôn chi tiết phiếu nội trạm / chấm công ngày × tổ
+  if (q.mo && q.to && q.ngay) {
+    var moTab = tabCu(q.tab || ''), moTo = q.to, moNgay = q.ngay;
+    delete q.mo;
+    S.trangThai = ''; veGatTrangThai();
+    setTimeout(function () {
+      if (moTab === 'sanLuong') moPhieu('PNT-' + moNgay.replace(/-/g, '') + '-' + moTo);
+      else if (moTab === 'chamCong') moNgayToCC({ ngay: moNgay, to: moTo });
+    }, 900);
+  }
   // Bấm thông báo "Nhắc chấm công" (./?nhanh=chamCong): mở luôn form chấm công cả tổ
   if (q.nhanh === 'chamCong' && S.vaiTro === 'TO_TRUONG') {
     delete q.nhanh;
