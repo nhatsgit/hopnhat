@@ -1706,6 +1706,16 @@ tr.bat-thuong td{background:var(--clay-soft)}
         <div id="pbLoi"></div>
         <div class="cuon" id="pbDs"></div>
       </div>
+      <div class="the" style="padding:16px;margin-bottom:16px">
+        <h3 class="tieude-muc" style="margin:0 0 6px">Đẩy hàng loạt lên Base (hôm nay)</h3>
+        <p class="goi-y" style="margin:0 0 10px">Chọn đội rồi bấm: mọi phiếu còn chờ duyệt của đội trong ngày hôm nay được đẩy lên Base lần lượt (mỗi phiếu 10–20 giây). Bấm 2 lần để chạy.</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div><label class="nhan" for="pbDoiHL">Đội</label><select class="o" id="pbDoiHL" style="width:auto"></select></div>
+          <button class="btn chinh" type="button" id="pbslDayHL">Đẩy sản lượng hôm nay</button>
+          <button class="btn chinh" type="button" id="pbccDayHL">Đẩy chấm công hôm nay</button>
+        </div>
+        <div id="pbslKqHL"></div><div id="pbccKqHL"></div>
+      </div>
     </section>
     <section id="pTaiKhoan" style="display:none">
       <div id="tkLoi"></div>
@@ -2339,7 +2349,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 251;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 252;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3492,10 +3502,34 @@ function taiPhieuBaseCho() {
     b.onclick = function () { _pb.loc = b.getAttribute('data-pbl'); taiPhieuBaseCho(); };
   });
   $('pbTaiLai').onclick = taiPhieuBaseCho;
+  var oDoi = $('pbDoiHL');
+  if (!oDoi.options.length) oDoi.innerHTML = (S.dsDoi || []).map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('');
+  $('pbslDayHL').onclick = function () { pbDayHangLoat('sl'); };
+  $('pbccDayHL').onclick = function () { pbDayHangLoat('cc'); };
+  oDoi.onchange = function () { ['pbsl', 'pbcc'].forEach(function (t) { delete $(t + 'DayHL').dataset.xacNhan; $(t + 'KqHL').innerHTML = ''; }); $('pbslDayHL').textContent = 'Đẩy sản lượng hôm nay'; $('pbccDayHL').textContent = 'Đẩy chấm công hôm nay'; };
   goiAPI('phieuBaseCho', { vaiTro: S.vaiTro, maDonVi: S.maDonVi }, 40000).then(function (d) {
     _pb.ds = (d.ds || []).filter(function (x) { return !_pb.loc || x.loai === _pb.loc; });
     vePhieuBaseCho();
   }).catch(function (e) { $('pbDs').innerHTML = ''; baoLoi('pbLoi', e.message); });
+}
+var _pbHL = { sl: null, cc: null };
+/** Tab Phiếu Base: nạp phiếu chờ duyệt HÔM NAY (bấm lần 1) rồi đẩy hàng loạt theo đội (bấm lần 2) — dùng chung dayHangLoatDoi. */
+function pbDayHangLoat(loai) {
+  var tien = loai === 'sl' ? 'pbsl' : 'pbcc', nut = $(tien + 'DayHL');
+  var o = _pbHL[loai] = _pbHL[loai] || { tien: tien, loai: loai, doiId: 'pbDoiHL',
+    nhanNut: loai === 'sl' ? 'Đẩy sản lượng hôm nay' : 'Đẩy chấm công hôm nay', sauKhi: function () { taiPhieuBaseCho(); } };
+  if (nut.dataset.xacNhan) { dayHangLoatDoi(o); return; }   // lần 2: chạy với danh sách đã nạp
+  var homNay = nsHomNay();
+  var ts = { vaiTro: S.vaiTro, maDonVi: S.maDonVi, tuNgay: homNay, denNgay: homNay, trangThai: 'CHO_DUYET', docSheet: '1' };
+  if (loai === 'sl') ts.layHet = '1'; else { ts.nhom = 'ngayTo'; ts.moiTrang = '500'; }
+  nut.disabled = true; nut.textContent = 'Đang tải danh sách…';
+  goiAPI(loai === 'sl' ? 'phieu' : 'chamCong', ts, 60000).then(function (d) {
+    o.ds = (d.rows || []).filter(function (x) {
+      return loai === 'sl' ? x.trangThai === 'CHO_DUYET' && (x.soDongChoDuyet || 0) > 0 : ((x.demTrangThai || {}).CHO_DUYET || 0) > 0;
+    });
+    nut.disabled = false; nut.textContent = o.nhanNut;
+    dayHangLoatDoi(o);   // lần 1: hiện số phiếu, chờ bấm xác nhận
+  }).catch(function (e) { nut.disabled = false; nut.textContent = o.nhanNut; $(tien + 'KqHL').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
 function vePhieuBaseCho() {
   var ds = _pb.ds;
@@ -9752,11 +9786,6 @@ function dsPhieuDayHtml(tien) {
       '<div><label class="nhan" for="' + tien + 'TuNgay">Từ ngày</label><input class="o" id="' + tien + 'TuNgay" type="date" style="width:auto" value="' + tu + '"></div>' +
       '<div><label class="nhan" for="' + tien + 'DenNgay">Đến ngày</label><input class="o" id="' + tien + 'DenNgay" type="date" style="width:auto" value="' + homNay + '"></div>' +
     '</div>' +
-    (S.laAdmin ? '<div class="the" style="padding:10px 12px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">' +
-      '<div><label class="nhan" for="' + tien + 'DoiHL">Admin · đẩy hàng loạt hôm nay</label><select class="o" id="' + tien + 'DoiHL" style="width:auto">' +
-        (S.dsDoi || []).map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('') + '</select></div>' +
-      '<button class="btn chinh" type="button" id="' + tien + 'DayHL">Đẩy hết hôm nay của đội</button>' +
-      '<div id="' + tien + 'KqHL" style="flex-basis:100%"></div></div>' : '') +
     '<input type="hidden" id="' + tien + 'To"><input type="hidden" id="' + tien + 'Ngay">' +
     '<div class="cuon" id="' + tien + 'Ds" style="max-height:38vh;overflow:auto;margin-bottom:12px"></div>' +
     '<div style="display:none">' + nsNut(tien + 'Xem', 'Xem dữ liệu', true) + '</div>';
@@ -9806,7 +9835,8 @@ function dsPhieuDayTai(o) {
 /* Admin: đẩy lên Base LẦN LƯỢT mọi phiếu còn chờ duyệt của 1 đội trong NGÀY HÔM NAY (mỗi phiếu gọi đúng 1 lần, không tự thử lại —
    tránh tạo trùng phiếu Base). Sản lượng bỏ qua phiếu đã có phiếu Base. Bấm 2 lần mới chạy. */
 function dayHangLoatDoi(o) {
-  var nut = $(o.tien + 'DayHL'), kqHop = $(o.tien + 'KqHL'), doi = $(o.tien + 'DoiHL').value, homNay = nsHomNay();
+  var oDoi = $(o.doiId || (o.tien + 'DoiHL'));
+  var nut = $(o.tien + 'DayHL'), kqHop = $(o.tien + 'KqHL'), doi = oDoi.value, homNay = nsHomNay();
   var ds = (o.ds || []).filter(function (x) {
     return String(x.ngay).slice(0, 10) === homNay && doiCuaTo(x.to) === doi && !(o.loai === 'sl' && x.base && x.base.length);
   });
@@ -9817,16 +9847,16 @@ function dayHangLoatDoi(o) {
     return;
   }
   delete nut.dataset.xacNhan;
-  nut.disabled = true; $(o.tien + 'DoiHL').disabled = true;
+  nut.disabled = true; oDoi.disabled = true;
   var dong = ds.map(function (x) { return '<div data-to="' + thoat(x.to) + '">⏳ ' + thoat(x.to) + ' — chờ</div>'; }).join('');
   kqHop.innerHTML = '<div class="goi-y" style="margin-top:6px;display:grid;gap:2px">' + dong + '</div>';
   var lenh = o.loai === 'sl' ? 'dayPhieuBase' : 'dayChamCongBase', ok = 0, i = 0;
   var oCua = function (to) { return kqHop.querySelector('[data-to="' + to + '"]'); };
   (function tiep() {
     if (i >= ds.length) {
-      nut.disabled = false; $(o.tien + 'DoiHL').disabled = false; nut.textContent = 'Đẩy hết hôm nay của đội';
+      nut.disabled = false; oDoi.disabled = false; nut.textContent = o.nhanNut || 'Đẩy hết hôm nay của đội';
       kqHop.insertAdjacentHTML('afterbegin', '<b>Đã đẩy ' + ok + '/' + ds.length + ' phiếu của ' + thoat(tenDoiNgan(doi)) + '.</b>');
-      dsPhieuDayTai(o);
+      if (o.sauKhi) o.sauKhi(); else dsPhieuDayTai(o);
       return;
     }
     var x = ds[i++], dx = oCua(x.to);
@@ -9862,7 +9892,6 @@ function moDayBase(chon) {
   $('dbXem').onclick = dbXemDuLieu;
   $('dbDay').onclick = dbDayLen;
   $('dbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
-  if ($('dbDayHL')) $('dbDayHL').onclick = function () { dayHangLoatDoi(_dbDs); };
   dsPhieuDayTai(_dbDs);
 }
 
@@ -9993,7 +10022,6 @@ function moCCBase(chon) {
   $('ccbXem').onclick = ccbXemDuLieu;
   $('ccbGui').onclick = ccbGuiLen;
   $('ccbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
-  if ($('ccbDayHL')) $('ccbDayHL').onclick = function () { dayHangLoatDoi(_ccbDs); };
   dsPhieuDayTai(_ccbDs);
 }
 
