@@ -2339,7 +2339,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 250;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 251;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -9752,6 +9752,11 @@ function dsPhieuDayHtml(tien) {
       '<div><label class="nhan" for="' + tien + 'TuNgay">Từ ngày</label><input class="o" id="' + tien + 'TuNgay" type="date" style="width:auto" value="' + tu + '"></div>' +
       '<div><label class="nhan" for="' + tien + 'DenNgay">Đến ngày</label><input class="o" id="' + tien + 'DenNgay" type="date" style="width:auto" value="' + homNay + '"></div>' +
     '</div>' +
+    (S.laAdmin ? '<div class="the" style="padding:10px 12px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">' +
+      '<div><label class="nhan" for="' + tien + 'DoiHL">Admin · đẩy hàng loạt hôm nay</label><select class="o" id="' + tien + 'DoiHL" style="width:auto">' +
+        (S.dsDoi || []).map(function (d) { return '<option value="' + thoat(d) + '">' + thoat(tenDoiNgan(d)) + '</option>'; }).join('') + '</select></div>' +
+      '<button class="btn chinh" type="button" id="' + tien + 'DayHL">Đẩy hết hôm nay của đội</button>' +
+      '<div id="' + tien + 'KqHL" style="flex-basis:100%"></div></div>' : '') +
     '<input type="hidden" id="' + tien + 'To"><input type="hidden" id="' + tien + 'Ngay">' +
     '<div class="cuon" id="' + tien + 'Ds" style="max-height:38vh;overflow:auto;margin-bottom:12px"></div>' +
     '<div style="display:none">' + nsNut(tien + 'Xem', 'Xem dữ liệu', true) + '</div>';
@@ -9769,6 +9774,7 @@ function dsPhieuDayTai(o) {
       // sản lượng: soDongChoDuyet gồm cả dòng Đang duyệt -> chỉ lấy phiếu trạng thái CHO_DUYET (chưa dòng nào lên Base)
       return o.loai === 'sl' ? x.trangThai === 'CHO_DUYET' && (x.soDongChoDuyet || 0) > 0 : ((x.demTrangThai || {}).CHO_DUYET || 0) > 0;
     });
+    o.ds = ds;
     if (!ds.length) { hop.innerHTML = '<p class="goi-y">Không có phiếu nào còn dòng chờ duyệt trong khoảng ngày này.</p>'; return; }
     var h = '<table><thead><tr><th>Ngày</th><th>Tổ</th><th class="so">' + (o.loai === 'sl' ? 'Tổng (kg)' : 'Người · công') + '</th><th class="so">Dòng chờ duyệt</th>' +
       (o.loai === 'sl' ? '<th>Phiếu Base</th>' : '') + '<th></th></tr></thead><tbody>';
@@ -9797,6 +9803,44 @@ function dsPhieuDayTai(o) {
   }).catch(function (e) { if ($(o.tien + 'Ds')) hop.innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
 
+/* Admin: đẩy lên Base LẦN LƯỢT mọi phiếu còn chờ duyệt của 1 đội trong NGÀY HÔM NAY (mỗi phiếu gọi đúng 1 lần, không tự thử lại —
+   tránh tạo trùng phiếu Base). Sản lượng bỏ qua phiếu đã có phiếu Base. Bấm 2 lần mới chạy. */
+function dayHangLoatDoi(o) {
+  var nut = $(o.tien + 'DayHL'), kqHop = $(o.tien + 'KqHL'), doi = $(o.tien + 'DoiHL').value, homNay = nsHomNay();
+  var ds = (o.ds || []).filter(function (x) {
+    return String(x.ngay).slice(0, 10) === homNay && doiCuaTo(x.to) === doi && !(o.loai === 'sl' && x.base && x.base.length);
+  });
+  if (!ds.length) { kqHop.innerHTML = '<p class="goi-y" style="margin:6px 0 0">' + thoat(tenDoiNgan(doi)) + ' không còn phiếu nào chờ đẩy hôm nay (' + thoat(ngayVN(homNay)) + ').</p>'; return; }
+  if (!nut.dataset.xacNhan) {
+    nut.dataset.xacNhan = '1';
+    nut.textContent = 'Bấm lần nữa để đẩy ' + ds.length + ' phiếu (' + ds.map(function (x) { return x.to; }).join(', ') + ')';
+    return;
+  }
+  delete nut.dataset.xacNhan;
+  nut.disabled = true; $(o.tien + 'DoiHL').disabled = true;
+  var dong = ds.map(function (x) { return '<div data-to="' + thoat(x.to) + '">⏳ ' + thoat(x.to) + ' — chờ</div>'; }).join('');
+  kqHop.innerHTML = '<div class="goi-y" style="margin-top:6px;display:grid;gap:2px">' + dong + '</div>';
+  var lenh = o.loai === 'sl' ? 'dayPhieuBase' : 'dayChamCongBase', ok = 0, i = 0;
+  var oCua = function (to) { return kqHop.querySelector('[data-to="' + to + '"]'); };
+  (function tiep() {
+    if (i >= ds.length) {
+      nut.disabled = false; $(o.tien + 'DoiHL').disabled = false; nut.textContent = 'Đẩy hết hôm nay của đội';
+      kqHop.insertAdjacentHTML('afterbegin', '<b>Đã đẩy ' + ok + '/' + ds.length + ' phiếu của ' + thoat(tenDoiNgan(doi)) + '.</b>');
+      dsPhieuDayTai(o);
+      return;
+    }
+    var x = ds[i++], dx = oCua(x.to);
+    if (dx) dx.textContent = '🔄 ' + x.to + ' — đang tạo phiếu Base…';
+    goiApiMotLan(lenh, { vaiTro: S.vaiTro, maDonVi: S.maDonVi, to: x.to, ngay: String(x.ngay).slice(0, 10) }, 120000).then(function (kq) {
+      ok++;
+      if (dx) dx.innerHTML = '✅ ' + thoat(x.to) + ' — phiếu <a href="' + tdLinkBase(kq.ticketId) + '" target="_blank" rel="noopener">#' + thoat(kq.ticketId) + ' ↗</a>' +
+        (kq.loiBang ? ' <span style="color:var(--do,#b3261e)">(điền bảng có lỗi)</span>' : '');
+    }).catch(function (e) {
+      if (dx) dx.innerHTML = '❌ ' + thoat(x.to) + ' — ' + thoat(e.message) + (e.vanChuyen ? ' (có thể đã tạo — kiểm tra trước khi đẩy lại)' : '');
+    }).then(tiep);
+  })();
+}
+
 var _dbDs = null;
 function moDayBase(chon) {
   if (!coQuyen('dayBase', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền đẩy phiếu lên Base.'); return; }
@@ -9818,6 +9862,7 @@ function moDayBase(chon) {
   $('dbXem').onclick = dbXemDuLieu;
   $('dbDay').onclick = dbDayLen;
   $('dbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
+  if ($('dbDayHL')) $('dbDayHL').onclick = function () { dayHangLoatDoi(_dbDs); };
   dsPhieuDayTai(_dbDs);
 }
 
@@ -9948,6 +9993,7 @@ function moCCBase(chon) {
   $('ccbXem').onclick = ccbXemDuLieu;
   $('ccbGui').onclick = ccbGuiLen;
   $('ccbDong').onclick = function () { $('nenPhieu').classList.remove('hien'); };
+  if ($('ccbDayHL')) $('ccbDayHL').onclick = function () { dayHangLoatDoi(_ccbDs); };
   dsPhieuDayTai(_ccbDs);
 }
 
