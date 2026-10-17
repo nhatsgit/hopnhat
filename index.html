@@ -1692,6 +1692,21 @@ tr.bat-thuong td{background:var(--clay-soft)}
     <!-- Tab Quản trị → Phân quyền (chỉ Admin): quản lý 3 bảng DIM_VAI_TRO / DIM_CHUC_NANG / PHAN_QUYEN
          (PhanQuyen.gs). Tick Xem / Thêm / Sửa / Xoá từng chức năng cho từng vai trò, thêm vai trò mới. -->
     <!-- Tab Quản trị → Tài khoản (chỉ Admin): tài khoản Google được vào hệ thống + cấu hình đăng nhập Google -->
+    <section id="pPhieuBase" style="display:none">
+      <div class="the" style="padding:16px;margin-bottom:16px">
+        <h3 class="tieude-muc" style="margin:0 0 6px">Phiếu Base chờ duyệt</h3>
+        <p class="goi-y" style="margin:0 0 10px">Chỉ Admin. Bấm <b>Duyệt</b> là các dòng sản lượng / chấm công của phiếu chuyển Đã duyệt ngay trên web,
+          tổ trưởng và trợ lý nhận thông báo như khi duyệt trên Base. Phiếu trên Base.vn vẫn để nguyên ở bước chờ duyệt.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <button class="btn nho chon" type="button" data-pbl="">Tất cả</button>
+          <button class="btn nho" type="button" data-pbl="SL">Sản lượng</button>
+          <button class="btn nho" type="button" data-pbl="CC">Chấm công</button>
+          <button class="btn nho" type="button" id="pbTaiLai">Tải lại</button>
+        </div>
+        <div id="pbLoi"></div>
+        <div class="cuon" id="pbDs"></div>
+      </div>
+    </section>
     <section id="pTaiKhoan" style="display:none">
       <div id="tkLoi"></div>
       <div class="the" style="padding:16px;margin-bottom:20px">
@@ -2242,7 +2257,7 @@ function tabCu(t) { return t === 'phieu' ? 'sanLuong' : t; }
 function tabAn(t) {
   if (TAB_AN[t]) return true;
   if (t === 'sanLuong' && S.vaiTro) return !(coQuyen('sanLuong', 'XEM') || coQuyen('phieu', 'XEM'));   // tab Vườn cây = thẻ sản lượng + bảng phiếu
-  if (t === 'phanQuyen' || t === 'taiKhoan') return !S.laAdmin;
+  if (t === 'phanQuyen' || t === 'taiKhoan' || t === 'phieuBase') return !S.laAdmin;
   if (!S.vaiTro) return false;
   return !coQuyen(pqChucNangCuaTab(t), 'XEM');
 }
@@ -2324,7 +2339,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 249;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 250;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -2344,7 +2359,7 @@ function cotKhongNhat(tieuDe, dong) {
 var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1, xoaChamCong: 1,
                        themSanLuong: 1, nhapHangLoatSanLuong: 1, suaSanLuong: 1, xoaSanLuong: 1,
                        chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1,
-                       dangKyThongBao: 1, huyThongBao: 1 };
+                       dangKyThongBao: 1, huyThongBao: 1, phieuBaseCho: 1, duyetPhieuBaseWeb: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho) {
@@ -3465,6 +3480,60 @@ function taiTramCan() {
       $('kpisTC').innerHTML = '<div class="rong">' + thoat(e.message) + '</div>';
       ['bdTcNgay', 'bdTcDoi', 'bangTcXe', 'bangTC'].forEach(function (id) { $(id).innerHTML = ''; });
     });
+}
+
+/* ---------- Phiếu Base chờ duyệt (Admin duyệt ngay trên web — demo) ---------- */
+var _pb = { ds: [], loc: '' };
+function taiPhieuBaseCho() {
+  baoLoi('pbLoi', '');
+  $('pbDs').innerHTML = skDong(4);
+  document.querySelectorAll('#pPhieuBase [data-pbl]').forEach(function (b) {
+    b.classList.toggle('chon', b.getAttribute('data-pbl') === _pb.loc);
+    b.onclick = function () { _pb.loc = b.getAttribute('data-pbl'); taiPhieuBaseCho(); };
+  });
+  $('pbTaiLai').onclick = taiPhieuBaseCho;
+  goiAPI('phieuBaseCho', { vaiTro: S.vaiTro, maDonVi: S.maDonVi }, 40000).then(function (d) {
+    _pb.ds = (d.ds || []).filter(function (x) { return !_pb.loc || x.loai === _pb.loc; });
+    vePhieuBaseCho();
+  }).catch(function (e) { $('pbDs').innerHTML = ''; baoLoi('pbLoi', e.message); });
+}
+function vePhieuBaseCho() {
+  var ds = _pb.ds;
+  if (!ds.length) { $('pbDs').innerHTML = '<div class="rong">Không còn phiếu Base nào chờ duyệt.</div>'; return; }
+  var tenLoai = { SL: 'Sản lượng', CC: 'Chấm công' };
+  var h = '<table><thead><tr><th>Loại</th><th>Ngày</th><th>Tổ</th><th>Phiếu Base</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+  ds.forEach(function (x, i) {
+    h += '<tr data-i="' + i + '"><td>' + thoat(tenLoai[x.loai] || x.loai) + '</td><td>' + thoat(ngayVN(x.ngay)) + '</td><td><b>' + thoat(x.to) + '</b></td>' +
+      '<td><a href="' + tdLinkBase(x.maBase) + '" target="_blank" rel="noopener">#' + thoat(x.maBase) + ' ↗</a></td>' +
+      '<td>' + thoat(TEN_TT_BASE[x.trangThai] || x.trangThai || 'Chờ duyệt') + '</td>' +
+      '<td style="white-space:nowrap"><button class="btn nho" type="button" data-xem="' + i + '">Xem</button> ' +
+      '<button class="btn nho chinh" type="button" data-duyet="' + i + '">Duyệt</button> ' +
+      '<button class="btn nho" type="button" data-tuchoi="' + i + '">Từ chối</button></td></tr>';
+  });
+  $('pbDs').innerHTML = h + '</tbody></table>';
+  $('pbDs').querySelectorAll('[data-xem]').forEach(function (b) {
+    b.onclick = function () { var x = ds[+b.getAttribute('data-xem')]; if (x.loai === 'SL') moPhieu('PNT-' + x.ngay.replace(/-/g, '') + '-' + x.to); else moNgayToCC({ ngay: x.ngay, to: x.to }); };
+  });
+  ['duyet', 'tuchoi'].forEach(function (k) {
+    $('pbDs').querySelectorAll('[data-' + k + ']').forEach(function (b) {
+      b.onclick = function () { duyetPhieuBaseWeb(ds[+b.getAttribute('data-' + k)], k === 'duyet' ? 'DUYET' : 'TU_CHOI', b); };
+    });
+  });
+}
+function duyetPhieuBaseWeb(x, kq, nut) {
+  var dong = nut.closest('tr'), cacNut = dong.querySelectorAll('button');
+  cacNut.forEach(function (b) { b.disabled = true; });
+  nut.textContent = kq === 'DUYET' ? 'Đang duyệt…' : 'Đang từ chối…';
+  goiApiMotLan('duyetPhieuBaseWeb', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, maBase: x.maBase, kq: kq }, 60000).then(function (d) {
+    _cacheFE = {};
+    dong.cells[4].innerHTML = '<span class="vi ' + (kq === 'DUYET' ? 'ok' : 'canh') + '">' + (kq === 'DUYET' ? 'Đã duyệt' + (d.soDong ? ' · ' + d.soDong + ' dòng' : '') : 'Từ chối') + '</span>';
+    dong.cells[5].innerHTML = '<span class="goi-y">xong</span>';
+    nsBaoOk((kq === 'DUYET' ? 'Đã duyệt ' : 'Đã từ chối ') + (x.loai === 'SL' ? 'sản lượng ' : 'chấm công ') + x.to + ' ngày ' + ngayVN(x.ngay) + ' (phiếu Base #' + x.maBase + ').');
+  }).catch(function (e) {
+    cacNut.forEach(function (b) { b.disabled = false; });
+    nut.textContent = kq === 'DUYET' ? 'Duyệt' : 'Từ chối';
+    baoLoi('pbLoi', e.message + (e.vanChuyen ? ' — có thể đã ghi xong, bấm Tải lại để kiểm tra.' : ''));
+  });
 }
 
 /* ---------- Dữ liệu giả để demo (CHỈ ADMIN) ---------- */
@@ -11026,6 +11095,7 @@ var LOC_THEO_TAB = {
   nangSuatVuon: [],     // bộ lọc riêng (năm, giống, năm mở cạo...)
   phanQuyen: [],        // trang quản trị, không lọc
   taiKhoan: [],
+  phieuBase: [],
   banDoLo: [],          // bộ lọc riêng trên bản đồ
   baoCaoTD: []          // bộ lọc riêng (kỳ ngày/tuần/tháng)
 };
@@ -11042,7 +11112,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'taiKhoan' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'taiKhoan' || S.tab === 'phieuBase' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -11226,6 +11296,7 @@ function taiTab() {
   else if (S.tab === 'nangSuatVuon') taiNangSuatVuon();
   else if (S.tab === 'phanQuyen') taiPhanQuyen();
   else if (S.tab === 'taiKhoan') taiTaiKhoan();
+  else if (S.tab === 'phieuBase') taiPhieuBaseCho();
   else if (S.tab === 'banDoLo') taiBanDoLo();
   else if (S.tab === 'baoCaoTD') taiBaoCaoTD();
 }
@@ -11355,14 +11426,14 @@ var NHOM_TAB = [
   // Nhân sự = nhân sự + chấm công + lương (đã gộp nhóm Lương cũ)
   { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
-  { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan'] }   // chỉ Admin (tabAn)
+  { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan', 'phieuBase'] }   // chỉ Admin (tabAn)
 ];
 var TEN_TAB = {
   tongQuan: 'Tổng quan', tqNhanSu: 'Tổng quan', sanLuong: 'Vườn cây', tramCan: 'Trạm cân', drc: 'DRC trạm cân',
   chamCong: 'Chấm công', doiChieu: 'Đối chiếu', xepHang: 'Xếp hạng công nhân',
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
-  phanQuyen: 'Phân quyền', taiKhoan: 'Tài khoản', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn'
+  phanQuyen: 'Phân quyền', taiKhoan: 'Tài khoản', phieuBase: 'Phiếu Base', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -11394,6 +11465,7 @@ var ICON_TAB = {
   xepHang: _svgNet('<path d="M2.5 17.5h15M4 17.5v-5h4v5M8 17.5V8h4v9.5M12 17.5v-7h4v7"/>'),
   xepLoai: _svgNet('<path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/>'),
   khoMieng: _svgNet('<path d="M10 2.8c3 3.6 5 6.3 5 8.8a5 5 0 0 1-10 0c0-2.5 2-5.2 5-8.8z"/>'),
+  phieuBase: _svgNet('<rect x="4" y="3" width="12" height="14" rx="2"/><path d="M7 10l2 2 4-4"/>'),
   taiKhoan: _svgNet('<circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="8.3" r="2.5"/><path d="M5.3 15.8c1-1.8 2.7-2.8 4.7-2.8s3.7 1 4.7 2.8"/>')
 };
 
@@ -11548,6 +11620,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pNangSuatVuon').style.display = (ten === 'nangSuatVuon') ? '' : 'none';
   $('pPhanQuyen').style.display = (ten === 'phanQuyen') ? '' : 'none';
   $('pTaiKhoan').style.display = (ten === 'taiKhoan') ? '' : 'none';
+  $('pPhieuBase').style.display = (ten === 'phieuBase') ? '' : 'none';
   $('pBanDoLo').style.display = (ten === 'banDoLo') ? '' : 'none';
   $('pBaoCaoTD').style.display = (ten === 'baoCaoTD') ? '' : 'none';
   if (ten === 'banDoLo' && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
