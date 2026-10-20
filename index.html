@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -2049,14 +2049,13 @@ function xoaLS(khoa) {
 /* =====================================================================
    Sáng / tối — biến CSS đã có sẵn (:root, @media prefers-color-scheme,
    :root[data-theme]), ở đây chỉ cần điều khiển thuộc tính data-theme.
-   Mặc định LUÔN theo hệ thống (không đặt data-theme gì cả) — đổi theo
-   ngay khi máy đổi theme, kể cả đang mở trang. Bấm nút mới ghi đè tường
-   minh và nhớ lại cho lần sau, qua đúng khoá crck2_theme.
+   Mặc định là SÁNG (20/10/2026 — trước đây theo hệ thống): thẻ <html> đặt sẵn data-theme="light".
+   Bấm nút mới đổi sang tối và nhớ lại cho lần sau, qua đúng khoá crck2_theme.
    Áp NGAY Ở ĐÂY (trước khi vẽ gì) để khỏi nháy sai màu một nhịp lúc tải.
    ===================================================================== */
 (function () {
   var luu = docLS('crck2_theme');
-  if (luu === 'light' || luu === 'dark') document.documentElement.setAttribute('data-theme', luu);
+  document.documentElement.setAttribute('data-theme', luu === 'dark' ? 'dark' : 'light');
 })();
 
 function dangToiThuc() {
@@ -2083,14 +2082,6 @@ $('nutTheme').onclick = function () {
 };
 veNutTheme();
 
-// Chưa bấm gạt lần nào (chưa lưu lựa chọn riêng) thì vẫn bám theo hệ
-// thống — máy đổi sáng/tối lúc đang mở trang thì icon cập nhật theo luôn.
-if (window.matchMedia) {
-  var _mmToi = window.matchMedia('(prefers-color-scheme: dark)');
-  var _theoHeThong = function () { if (!docLS('crck2_theme')) veNutTheme(); };
-  if (_mmToi.addEventListener) _mmToi.addEventListener('change', _theoHeThong);
-  else if (_mmToi.addListener) _mmToi.addListener(_theoHeThong);   // trình duyệt cũ
-}
 
 /* Địa chỉ Web App mặc định — dùng ngay khi mở trang, không cần nhập tay.
    (Đã bỏ liên kết "Đổi địa chỉ backend" ở màn đăng nhập theo yêu cầu 2026-09-30; màn cấu hình vẫn tự hiện
@@ -2349,7 +2340,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 252;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 253;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
