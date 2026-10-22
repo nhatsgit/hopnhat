@@ -2128,6 +2128,7 @@ tr.bat-thuong td{background:var(--clay-soft)}
       <option value="">Tất cả</option><option value="SL">Dòng sản lượng</option><option value="PNT">Sổ tổ / phiếu nội trạm</option>
       <option value="CC">Dòng chấm công</option><option value="CC_TO">Bảng công tổ</option><option value="PC">Phiếu cân</option>
       <option value="DRC">DRC trạm cân</option><option value="KH_CAN">Ngày cân theo kế hoạch</option><option value="LUONG">Lương tháng</option>
+      <option value="NS">Biến động nhân sự</option><option value="PHAN_QUYEN">Phân quyền</option><option value="BAN_DO">Bản đồ lô</option>
       <option value="BASE">Mọi thao tác duyệt Base</option></select></div>
     <div id="khungLsTo"><label class="nhan" for="lsTo">Tổ</label><select class="o" id="lsTo"></select></div>
     <div class="kls-tim"><label class="nhan" for="lsQ">Tìm</label><input class="o" id="lsQ" placeholder="Mã dòng, mã công nhân, người sửa…"></div>
@@ -2528,7 +2529,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 254;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 255;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
