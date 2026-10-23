@@ -64,7 +64,8 @@
 
   function giaTri(p, src, ctx) {
     var m;
-    if (src === 'cccd') return /^\d+$/.test(p.cccd || '') ? Number(p.cccd) : (p.cccd || p.maCn);
+    // CCCD ghi dạng CHỮ như file thật (giữ số 0 đầu, vd 050888653; số 10 chữ số cũng nguyên vẹn); chưa có thì ghi mã CN
+    if (src === 'cccd') return String(p.cccd || p.maCn || '');
     if (src === 'ten') return p.ten || null;
     if (src === 'cay') return p.cay || null;
     if (src === 'giaoChenNL') return p.giaoChenNL || null;
@@ -194,7 +195,7 @@
               if (+ck === 8 && Math.round((p.giaoDayNL || 0) * 0.6) !== (p.giaoDayQK || 0)) v = p.giaoDayQK || 0;
             }
             var cell = dat(r, +ck, spec, v);
-            if (spec.src === 'cccd') cell.numFmt = '000000000';
+            if (spec.src === 'cccd') cell.numFmt = '@';
           });
         }
         lastRow = r0 + N - 1;
