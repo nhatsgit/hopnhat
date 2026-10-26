@@ -764,6 +764,28 @@ tr[data-tx]:hover > td{background:var(--leaf-soft)}
   .tx-lien-quan{padding:8px 12px 0}
   .tx-dieu-huong .btn{max-width:100%;flex:1}
 }
+/* Hệ số lương: đơn giá theo kỳ, tỷ lệ hưởng xếp loại, biểu thuế */
+.hsl-dau{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;padding:14px 16px}
+.hsl-dau h3{margin:0 auto 0 0}
+.hsl-ghi{padding:0 16px 12px;font-size:13px;color:var(--ink-2);line-height:1.5}
+.bang-hsl{width:100%;border-collapse:collapse;font-size:14px}
+.bang-hsl th{font-size:12px;font-weight:600;color:var(--ink-3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bang-hsl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.bang-hsl .p{text-align:right;font-variant-numeric:tabular-nums}
+.bang-hsl tr.hsl-nhom td{background:var(--paper);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:6px 10px}
+.bang-hsl .hsl-gia{font-weight:700;font-size:15px}
+.bang-hsl .hsl-dvt{color:var(--ink-3);font-size:12.5px;margin-left:4px}
+.bang-hsl .hsl-md{color:var(--ink-3);font-style:italic}
+.hsl-ls{display:flex;flex-wrap:wrap;gap:4px 6px}
+.hsl-ls span{font-size:12px;border:1px solid var(--line);border-radius:10px;padding:1px 8px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hsl-ls span.dung{border-color:var(--leaf);color:var(--leaf);font-weight:600}
+.hsl-ls button{border:0;background:none;color:var(--clay);cursor:pointer;padding:0 0 0 4px;font:inherit}
+.hsl-sua td{background:var(--leaf-soft)}
+.hsl-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hsl-form .o{padding:6px 8px;font-size:13.5px}
+.bang-hsl input.o{width:100%;min-width:70px;padding:6px 8px;font-size:13.5px}
+.bang-hsl input.o.p{text-align:right}
+.hsl-chan{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px}
 /* Bàn làm việc (trang chủ): việc cần làm + quy trình theo bước */
 .blv-dau{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:2px 0 14px}
 .blv-dau h1{margin:0;font-size:22px;font-weight:700;color:var(--ink)}
@@ -1765,6 +1787,32 @@ tr.bat-thuong td{background:var(--clay-soft)}
 
     <!-- Tab Báo cáo chỉ tiêu Tập đoàn (action baoCaoTD, Cloud Run đọc BigQuery; chỉ đọc). Bộ lọc riêng cùng khuôn
          khung lọc chung: màn rộng luôn hiện, màn hẹp = nút dính đầu trang mở tấm trượt. -->
+    <section id="pHeSoLuong" style="display:none">
+      <div class="the" style="margin-bottom:16px">
+        <div class="hsl-dau">
+          <h3 class="tieude-muc">Hệ số lương</h3>
+          <label class="nhan" for="hslKy" style="margin:0">Xem số dùng cho kỳ</label>
+          <input class="o" type="month" id="hslKy" style="width:auto">
+        </div>
+        <div class="hsl-ghi" id="hslGhi">Mỗi đơn giá áp dụng từ kỳ ghi bên cạnh cho tới khi có kỳ mới hơn. Sửa hệ số chỉ đổi bảng lương tạm tính; kỳ đã chốt lương giữ số cũ, muốn áp số mới thì chốt lại kỳ đó.</div>
+        <div id="hslLoi" style="padding:0 16px"></div>
+      </div>
+      <div class="the" style="margin-bottom:16px">
+        <div class="hsl-dau"><h3 class="tieude-muc">Đơn giá theo kỳ</h3></div>
+        <div class="cuon"><table class="bang-hsl" id="hslDonGia"></table></div>
+      </div>
+      <div class="the" style="margin-bottom:16px">
+        <div class="hsl-dau"><h3 class="tieude-muc">Tỷ lệ hưởng theo xếp loại</h3><button class="btn nho" id="hslThemXl" type="button">+ Thêm xếp loại</button></div>
+        <div class="hsl-ghi" style="padding-top:0">Nhân vào lương sản phẩm và lương vượt của người được xếp loại đó (chưa xếp loại thì tính 100%). Áp cho mọi kỳ chưa chốt.</div>
+        <div class="cuon"><table class="bang-hsl" id="hslXepLoai"></table></div>
+      </div>
+      <div class="the" style="margin-bottom:16px">
+        <div class="hsl-dau"><h3 class="tieude-muc">Biểu thuế thu nhập cá nhân</h3><button class="btn nho" id="hslThemBac" type="button">+ Thêm bậc</button></div>
+        <div class="hsl-ghi" style="padding-top:0">Thuế = thu nhập chịu thuế × thuế suất − giảm trừ, theo bậc chứa thu nhập (tính trên tổng thu nhập trừ bảo hiểm). Để trống "Đến" ở bậc cao nhất.</div>
+        <div class="cuon"><table class="bang-hsl" id="hslBacThue"></table></div>
+        <div class="hsl-chan" id="hslChanThue"></div>
+      </div>
+    </section>
     <section id="pBanLamViec" style="display:none">
       <div class="blv-dau">
         <div style="min-width:0"><h1 id="blvChao">Xin chào</h1><div class="blv-phu" id="blvPhu"></div></div>
@@ -2451,6 +2499,7 @@ var LENH_DOC = {
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1, thongBaoDs: 1,
   xemPhieuBase: 1,   // 17/10/2026: xem trước khi đẩy phiếu sản lượng lên Base — Cloud Run (Apps Script ~20 giây)
+  heSoLuong: 1,    // 26/10/2026: tab Hệ số lương (HeSoLuong.gs) — đọc Sheet trên Cloud Run, ghi qua Apps Script
   banLamViec: 1,   // 26/10/2026: Bàn làm việc — Cloud Run đọc Sheet (có dòng chờ duyệt) cho mọi vai trò
   truyXuat: 1, lichSu: 1,   // 22/10/2026: truy xuất nguồn gốc + lịch sử chỉnh sửa (TruyXuat.gs)
   hoSoLuong: 1,   // 16/10/2026: Cloud Run (trước Apps Script ~40 giây, Sheet chỉ 3 tháng nên kỳ cũ thiếu số)
@@ -2697,7 +2746,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 262;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 263;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -11535,7 +11584,8 @@ var LOC_THEO_TAB = {
   nguoiDung: [],
   banDoLo: [],          // bộ lọc riêng trên bản đồ
   baoCaoTD: [],         // bộ lọc riêng (kỳ ngày/tuần/tháng)
-  banLamViec: []        // trang chủ việc cần làm, không lọc
+  banLamViec: [],       // trang chủ việc cần làm, không lọc
+  heSoLuong: []         // ô chọn kỳ riêng
 };
 
 // Trạng thái không còn là 1 ô trong khung lọc — đã chuyển thành nút gạt
@@ -11550,7 +11600,7 @@ function capNhatHienBoLoc() {
   var duoc = LOC_THEO_TAB[S.tab] || LOC_THEO_TAB.tongQuan;
   // Tab Nhân sự không liên quan khoảng ngày / loại mủ / công nhân: ẩn cả khung lọc và nút gạt duyệt
   var laNS = S.tab === 'nhanSu';
-  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'taiKhoan' || S.tab === 'phieuBase' || S.tab === 'nguoiDung' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD' || S.tab === 'banLamViec';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
+  var anLoc = laNS || S.tab === 'baoCao' || S.tab === 'nangSuatVuon' || S.tab === 'phanQuyen' || S.tab === 'taiKhoan' || S.tab === 'phieuBase' || S.tab === 'nguoiDung' || S.tab === 'banDoLo' || S.tab === 'baoCaoTD' || S.tab === 'banLamViec' || S.tab === 'heSoLuong';   // tab có bộ lọc riêng: ẩn khung lọc chung + nút mở bộ lọc trên điện thoại
   var theoThang = S.tab === 'slTheoCn' || S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai';    // tab tính theo tháng: bỏ lọc khoảng ngày
   $('khungBoLocChung').style.display = anLoc ? 'none' : '';
   $('nutThuGonLoc').style.display = anLoc ? 'none' : '';
@@ -11562,7 +11612,7 @@ function capNhatHienBoLoc() {
   $('khungLocKy').style.display = theoThang ? '' : 'none';
   $('slKy').style.display = S.tab === 'slTheoCn' ? '' : 'none';
   $('lgKy').style.display = (S.tab === 'luong' || S.tab === 'khoMieng' || S.tab === 'xepLoai') ? '' : 'none';
-  $('gatTrangThai').style.display = (laNS || S.tab === 'banLamViec' || (S.toanCongTy && !S.laAdmin)) ? 'none' : '';
+  $('gatTrangThai').style.display = (laNS || S.tab === 'banLamViec' || S.tab === 'heSoLuong' || (S.toanCongTy && !S.laAdmin)) ? 'none' : '';
   for (var k in KHUNG_LOC) {
     var el = $(KHUNG_LOC[k]);
     if (!el) continue;
@@ -11739,6 +11789,7 @@ function taiTab() {
   else if (S.tab === 'banDoLo') taiBanDoLo();
   else if (S.tab === 'baoCaoTD') taiBaoCaoTD();
   else if (S.tab === 'banLamViec') taiBanLamViec();
+  else if (S.tab === 'heSoLuong') taiHeSoLuong();
 }
 
 /**
@@ -11873,7 +11924,7 @@ var NHOM_TAB = [
   { id: 'banDo', ten: 'Bản đồ', tabs: ['banDoLo'] },
   { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'tramCan', 'drc', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
   // Nhân sự = nhân sự + chấm công + lương (đã gộp nhóm Lương cũ)
-  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong'] },
+  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong', 'heSoLuong'] },
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan', 'nguoiDung', 'phieuBase'] }   // chỉ Admin (tabAn)
 ];
@@ -11883,7 +11934,7 @@ var TEN_TAB = {
   nhanSu: 'Nhân sự', giaoKhoan: 'Giao khoán', slTheoCn: 'Sản lượng theo CN',
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
   phanQuyen: 'Phân quyền', taiKhoan: 'Tài khoản', phieuBase: 'Phiếu Base', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn',
-  nguoiDung: 'Người dùng', banLamViec: 'Bàn làm việc'
+  nguoiDung: 'Người dùng', banLamViec: 'Bàn làm việc', heSoLuong: 'Hệ số lương'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
@@ -11903,6 +11954,7 @@ function _svgNet(d) {
 }
 var ICON_TAB = {
   banLamViec: ICON_NHOM.banLamViec,
+  heSoLuong: _svgNet('<path d="M4 16V9M8 16V6M12 16v-4M16 16V4"/><path d="M3 16.5h14"/>'),
   baoCaoTD: ICON_NHOM.tongQuan, banDoLo: ICON_NHOM.banDo, sanLuong: ICON_NHOM.sanLuong, nhanSu: ICON_NHOM.nhanSu,
   luong: ICON_NHOM.luong, baoCao: ICON_NHOM.baoCao, phanQuyen: ICON_NHOM.quanTri,
   tongQuan: _svgNet('<path d="M3.5 14a6.5 6.5 0 1 1 13 0"/><path d="M10 14l3-4"/>'),
@@ -12080,6 +12132,7 @@ function chuyenTab(ten, nhomMoi) {
   $('pBanDoLo').style.display = (ten === 'banDoLo') ? '' : 'none';
   $('pBaoCaoTD').style.display = (ten === 'baoCaoTD') ? '' : 'none';
   $('pBanLamViec').style.display = (ten === 'banLamViec') ? '' : 'none';
+  $('pHeSoLuong').style.display = (ten === 'heSoLuong') ? '' : 'none';
   if (ten !== 'banLamViec') dongKhungBlv();
   if (ten === 'banDoLo' && _bdMap) setTimeout(function () { _bdMap.invalidateSize(); }, 50);
   hieuUngVao($('p' + ten.charAt(0).toUpperCase() + ten.slice(1)));
@@ -14649,6 +14702,174 @@ function capNhatTayNamLs() {
   // Lần trước để mở thì mở lại (máy tính; điện thoại khung che trọn màn hình nên không tự mở)
   else if (docLS('crck2_ls_mo') === '1' && !$('khungLs').classList.contains('mo') && innerWidth > 640) moKhungLs();
 }
+/* =====================================================================
+   HỆ SỐ LƯƠNG (26/10/2026) — đơn giá theo kỳ (DIM_DON_GIA), tỷ lệ hưởng xếp loại (DIM_XEP_LOAI), biểu thuế (DIM_BAC_THUE).
+   Đọc: lệnh heSoLuong (Cloud Run). Ghi: heSoLuongLuu (Apps Script — ghi Sheet, nhật ký, đẩy BigQuery).
+   ===================================================================== */
+var _hsl = { d: null, sua: '', bac: null };
+
+function hslSo(n) { return n === null || n === undefined || n === '' ? '' : soVN(n, Math.abs(n % 1) > 0 ? 2 : 0); }
+function hslKyNay() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
+
+function taiHeSoLuong() {
+  if (!$('hslKy').value) $('hslKy').value = hslKyNay();
+  baoLoi('hslLoi', '');
+  if (!_hsl.d) $('hslDonGia').innerHTML = '<tbody>' + skBang(6) + '</tbody>';
+  goiAPI('heSoLuong', { vaiTro: S.vaiTro, maDonVi: S.maDonVi, ky: $('hslKy').value }).then(function (d) {
+    _hsl.d = d; _hsl.sua = ''; _hsl.bac = null; veHeSoLuong();
+  }).catch(function (e) { baoLoi('hslLoi', 'Không tải được hệ số lương: ' + e.message); });
+}
+
+function veHeSoLuong() {
+  var d = _hsl.d; if (!d) return;
+  var sua = d.coSua;
+  $('hslThemXl').style.display = sua ? '' : 'none';
+  $('hslThemBac').style.display = sua ? '' : 'none';
+  // ---- Đơn giá ----
+  var h = '<thead><tr><th>Khoản</th><th class="p">Đang dùng cho kỳ ' + thoat(d.ky) + '</th><th>Áp dụng từ kỳ</th><th>Các kỳ đã đặt</th>' + (sua ? '<th></th>' : '') + '</tr></thead><tbody>';
+  var nhom = '';
+  d.khoan.concat(d.khac).forEach(function (k) {
+    if (k.nhom !== nhom) { nhom = k.nhom; h += '<tr class="hsl-nhom"><td colspan="' + (sua ? 5 : 4) + '">' + thoat(nhom) + '</td></tr>'; }
+    var dung = k.dangDung;
+    var gia = dung ? '<span class="hsl-gia">' + hslSo(dung.gia) + '</span><span class="hsl-dvt">' + thoat(k.dvt) + '</span>'
+      : (k.macDinh !== null ? '<span class="hsl-md" title="Chưa đặt trong bảng — hệ thống dùng số mặc định">' + hslSo(k.macDinh) + ' ' + thoat(k.dvt) + ' (mặc định)</span>'
+      : '<span class="hsl-md">Chưa đặt</span>');
+    var ls = k.lichSu.map(function (x) {
+      return '<span class="' + (dung && dung.ky === x.ky ? 'dung' : '') + '" title="' + thoat(x.ghiChu || '') + '">' + thoat(x.ky) + ': ' + hslSo(x.gia) +
+        (sua && _hsl.sua === k.ma ? '<button type="button" data-hsl-xoa-dg="' + thoat(k.ma) + '|' + thoat(x.ky) + '" title="Xoá đơn giá kỳ này">✕</button>' : '') + '</span>';
+    }).join('');
+    h += '<tr' + (_hsl.sua === k.ma ? ' class="hsl-sua"' : '') + '><td><b>' + thoat(k.ten) + '</b><div class="goi-y" style="margin:0">' + thoat(k.ma) + '</div></td>' +
+      '<td class="p">' + gia + '</td><td>' + (dung ? thoat(dung.ky) : '—') + '</td><td><div class="hsl-ls">' + (ls || '<span>—</span>') + '</div></td>' +
+      (sua ? '<td style="text-align:right">' + (_hsl.sua === k.ma ? '' : '<button class="btn nho" type="button" data-hsl-sua="' + thoat(k.ma) + '">Đổi giá</button>') + '</td>' : '') + '</tr>';
+    if (sua && _hsl.sua === k.ma) {
+      h += '<tr class="hsl-sua"><td colspan="5"><div class="hsl-form">' +
+        '<label class="nhan" for="hslFKy" style="margin:0">Áp dụng từ kỳ</label><input class="o" type="month" id="hslFKy" value="' + thoat(d.ky) + '" style="width:auto">' +
+        '<label class="nhan" for="hslFGia" style="margin:0">Đơn giá (' + thoat(k.dvt) + ')</label><input class="o" id="hslFGia" inputmode="decimal" style="width:130px;text-align:right" value="' + (dung ? dung.gia : (k.macDinh !== null ? k.macDinh : '')) + '">' +
+        '<input class="o" id="hslFGhi" placeholder="Ghi chú (căn cứ, quyết định…)" style="flex:1;min-width:180px" maxlength="300">' +
+        '<button class="btn chinh nho" type="button" id="hslFLuu">Lưu</button><button class="btn nho" type="button" id="hslFHuy">Huỷ</button></div>' +
+        '<div class="goi-y" style="margin:6px 0 0">Cùng kỳ đã có thì ghi đè; kỳ mới thì thêm dòng — các kỳ trước giữ số cũ. Bấm ✕ cạnh một kỳ để xoá đơn giá kỳ đó.</div></td></tr>';
+    }
+  });
+  $('hslDonGia').innerHTML = h + '</tbody>';
+  // ---- Xếp loại ----
+  var x = '<thead><tr><th>Xếp loại</th><th class="p">Tỷ lệ hưởng (%)</th><th>Mô tả</th>' + (sua ? '<th></th>' : '') + '</tr></thead><tbody>';
+  d.xepLoai.forEach(function (r, i) {
+    x += '<tr><td><b>' + thoat(r.ma) + '</b></td>' + (sua
+      ? '<td class="p"><input class="o p" id="hslXl' + i + '" inputmode="decimal" value="' + Math.round(r.tyLe * 10000) / 100 + '" style="width:90px"></td>' +
+        '<td><input class="o" id="hslXlMt' + i + '" value="' + thoat(r.moTa) + '" maxlength="200"></td>' +
+        '<td style="text-align:right;white-space:nowrap"><button class="btn nho chinh" type="button" data-hsl-xl="' + i + '">Lưu</button> <button class="btn nho" type="button" data-hsl-xl-xoa="' + i + '">Xoá</button></td>'
+      : '<td class="p"><b>' + hslSo(Math.round(r.tyLe * 10000) / 100) + '%</b></td><td>' + thoat(r.moTa) + '</td>') + '</tr>';
+  });
+  if (!d.xepLoai.length) x += '<tr><td colspan="4" class="goi-y">Chưa có xếp loại nào.</td></tr>';
+  $('hslXepLoai').innerHTML = x + '</tbody>';
+  veBacThue();
+}
+
+function veBacThue() {
+  var d = _hsl.d, sua = d.coSua, ds = _hsl.bac || d.bacThue.map(function (b) { return Object.assign({}, b); });
+  _hsl.bac = ds;
+  var h = '<thead><tr><th>Bậc</th><th class="p">Từ (riel)</th><th class="p">Đến (riel)</th><th class="p">Thuế suất (%)</th><th class="p">Giảm trừ (riel)</th><th>Ghi chú</th>' + (sua ? '<th></th>' : '') + '</tr></thead><tbody>';
+  ds.forEach(function (b, i) {
+    h += '<tr><td>' + (i + 1) + '</td>' + (sua
+      ? '<td><input class="o p" data-bt="' + i + '|tu" value="' + (b.tu === null ? '' : b.tu) + '" inputmode="numeric"></td>' +
+        '<td><input class="o p" data-bt="' + i + '|den" value="' + (b.den === null ? '' : b.den) + '" inputmode="numeric" placeholder="trở lên"></td>' +
+        '<td><input class="o p" data-bt="' + i + '|ts" value="' + Math.round((b.thueSuat || 0) * 10000) / 100 + '" inputmode="decimal" style="width:80px"></td>' +
+        '<td><input class="o p" data-bt="' + i + '|gt" value="' + (b.giamTru || 0) + '" inputmode="numeric"></td>' +
+        '<td><input class="o" data-bt="' + i + '|ghi" value="' + thoat(b.ghiChu || '') + '" maxlength="200"></td>' +
+        '<td><button class="btn nho" type="button" data-bt-xoa="' + i + '" title="Xoá bậc">✕</button></td>'
+      : '<td class="p">' + hslSo(b.tu) + '</td><td class="p">' + (b.den === null ? 'trở lên' : hslSo(b.den)) + '</td>' +
+        '<td class="p"><b>' + hslSo(Math.round(b.thueSuat * 10000) / 100) + '%</b></td><td class="p">' + hslSo(b.giamTru) + '</td><td class="goi-y" style="margin:0">' + thoat(b.ghiChu) + '</td>') + '</tr>';
+  });
+  $('hslBacThue').innerHTML = h + '</tbody>';
+  $('hslChanThue').innerHTML = sua ? '<button class="btn nho" type="button" id="hslHuyThue">Huỷ thay đổi</button><button class="btn chinh nho" type="button" id="hslLuuThue">Lưu biểu thuế</button>' : '';
+}
+
+/** Gửi lệnh ghi; xong thì vẽ lại theo số máy chủ trả về. */
+function hslGhi(thamSo, nut, thongBao) {
+  if (nut) { nut.disabled = true; nut.dataset.chu = nut.textContent; nut.textContent = 'Đang lưu…'; }
+  baoLoi('hslLoi', '');
+  return goiAPI('heSoLuongLuu', Object.assign({ vaiTro: S.vaiTro, maDonVi: S.maDonVi, kyXem: $('hslKy').value, nguoi: S.hoTenDN || S.emailDN || '' }, thamSo), 60000)
+    .then(function (d) {
+      _hsl.d = d; _hsl.sua = ''; _hsl.bac = null; _cacheFE = {};   // bảng lương đang nhớ trên trình duyệt tính lại theo số mới
+      veHeSoLuong();
+      nsBaoOkChung((thongBao || d.daLuu || 'Đã lưu') + (d.bigQuery === 'loi' ? ' (BigQuery chưa nhận — lần đồng bộ tới sẽ đẩy bù).' : '.'));
+    }).catch(function (e) {
+      if (nut && nut.isConnected) { nut.disabled = false; nut.textContent = nut.dataset.chu; }
+      baoLoi('hslLoi', e.message);
+    });
+}
+
+$('hslKy').onchange = function () { _hsl.d = null; taiHeSoLuong(); };
+$('pHeSoLuong').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button'); if (!b || !_hsl.d) return;
+  var d = _hsl.d;
+  if (b.dataset.hslSua) { _hsl.sua = b.dataset.hslSua; veHeSoLuong(); var o = $('hslFGia'); if (o) { o.focus(); o.select(); } return; }
+  if (b.id === 'hslFHuy') { _hsl.sua = ''; veHeSoLuong(); return; }
+  if (b.id === 'hslFLuu') {
+    var gia = String($('hslFGia').value).replace(/[\s.]/g, '').replace(',', '.');
+    if (gia === '' || !isFinite(Number(gia))) { baoLoi('hslLoi', 'Nhập đơn giá là số.'); return; }
+    hslGhi({ bang: 'DON_GIA', viec: 'luu', ma: _hsl.sua, ky: $('hslFKy').value, gia: gia, ghiChu: $('hslFGhi').value.trim() }, b);
+    return;
+  }
+  if (b.dataset.hslXoaDg) {
+    var pz = b.dataset.hslXoaDg.split('|');
+    if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Xoá?'; setTimeout(function () { if (b.isConnected) { delete b.dataset.xacNhan; b.textContent = '✕'; } }, 4000); return; }
+    hslGhi({ bang: 'DON_GIA', viec: 'xoa', ma: pz[0], ky: pz[1] }, b);
+    return;
+  }
+  if (b.dataset.hslXl !== undefined) {
+    var i = Number(b.dataset.hslXl), pt = Number(String($('hslXl' + i).value).replace(',', '.'));
+    if (!isFinite(pt)) { baoLoi('hslLoi', 'Tỷ lệ hưởng phải là số (%).'); return; }
+    hslGhi({ bang: 'XEP_LOAI', viec: 'luu', ma: d.xepLoai[i].ma, tyLe: pt / 100, moTa: $('hslXlMt' + i).value.trim() }, b);
+    return;
+  }
+  if (b.dataset.hslXlXoa !== undefined) {
+    if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Chắc chắn xoá?'; setTimeout(function () { if (b.isConnected) { delete b.dataset.xacNhan; b.textContent = 'Xoá'; } }, 4000); return; }
+    hslGhi({ bang: 'XEP_LOAI', viec: 'xoa', ma: d.xepLoai[Number(b.dataset.hslXlXoa)].ma }, b);
+    return;
+  }
+  if (b.id === 'hslThemXl') {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><input class="o" id="hslXlMoiMa" maxlength="10" placeholder="Mã, vd D" style="width:80px"></td>' +
+      '<td class="p"><input class="o p" id="hslXlMoiTl" inputmode="decimal" placeholder="%" style="width:90px"></td>' +
+      '<td><input class="o" id="hslXlMoiMt" maxlength="200" placeholder="Mô tả"></td>' +
+      '<td style="text-align:right"><button class="btn nho chinh" type="button" id="hslXlMoiLuu">Thêm</button></td>';
+    $('hslXepLoai').querySelector('tbody').appendChild(tr); $('hslXlMoiMa').focus(); b.style.display = 'none';
+    return;
+  }
+  if (b.id === 'hslXlMoiLuu') {
+    var ma = $('hslXlMoiMa').value.trim().toUpperCase(), tl = Number(String($('hslXlMoiTl').value).replace(',', '.'));
+    if (!ma || !isFinite(tl) || $('hslXlMoiTl').value === '') { baoLoi('hslLoi', 'Nhập mã xếp loại và tỷ lệ hưởng (%).'); return; }
+    hslGhi({ bang: 'XEP_LOAI', viec: 'luu', ma: ma, tyLe: tl / 100, moTa: $('hslXlMoiMt').value.trim() }, b);
+    return;
+  }
+  if (b.id === 'hslThemBac') {
+    var cuoi = _hsl.bac[_hsl.bac.length - 1];
+    _hsl.bac.push({ tu: cuoi && cuoi.den !== null ? cuoi.den + 1 : null, den: null, thueSuat: 0, giamTru: 0, ghiChu: '' });
+    veBacThue(); return;
+  }
+  if (b.dataset.btXoa !== undefined) { _hsl.bac.splice(Number(b.dataset.btXoa), 1); veBacThue(); return; }
+  if (b.id === 'hslHuyThue') { _hsl.bac = null; veBacThue(); return; }
+  if (b.id === 'hslLuuThue') {
+    var ds = _hsl.bac.map(function (x) {
+      return { tu: x.tu, den: x.den, thueSuat: x.thueSuat, giamTru: x.giamTru, ghiChu: x.ghiChu };
+    });
+    if (ds.some(function (x) { return x.tu === null || !isFinite(x.tu); })) { baoLoi('hslLoi', 'Mỗi bậc cần có "Từ".'); return; }
+    hslGhi({ bang: 'BAC_THUE', ds: JSON.stringify(ds) }, b, 'Đã lưu biểu thuế (' + ds.length + ' bậc)');
+  }
+});
+/** Gõ trong bảng thuế: cập nhật bản nháp _hsl.bac (chưa lưu cho tới khi bấm "Lưu biểu thuế"). */
+$('hslBacThue').addEventListener('input', function (ev) {
+  var k = ev.target.dataset.bt; if (!k) return;
+  var p = k.split('|'), b = _hsl.bac[Number(p[0])], v = String(ev.target.value).trim();
+  var so = function (t) { t = t.replace(/[\s.]/g, '').replace(',', '.'); return t === '' ? null : Number(t); };
+  if (p[1] === 'tu') b.tu = so(v);
+  else if (p[1] === 'den') b.den = so(v);
+  else if (p[1] === 'ts') b.thueSuat = (Number(v.replace(',', '.')) || 0) / 100;   // % có thể có số lẻ: không bỏ dấu chấm
+  else if (p[1] === 'gt') b.giamTru = so(v) || 0;
+  else b.ghiChu = v;
+});
+
 /* =====================================================================
    BÀN LÀM VIỆC (26/10/2026) — trang chủ: việc chưa làm của vai trò + quy trình theo bước (BanLamViec.gs).
    Mỗi việc / mục có hd = hành động khi bấm: nhapCaTo · chamCongCaTo · dayBase · ccBase · tab · link · hangCho.
