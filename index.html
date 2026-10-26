@@ -2697,7 +2697,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 261;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 262;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15039,7 +15039,7 @@ function veNguoiDung() {
     the_kpi('Đang trực tuyến', soVN(k.trucTuyen, 0), 'thiết bị', 'Hoạt động trong 3 phút qua') +
     the_kpi('Đang đăng nhập', soVN(k.dangDangNhap, 0), 'thiết bị', soVN(k.tongThietBi, 0) + ' thiết bị từng dùng · ' + soVN(k.tongTaiKhoan, 0) + ' tài khoản') +
     the_kpi('Đăng nhập hôm nay', soVN(k.dangNhapHomNay, 0), 'lượt', soVN(k.thietBiHomNay, 0) + ' thiết bị có mở app hôm nay') +
-    the_kpi('Thao tác hôm nay', soVN(k.thaoTacHomNay, 0), 'thao tác', 'Xem trang, ghi dữ liệu, truy xuất');
+    the_kpi('Thao tác hôm nay', soVN(k.thaoTacHomNay, 0), 'thao tác', 'Ghi dữ liệu, truy xuất, đổi vai trò (không tính xem trang)');
   var max = Math.max.apply(null, d.theoGio.concat([1]));
   $('ndTheoGio').innerHTML = d.theoGio.map(function (n, g) {
     return '<div class="nd-cot" title="' + g + 'h: ' + n + ' hoạt động"><i style="height:' + Math.round(n / max * 100) + '%"></i><span>' + (g % 3 === 0 ? g : '') + '</span></div>';
