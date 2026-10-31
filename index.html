@@ -1877,6 +1877,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
           <button class="btn chinh nho" id="hsThemGt" type="button">+ Gia thuộc</button>
           <button class="btn nho" id="hsInThe" type="button" title="In thẻ nhận diện có mã QR cho các hồ sơ đang hiện">In thẻ QR</button>
           <button class="btn nho" id="hsXuat" type="button">Xuất Excel</button>
+          <button class="btn nho" id="hsNhap" type="button" style="display:none" title="Admin: nhập 1 lần từ file CSV xuất ở CN Workforce">Nhập từ CN Workforce</button>
         </div>
         <div id="hsLoi" style="padding:0 16px"></div>
         <div class="cuon"><table id="bangHs"></table></div>
@@ -2913,7 +2914,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 264;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 265;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -14990,6 +14991,7 @@ function veHoSo() {
     the_kpi_canh(t.chuaPhong > 0, 'Chưa có phòng ở', soVN(t.chuaPhong, 0), 'người', '') + the_kpi('Đang trong cổng', soVN(t.trongCong, 0), 'người', 'Theo lượt cổng gần nhất');
   $('hsTomTat').textContent = soVN(t.tatCa, 0) + ' hồ sơ';
   $('hsThemGt').style.display = hsCo('hoSo', 'THEM') ? '' : 'none';
+  $('hsNhap').style.display = S.laAdmin ? '' : 'none';
   var xemDg = d.rows.some(function (r) { return r.danhGia !== undefined; });
   var h = '<thead><tr><th></th><th>Họ tên</th><th>Loại</th><th>Mã CN / quan hệ</th><th>Tổ</th><th>Phòng ở</th><th>Cổng</th>' + (xemDg ? '<th>Đánh giá</th><th>Kỷ luật</th>' : '') + '</tr></thead><tbody>';
   d.rows.forEach(function (r) {
@@ -15264,15 +15266,64 @@ $('hsFile').onchange = function () {
   img.onerror = function () { URL.revokeObjectURL(url); if ($('hsCtLoi')) $('hsCtLoi').innerHTML = '<div class="bao-loi">Không đọc được ảnh này.</div>'; };
   img.src = url;
 };
-function hsGuiAnh(ts) {
+function hsGuiAnh(ts) { return hsPost('hsTaiAnh', ts); }
+/** Lệnh ghi có thân lớn (ảnh, file nhập): POST text/plain tới /api/hoSo (GET JSONP không chở nổi). */
+function hsPost(action, ts) {
   var than = hsP(ts);
-  try { than = thamSoAdmin('hsTaiAnh', than); } catch (e) { return Promise.reject(e); }
+  try { than = thamSoAdmin(action, than); } catch (e) { return Promise.reject(e); }
   if (S.phienDN) than.phienDN = S.phienDN;
   if (S.vaiTroHienThi) than.vaiTroHien = S.vaiTroHienThi;
   var goc = String(S.apiDoc || API_DOC_MAC_DINH).replace(/\/api\/exec.*$/, '');
-  return fetch(goc + '/api/hoSo?action=hsTaiAnh', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(than) })
-    .then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.loi || 'Không lưu được ảnh.'); return j.data; });
+  return fetch(goc + '/api/hoSo?action=' + action, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(than) })
+    .then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.loi || 'Máy chủ không nhận được dữ liệu.'); return j.data; });
 }
+
+/* ---------- Admin: nhập 1 lần từ CN Workforce (2 file CSV "Danh sách hồ sơ" + "Tình hình cư trú" xuất ở trang Báo cáo của họ) ---------- */
+function hsDocCsv(txt) {
+  txt = String(txt || '').replace(/^﻿/, '');
+  var dong = [], o = '', r = [], q = false;
+  for (var i = 0; i < txt.length; i++) {
+    var c = txt[i];
+    if (q) { if (c === '"') { if (txt[i + 1] === '"') { o += '"'; i++; } else q = false; } else o += c; continue; }
+    if (c === '"') q = true;
+    else if (c === ',') { r.push(o); o = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && txt[i + 1] === '\n') i++; r.push(o); dong.push(r); r = []; o = ''; }
+    else o += c;
+  }
+  if (o !== '' || r.length) { r.push(o); dong.push(r); }
+  var dau = dong.shift() || [];
+  return dong.filter(function (x) { return x.some(function (v) { return v !== ''; }); }).map(function (x) {
+    var m = {}; dau.forEach(function (h, k) { m[h.trim()] = (x[k] || '').trim(); }); return m;
+  });
+}
+$('hsNhap').onclick = function () {
+  hsMo('Nhập từ CN Workforce', '<div id="hsFLoi"></div><p class="goi-y" style="margin-top:0">Ở CN Workforce: <b>Báo cáo & Thống kê</b> → tải CSV <b>Danh sách hồ sơ</b> và <b>Tình hình cư trú</b>, rồi chọn 2 file đó ở đây. ' +
+    'Người lao động ghép theo số căn cước với danh sách nhân sự (không tạo người mới); gia thuộc gắn với người lao động cùng phòng. Bấm <b>Xem trước</b> để kiểm số trước khi nhập — chạy lại không nhân đôi.</p>' +
+    '<div class="hs-form"><div><label class="nhan" for="hsFCsvHs">File "Danh sách hồ sơ" (ho-so-cong-ty-….csv)</label><input class="o" type="file" id="hsFCsvHs" accept=".csv,text/csv"></div>' +
+    '<div><label class="nhan" for="hsFCsvPh">File "Tình hình cư trú" (cu-tru-cong-ty-….csv) — để lấy sức chứa phòng</label><input class="o" type="file" id="hsFCsvPh" accept=".csv,text/csv"></div></div>' +
+    '<div id="hsFKq" style="margin-top:12px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXem">Xem trước</button><button class="btn chinh" type="button" id="hsFNhap" disabled>Nhập vào hệ thống</button></div>');
+  var docFile = function (id) { var f = $(id).files[0]; return f ? f.text() : Promise.resolve(''); };
+  var chay = function (apDung, nut) {
+    $('hsFLoi').innerHTML = '';
+    nut.disabled = true; var chuCu = nut.textContent; nut.textContent = 'Đang xử lý…';
+    Promise.all([docFile('hsFCsvHs'), docFile('hsFCsvPh')]).then(function (t) {
+      if (!t[0]) throw new Error('Chọn file "Danh sách hồ sơ" trước.');
+      return hsPost('hsNhapCnw', { hoSo: JSON.stringify(hsDocCsv(t[0])), phong: JSON.stringify(t[1] ? hsDocCsv(t[1]) : []), apDung: apDung ? 1 : 0 });
+    }).then(function (k) {
+      $('hsFKq').innerHTML = '<div class="' + (k.daNhap ? 'vi ok' : 'goi-y') + '" style="display:block;padding:10px">' + (k.daNhap ? '✓ Đã nhập. ' : 'Xem trước (chưa ghi gì): ') +
+        k.tong + ' dòng · người lao động ghép được <b>' + k.ghepDuoc + '/' + k.laoDong + '</b> · hồ sơ mở rộng ' + k.hoSoMoRong + ' · phòng mới ' + k.phong + ' · cư trú ' + k.cuTru +
+        ' · gia thuộc ' + k.giaThuoc + (k.giaThuocKhongChuHo ? ' (' + k.giaThuocKhongChuHo + ' chưa tìm được người lao động cùng phòng)' : '') + ' · đánh giá ' + k.danhGia + ' · kỷ luật ' + k.kyLuat +
+        (k.boQua ? ' · bỏ qua ' + k.boQua + ' đã có' : '') + '</div>' +
+        (k.khongGhepSo ? '<div class="goi-y">' + k.khongGhepSo + ' người lao động không tìm thấy số căn cước trong danh sách nhân sự (mã hồ sơ bên CN Workforce): ' + thoat(k.khongGhep.join(', ')) +
+          (k.khongGhepSo > k.khongGhep.length ? '…' : '') + '. TCHC rà lại số căn cước hoặc thêm người qua trang Nhân sự rồi nhập lại.</div>' : '');
+      $('hsFNhap').disabled = !!k.daNhap;
+      if (k.daNhap) taiHoSo();
+    }).catch(function (e) { $('hsFLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; })
+      .then(function () { nut.textContent = chuCu; if (nut.id === 'hsFXem') nut.disabled = false; });
+  };
+  $('hsFXem').onclick = function () { chay(false, this); };
+  $('hsFNhap').onclick = function () { chay(true, this); };
+};
 
 /* ---------- In thẻ nhận diện (A7) có mã QR — QR chỉ chứa mã tham chiếu, không chứa tên hay giấy tờ ---------- */
 function hsInThe(ds) {
