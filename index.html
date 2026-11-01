@@ -2961,7 +2961,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 267;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 268;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15351,17 +15351,33 @@ $('hsNhap').onclick = function () {
     '<div class="hs-form"><div><label class="nhan" for="hsFCsvHs">File "Danh sách hồ sơ" (ho-so-cong-ty-….csv)</label><input class="o" type="file" id="hsFCsvHs" accept=".csv,text/csv"></div>' +
     '<div><label class="nhan" for="hsFCsvPh">File "Tình hình cư trú" (cu-tru-cong-ty-….csv) — để lấy sức chứa phòng</label><input class="o" type="file" id="hsFCsvPh" accept=".csv,text/csv"></div></div>' +
     '<div id="hsFKq" style="margin-top:12px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXem">Xem trước</button><button class="btn chinh" type="button" id="hsFNhap" disabled>Nhập vào hệ thống</button></div>' +
-    '<h4 style="margin:22px 0 6px">Bước 2 — Gắn ảnh</h4><p class="goi-y" style="margin-top:0">Sau khi bên CN Workforce chép ảnh vào Shared Drive công ty (tệp tên CN-xxxx_photo / CN-xxxx_cmnd), hệ thống tự ghép ảnh với người đã nhập ở bước 1 — không tải ảnh về máy.</p>' +
-    '<div id="hsFKqAnh"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXemAnh">Xem trước ảnh</button><button class="btn chinh" type="button" id="hsFGanAnh" disabled>Gắn ảnh</button></div>');
+    '<h4 style="margin:22px 0 6px">Bước 2 — Gắn ảnh</h4><p class="goi-y" style="margin-top:0">Chọn file <b>worker_images.csv</b> trong gói dữ liệu của CN Workforce. Hệ thống chép ảnh từ Drive của họ sang Shared Drive công ty rồi gắn vào đúng người — không tải ảnh về máy; chạy lại không chép trùng.</p>' +
+    '<div class="hs-form"><div class="rong2"><input class="o" type="file" id="hsFCsvAnh" accept=".csv,text/csv"></div></div>' +
+    '<div id="hsFKqAnh" style="margin-top:10px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXemAnh">Xem trước ảnh</button><button class="btn chinh" type="button" id="hsFGanAnh" disabled>Chép và gắn ảnh</button></div>');
   var chayAnh = function (apDung, nut) {
     $('hsFLoi').innerHTML = '';
+    var f = $('hsFCsvAnh').files[0];
+    if (!f) { $('hsFLoi').innerHTML = '<div class="bao-loi">Chọn file worker_images.csv trước.</div>'; return; }
     nut.disabled = true; var chuCu = nut.textContent; nut.textContent = 'Đang xử lý…';
-    hsPost('hsNhapAnhCnw', { apDung: apDung ? 1 : 0 }).then(function (k) {
-      $('hsFKqAnh').innerHTML = '<div class="' + (k.daNhap ? 'vi ok' : 'goi-y') + '" style="display:block;padding:10px">' + (k.daNhap ? '✓ Đã gắn ' : 'Xem trước: sẽ gắn ') +
-        '<b>' + k.ganDuoc + '</b> ảnh (' + k.chanDung + ' chân dung, ' + k.giayTo + ' giấy tờ) · tìm thấy ' + k.hopLe + ' ảnh CN-xxxx trong ' + k.tep + ' tệp' +
-        (k.daCo ? ' · ' + k.daCo + ' đã có' : '') + (k.khongRoNguoi ? ' · ' + k.khongRoNguoi + ' ảnh chưa biết của ai (' + thoat(k.maKhongRo.join(', ')) + ')' : '') + '</div>';
-      $('hsFGanAnh').disabled = !!k.daNhap || !k.ganDuoc;
-      if (k.daNhap) taiHoSo();
+    f.text().then(function (t) {
+      var anh = JSON.stringify(hsDocCsv(t).map(function (r) { return { person_id: r.person_id, kind: r.kind, drive_file_id: r.drive_file_id }; }));
+      var chep = 0, loi = 0, mau = [];
+      var lan = function () {
+        return hsPost('hsNhapAnhCnw', { anh: anh, apDung: apDung ? 1 : 0, moiLo: 40 }).then(function (k) {
+          if (!apDung) {
+            $('hsFKqAnh').innerHTML = '<div class="goi-y">Xem trước: <b>' + k.canGan + '</b> ảnh cần chép (' + k.chanDung + ' chân dung, ' + k.giayTo + ' giấy tờ) · đã có ' + k.daCo +
+              ' · chưa biết của ai ' + k.khongRoNguoi + ' · thử đọc ' + k.thuDoc + ' tệp được, lỗi ' + k.thuLoi + (k.loiMau.length ? ' (' + thoat(k.loiMau[0]) + ')' : '') + '</div>';
+            $('hsFGanAnh').disabled = !k.canGan || k.thuLoi > 0;
+            return;
+          }
+          chep += k.daChep; loi += k.loi; mau = mau.concat(k.loiMau).slice(0, 5);
+          $('hsFKqAnh').innerHTML = '<div class="goi-y">Đã chép ' + chep + ' ảnh, lỗi ' + loi + ', còn ' + k.conLai + '…</div>';
+          if (k.conLai > 0 && k.daChep > 0) return lan();
+          $('hsFKqAnh').innerHTML = '<div class="vi ok" style="display:block;padding:10px">✓ Đã chép và gắn ' + chep + ' ảnh' + (loi ? ', lỗi ' + loi + ': ' + thoat(mau.join('; ')) : '') + '</div>';
+          taiHoSo();
+        });
+      };
+      return lan();
     }).catch(function (e) { $('hsFLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; })
       .then(function () { nut.textContent = chuCu; if (nut.id === 'hsFXemAnh') nut.disabled = false; });
   };
