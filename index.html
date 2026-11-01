@@ -2037,7 +2037,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
       <div class="the" style="margin-bottom:16px">
         <div class="hs-loc">
           <input class="o" id="dgQKl" type="search" placeholder="Tìm người, nội dung, cán bộ phụ trách…" style="flex:2 1 240px;max-width:none">
-          <select class="o" id="dgTtKl" aria-label="Trạng thái theo dõi"><option value="mo">Chưa khắc phục xong</option><option value="">Mọi trạng thái</option></select>
+          <select class="o" id="dgTtKl" aria-label="Trạng thái theo dõi"><option value="">Mọi trạng thái</option><option value="mo">Chưa khắc phục xong</option><option value="CAN_CHAN_CHINH">Cần chấn chỉnh</option><option value="DANG_THEO_DOI">Đang theo dõi</option><option value="DANG_DAO_TAO_LAI">Đang đào tạo lại</option><option value="DA_TIEN_BO">Đã có tiến bộ</option><option value="DA_KHAC_PHUC">Đã khắc phục xong</option></select>
         </div>
         <div class="hs-dau-ds"><span id="dgTomTat"></span><span id="dgPhamVi"></span></div>
         <div class="cuon"><table id="bangKl"></table></div>
@@ -3068,7 +3068,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 270;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 271;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
