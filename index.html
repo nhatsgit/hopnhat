@@ -2961,7 +2961,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 268;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 269;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15105,7 +15105,8 @@ function veChiTietHs() {
     tt('Ngày sinh', hsNgay(d.sinh)) + (ns ? tt('Mã CN · chức danh', [d.maCn, d.chucDanh].filter(Boolean).join(' · ')) : '') +
     tt('Đội · tổ', [d.doi, d.to].filter(Boolean).join(' · ')) + (ns ? tt('Số căn cước', d.cccd) : tt('Số giấy tờ', d.soGiayTo)) +
     tt('Trạng thái', HS_TT_NS[d.trangThai] || d.trangThai) + tt('Số điện thoại', d.sdt) + tt('Nhóm máu', d.nhomMau) +
-    (ns ? tt('Nơi sinh / quê quán', d.noiSinh) + tt('Địa chỉ', d.diaChi) + tt('NSSF', d.coNssf ? 'Đã có' : 'Chưa có') : '') + tt('Ghi chú', d.ghiChu) +
+    tt('Nơi sinh / quê quán', d.noiSinh) + tt('Địa chỉ thường trú', d.diaChi) + tt('Chi tiết nơi ở', d.chiTietNoiO) + tt('Khu vực', d.khuVuc) + tt('Phần cây', d.phanCay) +
+    tt('Số bảo hiểm', d.soBaoHiem) + (ns ? tt('NSSF', d.coNssf ? 'Đã có' : 'Chưa có') : '') + (d.toCu ? tt('Tổ theo hồ sơ cũ', d.toCu) : '') + tt('Ghi chú', d.ghiChu) +
     '</div></div></div>';
   // Ảnh giấy tờ
   if (hsCo('anhGiayTo', 'XEM') || hsCo('anhGiayTo', 'THEM')) {
@@ -15173,14 +15174,15 @@ function hsFormHoSo(d) {
   hsMo('Sửa thông tin — ' + d.ten, '<div id="hsFLoi"></div><div class="hs-form">' +
     hsO('hsFTenThat', 'Tên thật (khi khác tên hồ sơ)', d.tenThat, { max: 120 }) + hsO('hsFSdt', 'Số điện thoại', d.sdt, { max: 40, kieu: 'tel' }) +
     hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) +
-    hsO('hsFNoiSinh', 'Nơi sinh / quê quán', d.noiSinh, { max: 250 }) + hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) +
+    hsO('hsFNoiSinh', 'Nơi sinh / quê quán', d.noiSinh, { max: 250 }) + hsO('hsFKhuVuc', 'Khu vực', d.khuVuc, { max: 120 }) + hsO('hsFPhanCay', 'Phần cây', d.phanCay, { max: 60 }) +
+    hsO('hsFBaoHiem', 'Số bảo hiểm', d.soBaoHiem, { max: 40 }) + hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) +
     hsO('hsFGhi', 'Ghi chú', d.ghiChu, { vung: 1, max: 1000, rong: 1 }) + '</div>' +
     '<div class="goi-y">Họ tên trên hồ sơ, ngày sinh, số căn cước, NSSF sửa ở trang Nhân sự (đi theo quy trình biến động).</div>' +
     '<div class="hs-chan"><button class="btn nho" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu</button></div>');
   $('hsFHuy').onclick = function () { veChiTietHs(); };
   $('hsFLuu').onclick = function () {
     hsGhi('hsLuuHoSo', { id: d.id, tenThat: hsV('hsFTenThat'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), noiSinh: hsV('hsFNoiSinh'),
-                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi') }, this, function () { moHoSo('NS', d.id); hsLamMoiTrang(); }, 'hsFLoi');
+                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi'), khuVuc: hsV('hsFKhuVuc'), phanCay: hsV('hsFPhanCay'), soBaoHiem: hsV('hsFBaoHiem'), chiTietNoiO: hsV('hsFChiTiet') }, this, function () { moHoSo('NS', d.id); hsLamMoiTrang(); }, 'hsFLoi');
   };
 }
 
@@ -15198,6 +15200,8 @@ function hsFormGiaThuoc(g, chuHo) {
     hsO('hsFMau', 'Nhóm máu', laSua ? g.nhomMau : '', { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) +
     (laSua ? hsO('hsFTt', 'Trạng thái', g.trangThai, { chon: [['DANG_O', 'Đang ở'], ['DA_ROI', 'Đã rời đi (trả phòng)']] }) : '') +
     (!laSua && hsDsDoi().length > 1 && S.toanCongTy ? hsO('hsFDoi', 'Đội (khi không gắn người lao động)', hsDsDoi()[0], { chon: hsDsDoi() }) : '') +
+    hsO('hsFNoiSinh', 'Nơi sinh', laSua ? g.noiSinh : '', { max: 250 }) + hsO('hsFKhuVuc', 'Khu vực', laSua ? g.khuVuc : '', { max: 120 }) + hsO('hsFPhanCay', 'Phần cây', laSua ? g.phanCay : '', { max: 60 }) +
+    hsO('hsFBaoHiem', 'Số bảo hiểm', laSua ? g.soBaoHiem : '', { max: 40 }) + hsO('hsFDiaChi', 'Địa chỉ thường trú', laSua ? g.diaChi : '', { max: 500, rong: 1 }) + hsO('hsFChiTiet', 'Chi tiết nơi ở', laSua ? g.chiTietNoiO : '', { max: 500, rong: 1 }) +
     hsO('hsFGhi', 'Ghi chú', laSua ? g.ghiChu : '', { vung: 1, rong: 1 }) + '</div>' +
     (!laSua ? '<div class="goi-y">Người lao động đang có phòng ở thì gia thuộc tự được xếp vào cùng phòng.</div>' : '') +
     '<div class="hs-chan"><button class="btn nho" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu</button></div>');
@@ -15219,7 +15223,8 @@ function hsFormGiaThuoc(g, chuHo) {
     };
   }
   $('hsFLuu').onclick = function () {
-    var ts = { hoTen: hsV('hsFTen'), quanHe: hsV('hsFQh'), gt: hsV('hsFGt'), ngaySinh: hsV('hsFSinh'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), ghiChu: hsV('hsFGhi') };
+    var ts = { hoTen: hsV('hsFTen'), quanHe: hsV('hsFQh'), gt: hsV('hsFGt'), ngaySinh: hsV('hsFSinh'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), ghiChu: hsV('hsFGhi'),
+               noiSinh: hsV('hsFNoiSinh'), khuVuc: hsV('hsFKhuVuc'), phanCay: hsV('hsFPhanCay'), soBaoHiem: hsV('hsFBaoHiem'), diaChi: hsV('hsFDiaChi'), chiTietNoiO: hsV('hsFChiTiet') };
     if (hsV('hsFGiayTo')) ts.soGiayTo = hsV('hsFGiayTo');
     if (laSua) { ts.ma = g.id; ts.trangThai = hsV('hsFTt'); ts.chuHo = g.chuHo ? g.chuHo.id : ''; ts.maDoi = g.doi; }
     else { ts.chuHo = chuHo ? chuHo.id : hsV('hsFChuHo'); if ($('hsFDoi')) ts.maDoi = hsV('hsFDoi'); }
