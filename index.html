@@ -1261,7 +1261,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-the-id h4{margin:0 0 1.2mm;font-size:3.9mm;line-height:1.25;font-weight:600;overflow-wrap:anywhere}
 .hs-the-id .ma{margin:0 0 2mm;font-family:ui-monospace,Consolas,monospace;font-size:2.5mm;font-weight:600;color:#2f6b50;overflow-wrap:anywhere}
 .hs-the-id dl{margin:0;display:grid;gap:1.1mm}
-.hs-the-id dl>div{display:grid;grid-template-columns:10mm minmax(0,1fr);gap:1.2mm;font-size:2.35mm;line-height:1.35}
+.hs-the-id dl>div{display:grid;grid-template-columns:13mm minmax(0,1fr);gap:1.2mm;font-size:2.35mm;line-height:1.35}
 .hs-the-id dt{color:#8a978c}
 .hs-the-id dd{margin:0;font-weight:500;overflow-wrap:anywhere}
 .hs-the-id footer{display:flex;align-items:flex-end;gap:2.6mm;padding:2mm 3mm 3mm;border-top:1px solid #edf1ed;background:#fafcf9}
@@ -3184,7 +3184,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 272;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 273;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
