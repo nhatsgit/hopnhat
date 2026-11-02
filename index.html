@@ -3184,7 +3184,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 273;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 274;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15749,7 +15749,7 @@ $('pBaoCaoAn').addEventListener('click', function (ev) {
     })().then(function () { xuatBangExcel('ho_so_' + ten + '.xlsx', ['Họ tên', 'Tên hồ sơ', 'Phân loại', 'Giới tính', 'Tuổi', 'Đội', 'Tổ', 'Mã CN', 'Quan hệ', 'Phòng ở', 'Chủ phòng', 'Điện thoại', 'Nhóm máu', 'Khu vực', 'Phần cây', 'Mã QR'], rows); });
   } else if (viec === 'cuTru') {
     xong = goiAPI('hsCuTru', hsP({})).then(function (d) {
-      xuatBangExcel('cu_tru_' + ten + '.xlsx', ['Phòng', 'Đội', 'Khu', 'Sức chứa', 'Số người', 'Trạng thái'], d.phong.map(function (x) {
+      xuatBangExcel('cu_tru_' + ten + '.xlsx', ['Phòng', 'Đội', 'Khu', 'Sức chứa', 'Số người', 'Trạng thái'], d.phong.filter(function (x) { return x.hoat; }).map(function (x) {
         return [x.ten, x.doi, x.khu, x.sucChua, x.o.length, !x.hoat ? 'Ngừng dùng' : (x.sucChua && x.o.length > x.sucChua ? 'Vượt sức chứa' : (x.o.length ? 'Đang sử dụng' : 'Phòng trống'))];
       }));
     });
@@ -15891,10 +15891,11 @@ function veCuTru() {
     the_kpi_canh(t.quaTai > 0, 'Phòng vượt sức chứa', soVN(t.quaTai, 0), 'phòng', 'Cần kiểm tra và điều chỉnh') +
     the_kpi_canh(t.chuaPhong > 0, 'Chưa bố trí phòng', soVN(t.chuaPhong, 0), 'người', 'Theo trường thông tin phòng ở');
   $('ctThemPhong').style.display = hsCo('cuTru', 'THEM') ? '' : 'none';
-  $('ctSoPhong').textContent = d.phong.length + ' phòng';
+  $('ctSoPhong').textContent = t.phong + ' phòng';
   // Phòng: thẻ gọn, bấm để xem hồ sơ trong phòng
   var q = hsV('ctQ').toUpperCase(), quaTai = $('ctQuaTai').checked, suaP = hsCo('cuTru', 'SUA') || hsCo('cuTru', 'XOA');
   var ds = d.phong.filter(function (p) {
+    if (!p.hoat) return false;   // phòng đã ngừng dùng không hiện trên sơ đồ
     if (quaTai && !(p.sucChua && p.o.length > p.sucChua)) return false;
     if (!q) return true;
     return (p.ma + ' ' + p.khu + ' ' + p.o.map(function (n) { return n.ten + ' ' + n.maCn; }).join(' ')).toUpperCase().indexOf(q) > -1;
