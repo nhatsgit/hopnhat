@@ -1090,6 +1090,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .hs-form .rong2{grid-column:1/-1}
 .hs-chan-hop{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--line);background:var(--card);position:sticky;bottom:0}
+#nenHs{--sb-bg:#157A5A}
 .hs-the-xem{display:flex;justify-content:center;margin-bottom:12px}
 .hs-muc-form{font-weight:700;padding-top:10px;border-top:1px solid var(--line)}
 .hs-chan{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
@@ -3192,7 +3193,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 277;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 278;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15937,7 +15938,7 @@ function hsInThe(ds) {
     return goiAPI('hsAnh', hsP({ ma: ma }), 30000).then(function (a) { _hs.anh[a.ma] = 'data:' + a.mime + ';base64,' + a.b64; }).catch(function () {});
   }))).then(function () {
     var the = ds.map(function (r) { return hsTheHtml(r, r.anh && r.anh.CHAN_DUNG && _hs.anh[r.anh.CHAN_DUNG]); }).join('');
-    var mauNen = getComputedStyle(document.documentElement).getPropertyValue('--sb-bg').trim() || '#1d5a3e';
+    var mauNen = getComputedStyle($('nenHs')).getPropertyValue('--sb-bg').trim() || '#157A5A';
     var css = '';
     for (var i = 0; i < document.styleSheets.length; i++) {
       try { Array.prototype.forEach.call(document.styleSheets[i].cssRules, function (ru) { if (/\.hs-the-id/.test(ru.selectorText || '')) css += ru.cssText; }); } catch (e) {}
