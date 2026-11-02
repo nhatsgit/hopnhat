@@ -1089,6 +1089,9 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-muc h4 .btn{margin-left:auto}
 .hs-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .hs-form .rong2{grid-column:1/-1}
+.hs-chan-hop{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--line);background:var(--card);position:sticky;bottom:0}
+.hs-the-xem{display:flex;justify-content:center;margin-bottom:12px}
+.hs-muc-form{font-weight:700;padding-top:10px;border-top:1px solid var(--line)}
 .hs-chan{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .hs-phong{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:16px}
 .hs-p{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card)}
@@ -2045,7 +2048,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     <section id="pTheId" style="display:none">
       <div class="hs-dau-trang">
         <div><div class="hs-eyebrow">Nhận diện &amp; ra/vào</div><h1>Thẻ ID &amp; QR</h1><p>Mỗi công nhân, gia thuộc có mã QR riêng, mở đúng hồ sơ khi quét.</p></div>
-        <div class="hs-dau-nut"><button class="btn" id="tiXuat" type="button">Xuất mã thẻ</button><button class="btn chinh" id="tiIn" type="button">In thẻ</button></div>
+        <div class="hs-dau-nut"><button class="btn" type="button" onclick="chuyenTab('khach')">Thẻ khách &amp; QR →</button><button class="btn" id="tiXuat" type="button">Xuất mã thẻ</button><button class="btn chinh" id="tiIn" type="button">In thẻ</button></div>
       </div>
       <div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div>QR chỉ chứa mã cố định, <b>không có tên, CMND hay điện thoại</b>. Thẻ khổ A7 (74×105 mm); mỗi lần in tối đa 60 thẻ, lọc theo tổ hoặc phòng để in từng đợt.</div></div>
       <div id="tiLoi"></div>
@@ -2066,6 +2069,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     <section id="pBaoCaoAn" style="display:none">
       <div class="hs-dau-trang">
         <div><div class="hs-eyebrow">Thông tin điều hành</div><h1>Báo cáo &amp; thống kê</h1><p>Một nguồn số liệu, từ hồ sơ đến vận hành đơn vị.</p></div>
+        <div class="hs-dau-nut"><button class="btn" type="button" onclick="window.print()">In báo cáo</button></div>
       </div>
       <div id="bcAnLoi"></div>
       <div class="kpis gian" id="kpisBcAn" style="--cot:4"></div>
@@ -2121,7 +2125,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     <section id="pCuTru" style="display:none">
       <div class="hs-dau-trang">
         <div><div class="hs-eyebrow">Không gian sống</div><h1>Cư trú &amp; gia thuộc</h1><p>Quản lý phòng ở, nhân khẩu và sức chứa theo từng đơn vị.</p></div>
-        <div class="hs-dau-nut"><button class="btn chinh" id="ctThemPhong" type="button">+ Thêm phòng</button></div>
+        <div class="hs-dau-nut"><button class="btn" id="ctXuat" type="button">Xuất cư trú</button><button class="btn" id="ctChuyen" type="button">Chuyển phòng ở</button><button class="btn chinh" id="ctThemPhong" type="button">+ Thêm phòng</button></div>
       </div>
       <div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div>Chuyển phòng là <b>yêu cầu chờ duyệt</b>: người đó vẫn ở phòng cũ cho tới khi đội trưởng đội nhận / TCHC chấp nhận. Số người cùng phòng không tự động đồng nghĩa với quan hệ gia đình.</div></div>
       <div class="kpis gian" id="kpisCt" style="--cot:6"></div>
@@ -2147,7 +2151,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     <section id="pDanhGia" style="display:none">
       <div class="hs-dau-trang">
         <div><div class="hs-eyebrow">Chất lượng lao động</div><h1>Đánh giá &amp; kỷ luật</h1><p>Theo dõi kỹ năng, ý thức lao động và kế hoạch khắc phục theo đơn vị.</p></div>
-        <div class="hs-dau-nut"><button class="btn chinh" id="dgThemKl" type="button">+ Lập biên bản</button></div>
+        <div class="hs-dau-nut"><button class="btn" id="dgXuat" type="button">Xuất sổ theo dõi</button><button class="btn chinh" id="dgThemKl" type="button">+ Lập biên bản</button></div>
       </div>
       <div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div>Điểm kỹ năng thấp chỉ là nhu cầu đào tạo, <b>không tự động kết luận vi phạm kỷ luật</b>. Người quản lý ghi nhận và xác nhận; gia thuộc không thuộc sổ này.</div></div>
       <div class="kpis gian" id="kpisDg" style="--cot:3"></div>
@@ -2194,6 +2198,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
             <div class="hs-cam" id="anCam" style="display:none"><video id="anVideo" playsinline muted></video><div class="khung"></div></div>
             <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
               <button class="btn chinh" id="anBatCam" type="button">📷 Bật camera quét QR</button>
+              <label class="btn" style="cursor:pointer">🖼 Đọc QR từ ảnh<input type="file" id="anAnhQr" accept="image/*" hidden></label>
               <label class="goi-y" style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="anTuGhi"> Quét xong tự ghi</label>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px">
@@ -2209,11 +2214,11 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         <div class="cuon cuon-doc" style="max-height:420px"><table id="bangTrongCong"></table></div>
       </div>
       <div class="the" style="margin-bottom:16px">
-        <div class="hs-the-dau"><div><h3>Kiểm tra đột xuất</h3><div class="hs-phu">Đối chiếu thẻ tại khu vực khai thác, theo ngày đang chọn</div></div></div>
+        <div class="hs-the-dau"><div><h3>Kiểm tra đột xuất</h3><div class="hs-phu">Đối chiếu thẻ tại khu vực khai thác, theo ngày đang chọn</div></div><button class="btn nho" id="anXuatKiem" type="button">Xuất biên bản</button></div>
         <div class="cuon"><table id="bangKiem"></table></div>
       </div>
       <div class="the">
-        <div class="hs-the-dau"><div><h3>Nhật ký ra/vào</h3><div class="hs-phu">Không chỉnh sửa hoặc xoá sự kiện đã ghi nhận</div></div><input class="o" type="date" id="anNgay" style="width:auto"></div>
+        <div class="hs-the-dau"><div><h3>Nhật ký ra/vào</h3><div class="hs-phu">Không chỉnh sửa hoặc xoá sự kiện đã ghi nhận</div></div><span style="display:flex;gap:8px;align-items:center"><button class="btn nho" id="anXuatLuot" type="button">Xuất nhật ký</button><input class="o" type="date" id="anNgay" style="width:auto"></span></div>
         <div class="cuon cuon-doc" style="max-height:480px"><table id="bangLuot"></table></div>
       </div>
     </section>
@@ -2702,6 +2707,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
       <button class="btn nho" id="hsDong" type="button">Đóng</button>
     </div>
     <div class="than-hop" id="hsThan"></div>
+    <div class="hs-chan-hop" id="hsChanHop" style="display:none"></div>
   </div>
 </div>
 <input type="file" id="hsFile" accept="image/*" style="display:none">
@@ -3186,7 +3192,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 276;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 277;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15215,7 +15221,9 @@ function hsGanAnh(ma) {
 }
 
 /* ---------- Hộp thoại dùng chung ---------- */
-function hsMo(tieuDe, than, nutDau) {
+function hsMo(tieuDe, than, nutDau, nutChan) {
+  $('hsChanHop').innerHTML = nutChan || '';
+  $('hsChanHop').style.display = nutChan ? '' : 'none';
   $('hsTieuDe').textContent = tieuDe;
   $('hsNutDau').innerHTML = nutDau || '';
   $('hsThan').innerHTML = than;
@@ -15350,7 +15358,8 @@ function moHoSo(loai, id) {
 }
 function veChiTietHs() {
   var d = _hs.ct, ns = d.loai === 'NS', ten = d.tenThat || d.ten;
-  var nut = (hsCo('hoSo', 'SUA') ? '<button class="btn nho" type="button" data-hs-viec="sua">Sửa thông tin</button>' : '');
+  var chan = '<button class="btn" type="button" data-hs-viec="inThe">In thẻ</button><button class="btn" type="button" data-hs-viec="dong">Đóng</button>' +
+    (hsCo('hoSo', 'SUA') ? '<button class="btn chinh" type="button" data-hs-viec="sua">Chỉnh sửa</button>' : '');
   var sao = function (v) { return d.loai === 'GT' ? 'Không áp dụng' : (v ? '<span class="hs-sao-hien" aria-label="' + v + ' trên 5">' + '★★★★★'.slice(0, v) + '</span> ' + v + '/5' : 'Chưa đánh giá'); };
   var o = function (nhan, gt, html) {
     return '<div><dt>' + thoat(nhan) + '</dt>' + (gt ? '<dd>' + (html ? gt : thoat(gt)) + '</dd>' : '<dd class="trong">Chưa cập nhật</dd>') + '</div>';
@@ -15361,8 +15370,8 @@ function veChiTietHs() {
     (d.trangThai === 'CHO_XAC_NHAN' ? ' <span class="vi canh">Chờ xác nhận</span>' : '') +
     '<div class="hs-phu" style="margin-top:4px">' + thoat(d.maCn || d.id) + ' · ' + thoat(HS_TT_NS[d.trangThai] || d.trangThai) + '</div></div></div>';
   // Thẻ nhận diện
-  h += '<div class="hs-khoi"><div class="hs-khoi-dau"><h4>Thẻ nhận diện</h4><button class="btn nho" type="button" data-hs-viec="inThe">Xem / in thẻ</button></div>' +
-    '<p class="hs-ma-the">' + thoat(d.qr) + '</p><div class="goi-y" style="margin:8px 0 0">QR chỉ chứa mã này, không chứa tên hay số giấy tờ.</div></div>';
+  h += '<div class="hs-khoi"><div class="hs-khoi-dau"><h4>Thẻ nhận diện</h4><button class="btn nho" type="button" data-hs-viec="xemThe">Xem thẻ</button></div>' +
+    '<p class="hs-ma-the">' + thoat(d.qr) + '</p><div class="goi-y" style="margin:8px 0 0">QR chỉ chứa mã này; mở thẻ để xem hoặc in.</div></div>';
   // Ảnh chân dung + giấy tờ
   var coXemGt = hsCo('anhGiayTo', 'XEM'), coTaiGt = hsCo('anhGiayTo', 'THEM');
   h += '<div class="hs-khoi"><div class="hs-khoi-dau"><h4>Ảnh hồ sơ</h4></div><div class="hs-anh-luoi">' +
@@ -15386,7 +15395,13 @@ function veChiTietHs() {
     o('CMND / CCCD', ns ? d.cccd : d.soGiayTo) + o('Ngày sinh', hsNgay(d.sinh)) + o('Tuổi', d.tuoi === null || d.tuoi === undefined ? '' : String(d.tuoi)) + o('Giới tính', d.gt === 'NU' ? 'Nữ' : (d.gt === 'NAM' ? 'Nam' : '')) +
     o('Nơi sinh', d.noiSinh) + o('Điện thoại', d.sdt) + o('Nhóm máu', d.nhomMau || 'Chưa xác định') + o('Khu vực', d.khuVuc) + o('Phần cây', d.phanCay) + o('Số bảo hiểm', d.soBaoHiem) +
     (ns ? o('NSSF', d.coNssf ? 'Đã có' : 'Chưa có') : '') + o('Phòng ở', hien ? hien.phong : '') + o('Vai trò phòng ở', hien ? (hien.chuPhong ? 'Chủ phòng' : 'Thành viên') : '') + o('Chi tiết nơi ở', d.chiTietNoiO) + o('Địa chỉ thường trú', d.diaChi) +
-    (d.danhGia !== undefined ? o('Kỹ năng lao động', sao(d.danhGia && d.danhGia.kyNang), true) + o('Đạo đức & Kỷ luật', sao(d.danhGia && d.danhGia.yThuc), true) : '') + o('Ghi chú', d.ghiChu) + '</dl>';
+    (d.danhGia !== undefined ? o('Kỹ năng lao động', sao(d.danhGia && d.danhGia.kyNang), true) + o('Đạo đức & Kỷ luật', sao(d.danhGia && d.danhGia.yThuc), true) : '') + o('Trạng thái cổng', d.trongCong ? 'Đang ở trong' : 'Không có lượt vào đang mở') + o('Ghi chú', d.ghiChu) + '</dl>';
+  // Theo dõi & khắc phục: biên bản mới nhất
+  var klMoi = (d.dsKyLuat || [])[0];
+  if (klMoi) {
+    h += '<div class="hs-khoi"><div class="hs-khoi-dau"><h4>Theo dõi & khắc phục</h4></div><div>' + thoat(_hs.ttKl[klMoi.trangThai] || klMoi.trangThai) + ' · ' + hsNgay(klMoi.ngay) + '</div>' +
+      '<div>' + thoat(klMoi.hinhThuc || 'Chưa ghi hình thức') + ' · ' + thoat(klMoi.nguoiLap || 'Chưa phân công') + '</div>' + (klMoi.noiDung ? '<div>' + thoat(klMoi.noiDung) + '</div>' : '') + '</div>';
+  }
   // Gia thuộc
   if (ns) {
     h += '<div class="hs-muc"><h4>Gia thuộc (' + (d.giaThuoc || []).length + ')' + (hsCo('hoSo', 'THEM') ? '<button class="btn nho" type="button" data-hs-viec="themGt">+ Thêm gia thuộc</button>' : '') + '</h4>' +
@@ -15416,7 +15431,7 @@ function veChiTietHs() {
       return hsNgay(r.luc) + ' ' + hsGio(r.luc) + ' ' + (r.chieu === 'VAO' ? 'vào' : 'ra') + ' ' + thoat(r.cong) + (r.cach === 'QR' ? ' (QR)' : '');
     }).join(' · ') + '</div>' : '<div class="hs-phu">Chưa có lượt ra / vào.</div>') + '</div>';
   }
-  hsMo(d.ten, h, nut);
+  hsMo(ns ? 'Hồ sơ công nhân' : 'Hồ sơ gia thuộc', h, '', chan);
   if (S.phienDN) Array.prototype.forEach.call($('nenHs').querySelectorAll('[data-hs-xem-anh]'), hsHienAnhGt);
 }
 // Mở hồ sơ khác khi ảnh chưa về thì ô cũ đã bị thay: isConnected để ảnh người này không rơi vào hồ sơ người kia
@@ -15454,17 +15469,61 @@ $('nenHs').addEventListener('click', function (ev) {
   else if (v === 'xepPhong') hsFormXepPhong(d);
   else if (v === 'themKl') hsFormKyLuat(d);
   else if (v === 'inThe') hsInThe([d]);
+  else if (v === 'xemThe') hsXemThe(d);
+  else if (v === 'quayLai') veChiTietHs();
+  else if (v === 'dong') hsDongHop();
 });
 
+/** Popup xem thẻ: In thẻ / Quay lại hồ sơ / Đóng. Đóng hoặc mở hồ sơ khác khi đang tải thì bỏ qua kết quả. */
+function hsXemThe(d) {
+  hsMo('Thẻ nhận diện', '<div class="skeleton" style="height:320px"></div>');
+  var ma = d.anh && d.anh.CHAN_DUNG;
+  Promise.all([napThuVien('qrcode'), ma && !_hs.anh[ma] ? goiAPI('hsAnh', hsP({ ma: ma }), 30000).then(function (a) { _hs.anh[a.ma] = 'data:' + a.mime + ';base64,' + a.b64; }).catch(function () {}) : null]).then(function () {
+    if (_hs.ct !== d) return;
+    hsMo('Thẻ nhận diện', '<div class="hs-the-xem">' + hsTheHtml(d, ma && _hs.anh[ma]) + '</div><div class="goi-y" style="margin:0">QR chỉ chứa ' + thoat(d.qr) + ' nên không lộ thông tin cá nhân.</div>', '',
+      '<button class="btn" type="button" data-hs-viec="inThe">In thẻ</button><button class="btn" type="button" data-hs-viec="quayLai">Quay lại hồ sơ</button><button class="btn chinh" type="button" data-hs-viec="dong">Đóng</button>');
+  }).catch(function (e) { if (_hs.ct === d) $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+/** Chọn một người rồi làm tiếp (Chuyển phòng ở). */
+function hsChonNguoi(tieuDe, sau) {
+  hsMo(tieuDe, '<div class="hs-form">' + hsO('hsFTim', 'Tìm người', '', { rong: 1, goiY: 'Gõ tên, mã CN, điện thoại, phòng…' }) + '</div><div id="hsFKq" style="margin-top:10px"></div>');
+  var hen, lan = 0;
+  $('hsFTim').oninput = function () {
+    clearTimeout(hen);
+    var q = hsV('hsFTim'), so = ++lan;
+    if (q.length < 2) { $('hsFKq').innerHTML = ''; return; }
+    hen = setTimeout(function () {
+      goiAPI('hsDanhSach', hsP({ q: q, trangThai: 'hoat', moiTrang: 20 })).then(function (d) {
+        if (so !== lan || !$('hsFKq')) return;
+        $('hsFKq').innerHTML = d.rows.length ? d.rows.map(function (r) {
+          return '<button class="btn" type="button" style="display:block;width:100%;text-align:left;margin-bottom:6px" data-chon="' + r.loai + '|' + thoat(r.id) + '"><b>' + thoat(r.tenThat || r.ten) + '</b> <span class="hs-phu">' + thoat(r.maCn || r.id) + ' · ' + thoat(r.doi || '') + ' · ' + thoat(r.phong || 'Chưa có phòng') + '</span></button>';
+        }).join('') : '<div class="rong">Không tìm thấy.</div>';
+      }).catch(function (e) { if ($('hsFKq')) $('hsFKq').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+    }, 300);
+  };
+  $('hsFKq').onclick = function (ev) {
+    var b = ev.target.closest('[data-chon]'); if (!b) return;
+    var k = b.dataset.chon.split('|');
+    hsMo(tieuDe, '<div class="skeleton" style="height:120px"></div>');
+    goiAPI('hsChiTiet', hsP({ loai: k[0], id: k[1] })).then(function (d) { _hs.ct = d; sau(d); })
+      .catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+  };
+  $('hsFTim').focus();
+}
+
 function hsFormHoSo(d) {
-  hsMo('Sửa thông tin — ' + d.ten, '<div id="hsFLoi"></div><div class="hs-form">' +
-    hsO('hsFTenThat', 'Tên thật (khi khác tên hồ sơ)', d.tenThat, { max: 120 }) + hsO('hsFSdt', 'Số điện thoại', d.sdt, { max: 40, kieu: 'tel' }) +
-    hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) +
-    hsO('hsFNoiSinh', 'Nơi sinh / quê quán', d.noiSinh, { max: 250 }) + hsO('hsFKhuVuc', 'Khu vực', d.khuVuc, { max: 120 }) + hsO('hsFPhanCay', 'Phần cây', d.phanCay, { max: 60 }) +
-    hsO('hsFBaoHiem', 'Số bảo hiểm', d.soBaoHiem, { max: 40 }) + hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) +
-    hsO('hsFGhi', 'Ghi chú', d.ghiChu, { vung: 1, max: 1000, rong: 1 }) + '</div>' +
-    '<div class="goi-y">Họ tên trên hồ sơ, ngày sinh, số căn cước, NSSF sửa ở trang Nhân sự (đi theo quy trình biến động).</div>' +
-    '<div class="hs-chan"><button class="btn nho" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu</button></div>');
+  var ro = function (nhan, gt) { return hsO('hsRo' + nhan.replace(/\W/g, ''), nhan, gt).replace('<input', '<input disabled'); };
+  var muc = function (t) { return '<div class="rong2 hs-muc-form">' + t + '</div>'; };
+  hsMo('Chỉnh sửa hồ sơ công nhân', '<div id="hsFLoi"></div><div class="hs-form">' + muc('01 · Danh tính & liên hệ') +
+    hsO('hsFTenThat', 'Tên thật / tên hiển thị', d.tenThat, { max: 120 }) + ro('Tên trên hồ sơ', d.ten) + ro('Số CMND / CCCD', d.cccd) + hsO('hsFSdt', 'Điện thoại / liên hệ', d.sdt, { max: 40, kieu: 'tel' }) +
+    ro('Ngày sinh', hsNgay(d.sinh)) + ro('Giới tính', d.gt === 'NU' ? 'Nữ' : (d.gt === 'NAM' ? 'Nam' : '')) + hsO('hsFNoiSinh', 'Nơi sinh', d.noiSinh, { max: 250 }) + ro('Tuổi (tính theo ngày sinh)', d.tuoi === null || d.tuoi === undefined ? '' : String(d.tuoi)) +
+    hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) + muc('02 · Đơn vị, lao động & cư trú') +
+    ro('Đơn vị quản lý', tenDoiNgan(d.doi || '')) + ro('Tổ', d.to || d.toCu) + hsO('hsFKhuVuc', 'Khu vực', d.khuVuc, { max: 120 }) + hsO('hsFPhanCay', 'Phần cây hiện tại', d.phanCay, { max: 60 }) +
+    hsO('hsFBaoHiem', 'Số bảo hiểm', d.soBaoHiem, { max: 40 }) + ro('Phòng ở', d.phong) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) + muc('03 · Nhóm máu') +
+    hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) + muc('04 · Ghi chú') +
+    hsO('hsFGhi', 'Thông tin bổ sung', d.ghiChu, { vung: 1, max: 1000, rong: 1 }) + '</div>' +
+    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ sửa ở trang Nhân sự (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; điểm và kỷ luật ở trang Đánh giá & kỷ luật.</div>', '',
+    '<button class="btn" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu hồ sơ</button>');
   $('hsFHuy').onclick = function () { veChiTietHs(); };
   $('hsFLuu').onclick = function () {
     hsGhi('hsLuuHoSo', { id: d.id, tenThat: hsV('hsFTenThat'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), noiSinh: hsV('hsFNoiSinh'),
@@ -15670,12 +15729,12 @@ $('pTqAnNinh').addEventListener('click', function (ev) {
 /* ---------- Thẻ ID & QR ---------- */
 function hsTheHtml(r, anh) {
   var q = window.qrcode(0, 'M'); q.addData(r.qr); q.make();
-  var ma = r.maCn || r.id, dong = [['Đơn vị', tenDoiNgan(r.doi || '')], ['Tổ', r.to || r.toCu || '—'], ['Phòng', r.phong ? r.phong.replace(/^[^-]*-/, '') : '—'], ['Nhóm máu', r.nhomMau || '—']];
+  var ma = r.maCn || r.id, dong = [['Đơn vị', tenDoiNgan(r.doi || '')], ['Tổ', r.to || r.toCu || '—'], ['Khu vực', r.khuVuc || '—'], ['Phòng', r.phong ? r.phong.replace(/^[^-]*-/, '') : '—']];
   if (r.loai === 'GT') dong.splice(1, 1, ['Quan hệ', (r.quanHe || '') + (r.chuHo ? ' của ' + r.chuHo.ten : '')]);
   return '<article class="hs-the-id" data-the-mo="' + r.loai + '|' + thoat(r.id) + '"><header><span>C.R.C.K.2<small>APHIVATH</small></span><span>' + (r.loai === 'NS' ? 'THẺ CÔNG NHÂN' : 'THẺ GIA THUỘC') + '</span></header>' +
     '<div class="than">' + (anh ? '<img src="' + anh + '" alt="">' : '<span class="chu">' + hsChuCai(r.tenThat || r.ten) + '</span>') + '<div><h4>' + thoat(r.tenThat || r.ten) + '</h4><p class="ma">' + thoat(ma) + '</p><dl>' +
     dong.map(function (x) { return '<div><dt>' + thoat(x[0]) + '</dt><dd>' + thoat(x[1]) + '</dd></div>'; }).join('') + '</dl></div></div>' +
-    '<footer><div class="qr">' + q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }) + '</div><div><b>' + thoat(r.qr) + '</b><small>Quét để mở hồ sơ trong hệ thống</small><small>Không chứa tên hay số giấy tờ</small></div></footer></article>';
+    '<footer><div class="qr">' + q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }) + '</div><div><b>' + thoat(r.qr) + '</b><small>Quét để mở hồ sơ trong hệ thống</small><small>Thẻ nội bộ · xuất trình khi ra/vào</small></div></footer></article>';
 }
 function tiThamSo(them) {
   var a = $('tiAnh').value;
@@ -15911,6 +15970,7 @@ function veCuTru() {
     the_kpi_canh(t.quaTai > 0, 'Phòng vượt sức chứa', soVN(t.quaTai, 0), 'phòng', 'Cần kiểm tra và điều chỉnh') +
     the_kpi_canh(t.chuaPhong > 0, 'Chưa bố trí phòng', soVN(t.chuaPhong, 0), 'người', 'Theo trường thông tin phòng ở');
   $('ctThemPhong').style.display = hsCo('cuTru', 'THEM') ? '' : 'none';
+  $('ctChuyen').style.display = hsCo('cuTru', 'THEM') || hsCo('cuTru', 'SUA') ? '' : 'none';
   $('ctSoPhong').textContent = t.phong + ' phòng';
   // Phòng: thẻ gọn, bấm để xem hồ sơ trong phòng
   var q = hsV('ctQ').toUpperCase(), quaTai = $('ctQuaTai').checked, suaP = hsCo('cuTru', 'SUA') || hsCo('cuTru', 'XOA');
@@ -15931,13 +15991,18 @@ function veCuTru() {
   }).join('') : '<div class="rong">' + (d.phong.length ? 'Không có phòng khớp bộ lọc.' : 'Chưa khai phòng ở nào' + (hsCo('cuTru', 'THEM') ? ' — bấm "+ Thêm phòng".' : '.')) + '</div>';
   // Chờ duyệt chuyển phòng
   var cd = d.choDuyet;
-  $('ctChoDuyet').style.display = cd.length ? '' : 'none';
+  var dx = d.daXuLy || [], tenTtCp = { DA_DUYET: ['ok', 'Đã chấp nhận'], TU_CHOI: ['tap', 'Đã từ chối'] };
+  $('ctChoDuyet').style.display = cd.length || dx.length ? '' : 'none';
   $('ctChoDuyet').innerHTML = '<div class="hs-the-dau"><div><h3>Yêu cầu chuyển phòng ở</h3><div class="hs-phu">Người duyệt chấp nhận thì mới đổi phòng</div></div><span class="vi canh">' + cd.length + ' chờ duyệt</span></div><div class="cuon"><table><thead><tr><th>Hồ sơ</th><th>Từ phòng</th><th>Phòng đích</th><th>Ghi chú</th><th>Thời điểm</th><th></th></tr></thead><tbody>' +
     cd.map(function (x) {
       return '<tr><td><b>' + thoat(x.ten) + '</b>' + (x.loai === 'GT' ? ' <span class="vi nuoc">Gia thuộc</span>' : '') + '</td><td>' + thoat(x.tu || '—') + '</td><td>' + thoat(x.den) +
         (x.khacDoi ? ' <span class="vi canh">Khác đội</span>' : '') + '</td><td>' + thoat(x.lyDo) + '</td><td class="hs-phu">' + thoat(x.nguoi) + '<br>' + thoat(hsNgay(x.luc)) + '</td><td style="white-space:nowrap">' +
         (hsCo('duyetChuyenPhong', 'SUA') ? '<button class="btn chinh nho" type="button" data-ct-duyet="' + thoat(x.ma) + '|1">Chấp nhận</button> <button class="btn nho" type="button" data-ct-duyet="' + thoat(x.ma) + '|0">Từ chối</button>' : '') + '</td></tr>';
-    }).join('') + '</tbody></table></div>';
+    }).join('') + '</tbody></table></div>' +
+    (dx.length ? '<div class="hs-the-dau"><div><h3>Đã xử lý gần đây</h3><div class="hs-phu">5 yêu cầu mới nhất trong phạm vi đang xem</div></div></div><div class="cuon"><table><thead><tr><th>Hồ sơ</th><th>Từ phòng</th><th>Phòng đích</th><th>Ghi chú</th><th>Thời điểm</th><th>Trạng thái</th></tr></thead><tbody>' + dx.map(function (x) {
+      var t = tenTtCp[x.trangThai] || ['tap', x.trangThai];
+      return '<tr><td><b>' + thoat(x.ten) + '</b></td><td>' + thoat(x.tu || '—') + '</td><td>' + thoat(x.den) + '</td><td>' + thoat(x.lyDo || '—') + '</td><td class="hs-phu">' + hsNgay(x.luc) + ' ' + hsGio(x.luc) + '</td><td><span class="vi ' + t[0] + '">' + thoat(t[1]) + '</span></td></tr>';
+    }).join('') + '</tbody></table></div>' : '');
   // Chưa có phòng
   $('ctTieuDeChua').textContent = 'Chưa bố trí phòng (' + d.chuaPhong.length + ')';
   $('bangCtChua').innerHTML = '<thead><tr><th>Họ tên</th><th>Loại</th><th>Mã CN / quan hệ</th><th>Tổ</th><th></th></tr></thead><tbody>' + (d.chuaPhong.length ? d.chuaPhong.map(function (n) {
@@ -15949,6 +16014,13 @@ $('ctDoi').onchange = function () { taiCuTru(); };
 $('ctQ').oninput = function () { if (_hs.cuTru) veCuTru(); };
 $('ctQuaTai').onchange = function () { if (_hs.cuTru) veCuTru(); };
 $('ctThemPhong').onclick = function () { hsFormPhong(null); };
+$('ctChuyen').onclick = function () { hsChonNguoi('Chuyển phòng ở — chọn người', hsFormXepPhong); };
+$('ctXuat').onclick = function () {
+  if (!_hs.cuTru) return;
+  xuatBangExcel('cu_tru_' + S.maDonVi + '.xlsx', ['Phòng', 'Đội', 'Khu', 'Sức chứa', 'Số người', 'Trạng thái'], _hs.cuTru.phong.filter(function (x) { return x.hoat; }).map(function (x) {
+    return [x.ten, x.doi, x.khu, x.sucChua, x.o.length, x.sucChua && x.o.length > x.sucChua ? 'Vượt sức chứa' : (x.o.length ? 'Đang sử dụng' : 'Phòng trống')];
+  }));
+};
 $('pCuTru').addEventListener('click', function (ev) {
   var el = ev.target.closest('[data-ct-nguoi],[data-ct-phong],[data-ct-duyet]');
   if (!el) {
@@ -16059,6 +16131,12 @@ $('dgKy').onchange = function () { _hs.dg = null; taiDanhGia(); };
 $('dgTtKl').onchange = function () { taiDanhGia(); };
 $('dgTo').onchange = function () { if (_hs.dg) veDanhGia(); };
 $('dgQ').oninput = function () { if (_hs.dg) veDanhGia(); };
+$('dgXuat').onclick = function () {
+  var d = _hs.dg; if (!d) return;
+  xuatBangExcel('so_theo_doi_' + S.maDonVi + '.xlsx', ['Ngày', 'Họ tên', 'Mã CN', 'Tổ', 'Nội dung', 'Hình thức', 'Người lập', 'Trạng thái', 'Kế hoạch khắc phục'], d.kyLuat.map(function (k) {
+    return [k.ngay, k.ten, k.maCn, k.to, k.noiDung, k.hinhThuc, k.nguoiLap, d.ttKyLuat[k.trangThai] || k.trangThai, k.keHoach];
+  }));
+};
 $('dgThemKl').onclick = function () {
   // Chọn người trước: dùng danh sách đang có ở bảng đánh giá
   var ds = (_hs.dg && _hs.dg.nguoi) || [];
@@ -16110,10 +16188,11 @@ function veAnNinh() {
   }).join('');
   $('anSoTrong').textContent = (d.trongCong ? d.trongCong.length : 0) + ' người';
   if (!d.luot) { ['bangTrongCong', 'bangLuot', 'bangKiem'].forEach(function (id) { $(id).innerHTML = ''; }); return; }
-  $('bangTrongCong').innerHTML = '<thead><tr><th>Họ tên</th><th>Mã CN</th><th>Đội</th><th>Vào lúc</th><th>Cổng</th></tr></thead><tbody>' + (d.trongCong.length ? d.trongCong.map(function (n) {
+  $('bangTrongCong').innerHTML = '<thead><tr><th>Họ tên</th><th>Mã CN</th><th>Đội</th><th>Vào lúc</th><th>Cổng</th><th></th></tr></thead><tbody>' + (d.trongCong.length ? d.trongCong.map(function (n) {
     return '<tr' + (n.loai !== 'KH' ? ' data-hs="' + n.loai + '|' + thoat(n.id) + '"' : '') + '><td><b>' + thoat(n.ten) + '</b>' + (n.loai === 'GT' ? ' <span class="vi nuoc">Gia thuộc</span>' : '') + '</td><td>' + thoat(n.maCn) + '</td><td>' + thoat(n.doi) +
-      '</td><td>' + hsNgay(n.luc) + ' ' + hsGio(n.luc) + '</td><td>' + thoat(n.cong) + '</td></tr>';
-  }).join('') : '<tr><td colspan="5"><div class="rong">Không có ai trong cổng.</div></td></tr>') + '</tbody>';
+      '</td><td>' + hsNgay(n.luc) + ' ' + hsGio(n.luc) + (Date.now() - new Date(String(n.luc).slice(0, 16).replace(' ', 'T') + ':00+07:00').getTime() > 12 * 3600000 ? ' <span class="vi canh">Quá 12 giờ</span>' : '') + '</td><td>' + thoat(n.cong) + '</td>' +
+      '<td style="text-align:right">' + (hsCo('anNinh', 'THEM') ? '<button class="btn nho" type="button" data-an-ra="' + n.loai + '|' + thoat(n.id) + '|' + thoat(n.cong) + '">Ghi ra</button>' : '') + '</td></tr>';
+  }).join('') : '<tr><td colspan="6"><div class="rong">Không có ai trong cổng.</div></td></tr>') + '</tbody>';
   $('bangLuot').innerHTML = '<thead><tr><th>Giờ</th><th>Họ tên</th><th>Chiều</th><th>Cổng</th><th>Cách ghi</th><th>Người ghi</th></tr></thead><tbody>' + (d.luot.length ? d.luot.map(function (l) {
     return '<tr><td>' + hsGio(l.luc) + '</td><td>' + thoat(l.ten) + (l.loai === 'KH' ? ' <span class="vi tap">Khách</span>' : (l.loai === 'GT' ? ' <span class="vi nuoc">Gia thuộc</span>' : '')) + '</td>' +
       '<td><span class="vi ' + (l.chieu === 'VAO' ? 'ok' : 'tap') + '">' + (l.chieu === 'VAO' ? 'Vào' : 'Ra') + '</span></td><td>' + thoat(l.cong) + '</td><td>' + (l.cach === 'QR' ? 'Quét QR' : 'Ghi tay') + '</td><td class="hs-phu">' + thoat(l.nguoi) + '</td></tr>';
@@ -16126,6 +16205,40 @@ function veAnNinh() {
   }).join('') : '<tr><td colspan="7"><div class="rong">Chưa có lượt kiểm tra nào.</div></td></tr>') + '</tbody>';
 }
 $('anNgay').onchange = function () { taiAnNinh(); };
+$('bangTrongCong').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-an-ra]'); if (!b) return;
+  ev.stopPropagation();
+  if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Chắc chắn ghi ra?'; return; }
+  var k = b.dataset.anRa.split('|');
+  hsGhi('hsGhiCong', { loai: k[0], id: k[1], chieu: 'RA', cong: k[2], cach: 'TAY' }, b, function () { nsBaoOkChung('Đã ghi ra cổng.'); taiAnNinh(); }, 'anLoi');
+});
+$('anXuatKiem').onclick = function () {
+  if (!_hs.an || !_hs.an.kiemTra) return;
+  xuatBangExcel('bien_ban_kiem_tra_' + _hs.an.ngay + '.xlsx', ['Thời gian', 'Mã quét', 'Họ tên', 'Khu vực', 'Kết quả', 'Ghi chú', 'Người kiểm'], _hs.an.kiemTra.map(function (k) {
+    return [k.luc, k.ma, k.ten, k.khu, ({ KHOP: 'Khớp thẻ', KHONG_KHOP: 'Không khớp', KHONG_NHAN_DIEN: 'Không nhận diện' })[k.ketQua] || k.ketQua, k.ghiChu, k.nguoi];
+  }));
+};
+$('anXuatLuot').onclick = function () {
+  if (!_hs.an || !_hs.an.luot) return;
+  xuatBangExcel('nhat_ky_cong_' + _hs.an.ngay + '.xlsx', ['Thời gian', 'Họ tên', 'Loại', 'Cổng', 'Chiều', 'Cách ghi', 'Người ghi'], _hs.an.luot.map(function (l) {
+    return [l.luc, l.ten, ({ NS: 'Lao động', GT: 'Gia thuộc', KH: 'Khách' })[l.loai] || l.loai, l.cong, l.chieu === 'VAO' ? 'Vào' : 'Ra', l.cach === 'QR' ? 'Quét QR' : 'Ghi tay', l.nguoi];
+  }));
+};
+$('anAnhQr').onchange = function () {
+  var tep = this.files[0]; this.value = '';
+  if (!tep) return;
+  baoLoi('anLoi', '');
+  napThuVien('jsqr').then(function () {
+    return createImageBitmap(tep);
+  }).then(function (anh) {
+    var c = document.createElement('canvas'), tl = Math.min(1, 1600 / Math.max(anh.width, anh.height));
+    c.width = Math.round(anh.width * tl); c.height = Math.round(anh.height * tl);
+    var g = c.getContext('2d'); g.drawImage(anh, 0, 0, c.width, c.height);
+    var kq = window.jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+    if (!kq || !kq.data) throw new Error('Không đọc được mã QR trong ảnh. Chụp thẳng, đủ sáng rồi thử lại.');
+    hsTraMa(kq.data, 'QR');
+  }).catch(function (e) { baoLoi('anLoi', e.message); });
+};
 $('anCheDo').onclick = function (ev) {
   var b = ev.target.closest('[data-che-do]'); if (!b) return;
   _hs.cheDo = b.dataset.cheDo;
