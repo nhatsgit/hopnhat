@@ -3194,7 +3194,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 281;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 282;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15516,20 +15516,40 @@ function hsChonNguoi(tieuDe, sau) {
 function hsFormHoSo(d) {
   var ro = function (nhan, gt) { return hsO('hsRo' + nhan.replace(/\W/g, ''), nhan, gt).replace('<input', '<input disabled'); };
   var muc = function (t) { return '<div class="rong2 hs-muc-form">' + t + '</div>'; };
+  // Chấm điểm ngay trong form như bản gốc; lưu chung FACT_DANH_GIA với trang Đánh giá & kỷ luật (kỳ tháng hiện tại)
+  var coCham = d.danhGia !== undefined && hsCo('danhGiaKyLuat', 'THEM'), dg = d.danhGia || {};
+  var chonDiem = function (id, nhan, v, ten) {
+    return hsO(id, nhan, v || '', { chon: [['', '0 · Chưa chấm']].concat(ten.map(function (t, i) { return [String(i + 1), (i + 1) + ' · ' + t]; })) });
+  };
   hsMo('Chỉnh sửa hồ sơ công nhân', '<div id="hsFLoi"></div><div class="hs-form">' + muc('01 · Danh tính & liên hệ') +
     hsO('hsFTenThat', 'Tên thật / tên hiển thị', d.tenThat, { max: 120 }) + ro('Tên trên hồ sơ', d.ten) + ro('Số CMND / CCCD', d.cccd) + hsO('hsFSdt', 'Điện thoại / liên hệ', d.sdt, { max: 40, kieu: 'tel' }) +
     ro('Ngày sinh', hsNgay(d.sinh)) + ro('Giới tính', d.gt === 'NU' ? 'Nữ' : (d.gt === 'NAM' ? 'Nam' : '')) + hsO('hsFNoiSinh', 'Nơi sinh', d.noiSinh, { max: 250 }) + ro('Tuổi (tính theo ngày sinh)', d.tuoi === null || d.tuoi === undefined ? '' : String(d.tuoi)) +
     hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) + muc('02 · Đơn vị, lao động & cư trú') +
     ro('Đơn vị quản lý', tenDoiNgan(d.doi || '')) + ro('Tổ', d.to || d.toCu) + ro('Khu vực', d.khuVuc) + ro('Phần cây hiện tại', d.phanCay) +
     hsO('hsFBaoHiem', 'Số bảo hiểm', d.soBaoHiem, { max: 40 }) + ro('Phòng ở', d.phong) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) + muc('03 · Nhóm máu') +
-    hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) + muc('04 · Ghi chú') +
+    hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) +
+    (coCham ? muc('04 · Kỹ năng & Đạo đức') +
+      chonDiem('hsFKyNang', 'Kỹ năng lao động', dg.kyNang, ['Cần đào tạo lại', 'Trung bình yếu', 'Đạt yêu cầu', 'Giỏi · Thao tác vững', 'Xuất sắc']) +
+      chonDiem('hsFYThuc', 'Đạo đức & Kỷ luật', dg.yThuc, ['Cần chấn chỉnh', 'Vi phạm nhắc nhở', 'Đạt yêu cầu', 'Gương mẫu, trách nhiệm', 'Rất tốt']) : '') +
+    muc((coCham ? '05' : '04') + ' · Ghi chú') +
     hsO('hsFGhi', 'Thông tin bổ sung', d.ghiChu, { vung: 1, max: 1000, rong: 1 }) + '</div>' +
-    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ, khu vực, phần cây thuộc bên Nhân sự (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; điểm và kỷ luật ở trang Đánh giá & kỷ luật.</div>', '',
+    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ, khu vực, phần cây thuộc bên Nhân sự (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; kỷ luật và lịch sử điểm ở trang Đánh giá & kỷ luật.</div>', '',
     '<button class="btn" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu hồ sơ</button>');
   $('hsFHuy').onclick = function () { veChiTietHs(); };
   $('hsFLuu').onclick = function () {
+    var nut = this, kn = coCham ? hsV('hsFKyNang') : '', yt = coCham ? hsV('hsFYThuc') : '';
+    var doiDiem = coCham && (kn !== String(dg.kyNang || '') || yt !== String(dg.yThuc || ''));
+    var xong = function () { moHoSo('NS', d.id); hsLamMoiTrang(); };
     hsGhi('hsLuuHoSo', { id: d.id, tenThat: hsV('hsFTenThat'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), noiSinh: hsV('hsFNoiSinh'),
-                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi'), soBaoHiem: hsV('hsFBaoHiem'), chiTietNoiO: hsV('hsFChiTiet') }, this, function () { moHoSo('NS', d.id); hsLamMoiTrang(); }, 'hsFLoi');
+                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi'), soBaoHiem: hsV('hsFBaoHiem'), chiTietNoiO: hsV('hsFChiTiet') }, nut, function () {
+      if (!doiDiem) return xong();
+      // Giữ nhận xét đã có của cùng kỳ; lỗi điểm thì báo và mở lại nút (hồ sơ đã lưu, bấm lại không mất gì)
+      var ky = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7), daLuu = false;
+      var cu = (d.dsDanhGia || []).filter(function (x) { return x.ky === ky; })[0];
+      hsGhi('hsLuuDanhGia', { id: d.id, ky: ky, kyNang: kn, yThuc: yt, nhanXet: cu ? cu.nhanXet : '' }, null, function () { daLuu = true; xong(); }, 'hsFLoi').then(function () {
+        if (!daLuu && nut.isConnected) { nut.disabled = false; nut.textContent = nut.dataset.chu; }
+      });
+    }, 'hsFLoi');
   };
 }
 
