@@ -3184,7 +3184,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 274;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 275;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15368,11 +15368,14 @@ function veChiTietHs() {
     (hsCo('hoSo', 'THEM') ? '<button class="btn nho" type="button" data-hs-tai="CHAN_DUNG">' + (d.anh.CHAN_DUNG ? 'Thay ảnh' : 'Chụp / tải') + '</button>' : '') + '</div>';
   ['CCCD_TRUOC', 'CCCD_SAU'].forEach(function (l) {
     if (!coXemGt && !coTaiGt) return;
-    h += '<div class="hs-anh-o"><div class="hs-anh-trong" id="hsO' + l + '">' + (d.anh[l] ? 'Bấm xem để mở' : 'Chưa có ảnh') + '</div><span>' + HS_TEN_ANH[l] + '</span>' +
+    // Máy chủ chỉ trả mã ảnh cho người có quyền Xem: không có quyền thì chưa biết mặt nào có ảnh, đừng báo "Chưa có ảnh"
+    h += '<div class="hs-anh-o"><div class="hs-anh-trong" id="hsO' + l + '">' + (d.anh[l] ? 'Bấm xem để mở' : (!coXemGt && d.coAnhGiayTo ? 'Không có quyền xem' : 'Chưa có ảnh')) + '</div><span>' + HS_TEN_ANH[l] + '</span>' +
       (d.anh[l] ? '<button class="btn nho" type="button" data-hs-xem-anh="' + thoat(d.anh[l]) + '" data-o="hsO' + l + '">Xem</button>' : '') +
       (coTaiGt ? '<button class="btn nho" type="button" data-hs-tai="' + l + '">' + (d.anh[l] ? 'Thay' : 'Chụp / tải') + '</button>' : '') + '</div>';
   });
-  h += '</div>' + (coXemGt || coTaiGt ? '<div class="goi-y" style="margin:10px 0 0">Đối chiếu thủ công với người thực tế. Mỗi lần mở ảnh giấy tờ đều được ghi vào lịch sử.</div>' : '') + '</div>';
+  h += '</div>' + (coXemGt || coTaiGt ? '<div class="goi-y" style="margin:10px 0 0">Đối chiếu thủ công với người thực tế. Mỗi lần mở ảnh giấy tờ đều được ghi vào lịch sử.</div>' : '') +
+    (d.coAnhGiayTo && !coXemGt ? '<div class="goi-y" style="margin:10px 0 0">Hồ sơ này <b>đã có ảnh giấy tờ</b>, nhưng vai trò của bạn chưa được cấp quyền xem. Admin cấp ở Quản trị → Phân quyền → "Ảnh giấy tờ".</div>' : '') +
+    (coXemGt && !S.phienDN ? '<div class="goi-y" style="margin:10px 0 0">Xem ảnh giấy tờ cần <b>đăng nhập bằng tài khoản Google</b>; đăng nhập bằng mã vai trò sẽ bị từ chối.</div>' : '') + '</div>';
   // Lưới thông tin
   h += '<dl class="hs-luoi-tt">' + o('Mã thẻ QR', d.qr) + o('Đơn vị', tenDoiNgan(d.doi || '')) + o('Phân loại', ns ? 'Lao động' : 'Gia thuộc') + o('Tổ', d.to || d.toCu) +
     o('Tên trên hồ sơ', d.ten) + o(ns ? 'Mã CN' : 'Mã gia thuộc', ns ? d.maCn : d.id) + (ns ? o('Chức danh', d.chucDanh) : o('Quan hệ', (d.quanHe || '') + (d.chuHo ? ' của ' + d.chuHo.ten : ''))) +
