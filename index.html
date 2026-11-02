@@ -3193,7 +3193,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 279;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 280;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16174,7 +16174,12 @@ function taiAnNinh() {
 function veAnNinh() {
   var d = _hs.an, t = d.tong || {}, khach = d.khach || [];
   if (!$('anCong').options.length) $('anCong').innerHTML = d.cong.map(function (c) { return '<option>' + thoat(c) + '</option>'; }).join('');
-  $('anTram').style.display = hsCo('anNinh', 'THEM') ? '' : 'none';
+  // Có quyền Xem: quét để tra cứu, đối chiếu. Chỉ quyền Thêm mới ghi được lượt cổng / biên bản
+  var coGhiCong = hsCo('anNinh', 'THEM');
+  $('anTram').style.display = coGhiCong || hsCo('anNinh', 'XEM') ? '' : 'none';
+  $('anCheDo').style.display = coGhiCong ? '' : 'none';
+  $('anTuGhi').closest('label').style.display = coGhiCong ? '' : 'none';
+  if (!coGhiCong) { $('anTuGhi').checked = false; _hs.cheDo = 'cong'; }
   var qrCua = function (ds, chieu) { return ds.filter(function (l) { return l.chieu === chieu && l.cach === 'QR'; }).length; };
   $('kpisAn').innerHTML = d.luot ? the_kpi('Đang ở trong cổng', soVN(t.trongCong, 0), 'người', 'Theo lượt vào chưa đóng') +
     the_kpi('Lượt vào', soVN(t.vao, 0), 'lượt', qrCua(d.luot, 'VAO') + ' lượt quét QR · ' + hsNgay(d.ngay)) +
@@ -16275,7 +16280,7 @@ function hsVeKq(k) {
   if (!k.timThay) {
     el.className = 'hs-kq loi';
     el.innerHTML = '<b>Không nhận diện được mã</b><div class="hs-phu">' + thoat(k.ma) + '</div>' +
-      (_hs.cheDo === 'kiem' ? '<div class="hs-chan" style="justify-content:flex-start"><button class="btn chinh" type="button" data-an-kiem="KHONG_NHAN_DIEN">Ghi kiểm tra: không nhận diện</button></div>' : '');
+      (_hs.cheDo === 'kiem' && hsCo('anNinh', 'THEM') ? '<div class="hs-chan" style="justify-content:flex-start"><button class="btn chinh" type="button" data-an-kiem="KHONG_NHAN_DIEN">Ghi kiểm tra: không nhận diện</button></div>' : '');
     return;
   }
   var n = k.nguoi, laKhach = n.loai === 'KH';
@@ -16291,7 +16296,10 @@ function hsVeKq(k) {
     h += '<dl class="hs-su-kien"><div><dt>Tổ</dt><dd>' + thoat(n.to || n.toCu || '—') + '</dd></div><div><dt>Phòng</dt><dd>' + thoat(n.phong || '—') + '</dd></div>' +
       '<div><dt>Giấy tờ</dt><dd>' + (n.thieuGiayTo ? 'Thiếu' : 'Có') + '</dd></div><div><dt>Cổng đang chọn</dt><dd>' + thoat($('anCong').value || '—') + '</dd></div></dl>';
   }
-  if (_hs.cheDo === 'cong') {
+  if (!laKhach && hsCo('hoSo', 'XEM')) h += '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho" type="button" data-an-mo-hs="' + n.loai + '|' + thoat(n.id) + '">Mở hồ sơ</button></div>';
+  if (!hsCo('anNinh', 'THEM')) {
+    h += '<div class="goi-y" style="margin:10px 0 0">Vai trò của bạn chỉ quét để tra cứu, đối chiếu. Ghi lượt ra/vào và biên bản do Bảo vệ thực hiện; Admin cấp thêm ở Quản trị → Phân quyền → "Ra vào cổng & kiểm tra thẻ".</div>';
+  } else if (_hs.cheDo === 'cong') {
     var vao = !(n.trongCong || n.trangThai === 'DANG_TRONG');
     h += '<div class="hs-chan" style="justify-content:flex-start"><button class="btn chinh hs-nut-lon" type="button" data-an-ghi="' + (vao ? 'VAO' : 'RA') + '">' + (vao ? '→ Ghi VÀO cổng' : '← Ghi RA cổng') + '</button></div>';
   } else {
@@ -16313,6 +16321,7 @@ function hsGhiCongTram(chieu, nut) {
 }
 $('anKq').addEventListener('click', function (ev) {
   var b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.anMoHs) { var kh = b.dataset.anMoHs.split('|'); moHoSo(kh[0], kh[1]); return; }
   if (b.dataset.anGhi) { hsGhiCongTram(b.dataset.anGhi, b); return; }
   if (b.dataset.anKiem) {
     var kk = _hs.kqTra, khu = hsV('anKhu');
