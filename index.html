@@ -1089,6 +1089,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-muc h4 .btn{margin-left:auto}
 .hs-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .hs-form .rong2{grid-column:1/-1}
+.hs-form .o:disabled{opacity:.65;background:rgba(127,127,127,.14);cursor:not-allowed}
 .hs-chan-hop{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--line);background:var(--card);position:sticky;bottom:0}
 :root{--sb-bg:#157A5A;--sb-ink:#FFFFFF;--sb-ink-2:rgba(255,255,255,.68)}
 .hs-the-xem{display:flex;justify-content:center;margin-bottom:12px}
@@ -3193,7 +3194,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 280;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 281;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15519,16 +15520,16 @@ function hsFormHoSo(d) {
     hsO('hsFTenThat', 'Tên thật / tên hiển thị', d.tenThat, { max: 120 }) + ro('Tên trên hồ sơ', d.ten) + ro('Số CMND / CCCD', d.cccd) + hsO('hsFSdt', 'Điện thoại / liên hệ', d.sdt, { max: 40, kieu: 'tel' }) +
     ro('Ngày sinh', hsNgay(d.sinh)) + ro('Giới tính', d.gt === 'NU' ? 'Nữ' : (d.gt === 'NAM' ? 'Nam' : '')) + hsO('hsFNoiSinh', 'Nơi sinh', d.noiSinh, { max: 250 }) + ro('Tuổi (tính theo ngày sinh)', d.tuoi === null || d.tuoi === undefined ? '' : String(d.tuoi)) +
     hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) + muc('02 · Đơn vị, lao động & cư trú') +
-    ro('Đơn vị quản lý', tenDoiNgan(d.doi || '')) + ro('Tổ', d.to || d.toCu) + hsO('hsFKhuVuc', 'Khu vực', d.khuVuc, { max: 120 }) + hsO('hsFPhanCay', 'Phần cây hiện tại', d.phanCay, { max: 60 }) +
+    ro('Đơn vị quản lý', tenDoiNgan(d.doi || '')) + ro('Tổ', d.to || d.toCu) + ro('Khu vực', d.khuVuc) + ro('Phần cây hiện tại', d.phanCay) +
     hsO('hsFBaoHiem', 'Số bảo hiểm', d.soBaoHiem, { max: 40 }) + ro('Phòng ở', d.phong) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) + muc('03 · Nhóm máu') +
     hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) + muc('04 · Ghi chú') +
     hsO('hsFGhi', 'Thông tin bổ sung', d.ghiChu, { vung: 1, max: 1000, rong: 1 }) + '</div>' +
-    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ sửa ở trang Nhân sự (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; điểm và kỷ luật ở trang Đánh giá & kỷ luật.</div>', '',
+    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ, khu vực, phần cây thuộc bên Nhân sự (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; điểm và kỷ luật ở trang Đánh giá & kỷ luật.</div>', '',
     '<button class="btn" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu hồ sơ</button>');
   $('hsFHuy').onclick = function () { veChiTietHs(); };
   $('hsFLuu').onclick = function () {
     hsGhi('hsLuuHoSo', { id: d.id, tenThat: hsV('hsFTenThat'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), noiSinh: hsV('hsFNoiSinh'),
-                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi'), khuVuc: hsV('hsFKhuVuc'), phanCay: hsV('hsFPhanCay'), soBaoHiem: hsV('hsFBaoHiem'), chiTietNoiO: hsV('hsFChiTiet') }, this, function () { moHoSo('NS', d.id); hsLamMoiTrang(); }, 'hsFLoi');
+                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi'), soBaoHiem: hsV('hsFBaoHiem'), chiTietNoiO: hsV('hsFChiTiet') }, this, function () { moHoSo('NS', d.id); hsLamMoiTrang(); }, 'hsFLoi');
   };
 }
 
