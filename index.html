@@ -1179,6 +1179,8 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-anh-luoi{display:flex;gap:12px;flex-wrap:wrap}
 .hs-anh-o{display:flex;flex-direction:column;gap:7px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:12px;color:var(--ink-2)}
 .hs-anh-o .hs-anh,.hs-anh-o img{width:104px;height:128px;border-radius:8px;object-fit:cover}
+.hs-phong-to{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72);cursor:zoom-out}
+.hs-phong-to img{max-width:100%;max-height:100%;border-radius:8px;object-fit:contain;background:var(--card)}
 .hs-anh-trong{width:104px;height:128px;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;box-sizing:border-box;border-radius:8px;background:var(--paper);color:var(--ink-3);border:1px dashed var(--line-2)}
 .hs-luoi-tt{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px 18px;margin:0}
 .hs-luoi-tt div{min-width:0;overflow-wrap:anywhere}
@@ -3184,7 +3186,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 275;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 276;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15368,12 +15370,14 @@ function veChiTietHs() {
     (hsCo('hoSo', 'THEM') ? '<button class="btn nho" type="button" data-hs-tai="CHAN_DUNG">' + (d.anh.CHAN_DUNG ? 'Thay ảnh' : 'Chụp / tải') + '</button>' : '') + '</div>';
   ['CCCD_TRUOC', 'CCCD_SAU'].forEach(function (l) {
     if (!coXemGt && !coTaiGt) return;
+    // Có ảnh + có quyền thì tự hiện, chỉ người tải được mới cần ô trống để chụp / tải
+    if (coXemGt && !coTaiGt && !d.anh[l]) return;
     // Máy chủ chỉ trả mã ảnh cho người có quyền Xem: không có quyền thì chưa biết mặt nào có ảnh, đừng báo "Chưa có ảnh"
-    h += '<div class="hs-anh-o"><div class="hs-anh-trong" id="hsO' + l + '">' + (d.anh[l] ? 'Bấm xem để mở' : (!coXemGt && d.coAnhGiayTo ? 'Không có quyền xem' : 'Chưa có ảnh')) + '</div><span>' + HS_TEN_ANH[l] + '</span>' +
-      (d.anh[l] ? '<button class="btn nho" type="button" data-hs-xem-anh="' + thoat(d.anh[l]) + '" data-o="hsO' + l + '">Xem</button>' : '') +
+    h += '<div class="hs-anh-o"><div class="hs-anh-trong" id="hsO' + l + '">' + (d.anh[l] ? (S.phienDN ? 'Đang tải…' : 'Cần đăng nhập Google') : (!coXemGt && d.coAnhGiayTo ? 'Không có quyền xem' : 'Chưa có ảnh')) + '</div><span>' + HS_TEN_ANH[l] + '</span>' +
+      (d.anh[l] && S.phienDN ? '<button class="btn nho" type="button" style="display:none" data-hs-xem-anh="' + thoat(d.anh[l]) + '" data-o="hsO' + l + '">Tải lại</button>' : '') +
       (coTaiGt ? '<button class="btn nho" type="button" data-hs-tai="' + l + '">' + (d.anh[l] ? 'Thay' : 'Chụp / tải') + '</button>' : '') + '</div>';
   });
-  h += '</div>' + (coXemGt || coTaiGt ? '<div class="goi-y" style="margin:10px 0 0">Đối chiếu thủ công với người thực tế. Mỗi lần mở ảnh giấy tờ đều được ghi vào lịch sử.</div>' : '') +
+  h += '</div>' + (coXemGt || coTaiGt ? '<div class="goi-y" style="margin:10px 0 0">Đối chiếu thủ công với người thực tế. Ảnh giấy tờ hiện lên lần nào đều được ghi vào lịch sử lần đó.</div>' : '') +
     (d.coAnhGiayTo && !coXemGt ? '<div class="goi-y" style="margin:10px 0 0">Hồ sơ này <b>đã có ảnh giấy tờ</b>, nhưng vai trò của bạn chưa được cấp quyền xem. Admin cấp ở Quản trị → Phân quyền → "Ảnh giấy tờ".</div>' : '') +
     (coXemGt && !S.phienDN ? '<div class="goi-y" style="margin:10px 0 0">Xem ảnh giấy tờ cần <b>đăng nhập bằng tài khoản Google</b>; đăng nhập bằng mã vai trò sẽ bị từ chối.</div>' : '') + '</div>';
   // Lưới thông tin
@@ -15413,6 +15417,29 @@ function veChiTietHs() {
     }).join(' · ') + '</div>' : '<div class="hs-phu">Chưa có lượt ra / vào.</div>') + '</div>';
   }
   hsMo(d.ten, h, nut);
+  if (S.phienDN) Array.prototype.forEach.call($('nenHs').querySelectorAll('[data-hs-xem-anh]'), hsHienAnhGt);
+}
+// Mở hồ sơ khác khi ảnh chưa về thì ô cũ đã bị thay: isConnected để ảnh người này không rơi vào hồ sơ người kia
+function hsHienAnhGt(b) {
+  var oAnh = $(b.dataset.o);
+  b.style.display = 'none';
+  goiAPI('hsAnh', hsP({ ma: b.dataset.hsXemAnh }), 30000).then(function (a) {
+    if (!oAnh.isConnected) return;
+    var img = document.createElement('img');
+    img.src = 'data:' + a.mime + ';base64,' + a.b64; img.alt = ''; img.style.cursor = 'zoom-in';
+    img.onclick = function () {
+      var nen = document.createElement('div'), to = document.createElement('img');
+      nen.className = 'hs-phong-to'; to.src = img.src; to.alt = '';
+      nen.onclick = function () { nen.remove(); };
+      nen.appendChild(to); document.body.appendChild(nen);
+    };
+    oAnh.replaceWith(img);
+  }).catch(function (e) {
+    if (!oAnh.isConnected) return;
+    oAnh.textContent = 'Chưa tải được';
+    b.style.display = '';
+    if ($('hsCtLoi')) $('hsCtLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>';
+  });
 }
 $('nenHs').addEventListener('click', function (ev) {
   var b = ev.target.closest('button'), d = _hs.ct;
@@ -15420,17 +15447,7 @@ $('nenHs').addEventListener('click', function (ev) {
   if (tr && !b) { var k = tr.dataset.hs.split('|'); moHoSo(k[0], k[1]); return; }
   if (!b || !d) return;
   if (b.dataset.hsTai) { hsChonAnh(d.loai, d.id, b.dataset.hsTai); return; }
-  if (b.dataset.hsXemAnh) {
-    b.disabled = true;
-    var oAnh = $(b.dataset.o);
-    goiAPI('hsAnh', hsP({ ma: b.dataset.hsXemAnh }), 30000).then(function (a) {
-      var img = document.createElement('img');
-      img.src = 'data:' + a.mime + ';base64,' + a.b64; img.alt = ''; img.style.cursor = 'zoom-in';
-      img.onclick = function () { var w = window.open(''); if (w) { w.document.title = 'Ảnh giấy tờ'; var i2 = w.document.createElement('img'); i2.src = img.src; i2.style.maxWidth = '100%'; w.document.body.appendChild(i2); } };
-      if (oAnh) oAnh.replaceWith(img);
-    }).catch(function (e) { if ($('hsCtLoi')) $('hsCtLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; b.disabled = false; });
-    return;
-  }
+  if (b.dataset.hsXemAnh) { hsHienAnhGt(b); return; }
   var v = b.dataset.hsViec;
   if (v === 'sua') { if (d.loai === 'NS') hsFormHoSo(d); else hsFormGiaThuoc(d, null); }
   else if (v === 'themGt') hsFormGiaThuoc(null, d);
