@@ -2059,6 +2059,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         <div class="hs-the-dau"><div><h3>Xem trước thẻ A7</h3><div class="hs-phu">Chọn tổ, phòng và phân loại để lọc trước khi in</div></div></div>
         <div class="hs-loc">
           <input class="o" id="tiQ" type="search" autocomplete="off" placeholder="Tìm tên, mã CN, phòng…" style="flex:2 1 220px;max-width:none">
+          <select class="o" id="tiDoi" aria-label="Đội" style="display:none"><option value="">Tất cả đội</option></select>
           <select class="o" id="tiTo" aria-label="Tổ"><option value="">Tất cả tổ</option></select>
           <select class="o" id="tiLoai" aria-label="Phân loại"><option value="">Tất cả phân loại</option><option value="NS">Lao động</option><option value="GT">Gia thuộc</option></select>
           <select class="o" id="tiAnh" aria-label="Ảnh chân dung"><option value="">Ảnh: tất cả</option><option value="coAnh">Có ảnh chân dung</option><option value="thieuAnh">Chưa có ảnh</option></select>
@@ -2108,6 +2109,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
       <div class="the">
         <div class="hs-loc">
           <select class="o" id="hsLoai" aria-label="Loại hồ sơ"><option value="">Tất cả phân loại</option><option value="NS">Lao động</option><option value="GT">Gia thuộc</option></select>
+          <select class="o" id="hsDoi" aria-label="Đội" style="display:none"><option value="">Tất cả đội</option></select>
           <select class="o" id="hsTo" aria-label="Tổ"><option value="">Tất cả tổ</option></select>
           <select class="o" id="hsMau" aria-label="Nhóm máu"><option value="">Nhóm máu: tất cả</option></select>
           <select class="o" id="hsLoc" aria-label="Thông tin cần lọc">
@@ -3194,7 +3196,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 282;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 283;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15271,7 +15273,7 @@ function taiHoSo(giuTrang) {
   }).catch(function (e) { baoLoi('hsLoi', 'Không tải được hồ sơ: ' + e.message); $('bangHs').innerHTML = ''; });
 }
 function hsThamSoLoc(them) {
-  return Object.assign({ q: hsV('hsQ'), loai: $('hsLoai').value, to: $('hsTo').value, nhomMau: $('hsMau').value, loc: $('hsLoc').value,
+  return Object.assign({ q: hsV('hsQ'), loai: $('hsLoai').value, doi: $('hsDoi').value, to: $('hsTo').value, nhomMau: $('hsMau').value, loc: $('hsLoc').value,
                          trangThai: $('hsTt').value, phong: _hs.locPhong || '', moiTrang: 30 }, them || {});
 }
 function hsNapChon(id, ds, dau) {
@@ -15280,8 +15282,17 @@ function hsNapChon(id, ds, dau) {
   o.value = cu;
   if (o.value !== cu) o.value = '';
 }
+/** Ô lọc đội: chỉ hiện khi phạm vi đăng nhập có từ 2 đội trở lên. */
+function hsNapDoi(id, ds) {
+  var o = $(id), cu = o.value;
+  o.innerHTML = '<option value="">Tất cả đội</option>' + (ds || []).map(function (x) { return '<option value="' + thoat(x) + '">' + thoat(tenDoiNgan(x)) + '</option>'; }).join('');
+  o.value = cu;
+  if (o.value !== cu) o.value = '';
+  o.style.display = ds && ds.length > 1 ? '' : 'none';
+}
 function veHoSo() {
   var d = _hs.ds, q = d.tq;
+  hsNapDoi('hsDoi', d.dsDoi);
   hsNapChon('hsTo', d.dsTo, '<option value="">Tất cả tổ</option>');
   hsNapChon('hsMau', d.dsMau, '<option value="">Nhóm máu: tất cả</option><option value="chuaRo">Chưa rõ nhóm máu</option>');
   var bat = $('hsLoai').value || $('hsLoc').value;
@@ -15318,8 +15329,9 @@ function veHoSo() {
 var _hsHenTim = null;
 $('hsQ').oninput = function () { clearTimeout(_hsHenTim); _hsHenTim = setTimeout(function () { taiHoSo(); }, 350); };
 ['hsLoai', 'hsTo', 'hsMau', 'hsLoc', 'hsTt'].forEach(function (id) { $(id).onchange = function () { taiHoSo(); }; });
+$('hsDoi').onchange = function () { $('hsTo').value = ''; taiHoSo(); };
 $('hsBoLoc').onclick = function () {
-  $('hsQ').value = ''; ['hsLoai', 'hsTo', 'hsMau', 'hsLoc'].forEach(function (id) { $(id).value = ''; }); $('hsTt').value = 'hoat'; _hs.locPhong = '';
+  $('hsQ').value = ''; ['hsLoai', 'hsDoi', 'hsTo', 'hsMau', 'hsLoc'].forEach(function (id) { $(id).value = ''; }); $('hsTt').value = 'hoat'; _hs.locPhong = '';
   taiHoSo();
 };
 $('kpisHs').onclick = function (ev) {
@@ -15742,7 +15754,7 @@ $('bangTqGanDay').onclick = function (ev) { var tr = ev.target.closest('tr[data-
 $('pTqAnNinh').addEventListener('click', function (ev) {
   var el = ev.target.closest('[data-di-tab]'); if (!el) return;
   if (el.dataset.diTab === 'hoSo') {
-    $('hsQ').value = ''; _hs.locPhong = ''; ['hsLoai', 'hsTo', 'hsMau'].forEach(function (id) { $(id).value = ''; });
+    $('hsQ').value = ''; _hs.locPhong = ''; ['hsLoai', 'hsDoi', 'hsTo', 'hsMau'].forEach(function (id) { $(id).value = ''; });
     $('hsLoc').value = el.dataset.loc || '';
   }
   chuyenTab(el.dataset.diTab);
@@ -15760,7 +15772,7 @@ function hsTheHtml(r, anh) {
 }
 function tiThamSo(them) {
   var a = $('tiAnh').value;
-  return Object.assign({ q: hsV('tiQ'), to: $('tiTo').value, loai: $('tiLoai').value, loc: a, trangThai: 'hoat', moiTrang: 20 }, them || {});
+  return Object.assign({ q: hsV('tiQ'), doi: $('tiDoi').value, to: $('tiTo').value, loai: $('tiLoai').value, loc: a, trangThai: 'hoat', moiTrang: 20 }, them || {});
 }
 function taiTheId(giuTrang) {
   if (!giuTrang) _hs.tiTrang = 1;
@@ -15768,6 +15780,7 @@ function taiTheId(giuTrang) {
   if (!_hs.ti) $('tiLuoi').innerHTML = '<div class="skeleton" style="height:300px;width:100%"></div>';
   Promise.all([goiAPI('hsDanhSach', hsP(tiThamSo({ trang: _hs.tiTrang }))), napThuVien('qrcode')]).then(function (kq) {
     var d = kq[0]; _hs.ti = d;
+    hsNapDoi('tiDoi', d.dsDoi);
     hsNapChon('tiTo', d.dsTo, '<option value="">Tất cả tổ</option>');
     $('kpisTi').innerHTML = the_kpi('Thẻ đủ điều kiện', soVN(d.tq.tatCa, 0), 'thẻ', 'Hồ sơ đang hoạt động') +
       the_kpi_canh(d.tq.thieuAnh > 0, 'Thiếu ảnh chân dung', soVN(d.tq.thieuAnh, 0), 'hồ sơ', 'Thẻ vẫn in được với chữ viết tắt') +
@@ -15794,6 +15807,7 @@ function taiTheId(giuTrang) {
 var _tiHen = null;
 $('tiQ').oninput = function () { clearTimeout(_tiHen); _tiHen = setTimeout(function () { taiTheId(); }, 350); };
 ['tiTo', 'tiLoai', 'tiAnh'].forEach(function (id) { $(id).onchange = function () { taiTheId(); }; });
+$('tiDoi').onchange = function () { $('tiTo').value = ''; taiTheId(); };
 $('tiTrang').onclick = function (ev) {
   if (ev.target.id === 'tiTruoc') { _hs.tiTrang--; taiTheId(true); }
   if (ev.target.id === 'tiSau') { _hs.tiTrang++; taiTheId(true); }
@@ -16050,7 +16064,7 @@ $('pCuTru').addEventListener('click', function (ev) {
     var the = ev.target.closest('[data-ct-xem]');
     if (the) {
       _hs.locPhong = the.dataset.ctXem;
-      $('hsQ').value = ''; ['hsLoai', 'hsTo', 'hsMau', 'hsLoc'].forEach(function (id) { $(id).value = ''; });
+      $('hsQ').value = ''; ['hsLoai', 'hsDoi', 'hsTo', 'hsMau', 'hsLoc'].forEach(function (id) { $(id).value = ''; });
       chuyenTab('hoSo');
     }
     return;
