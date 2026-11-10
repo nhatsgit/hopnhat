@@ -3084,6 +3084,8 @@ function gdTimChucNang() {
         kq.push({ t: t, nh: nh.id, ten: ten, nhTen: nh.ten, diem: !k ? 2 : tenK.indexOf(k) === 0 ? 0 : tenK.indexOf(k) > -1 ? 1 : 2 });
       });
     });
+    // Có trang khớp theo tên thì bỏ các trang chỉ khớp theo tên nhóm (gõ "luong" không kéo cả nhóm Sản lượng)
+    if (k && kq.some(function (x) { return x.diem < 2; })) kq = kq.filter(function (x) { return x.diem < 2; });
     return kq.sort(function (a, b) { return a.diem - b.diem; }).slice(0, 10);
   };
   var to = function () { hop.querySelectorAll('[data-i]').forEach(function (b) { b.classList.toggle('on', +b.dataset.i === vt); }); };
@@ -3425,7 +3427,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 294;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 295;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
