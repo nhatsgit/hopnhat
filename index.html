@@ -3198,7 +3198,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 285;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 286;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15576,7 +15576,7 @@ function hsFormGiaThuoc(g, chuHo) {
   var laSua = !!g;
   var chonChuHo = !laSua && !chuHo;
   hsMo(laSua ? 'Sửa gia thuộc — ' + g.ten : 'Thêm gia thuộc' + (chuHo ? ' của ' + chuHo.ten : ''), '<div id="hsFLoi"></div><div class="hs-form">' +
-    (chonChuHo ? '<div class="rong2"><label class="nhan" for="hsFChuHoQ">Người lao động (chủ hộ)</label><input class="o" id="hsFChuHoQ" placeholder="Gõ tên hoặc mã CN rồi chọn">' +
+    (chonChuHo ? '<div class="rong2"><label class="nhan" for="hsFChuHoQ">Người lao động (chủ hộ)</label><input class="o" id="hsFChuHoQ" placeholder="Chọn trong danh sách bên dưới, hoặc gõ tên / mã CN / phòng để lọc">' +
       '<select class="o" id="hsFChuHo" style="margin-top:6px"><option value="">— Không gắn người lao động —</option></select></div>' : '') +
     hsO('hsFTen', 'Họ tên', laSua ? g.ten : '', { max: 120 }) + hsO('hsFQh', 'Quan hệ với người lao động', laSua ? g.quanHe : 'Con', { chon: _hs.quanHe.length ? _hs.quanHe : ['Vợ', 'Chồng', 'Con', 'Khác'] }) +
     hsO('hsFGt', 'Giới tính', laSua ? g.gt : '', { chon: [['', '—'], ['NAM', 'Nam'], ['NU', 'Nữ']] }) + hsO('hsFSinh', 'Ngày sinh', laSua ? g.sinh : '', { kieu: 'date' }) +
@@ -15592,20 +15592,28 @@ function hsFormGiaThuoc(g, chuHo) {
     '<div class="hs-chan"><button class="btn nho" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu</button></div>');
   $('hsFHuy').onclick = function () { if (laSua || chuHo) veChiTietHs(); else hsDongHop(); };
   if (chonChuHo) {
-    var hen = null;
-    $('hsFChuHoQ').oninput = function () {
-      clearTimeout(hen);
-      var q = hsV('hsFChuHoQ');
-      if (q.length < 2) return;
-      hen = setTimeout(function () {
-        goiAPI('hsDanhSach', hsP({ q: q, loai: 'NS', moiTrang: 20 })).then(function (d) {
-          $('hsFChuHo').innerHTML = '<option value="">— Không gắn người lao động —</option>' + d.rows.map(function (r) {
-            return '<option value="' + thoat(r.id) + '">' + thoat(r.ten + (r.maCn ? ' · ' + r.maCn : '') + (r.phong ? ' · phòng ' + r.phong : '')) + '</option>';
-          }).join('');
-          if (d.rows.length) $('hsFChuHo').selectedIndex = 1;
-        }).catch(function () {});
-      }, 300);
+    // Nạp sẵn cả danh sách người lao động đang làm trong phạm vi (đã xếp theo mã CN); ô gõ chỉ để lọc nhanh tại chỗ
+    var dsCh = [], chon = $('hsFChuHo');
+    var nhanCh = function (r) { return r.ten + (r.maCn ? ' · ' + r.maCn : '') + (r.phong ? ' · phòng ' + r.phong : ''); };
+    var veCh = function () {
+      var q = hsV('hsFChuHoQ').toUpperCase(), cu = chon.value;
+      var loc = dsCh.filter(function (r) { return !q || (nhanCh(r) + ' ' + (r.to || '')).toUpperCase().indexOf(q) > -1; });
+      chon.innerHTML = '<option value="">— Không gắn người lao động (' + loc.length + ' người phù hợp) —</option>' + loc.map(function (r) {
+        return '<option value="' + thoat(r.id) + '">' + thoat(nhanCh(r)) + '</option>';
+      }).join('');
+      chon.value = cu;
+      if (chon.value !== cu || (q && loc.length === 1)) chon.value = q && loc.length === 1 ? loc[0].id : '';
+      if ($('hsFDoi')) $('hsFDoi').closest('div').style.display = chon.value ? 'none' : '';
     };
+    chon.innerHTML = '<option value="">Đang tải danh sách người lao động…</option>';
+    (function nap(trang) {
+      goiAPI('hsDanhSach', hsP({ loai: 'NS', trangThai: 'hoat', moiTrang: 200, trang: trang })).then(function (d) {
+        dsCh = dsCh.concat(d.rows);
+        if (trang < d.soTrang && chon.isConnected) nap(trang + 1); else if (chon.isConnected) veCh();
+      }).catch(function () { if (chon.isConnected) chon.innerHTML = '<option value="">Không tải được danh sách — gõ để thử lại</option>'; });
+    })(1);
+    $('hsFChuHoQ').oninput = veCh;
+    chon.onchange = function () { if ($('hsFDoi')) $('hsFDoi').closest('div').style.display = chon.value ? 'none' : ''; };
   }
   $('hsFLuu').onclick = function () {
     var ts = { hoTen: hsV('hsFTen'), quanHe: hsV('hsFQh'), gt: hsV('hsFGt'), ngaySinh: hsV('hsFSinh'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), ghiChu: hsV('hsFGhi'),
