@@ -1090,6 +1090,16 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .hs-form .rong2{grid-column:1/-1}
 .hs-form .o:disabled{opacity:.65;background:rgba(127,127,127,.14);cursor:not-allowed}
+/* Ô chọn có tìm kiếm bên trong danh sách (chọn chủ hộ...) */
+.hs-ct{position:relative}
+.hs-ct-nut{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
+.hs-ct-nut span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-ct-ds{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:8px}
+.hs-ct-ls{max-height:260px;overflow:auto;margin-top:6px}
+.hs-ct-mu{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14px}
+.hs-ct-mu:hover,.hs-ct-mu.on{background:rgba(127,127,127,.13)}
+.hs-ct-av{width:28px;height:28px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
+.hs-ct-phu{color:var(--ink-3)}
 .hs-chan-hop{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--line);background:var(--card);position:sticky;bottom:0}
 :root{--sb-bg:#157A5A;--sb-ink:#FFFFFF;--sb-ink-2:rgba(255,255,255,.68)}
 .hs-the-xem{display:flex;justify-content:center;margin-bottom:12px}
@@ -3198,7 +3208,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 286;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 287;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15571,13 +15581,59 @@ function hsFormHoSo(d) {
   };
 }
 
+/**
+ * Ô chọn có Lọc nhanh bên trong danh sách. khungId: div rỗng; idGiaTri: input ẩn giữ giá trị (đọc bằng hsV như ô thường).
+ * ds: [{ id, ten, phu }]. Trả { datDs(ds, thongBao), dangTai() }.
+ */
+function hsChonTim(khungId, idGiaTri, trong, sauChon) {
+  var k = $(khungId), ds = [], loc = [], vt = -1, TOI_DA = 300;
+  k.innerHTML = '<button type="button" class="o hs-ct-nut" id="' + idGiaTri + 'Nut" aria-haspopup="listbox"><span>' + thoat(trong) + '</span><b aria-hidden="true">▾</b></button>' +
+    '<input type="hidden" id="' + idGiaTri + '" value="">' +
+    '<div class="hs-ct-ds" hidden><input class="o hs-ct-tim" placeholder="Lọc nhanh: tên, mã CN, phòng, tổ" autocomplete="off"><div class="hs-ct-ls" role="listbox"></div></div>';
+  var nut = k.querySelector('.hs-ct-nut'), an = $(idGiaTri), hop = k.querySelector('.hs-ct-ds'), tim = k.querySelector('.hs-ct-tim'), ls = k.querySelector('.hs-ct-ls');
+  var mu = function (r, i) {
+    return '<div class="hs-ct-mu' + (i === vt ? ' on' : '') + '" role="option" data-i="' + i + '">' + (r ? '<span class="hs-ct-av">' + hsChuCai(r.ten) + '</span><span><b>' + thoat(r.ten) + '</b>' +
+      (r.phu ? ' <span class="hs-ct-phu">· ' + thoat(r.phu) + '</span>' : '') + '</span>' : '<span class="hs-ct-phu">' + thoat(trong) + '</span>') + '</div>';
+  };
+  var ve = function () {
+    var q = tim.value.trim().toUpperCase();
+    loc = ds.filter(function (r) { return !q || (r.ten + ' ' + r.phu).toUpperCase().indexOf(q) > -1; });
+    ls.innerHTML = mu(null, -2) + loc.slice(0, TOI_DA).map(mu).join('') +
+      (loc.length > TOI_DA ? '<div class="hs-phu" style="padding:6px 8px">Còn ' + (loc.length - TOI_DA) + ' người, gõ thêm để lọc</div>' : '') +
+      (!loc.length && ds.length ? '<div class="hs-phu" style="padding:6px 8px">Không có ai khớp "' + thoat(tim.value) + '"</div>' : '');
+  };
+  var chon = function (r) {
+    an.value = r ? r.id : '';
+    nut.firstChild.innerHTML = r ? '<b>' + thoat(r.ten) + '</b>' + (r.phu ? ' · ' + thoat(r.phu) : '') : thoat(trong);
+    dong();
+    if (sauChon) sauChon(an.value);
+  };
+  var mo = function () { if (!hop.hidden) return; hop.hidden = false; tim.value = ''; vt = -1; ve(); tim.focus(); setTimeout(function () { document.addEventListener('mousedown', ngoai); }, 0); };
+  var dong = function () { hop.hidden = true; document.removeEventListener('mousedown', ngoai); };
+  var ngoai = function (ev) { if (!k.isConnected) { document.removeEventListener('mousedown', ngoai); return; } if (!k.contains(ev.target)) dong(); };
+  nut.onclick = function () { if (hop.hidden) mo(); else dong(); };
+  tim.oninput = function () { vt = -1; ve(); };
+  tim.onkeydown = function (ev) {
+    var n = Math.min(loc.length, TOI_DA);
+    if (ev.key === 'ArrowDown') { vt = Math.min(n - 1, vt + 1); ve(); ev.preventDefault(); }
+    else if (ev.key === 'ArrowUp') { vt = Math.max(-1, vt - 1); ve(); ev.preventDefault(); }
+    else if (ev.key === 'Enter') { ev.preventDefault(); if (vt >= 0) chon(loc[vt]); else if (loc.length === 1) chon(loc[0]); }
+    else if (ev.key === 'Escape') { dong(); nut.focus(); }
+    var on = ls.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+  };
+  ls.onclick = function (ev) { var m = ev.target.closest('.hs-ct-mu'); if (!m) return; var i = +m.dataset.i; chon(i === -2 ? null : loc[i]); };
+  return {
+    datDs: function (moi, thongBao) { ds = moi || []; nut.firstChild.innerHTML = thoat(thongBao || trong); if (!hop.hidden) ve(); },
+    dangTai: function () { nut.firstChild.textContent = 'Đang tải danh sách…'; }
+  };
+}
+
 /** Thêm (g = null) / sửa gia thuộc. chuHo: hồ sơ người lao động khi thêm từ trang chi tiết. */
 function hsFormGiaThuoc(g, chuHo) {
   var laSua = !!g;
   var chonChuHo = !laSua && !chuHo;
   hsMo(laSua ? 'Sửa gia thuộc — ' + g.ten : 'Thêm gia thuộc' + (chuHo ? ' của ' + chuHo.ten : ''), '<div id="hsFLoi"></div><div class="hs-form">' +
-    (chonChuHo ? '<div class="rong2"><label class="nhan" for="hsFChuHoQ">Người lao động (chủ hộ)</label><input class="o" id="hsFChuHoQ" placeholder="Chọn trong danh sách bên dưới, hoặc gõ tên / mã CN / phòng để lọc">' +
-      '<select class="o" id="hsFChuHo" style="margin-top:6px"><option value="">— Không gắn người lao động —</option></select></div>' : '') +
+    (chonChuHo ? '<div class="rong2"><label class="nhan" for="hsFChuHoNut">Người lao động (chủ hộ)</label><div class="hs-ct" id="hsFChuHoKhung"></div></div>' : '') +
     hsO('hsFTen', 'Họ tên', laSua ? g.ten : '', { max: 120 }) + hsO('hsFQh', 'Quan hệ với người lao động', laSua ? g.quanHe : 'Con', { chon: _hs.quanHe.length ? _hs.quanHe : ['Vợ', 'Chồng', 'Con', 'Khác'] }) +
     hsO('hsFGt', 'Giới tính', laSua ? g.gt : '', { chon: [['', '—'], ['NAM', 'Nam'], ['NU', 'Nữ']] }) + hsO('hsFSinh', 'Ngày sinh', laSua ? g.sinh : '', { kieu: 'date' }) +
     hsO('hsFGiayTo', 'Số giấy tờ (nếu có)', '', { max: 40, goiY: laSua && g.soGiayTo ? 'Đã có ' + g.soGiayTo + ' — để trống nếu không đổi' : '' }) +
@@ -15592,28 +15648,20 @@ function hsFormGiaThuoc(g, chuHo) {
     '<div class="hs-chan"><button class="btn nho" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu</button></div>');
   $('hsFHuy').onclick = function () { if (laSua || chuHo) veChiTietHs(); else hsDongHop(); };
   if (chonChuHo) {
-    // Nạp sẵn cả danh sách người lao động đang làm trong phạm vi (đã xếp theo mã CN); ô gõ chỉ để lọc nhanh tại chỗ
-    var dsCh = [], chon = $('hsFChuHo');
-    var nhanCh = function (r) { return r.ten + (r.maCn ? ' · ' + r.maCn : '') + (r.phong ? ' · phòng ' + r.phong : ''); };
-    var veCh = function () {
-      var q = hsV('hsFChuHoQ').toUpperCase(), cu = chon.value;
-      var loc = dsCh.filter(function (r) { return !q || (nhanCh(r) + ' ' + (r.to || '')).toUpperCase().indexOf(q) > -1; });
-      chon.innerHTML = '<option value="">— Không gắn người lao động (' + loc.length + ' người phù hợp) —</option>' + loc.map(function (r) {
-        return '<option value="' + thoat(r.id) + '">' + thoat(nhanCh(r)) + '</option>';
-      }).join('');
-      chon.value = cu;
-      if (chon.value !== cu || (q && loc.length === 1)) chon.value = q && loc.length === 1 ? loc[0].id : '';
-      if ($('hsFDoi')) $('hsFDoi').closest('div').style.display = chon.value ? 'none' : '';
-    };
-    chon.innerHTML = '<option value="">Đang tải danh sách người lao động…</option>';
+    // Nạp sẵn cả danh sách người lao động đang làm trong phạm vi (đã xếp theo mã CN); ô Lọc nhanh nằm ngay trong danh sách
+    var dsCh = [], oChon = hsChonTim('hsFChuHoKhung', 'hsFChuHo', '— Không gắn người lao động —', function (v) {
+      if ($('hsFDoi')) $('hsFDoi').closest('div').style.display = v ? 'none' : '';
+    });
+    oChon.dangTai();
     (function nap(trang) {
       goiAPI('hsDanhSach', hsP({ loai: 'NS', trangThai: 'hoat', moiTrang: 200, trang: trang })).then(function (d) {
         dsCh = dsCh.concat(d.rows);
-        if (trang < d.soTrang && chon.isConnected) nap(trang + 1); else if (chon.isConnected) veCh();
-      }).catch(function () { if (chon.isConnected) chon.innerHTML = '<option value="">Không tải được danh sách — gõ để thử lại</option>'; });
+        if (trang < d.soTrang && $('hsFChuHoKhung')) nap(trang + 1);
+        else if ($('hsFChuHoKhung')) oChon.datDs(dsCh.map(function (r) {
+          return { id: r.id, ten: r.ten, phu: [r.maCn, r.phong ? 'phòng ' + r.phong : '', r.to].filter(Boolean).join(' · ') };
+        }));
+      }).catch(function () { if ($('hsFChuHoKhung')) oChon.datDs([], 'Không tải được danh sách, đóng form mở lại'); });
     })(1);
-    $('hsFChuHoQ').oninput = veCh;
-    chon.onchange = function () { if ($('hsFDoi')) $('hsFDoi').closest('div').style.display = chon.value ? 'none' : ''; };
   }
   $('hsFLuu').onclick = function () {
     var ts = { hoTen: hsV('hsFTen'), quanHe: hsV('hsFQh'), gt: hsV('hsFGt'), ngaySinh: hsV('hsFSinh'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), ghiChu: hsV('hsFGhi'),
