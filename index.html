@@ -274,6 +274,9 @@ body.ck .nut-loc-pill{border-radius:10px}
   body.ck table.gd-the-dt td[data-nhan]::before{content:attr(data-nhan);flex:none;max-width:45%;color:var(--muted);text-align:left;font-size:13px}
   body.ck table.gd-the-dt td:empty{display:none}
   body.ck .cuon:has(>table.gd-the-dt){overflow:visible}
+  /* Hàng công cụ nằm ngang (kỳ, tổ, ô tìm) xuống dòng thay vì tràn ngang */
+  body.ck .hs-the-cong{flex-wrap:wrap}
+  body.ck .hs-the-cong>.o{flex:1 1 140px;min-width:0;max-width:100%}
 }
 /* Bàn làm việc theo bố cục mới: đầu trang .ck-ph + dải số liệu .ck-dai, các khối thành thẻ bo 16px */
 body.ck #pBanLamViec .blv-dau.ck-ph{margin-bottom:0}
@@ -3560,7 +3563,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 299;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 300;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
