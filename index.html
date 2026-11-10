@@ -3565,7 +3565,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 303;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 304;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -12749,7 +12749,7 @@ var NHOM_TAB = [
   { id: 'banDo', ten: 'Bản đồ', tabs: ['banDoLo'] },
   { id: 'sanLuong', ten: 'Sản lượng', tabs: ['tongQuan', 'sanLuong', 'tramCan', 'drc', 'slTheoCn', 'giaoKhoan', 'nangSuatVuon'] },
   // Nhân sự = nhân sự + chấm công + lương (đã gộp nhóm Lương cũ)
-  { id: 'nhanSu', ten: 'Nhân sự', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong', 'heSoLuong'] },
+  { id: 'nhanSu', ten: 'Lao động tiền lương', tabs: ['tqNhanSu', 'nhanSu', 'chamCong', 'xepHang', 'xepLoai', 'khoMieng', 'slTheoCn', 'luong', 'heSoLuong'] },
   { id: 'anNinhCuTru', ten: 'An ninh & cư trú', tabs: ['tqAnNinh', 'hoSo', 'cuTru', 'danhGia', 'anNinh', 'khach', 'theId', 'baoCaoAn'] },   // 31/10/2026: gộp phân hệ CN Workforce
   { id: 'baoCao', ten: 'Báo cáo', tabs: ['baoCao'] },
   { id: 'quanTri', ten: 'Quản trị', tabs: ['phanQuyen', 'taiKhoan', 'nguoiDung', 'phieuBase'] }   // chỉ Admin (tabAn)
