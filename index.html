@@ -3052,8 +3052,9 @@ veNutTheme();
    Bật thử: thêm ?gd=moi vào địa chỉ (nhớ cho lần sau); ?gd=cu để quay về. Chỉ đổi khung (thanh trên, menu trái)
    và bố cục trang; dữ liệu, API, phân quyền, tên hàm giữ nguyên. Menu dựng từ NHOM_TAB + tabAn như menu cũ.
    ===================================================================== */
+// 10/11/2026: giao diện mới là MẶC ĐỊNH. ?gd=cu (hoặc nút "Về giao diện cũ") dùng giao diện cũ và nhớ trên máy đó; ?gd=moi để quay lại.
 var GD_MOI = /[?&]gd=moi\b/.test(location.search) ? (ghiLS('crck2_gd', 'moi'), true)
-  : /[?&]gd=cu\b/.test(location.search) ? (ghiLS('crck2_gd', 'cu'), false) : docLS('crck2_gd') === 'moi';
+  : /[?&]gd=cu\b/.test(location.search) ? (ghiLS('crck2_gd', 'cu'), false) : docLS('crck2_gd') !== 'cu';
 var _gd = { menu: [] };
 var GD_HINH_NHOM = { banLamViec: 'viec', tongQuan: 'tq', banDo: 'bando', sanLuong: 'cay', nhanSu: 'nguoi', anNinhCuTru: 'khien', baoCao: 'baoCao', quanTri: 'khoa' };
 // Biểu tượng từng trang trong menu trái (nét 24x24 cùng kiểu bộ giao diện; định nghĩa trong CRCK_CAU_HINH.hinh)
@@ -3246,7 +3247,8 @@ function gdDauTrang() {
 function gdTheDt() {
   document.querySelectorAll('.noi-dung-chinh .wrap table:not(.gd-the-dt):not(.gd-bo-qua)').forEach(function (t) {
     var th = t.querySelectorAll('thead th');
-    if (!th.length || th.length > 7 || t.querySelector('input,select,textarea') || t.closest('.bang-cc-thang')) { t.classList.add('gd-bo-qua'); return; }
+    if (!th.length) return;   // bảng chưa vẽ (thẻ <table> rỗng, dữ liệu về sau): để lần quét sau
+    if (th.length > 7 || t.querySelector('input,select,textarea') || t.closest('.bang-cc-thang')) { t.classList.add('gd-bo-qua'); return; }
     var nhan = Array.prototype.map.call(th, function (x) { return x.textContent.trim(); });
     t.querySelectorAll('tbody tr').forEach(function (tr) {
       Array.prototype.forEach.call(tr.children, function (td, i) { if (nhan[i] && !td.hasAttribute('colspan')) td.setAttribute('data-nhan', nhan[i]); });
@@ -3286,6 +3288,15 @@ function gdBanLamViec() {
   if (_blv.d) veBanLamViec(_blv.d);
 }
 if (GD_MOI) batGdMoi();
+else {   // giao diện cũ: thêm nút quay về giao diện mới ở chân thanh bên
+  (function () {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn nho'; b.textContent = 'Dùng giao diện mới';
+    b.onclick = function () { ghiLS('crck2_gd', 'moi'); location.href = location.pathname; };
+    var duoi = document.querySelector('.thanh-ben .ben-duoi');
+    if (duoi) duoi.insertBefore(b, duoi.firstChild);
+  })();
+}
 
 
 /* Địa chỉ Web App mặc định — dùng ngay khi mở trang, không cần nhập tay.
@@ -3549,7 +3560,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 298;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 299;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
