@@ -2150,11 +2150,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         <div class="hs-dau-nut"><button class="btn" type="button" data-di-tab="baoCaoAn">Báo cáo</button><button class="btn chinh" type="button" data-di-tab="hoSo">Tra cứu hồ sơ</button></div>
       </div>
       <div id="tqAnLoi"></div>
-      <div class="hs-tq-hero">
-        <section class="hs-tq-chinh"><div class="hs-eyebrow">C.R.C.K.2 Aphivath · Nền tảng quản lý con người</div><h2>Hiểu con người.<br>An tâm vận hành.</h2><p>Một không gian cho công nhân, nơi ở và an ninh.<br>Một điểm tra cứu chung cho toàn công ty.</p></section>
-        <section class="the hs-tq-phu"><div class="hs-eyebrow">Nhận diện & ra/vào</div><h3>Một thẻ.<br>Một mã QR.</h3><p>Bảo vệ quét bằng điện thoại, đối chiếu ảnh rồi xác nhận.</p><button class="btn" type="button" data-di-tab="theId">Xem thẻ ID &amp; QR →</button></section>
-      </div>
-      <div class="kpis gian" id="kpisTqAn" style="--cot:4;margin-top:16px"></div>
+      <div class="kpis gian" id="kpisTqAn" style="--cot:4"></div>
       <div class="luoi-2">
         <section class="the" id="tqCoCau"></section>
         <section class="the" id="tqChuY"></section>
@@ -3569,7 +3565,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 302;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 303;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
