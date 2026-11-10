@@ -192,7 +192,8 @@ body.ck .gdm-phai .nut-chuong{position:relative;top:auto;right:auto;width:38px;h
 .gdm-nd .ben-duoi{margin:0;display:flex;flex-direction:column;gap:10px;--sb-ink:var(--mau-ink);--sb-ink-2:var(--muted);--sb-line:var(--mau-line);--sb-hover:var(--hover-bg);color:var(--mau-ink)}
 .gdm-nd .the-nguoi-dung{background:var(--soft);border-radius:var(--r-sm);color:var(--mau-ink)}
 .gdm-nd .phien-ban{color:var(--muted)}
-@media (max-width:720px){body.ck .ck-tim{display:none}}
+@media (max-width:720px){body.ck .ck-tim{display:none}body.ck .ck-top{padding-left:10px;padding-right:10px;gap:8px}.gdm-phai{gap:2px}body.ck .gdm-phai .nut-chuong,.gdm-av{width:34px;height:34px}}
+@media (max-width:400px){body.ck .ck-hieu b{font-size:14.5px}body.ck .ck-hieu img{height:28px}}
 /* Bàn làm việc theo bố cục mới: đầu trang .ck-ph + dải số liệu .ck-dai, các khối thành thẻ bo 16px */
 body.ck #pBanLamViec .blv-dau.ck-ph{margin-bottom:0}
 body.ck #pBanLamViec .ck-ph-chu .blv-phu{margin:2px 0 0;color:var(--muted);font-size:14px}
@@ -3341,7 +3342,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 290;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 291;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
