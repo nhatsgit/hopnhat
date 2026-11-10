@@ -199,6 +199,15 @@ body.ck .gdm-phai .nut-chuong{position:relative;top:auto;right:auto;width:38px;h
 .gdm-nd .phien-ban:not([hidden]){position:static;display:block;flex-basis:100%;font-size:11px;color:var(--faint);text-align:right}
 .gdm-nd .btn.nho{min-height:40px}
 .gdm-nd>.btn{width:100%;margin-top:10px}
+/* Ô tìm chức năng trên thanh trên: gợi ý các trang được xem, bỏ dấu khi so */
+.gdm-goiy{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--mau-card);border:1px solid var(--mau-line);border-radius:var(--r);box-shadow:var(--sh-2);padding:6px;z-index:60;max-height:70vh;overflow:auto}
+.gdm-goiy-mu{display:flex;gap:10px;align-items:center;width:100%;padding:8px 10px;border:0;background:none;border-radius:8px;text-align:left;cursor:pointer;color:var(--mau-ink);font:inherit}
+.gdm-goiy-mu.on,.gdm-goiy-mu:hover{background:var(--hover-bg)}
+.ck-tim .gdm-goiy svg{position:static;width:18px;height:18px;flex:none;color:var(--brand-700)}
+.gdm-goiy-mu span{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+.gdm-goiy-mu b{font-weight:600;font-size:14px}
+.gdm-goiy-mu small{color:var(--muted);font-size:12px}
+.gdm-goiy-trong{padding:10px;color:var(--muted);font-size:13.5px}
 @media (max-width:720px){body.ck .ck-tim{display:none}body.ck .ck-top{padding-left:10px;padding-right:10px;gap:8px}.gdm-phai{gap:2px}body.ck .gdm-phai .nut-chuong,.gdm-av{width:34px;height:34px}}
 @media (max-width:400px){body.ck .ck-hieu b{font-size:14.5px}body.ck .ck-hieu img{height:28px}}
 /* Bàn làm việc theo bố cục mới: đầu trang .ck-ph + dải số liệu .ck-dai, các khối thành thẻ bo 16px */
@@ -3007,7 +3016,7 @@ function batGdMoi() {
   new MutationObserver(function () { ghiLS('crck2_theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'); })
     .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   window.CRCK_CAU_HINH = {
-    ten: 'Quản trị hợp nhất', logo: 'ui/img/logo-vrg.png', trangChu: './', timGoiY: 'Tìm công nhân, mã CN, phòng…',
+    ten: 'Quản trị hợp nhất', logo: 'ui/img/logo-vrg.png', trangChu: './', timGoiY: 'Tìm chức năng: chấm công, lương, cổng…',
     chanMenu: 'Cao su Chư Sê – Kampong Thom', menu: _gd.menu,
     hinh: {
       viec: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m8 12 3 3 5-6"/>',
@@ -3050,17 +3059,53 @@ function batGdMoi() {
       if (!t) return false;
       S.trang = 1; chuyenTab(t, ph); return true;
     };
-    // Ô tìm trên thanh trên: tìm hồ sơ công nhân (An ninh & cư trú) nếu được xem, không thì Nhân sự
-    CRCK.khiTim = function (q) {
-      if (!tabAn('hoSo')) { chuyenTab('hoSo', 'anNinhCuTru'); $('hsQ').value = q; taiHoSo(); return true; }
-      if (!tabAn('nhanSu')) { chuyenTab('nhanSu', 'nhanSu'); return true; }
-      return true;
-    };
+    gdTimChucNang();
     gdThanhTrenPhai();
     gdVeMenu();
     gdBanLamViec();
   };
   document.body.appendChild(sc);
+}
+function gdBoDau(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase(); }
+/** Ô tìm trên thanh trên = tìm chức năng (trang) trong phạm vi vai trò được xem; gõ không dấu cũng được. Enter mở mục đầu. */
+function gdTimChucNang() {
+  var o = $('ckTimO'), form = $('ckTim'), ds = [], vt = 0;
+  o.setAttribute('aria-label', 'Tìm chức năng');
+  var hop = document.createElement('div');
+  hop.className = 'gdm-goiy'; hop.hidden = true; hop.setAttribute('role', 'listbox');
+  form.appendChild(hop);
+  var lay = function (q) {
+    var k = gdBoDau(q).trim(), tu = k.split(/\s+/).filter(Boolean), kq = [];
+    NHOM_TAB.forEach(function (nh) {
+      nh.tabs.forEach(function (t) {
+        if (tabAn(t) || kq.some(function (x) { return x.t === t; })) return;
+        var ten = TEN_TAB[t] || t, ch = gdBoDau(ten + ' ' + nh.ten), tenK = gdBoDau(ten);
+        if (tu.length && !tu.every(function (w) { return ch.indexOf(w) > -1; })) return;
+        kq.push({ t: t, nh: nh.id, ten: ten, nhTen: nh.ten, diem: !k ? 2 : tenK.indexOf(k) === 0 ? 0 : tenK.indexOf(k) > -1 ? 1 : 2 });
+      });
+    });
+    return kq.sort(function (a, b) { return a.diem - b.diem; }).slice(0, 10);
+  };
+  var to = function () { hop.querySelectorAll('[data-i]').forEach(function (b) { b.classList.toggle('on', +b.dataset.i === vt); }); };
+  var ve = function () {
+    ds = lay(o.value); vt = 0; hop.hidden = false;
+    hop.innerHTML = ds.length ? ds.map(function (x, i) {
+      return '<button type="button" role="option" class="gdm-goiy-mu' + (i === vt ? ' on' : '') + '" data-i="' + i + '">' + CRCK.hinh(GD_HINH_TAB[x.t] || 'ds') +
+        '<span><b>' + thoat(x.ten) + '</b>' + (x.nhTen !== x.ten ? '<small>' + thoat(x.nhTen) + '</small>' : '') + '</span></button>';
+    }).join('') : '<div class="gdm-goiy-trong">Không có chức năng nào khớp "' + thoat(o.value) + '"</div>';
+  };
+  var mo = function (x) { hop.hidden = true; o.value = ''; o.blur(); S.trang = 1; chuyenTab(x.t, x.nh); CRCK.thuGon(); };
+  o.addEventListener('focus', ve);
+  o.addEventListener('input', ve);
+  o.addEventListener('keydown', function (e) {
+    if (hop.hidden) return;
+    if (e.key === 'ArrowDown') { vt = Math.min(ds.length - 1, vt + 1); to(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { vt = Math.max(0, vt - 1); to(); e.preventDefault(); }
+    else if (e.key === 'Escape') { hop.hidden = true; o.blur(); }
+  });
+  hop.addEventListener('mousedown', function (e) { var b = e.target.closest('[data-i]'); if (!b) return; e.preventDefault(); mo(ds[+b.dataset.i]); });
+  document.addEventListener('mousedown', function (e) { if (!form.contains(e.target)) hop.hidden = true; });
+  CRCK.khiTim = function () { if (ds[vt]) mo(ds[vt]); return true; };
 }
 /** Góc phải thanh trên: chuông thông báo + nút tài khoản (mở khối tài khoản cũ: đổi vai trò, ngôn ngữ, tải lại, đăng xuất, phiên bản). */
 function gdThanhTrenPhai() {
@@ -3380,7 +3425,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 293;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 294;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
