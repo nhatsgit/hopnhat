@@ -2099,6 +2099,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         <p>Tra cứu xuyên suốt toàn công ty, đến từng đơn vị, tổ và phòng ở.</p>
         <label class="hs-tim"><span aria-hidden="true">⌕</span><input id="hsQ" type="search" autocomplete="off" placeholder="Tìm tên, mã CN, điện thoại, phòng ở, khu vực, đuôi CCCD…" aria-label="Tìm hồ sơ"><em>Gõ để tìm</em></label>
         <div class="hs-hero-nut">
+          <button class="btn chinh" id="hsThemNs" type="button" style="display:none" title="Đề xuất Tuyển mới bên Nhân sự; duyệt trên Base xong người mới tự có hồ sơ ở đây">+ Thêm hồ sơ</button>
           <button class="btn chinh" id="hsThemGt" type="button">+ Gia thuộc</button>
           <button class="btn" id="hsInThe" type="button" title="In thẻ nhận diện có mã QR cho các hồ sơ đang hiện">In thẻ QR</button>
           <button class="btn" id="hsXuat" type="button">Xuất danh sách</button>
@@ -2146,6 +2147,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         </div>
         <div class="hs-phong" id="ctPhong"></div>
       </div>
+      <div class="the" id="ctXepLai" style="margin-bottom:16px;display:none"></div>
       <div class="the" id="ctChoDuyet" style="margin-bottom:16px;display:none"></div>
       <div class="the">
         <div class="hs-the-dau"><div><h3 id="ctTieuDeChua">Chưa bố trí phòng</h3><div class="hs-phu">Theo trường thông tin phòng ở</div></div></div>
@@ -3196,7 +3198,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 284;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 285;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15305,6 +15307,7 @@ function veHoSo() {
   $('hsTomTat').innerHTML = '<b>' + soVN(d.tong.tatCa, 0) + '</b> hồ sơ' + (_hs.locPhong ? ' · Phòng ' + thoat(_hs.locPhong) + ' <button class="btn-lien" id="hsBoPhong" type="button">✕ bỏ lọc phòng</button>' : '');
   $('hsPhamVi').textContent = S.toanCongTy ? 'Toàn công ty' : tenDoiNgan(String(S.maDonVi).split('-')[0]);
   $('hsThemGt').style.display = hsCo('hoSo', 'THEM') ? '' : 'none';
+  $('hsThemNs').style.display = coQuyen('nhanSu', 'THEM') ? '' : 'none';
   $('hsNhap').style.display = S.laAdmin ? '' : 'none';
   $('bangHs').innerHTML = d.rows.length ? d.rows.map(function (r) {
     var ten = r.tenThat || r.ten, khacTen = r.tenThat && r.tenThat.toUpperCase() !== r.ten.toUpperCase();
@@ -15348,6 +15351,8 @@ $('hsTrang').onclick = function (ev) {
 };
 $('bangHs').onclick = function (ev) { var tr = ev.target.closest('[data-hs]'); if (tr) { var k = tr.dataset.hs.split('|'); moHoSo(k[0], k[1]); } };
 $('hsThemGt').onclick = function () { hsFormGiaThuoc(null, null); };
+// Hợp nhất Nhân sự - Hồ sơ: người lao động mới chỉ vào qua Nhân sự (Tuyển mới, duyệt Base), không tạo riêng ở đây
+$('hsThemNs').onclick = function () { nsMoTuyenMoi(); };
 $('hsXuat').onclick = function () {
   var rows = [], p = 1, nut = $('hsXuat');
   nut.disabled = true;
@@ -15409,8 +15414,7 @@ function veChiTietHs() {
   h += '<dl class="hs-luoi-tt">' + o('Mã thẻ QR', d.qr) + o('Đơn vị', tenDoiNgan(d.doi || '')) + o('Phân loại', ns ? 'Lao động' : 'Gia thuộc') + o('Tổ', d.to || d.toCu) +
     o('Tên trên hồ sơ', d.ten) + o(ns ? 'Mã CN' : 'Mã gia thuộc', ns ? d.maCn : d.id) + (ns ? o('Chức danh', d.chucDanh) : o('Quan hệ', (d.quanHe || '') + (d.chuHo ? ' của ' + d.chuHo.ten : ''))) +
     o('CMND / CCCD', ns ? d.cccd : d.soGiayTo) + o('Ngày sinh', hsNgay(d.sinh)) + o('Tuổi', d.tuoi === null || d.tuoi === undefined ? '' : String(d.tuoi)) + o('Giới tính', d.gt === 'NU' ? 'Nữ' : (d.gt === 'NAM' ? 'Nam' : '')) +
-    o('Nơi sinh', d.noiSinh) + o('Điện thoại', d.sdt) + o('Nhóm máu', d.nhomMau || 'Chưa xác định') + o('Khu vực', d.khuVuc) + o('Phần cây', d.phanCay) + o('Số bảo hiểm', d.soBaoHiem) +
-    (ns ? o('NSSF', d.coNssf ? 'Đã có' : 'Chưa có') : '') + o('Phòng ở', hien ? hien.phong : '') + o('Vai trò phòng ở', hien ? (hien.chuPhong ? 'Chủ phòng' : 'Thành viên') : '') + o('Chi tiết nơi ở', d.chiTietNoiO) + o('Địa chỉ thường trú', d.diaChi) +
+    o('Nơi sinh', d.noiSinh) + o('Điện thoại', d.sdt) + o('Nhóm máu', d.nhomMau || 'Chưa xác định') + o('Khu vực', d.khuVuc) + o('Phần cây', d.phanCay) + o(ns ? 'Số bảo hiểm / NSSF' : 'Số bảo hiểm', d.soBaoHiem) + o('Phòng ở', hien ? hien.phong : '') + o('Vai trò phòng ở', hien ? (hien.chuPhong ? 'Chủ phòng' : 'Thành viên') : '') + o('Chi tiết nơi ở', d.chiTietNoiO) + o(ns ? 'Quê quán / địa chỉ' : 'Địa chỉ thường trú', d.diaChi) +
     (d.danhGia !== undefined ? o('Kỹ năng lao động', sao(d.danhGia && d.danhGia.kyNang), true) + o('Đạo đức & Kỷ luật', sao(d.danhGia && d.danhGia.yThuc), true) : '') + o('Trạng thái cổng', d.trongCong ? 'Đang ở trong' : 'Không có lượt vào đang mở') + o('Ghi chú', d.ghiChu) + '</dl>';
   // Theo dõi & khắc phục: biên bản mới nhất
   var klMoi = (d.dsKyLuat || [])[0];
@@ -15538,16 +15542,16 @@ function hsFormHoSo(d) {
   hsMo('Chỉnh sửa hồ sơ công nhân', '<div id="hsFLoi"></div><div class="hs-form">' + muc('01 · Danh tính & liên hệ') +
     hsO('hsFTenThat', 'Tên thật / tên hiển thị', d.tenThat, { max: 120 }) + ro('Tên trên hồ sơ', d.ten) + ro('Số CMND / CCCD', d.cccd) + hsO('hsFSdt', 'Điện thoại / liên hệ', d.sdt, { max: 40, kieu: 'tel' }) +
     ro('Ngày sinh', hsNgay(d.sinh)) + ro('Giới tính', d.gt === 'NU' ? 'Nữ' : (d.gt === 'NAM' ? 'Nam' : '')) + hsO('hsFNoiSinh', 'Nơi sinh', d.noiSinh, { max: 250 }) + ro('Tuổi (tính theo ngày sinh)', d.tuoi === null || d.tuoi === undefined ? '' : String(d.tuoi)) +
-    hsO('hsFDiaChi', 'Địa chỉ thường trú', d.diaChi, { max: 500, rong: 1 }) + muc('02 · Đơn vị, lao động & cư trú') +
+    ro('Quê quán / địa chỉ (Nhân sự)', d.diaChi) + muc('02 · Đơn vị, lao động & cư trú') +
     ro('Đơn vị quản lý', tenDoiNgan(d.doi || '')) + ro('Tổ', d.to || d.toCu) + ro('Khu vực', d.khuVuc) + ro('Phần cây hiện tại', d.phanCay) +
-    hsO('hsFBaoHiem', 'Số bảo hiểm', d.soBaoHiem, { max: 40 }) + ro('Phòng ở', d.phong) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) + muc('03 · Nhóm máu') +
+    ro('Số bảo hiểm / NSSF (Nhân sự)', d.soBaoHiem) + ro('Phòng ở', d.phong) + hsO('hsFChiTiet', 'Chi tiết nơi ở', d.chiTietNoiO, { max: 500, rong: 1 }) + muc('03 · Nhóm máu') +
     hsO('hsFMau', 'Nhóm máu', d.nhomMau, { chon: [['', '—'], 'A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }) +
     (coCham ? muc('04 · Kỹ năng & Đạo đức') +
       chonDiem('hsFKyNang', 'Kỹ năng lao động', dg.kyNang, ['Cần đào tạo lại', 'Trung bình yếu', 'Đạt yêu cầu', 'Giỏi · Thao tác vững', 'Xuất sắc']) +
       chonDiem('hsFYThuc', 'Đạo đức & Kỷ luật', dg.yThuc, ['Cần chấn chỉnh', 'Vi phạm nhắc nhở', 'Đạt yêu cầu', 'Gương mẫu, trách nhiệm', 'Rất tốt']) : '') +
     muc((coCham ? '05' : '04') + ' · Ghi chú') +
     hsO('hsFGhi', 'Thông tin bổ sung', d.ghiChu, { vung: 1, max: 1000, rong: 1 }) + '</div>' +
-    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ, khu vực, phần cây thuộc bên Nhân sự (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; kỷ luật và lịch sử điểm ở trang Đánh giá & kỷ luật.</div>', '',
+    '<div class="goi-y">Ô mờ không sửa ở đây: tên trên hồ sơ, ngày sinh, số căn cước, đơn vị, tổ, khu vực, phần cây, quê quán, NSSF thuộc bên Nhân sự (Cập nhật NSSF / quê quán ở trang Nhân sự) (đi theo quy trình biến động); phòng ở đổi bằng nút Chuyển / đổi phòng; kỷ luật và lịch sử điểm ở trang Đánh giá & kỷ luật.</div>', '',
     '<button class="btn" type="button" id="hsFHuy">Huỷ</button><button class="btn chinh" type="button" id="hsFLuu">Lưu hồ sơ</button>');
   $('hsFHuy').onclick = function () { veChiTietHs(); };
   $('hsFLuu').onclick = function () {
@@ -15555,7 +15559,7 @@ function hsFormHoSo(d) {
     var doiDiem = coCham && (kn !== String(dg.kyNang || '') || yt !== String(dg.yThuc || ''));
     var xong = function () { moHoSo('NS', d.id); hsLamMoiTrang(); };
     hsGhi('hsLuuHoSo', { id: d.id, tenThat: hsV('hsFTenThat'), sdt: hsV('hsFSdt'), nhomMau: hsV('hsFMau'), noiSinh: hsV('hsFNoiSinh'),
-                         diaChi: hsV('hsFDiaChi'), ghiChu: hsV('hsFGhi'), soBaoHiem: hsV('hsFBaoHiem'), chiTietNoiO: hsV('hsFChiTiet') }, nut, function () {
+                         ghiChu: hsV('hsFGhi'), chiTietNoiO: hsV('hsFChiTiet') }, nut, function () {
       if (!doiDiem) return xong();
       // Giữ nhận xét đã có của cùng kỳ; lỗi điểm thì báo và mở lại nút (hồ sơ đã lưu, bấm lại không mất gì)
       var ky = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7), daLuu = false;
@@ -16041,6 +16045,14 @@ function veCuTru() {
       var t = tenTtCp[x.trangThai] || ['tap', x.trangThai];
       return '<tr><td><b>' + thoat(x.ten) + '</b></td><td>' + thoat(x.tu || '—') + '</td><td>' + thoat(x.den) + '</td><td>' + thoat(x.lyDo || '—') + '</td><td class="hs-phu">' + hsNgay(x.luc) + ' ' + hsGio(x.luc) + '</td><td><span class="vi ' + t[0] + '">' + thoat(t[1]) + '</span></td></tr>';
     }).join('') + '</tbody></table></div>' : '');
+  // Chuyển đội bên Nhân sự mà vẫn ở phòng của đội cũ: cả hai đội đều thấy
+  var xl = d.canXepLai || [];
+  $('ctXepLai').style.display = xl.length ? '' : 'none';
+  $('ctXepLai').innerHTML = '<div class="hs-the-dau"><div><h3>Cần xếp lại phòng (' + xl.length + ')</h3><div class="hs-phu">Đã chuyển đội bên Nhân sự nhưng vẫn ở phòng của đội cũ</div></div></div>' +
+    '<div class="cuon"><table><thead><tr><th>Họ tên</th><th>Mã CN / quan hệ</th><th>Đội hiện tại</th><th>Đang ở phòng</th><th></th></tr></thead><tbody>' + xl.map(function (n) {
+      return '<tr><td><b>' + thoat(n.ten) + '</b></td><td>' + thoat(n.loai === 'NS' ? n.maCn : n.quanHe) + '</td><td>' + thoat(tenDoiNgan(n.doi)) + '</td><td>' + thoat(n.phong) +
+        ' <span class="hs-phu">(' + thoat(tenDoiNgan(n.doiPhong)) + ')</span></td><td style="text-align:right"><button class="btn nho" type="button" data-ct-nguoi="' + n.loai + '|' + thoat(n.id) + '">Mở hồ sơ</button></td></tr>';
+    }).join('') + '</tbody></table></div>';
   // Chưa có phòng
   $('ctTieuDeChua').textContent = 'Chưa bố trí phòng (' + d.chuaPhong.length + ')';
   $('bangCtChua').innerHTML = '<thead><tr><th>Họ tên</th><th>Loại</th><th>Mã CN / quan hệ</th><th>Tổ</th><th></th></tr></thead><tbody>' + (d.chuaPhong.length ? d.chuaPhong.map(function (n) {
