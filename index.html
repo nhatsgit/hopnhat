@@ -217,6 +217,64 @@ body.ck .ck-tim:focus-within input{width:100%;padding:0 12px 0 36px;color:var(--
 body.ck .ck-tim:focus-within input::placeholder{color:var(--faint)}}
 @media (max-width:720px){body.ck .ck-top{padding-left:10px;padding-right:10px;gap:8px}.gdm-phai{gap:2px}body.ck .gdm-phai .nut-chuong,.gdm-av{width:34px;height:34px}}
 @media (max-width:400px){body.ck .ck-hieu b{font-size:14.5px}body.ck .ck-hieu img{height:28px}}
+/* ===== Giao diện mới cho MỌI trang (body.ck): đổi biến màu cũ sang biến của bộ CRCK, rồi chỉnh thành phần ===== */
+body.ck{--ink:var(--mau-ink);--ink-2:var(--ink-phu);--ink-3:var(--muted);--paper:var(--soft);--card:var(--mau-card);--line:var(--mau-line);--line-2:var(--border-strong);
+  --leaf:var(--brand);--leaf-soft:var(--brand-50);--clay:var(--bad-fg);--clay-soft:var(--bad-bg);--latex:var(--warn-fg);--latex-soft:var(--warn-bg);--sky:var(--info-fg);--sky-soft:var(--info-bg);
+  --shadow:var(--sh-1);--vien-the:var(--mau-line);--bong-the:var(--sh-1);--bong-the-noi:var(--sh-2)}
+:root[data-theme="dark"] body.ck{--leaf:var(--brand-700);--leaf-soft:var(--brand-100)}
+body.ck .wrap{max-width:none;font-family:var(--font)}
+body.ck .the{border:1px solid var(--mau-line);border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+body.ck .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 15px;border-radius:10px;border-color:var(--mau-line);font:600 14px var(--font)}
+body.ck .btn:hover{border-color:var(--border-strong);background:var(--soft)}
+body.ck .btn.nho{min-height:32px;padding:0 11px;font-size:13px;border-radius:9px}
+body.ck .btn.chinh{background:var(--brand);border-color:var(--brand-600);color:#fff}
+body.ck .btn.chinh:hover{background:#1f5a2b;opacity:1}
+body.ck .o{min-height:38px;border-radius:10px;border-color:var(--mau-line);font-family:var(--font)}
+body.ck .o:focus{border-color:var(--brand-200);box-shadow:0 0 0 3px var(--brand-100)}
+body.ck .chip{border-radius:8px;border-color:var(--mau-line);font-family:var(--font)}
+body.ck .chip.on{background:var(--brand);border-color:var(--brand)}
+body.ck .vi{border-radius:99px;padding:2px 9px;font-size:12.5px}
+body.ck .vi.ok{background:var(--ok-bg);color:var(--ok-fg)}
+body.ck .vi.canh{background:var(--warn-bg);color:var(--warn-fg)}
+body.ck .vi.tap{background:var(--gray-bg);color:var(--gray-fg)}
+/* Dải số liệu: các thẻ số liệu cũ (.kpis > .kpi) gộp chung một khung bo góc như .ck-dai */
+body.ck .kpis{gap:0;background:var(--mau-card);border:1px solid var(--mau-line);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden}
+body.ck .kpis>*{flex:0 0 calc(100% / var(--cot,6) + 1px);margin:0 -1px -1px 0;border:0;border-radius:0;box-shadow:inset -1px 0 0 var(--vach),inset 0 -1px 0 var(--vach);background:none}
+body.ck .kpis.gian>*{flex-grow:1}
+body.ck .kpi{padding:14px 18px}
+body.ck .kpi .ten{font-size:14px;font-weight:500;color:var(--muted)}
+body.ck .kpi .so{font-size:22px;letter-spacing:-.012em;font-variant-numeric:tabular-nums}
+body.ck .kpi .phu2{font-size:13px;color:var(--muted)}
+body.ck .kpi .icon-kpi{border-radius:11px;background:var(--brand-100);color:var(--brand-700)}
+body.ck .kpi.canh{background:var(--bad-bg)}
+body.ck .kpi.canh .so{color:var(--bad-fg)}
+/* Bảng */
+body.ck .wrap table{font-size:14px}
+body.ck .wrap th{background:var(--soft);color:var(--muted);font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;border-bottom:1px solid var(--mau-line)}
+body.ck .wrap td{border-bottom-color:var(--vach)}
+body.ck .wrap tbody tr:hover{background:var(--row-hover)}
+/* Đầu trang chuẩn của từng trang */
+#gdDau.ck-ph{margin-bottom:16px}
+body.ck .hs-hero{background:var(--mau-card);border-radius:var(--r-lg);box-shadow:var(--sh-1);text-align:left}
+body.ck .hs-hero>h1,body.ck .hs-hero>.hs-eyebrow,body.ck .hs-hero>p{display:none}
+/* Bộ lọc chung: nút "Bộ lọc" theo kiểu nút của bộ giao diện */
+body.ck .nut-loc-pill{border-radius:10px}
+@media (max-width:720px){
+  body.ck .btn{min-height:44px}
+  body.ck .btn.nho{min-height:40px}
+  body.ck .o{min-height:44px}
+  body.ck .kpi{padding:10px 12px}
+  body.ck .kpi .icon-kpi{display:none}
+  body.ck .kpi .so{font-size:19px}
+  /* Bảng ít cột thành danh sách thẻ (gdTheDt gắn data-nhan) */
+  body.ck table.gd-the-dt,body.ck table.gd-the-dt tbody,body.ck table.gd-the-dt tr,body.ck table.gd-the-dt td{display:block;width:100%}
+  body.ck table.gd-the-dt thead{display:none}
+  body.ck table.gd-the-dt tr{margin-bottom:10px;padding:10px 14px;background:var(--mau-card);border:1px solid var(--mau-line);border-radius:var(--r);box-shadow:var(--sh-1)}
+  body.ck table.gd-the-dt td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border:0;text-align:right;white-space:normal}
+  body.ck table.gd-the-dt td[data-nhan]::before{content:attr(data-nhan);flex:none;max-width:45%;color:var(--muted);text-align:left;font-size:13px}
+  body.ck table.gd-the-dt td:empty{display:none}
+  body.ck .cuon:has(>table.gd-the-dt){overflow:visible}
+}
 /* Bàn làm việc theo bố cục mới: đầu trang .ck-ph + dải số liệu .ck-dai, các khối thành thẻ bo 16px */
 body.ck #pBanLamViec .blv-dau.ck-ph{margin-bottom:0}
 body.ck #pBanLamViec .ck-ph-chu .blv-phu{margin:2px 0 0;color:var(--muted);font-size:14px}
@@ -3070,6 +3128,8 @@ function batGdMoi() {
     gdThanhTrenPhai();
     gdVeMenu();
     gdBanLamViec();
+    gdDauTrang();
+    gdTheoDoiBang();
   };
   document.body.appendChild(sc);
 }
@@ -3154,7 +3214,62 @@ function gdVeMenu() {
   });
   var nh = timNhom(S.nhom), don = !!nh && nh.tabs.filter(function (t) { return !tabAn(t); }).length === 1;
   CRCK.chon(S.nhom || '', don ? S.nhom : S.tab);
+  gdDauTrang();
   CRCK.vet(!nh || don ? [TEN_TAB[S.tab] || ''] : [nh.ten, TEN_TAB[S.tab] || '']);
+}
+// Một dòng mô tả dưới tên mỗi trang (đầu trang chuẩn .ck-ph)
+var GD_MO_TA = {
+  baoCaoTD: 'Báo cáo chỉ tiêu Tập đoàn theo kỳ', banDoLo: 'Bản đồ lô cao su, diện tích, năm trồng, giống',
+  tongQuan: 'Sản lượng, quy khô, năng suất theo đội và tổ', sanLuong: 'Sổ sản lượng và phiếu nội trạm theo ngày', tramCan: 'Phiếu cân mủ tại trạm cân',
+  drc: 'DRC thật theo ngày từng đội', slTheoCn: 'Sản lượng từng công nhân trong kỳ', giaoKhoan: 'Giao khoán phần cạo cho công nhân', nangSuatVuon: 'Năng suất vườn cây theo lô',
+  tqNhanSu: 'Lao động, biến động, chấm công trong kỳ', nhanSu: 'Hồ sơ người lao động và biến động nhân sự', chamCong: 'Chấm công theo ngày và tổng hợp tháng',
+  xepHang: 'Xếp hạng công nhân theo sản lượng', xepLoai: 'Xếp loại A/B/C hằng tháng', khoMieng: 'Hỗ trợ khô miệng cạo theo tháng', luong: 'Bảng lương tháng và hồ sơ lương',
+  heSoLuong: 'Đơn giá, xếp loại, bậc thuế dùng tính lương',
+  tqAnNinh: 'Tổng quan an ninh, cư trú toàn công ty', hoSo: 'Tra cứu hồ sơ, ảnh, thẻ QR người lao động và gia thuộc', cuTru: 'Phòng ở, xếp phòng, chuyển phòng',
+  danhGia: 'Đánh giá kỹ năng, đạo đức và sổ kỷ luật', anNinh: 'Quét QR ra vào cổng, kiểm tra thẻ đột xuất', khach: 'Đăng ký khách, nhà thầu và thẻ khách',
+  theId: 'Xem trước, in thẻ ID có mã QR', baoCaoAn: 'Báo cáo, thống kê an ninh và cư trú',
+  baoCao: 'Báo cáo tổng hợp, xuất file', phanQuyen: 'Quyền xem, thêm, sửa, xoá theo vai trò', taiKhoan: 'Tài khoản đăng nhập, đăng nhập Google',
+  nguoiDung: 'Thiết bị, lần đăng nhập và thao tác của người dùng', phieuBase: 'Phiếu Base đang chờ duyệt'
+};
+/** Đầu trang chuẩn (biểu tượng xanh + tên + mô tả) cho mọi trang trừ Bàn làm việc (có đầu trang riêng). */
+function gdDauTrang() {
+  var w = document.querySelector('.noi-dung-chinh .wrap'), d = $('gdDau');
+  if (!w || !window.CRCK) return;
+  if (!d) { d = document.createElement('div'); d.id = 'gdDau'; d.className = 'ck-ph'; w.insertBefore(d, w.firstChild); }
+  if (S.tab === 'banLamViec') { d.style.display = 'none'; return; }
+  d.style.display = '';
+  var nh = timNhom(S.nhom), ten = TEN_TAB[S.tab] || '';
+  d.innerHTML = '<div class="ck-ph-ico" aria-hidden="true">' + CRCK.hinh(GD_HINH_TAB[S.tab] || 'ds') + '</div><div class="ck-ph-chu"><h1>' + thoat(ten) + '</h1><p>' +
+    thoat((nh && nh.ten !== ten ? nh.ten + ' · ' : '') + (GD_MO_TA[S.tab] || '')) + '</p></div>';
+}
+/** Điện thoại: bảng ít cột (≤ 7, không có ô nhập) thành danh sách thẻ — gắn data-nhan = tên cột cho từng ô. */
+function gdTheDt() {
+  document.querySelectorAll('.noi-dung-chinh .wrap table:not(.gd-the-dt):not(.gd-bo-qua)').forEach(function (t) {
+    var th = t.querySelectorAll('thead th');
+    if (!th.length || th.length > 7 || t.querySelector('input,select,textarea') || t.closest('.bang-cc-thang')) { t.classList.add('gd-bo-qua'); return; }
+    var nhan = Array.prototype.map.call(th, function (x) { return x.textContent.trim(); });
+    t.querySelectorAll('tbody tr').forEach(function (tr) {
+      Array.prototype.forEach.call(tr.children, function (td, i) { if (nhan[i] && !td.hasAttribute('colspan')) td.setAttribute('data-nhan', nhan[i]); });
+    });
+    t.classList.add('gd-the-dt');
+  });
+}
+var _gdHenThe = 0;
+function gdTheoDoiBang() {
+  var w = document.querySelector('.noi-dung-chinh .wrap');
+  if (!w) return;
+  // Bảng vẽ lại (tải trang, lọc) thì gắn lại nhãn: bỏ dấu đã xử lý ở bảng có dòng mới
+  new MutationObserver(function () {
+    if (_gdHenThe) return;
+    _gdHenThe = setTimeout(function () {
+      _gdHenThe = 0;
+      document.querySelectorAll('.noi-dung-chinh .wrap table.gd-the-dt').forEach(function (t) {
+        if (t.querySelector('tbody tr > td:not([data-nhan]):not([colspan])')) t.classList.remove('gd-the-dt');
+      });
+      gdTheDt();
+    }, 120);
+  }).observe(w, { childList: true, subtree: true });
+  gdTheDt();
 }
 /** Bàn làm việc: đầu trang kiểu .ck-ph (biểu tượng + tên + mô tả + nút). */
 function gdBanLamViec() {
@@ -3434,7 +3549,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 297;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 298;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
