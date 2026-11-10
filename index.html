@@ -1091,15 +1091,15 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
 .hs-form .rong2{grid-column:1/-1}
 .hs-form .o:disabled{opacity:.65;background:rgba(127,127,127,.14);cursor:not-allowed}
 /* Ô chọn có tìm kiếm bên trong danh sách (chọn chủ hộ...) */
-.hs-ct{position:relative}
-.hs-ct-nut{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
-.hs-ct-nut span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hs-ct-ds{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:8px}
-.hs-ct-ls{max-height:260px;overflow:auto;margin-top:6px}
-.hs-ct-mu{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14px}
-.hs-ct-mu:hover,.hs-ct-mu.on{background:rgba(127,127,127,.13)}
-.hs-ct-av{width:28px;height:28px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
-.hs-ct-phu{color:var(--ink-3)}
+.hs-ctim{position:relative}
+.hs-ctim-nut{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
+.hs-ctim-nut span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-ctim-ds{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:8px}
+.hs-ctim-ls{max-height:260px;overflow:auto;margin-top:6px}
+.hs-ctim-mu{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14px}
+.hs-ctim-mu:hover,.hs-ctim-mu.on{background:rgba(127,127,127,.13)}
+.hs-ctim-av{width:28px;height:28px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
+.hs-ctim-phu{color:var(--ink-3)}
 .hs-chan-hop{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--line);background:var(--card);position:sticky;bottom:0}
 :root{--sb-bg:#157A5A;--sb-ink:#FFFFFF;--sb-ink-2:rgba(255,255,255,.68)}
 .hs-the-xem{display:flex;justify-content:center;margin-bottom:12px}
@@ -3208,7 +3208,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 288;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 289;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15587,13 +15587,13 @@ function hsFormHoSo(d) {
  */
 function hsChonTim(khungId, idGiaTri, trong, sauChon) {
   var k = $(khungId), ds = [], loc = [], vt = -1, TOI_DA = 300;
-  k.innerHTML = '<button type="button" class="o hs-ct-nut" id="' + idGiaTri + 'Nut" aria-haspopup="listbox"><span>' + thoat(trong) + '</span><b aria-hidden="true">▾</b></button>' +
+  k.innerHTML = '<button type="button" class="o hs-ctim-nut" id="' + idGiaTri + 'Nut" aria-haspopup="listbox"><span>' + thoat(trong) + '</span><b aria-hidden="true">▾</b></button>' +
     '<input type="hidden" id="' + idGiaTri + '" value="">' +
-    '<div class="hs-ct-ds" hidden><input class="o hs-ct-tim" placeholder="Lọc nhanh: tên, mã CN, phòng, tổ" autocomplete="off"><div class="hs-ct-ls" role="listbox"></div></div>';
-  var nut = k.querySelector('.hs-ct-nut'), an = $(idGiaTri), hop = k.querySelector('.hs-ct-ds'), tim = k.querySelector('.hs-ct-tim'), ls = k.querySelector('.hs-ct-ls');
+    '<div class="hs-ctim-ds" hidden><input class="o hs-ctim-tim" placeholder="Lọc nhanh: tên, mã CN, phòng, tổ" autocomplete="off"><div class="hs-ctim-ls" role="listbox"></div></div>';
+  var nut = k.querySelector('.hs-ctim-nut'), an = $(idGiaTri), hop = k.querySelector('.hs-ctim-ds'), tim = k.querySelector('.hs-ctim-tim'), ls = k.querySelector('.hs-ctim-ls');
   var mu = function (r, i) {
-    return '<div class="hs-ct-mu' + (i === vt ? ' on' : '') + '" role="option" data-i="' + i + '">' + (r ? '<span class="hs-ct-av">' + hsChuCai(r.ten) + '</span><span><b>' + thoat(r.ten) + '</b>' +
-      (r.phu ? ' <span class="hs-ct-phu">· ' + thoat(r.phu) + '</span>' : '') + '</span>' : '<span class="hs-ct-phu">' + thoat(trong) + '</span>') + '</div>';
+    return '<div class="hs-ctim-mu' + (i === vt ? ' on' : '') + '" role="option" data-i="' + i + '">' + (r ? '<span class="hs-ctim-av">' + hsChuCai(r.ten) + '</span><span><b>' + thoat(r.ten) + '</b>' +
+      (r.phu ? ' <span class="hs-ctim-phu">· ' + thoat(r.phu) + '</span>' : '') + '</span>' : '<span class="hs-ctim-phu">' + thoat(trong) + '</span>') + '</div>';
   };
   var ve = function () {
     var q = tim.value.trim().toUpperCase();
@@ -15621,7 +15621,7 @@ function hsChonTim(khungId, idGiaTri, trong, sauChon) {
     else if (ev.key === 'Escape') { dong(); nut.focus(); }
     var on = ls.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
   };
-  ls.onclick = function (ev) { var m = ev.target.closest('.hs-ct-mu'); if (!m) return; var i = +m.dataset.i; chon(i === -2 ? null : loc[i]); };
+  ls.onclick = function (ev) { var m = ev.target.closest('.hs-ctim-mu'); if (!m) return; var i = +m.dataset.i; chon(i === -2 ? null : loc[i]); };
   return {
     datDs: function (moi, thongBao) { ds = moi || []; nut.firstChild.innerHTML = thoat(thongBao || trong); if (!hop.hidden) ve(); },
     dangTai: function () { nut.firstChild.textContent = 'Đang tải danh sách…'; }
@@ -15633,7 +15633,7 @@ function hsFormGiaThuoc(g, chuHo) {
   var laSua = !!g;
   var chonChuHo = !laSua && !chuHo;
   hsMo(laSua ? 'Sửa gia thuộc — ' + g.ten : 'Thêm gia thuộc' + (chuHo ? ' của ' + chuHo.ten : ''), '<div id="hsFLoi"></div><div class="hs-form">' +
-    (chonChuHo ? '<div class="rong2"><label class="nhan" for="hsFChuHoNut">Người lao động (chủ hộ)</label><div class="hs-ct" id="hsFChuHoKhung"></div></div>' : '') +
+    (chonChuHo ? '<div class="rong2"><label class="nhan" for="hsFChuHoNut">Người lao động (chủ hộ)</label><div class="hs-ctim" id="hsFChuHoKhung"></div></div>' : '') +
     hsO('hsFTen', 'Họ tên', laSua ? g.ten : '', { max: 120 }) + hsO('hsFQh', 'Quan hệ với người lao động', laSua ? g.quanHe : 'Con', { chon: _hs.quanHe.length ? _hs.quanHe : ['Vợ', 'Chồng', 'Con', 'Khác'] }) +
     hsO('hsFGt', 'Giới tính', laSua ? g.gt : '', { chon: [['', '—'], ['NAM', 'Nam'], ['NU', 'Nữ']] }) + hsO('hsFSinh', 'Ngày sinh', laSua ? g.sinh : '', { kieu: 'date' }) +
     hsO('hsFGiayTo', 'Số giấy tờ (nếu có)', '', { max: 40, goiY: laSua && g.soGiayTo ? 'Đã có ' + g.soGiayTo + ' — để trống nếu không đổi' : '' }) +
