@@ -2974,7 +2974,15 @@ veNutTheme();
 var GD_MOI = /[?&]gd=moi\b/.test(location.search) ? (ghiLS('crck2_gd', 'moi'), true)
   : /[?&]gd=cu\b/.test(location.search) ? (ghiLS('crck2_gd', 'cu'), false) : docLS('crck2_gd') === 'moi';
 var _gd = { menu: [] };
-var GD_HINH_NHOM = { banLamViec: 'viec', tongQuan: 'tq', banDo: 'bando', sanLuong: 'cay', nhanSu: 'nguoi', anNinhCuTru: 'khien', baoCao: 'so', quanTri: 'qt' };
+var GD_HINH_NHOM = { banLamViec: 'viec', tongQuan: 'tq', banDo: 'bando', sanLuong: 'cay', nhanSu: 'nguoi', anNinhCuTru: 'khien', baoCao: 'baoCao', quanTri: 'khoa' };
+// Biểu tượng từng trang trong menu trái (nét 24x24 cùng kiểu bộ giao diện; định nghĩa trong CRCK_CAU_HINH.hinh)
+var GD_HINH_TAB = {
+  banLamViec: 'viec', baoCaoTD: 'tq', banDoLo: 'bando',
+  tongQuan: 'tq', sanLuong: 'cay', tramCan: 'can', drc: 'giot', slTheoCn: 'nguoiSo', giaoKhoan: 'giao', nangSuatVuon: 'tang',
+  tqNhanSu: 'tq', nhanSu: 'nguoiNhom', chamCong: 'lichCheck', xepHang: 'cup', xepLoai: 'sao', khoMieng: 'nang', luong: 'tien', heSoLuong: 'heSo',
+  tqAnNinh: 'tq', hoSo: 'the', cuTru: 'nha', danhGia: 'danhGia', anNinh: 'qr', khach: 'khach', theId: 'theQr', baoCaoAn: 'baoCao',
+  baoCao: 'baoCao', phanQuyen: 'khoa', taiKhoan: 'tk', nguoiDung: 'thietBi', phieuBase: 'phieu'
+};
 function batGdMoi() {
   var dau = document.head;
   ['https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@400;600&display=swap', 'ui/crck.css', 'ui/crck-thanh-phan.css']
@@ -2999,7 +3007,30 @@ function batGdMoi() {
       bando: '<path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
       cay: '<path d="M12 21v-8M12 13c-4 0-6-3-6-6 4 0 6 2 6 6zM12 15c3 0 5-2 5-5-3 0-5 2-5 5z"/>',
       nguoi: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
-      khien: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/>'
+      khien: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
+      can: '<path d="M12 4v16M7 20h10M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/>',
+      giot: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+      nguoiSo: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M17.5 20v-5M21 20v-8"/>',
+      giao: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>',
+      tang: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+      nguoiNhom: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>',
+      lichCheck: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
+      cup: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M10 17h4"/>',
+      sao: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+      nang: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+      tien: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>',
+      heSo: '<path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+      the: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0M14 10h4M14 14h3"/>',
+      nha: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10M10 20v-5h4v5"/>',
+      danhGia: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m12 10 1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>',
+      qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-4M14 18v3"/>',
+      khach: '<circle cx="10" cy="8" r="3.5"/><path d="M3 20a7 7 0 0 1 14 0M19 4v5M16.5 6.5h5"/>',
+      theQr: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h3v3H7zM14 9h3M14 13h3M7 16h10"/>',
+      baoCao: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 17v-3M12 17v-6M15 17v-4"/>',
+      khoa: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
+      tk: '<circle cx="10" cy="8" r="3.5"/><path d="M3 20a7 7 0 0 1 11-5.7"/><circle cx="18" cy="17" r="2.5"/><path d="M18 13v1.5M18 19.5V21M14 17h1.5M20.5 17H22"/>',
+      thietBi: '<rect x="3" y="4" width="13" height="10" rx="1.5"/><path d="M7 18h5"/><rect x="16" y="9" width="5" height="11" rx="1"/>',
+      phieu: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/>'
     }
   };
   var sc = document.createElement('script');
@@ -3054,10 +3085,10 @@ function gdVeMenu() {
   NHOM_TAB.forEach(function (nh) {
     var ds = nh.tabs.filter(function (t) { return !tabAn(t); });
     if (!ds.length) return;
-    var hinh = GD_HINH_NHOM[nh.id] || 'ds';
+    var hinh = ds.length === 1 ? (GD_HINH_TAB[ds[0]] || GD_HINH_NHOM[nh.id] || 'ds') : (GD_HINH_NHOM[nh.id] || 'ds');
     if (ds.length === 1) { m.push({ id: nh.id, ten: nh.ten, hinh: hinh, link: function () { return '#'; } }); return; }
     m.push({ id: nh.id, ten: nh.ten, hinh: hinh, muc: ds.map(function (t) {
-      return { id: t, ten: TEN_TAB[t] || t, hinh: 'ds', nhan: hh[t] ? String(hh[t]) : '', link: function () { return '#'; } };
+      return { id: t, ten: TEN_TAB[t] || t, hinh: GD_HINH_TAB[t] || 'ds', nhan: hh[t] ? String(hh[t]) : '', link: function () { return '#'; } };
     }) });
   });
   var nh = timNhom(S.nhom), don = !!nh && nh.tabs.filter(function (t) { return !tabAn(t); }).length === 1;
@@ -3342,7 +3373,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 291;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 292;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
