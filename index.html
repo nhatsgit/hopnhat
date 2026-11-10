@@ -3127,7 +3127,10 @@ function batGdMoi() {
     // Bấm menu: chuyển trang ngay trong ứng dụng (không tải lại), giữ đúng nhóm cha như menu cũ
     CRCK.khiBam = function (ph, muc) {
       var nh = timNhom(ph); if (!nh) return false;
-      var t = muc === ph ? nh.tabs.filter(function (x) { return !tabAn(x); })[0] : muc;
+      // Nhóm 1 trang (mục bấm thẳng, data-ckmuc = nhóm:nhóm) mở trang duy nhất; nhóm nhiều trang thì muc luôn là mã trang —
+      // kể cả khi trùng tên nhóm (trang "nhanSu" trong nhóm Nhân sự, "sanLuong" trong nhóm Sản lượng)
+      var ds = nh.tabs.filter(function (x) { return !tabAn(x); });
+      var t = ds.length === 1 ? ds[0] : muc;
       if (!t) return false;
       S.trang = 1; chuyenTab(t, ph); return true;
     };
@@ -3566,7 +3569,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 301;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 302;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
