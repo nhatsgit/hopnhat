@@ -1483,6 +1483,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
       <div class="ben-duoi">
         <button class="btn nho" id="nutDongBoDM" style="display:none" title="Đẩy 37 bảng danh mục sang BigQuery">Đồng bộ danh mục</button>
         <button class="btn nho" id="nutDongBoPS" style="display:none" title="Đẩy chấm công, giao khoán, CC phần cạo sang BigQuery; bù phần sản lượng đã duyệt nếu bị lỡ">Đồng bộ chấm công</button>
+        <button class="btn nho" id="nutKhoBq" style="display:none" title="Chép nguyên trạng mọi tab Sheet (kể cả dòng chưa duyệt) sang kho BigQuery mới — bước 1 của việc bỏ Sheet">Chép sang kho BigQuery</button>
         <div class="ben-nut">
           <button class="btn nho nut-ngon-ngu" type="button" data-khong-dich></button>
           <button class="btn nho" id="nutTai">Tải lại</button>
@@ -3565,7 +3566,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 304;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 305;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -13645,6 +13646,7 @@ function vaoApp(d, vtChon) {
   var laAdmin = S.vaiTroHienThi === 'ADMIN';
   $('nutDongBoDM').style.display = laAdmin ? '' : 'none';
   $('nutDongBoPS').style.display = laAdmin ? '' : 'none';
+  $('nutKhoBq').style.display = laAdmin ? '' : 'none';
   $('phienBan').hidden = !laAdmin;   // chỉ Admin thấy số phiên bản
   if (laAdmin) taiPhienBan();
   henNapThuVien();
@@ -14660,6 +14662,58 @@ function ganNutDongBo(id, nhom, nhan) {
 }
 ganNutDongBo('nutDongBoDM', 'danhMuc', 'Đồng bộ danh mục');
 ganNutDongBo('nutDongBoPS', 'phatSinh', 'Đồng bộ chấm công');
+
+/* Chép Sheet sang kho BigQuery (crck2-api lib/kho_bq.js): mỗi tab 1 lần gọi chép + 1 lần đối chiếu từng ô.
+   Chỉ Admin đăng nhập Google. Không hiện giá trị ô nào — chỉ số dòng, kiểu cột, kết quả đối chiếu. */
+var _kho = { ds: [], kq: {}, chay: false };
+function khoGoi(action, them) {
+  return goiQua(S.apiDoc, action, Object.assign({ vaiTro: S.vaiTro, maDonVi: S.maDonVi, vaiTroHien: S.vaiTroHienThi, phienDN: S.phienDN }, them || {}), 300000);
+}
+function khoVe() {
+  var tong = 0;
+  $('khoBang').innerHTML = '<thead><tr><th>Tab Sheet</th><th>Đích</th><th>Đã nạp</th><th>Kết quả</th><th></th></tr></thead><tbody>' + _kho.ds.map(function (t, i) {
+    var k = _kho.kq[t.ten] || {};
+    if (t.daNap) tong++;
+    return '<tr><td><b>' + thoat(t.ten) + '</b></td><td class="hs-phu">' + thoat(t.dataset.replace('crck2_', '') + '.' + t.bang) + '</td><td>' +
+      (t.daNap ? soVN(t.daNap.soDong, 0) + ' dòng<br><span class="hs-phu">' + thoat(String(t.daNap.luc || '').slice(0, 16)) + '</span>' : '<span class="hs-phu">chưa</span>') + '</td><td>' +
+      (k.html || '') + '</td><td><button class="btn nho" type="button" data-kho-chep="' + i + '"' + (_kho.chay ? ' disabled' : '') + '>Chép</button></td></tr>';
+  }).join('') + '</tbody>';
+  $('khoTom').textContent = _kho.ds.length + ' tab · đã nạp ' + tong;
+}
+function khoChep1(t) {
+  _kho.kq[t.ten] = { html: '<span class="vi tap">Đang chép…</span>' }; khoVe();
+  return khoGoi('khoChepBang', { ten: t.ten }).then(function (r) {
+    t.daNap = { soDong: r.soDong, luc: 'vừa chép' };
+    _kho.kq[t.ten] = { html: '<span class="vi tap">Đang đối chiếu ' + soVN(r.soDong, 0) + ' dòng…</span>' }; khoVe();
+    return khoGoi('khoDoiChieu', { ten: t.ten }).then(function (d) {
+      var dat = !d.lechO && !d.lechDong;
+      _kho.kq[t.ten] = { dat: dat, html: '<span class="vi ' + (dat ? 'ok">ĐẠT' : 'canh">LỆCH') + '</span> ' + soVN(r.soDong, 0) + ' dòng · ' + r.soCot + ' cột · ' + (r.giay + d.giay) + ' giây' +
+        (dat ? '' : '<br><span class="hs-phu">' + (d.lechDong ? d.lechDong + ' dòng lệch. ' : '') + (d.lechO ? d.lechO + ' ô lệch, vd ' + thoat(d.viDu) : '') + '</span>') };
+    });
+  }).catch(function (e) {
+    _kho.kq[t.ten] = { html: '<span class="vi canh">Lỗi</span> <span class="hs-phu">' + thoat(e.message) + '</span>' };
+  }).then(khoVe);
+}
+$('nutKhoBq').onclick = function () {
+  if (!S.phienDN) { baoLoi('thongBao', 'Chép sang kho BigQuery cần đăng nhập Admin bằng tài khoản Google.'); return; }
+  hsMo('Chép dữ liệu sang kho BigQuery', '<div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div>Chép <b>nguyên trạng</b> mọi tab Sheet, kể cả dòng chưa duyệt, giữ đúng trạng thái và kiểu từng ô. ' +
+    'Dữ liệu cá nhân vào dataset riêng <b>crck2_ca_nhan</b>. Sheet không bị sửa gì. Chép lại một tab là làm lại từ đầu bảng đó. Mỗi tab xong sẽ tự đối chiếu từng ô với Sheet.</div></div>' +
+    '<div id="khoLoi"></div><div style="display:flex;gap:8px;align-items:center;margin:10px 0"><button class="btn chinh" type="button" id="khoTatCa">Chép tất cả</button>' +
+    '<button class="btn" type="button" id="khoChua">Chép tab chưa nạp</button><span class="hs-phu" id="khoTom">Đang đọc danh sách tab…</span></div>' +
+    '<div class="cuon"><table id="khoBang"></table></div>');
+  var chayLan = function (ds) {
+    if (_kho.chay || !ds.length) return;
+    _kho.chay = true; khoVe();
+    ds.reduce(function (p, t) { return p.then(function () { return khoChep1(t); }); }, Promise.resolve())
+      .then(function () { _kho.chay = false; khoVe(); var hong = _kho.ds.filter(function (t) { return _kho.kq[t.ten] && _kho.kq[t.ten].dat === false; }).length;
+        $('khoTom').textContent += hong ? ' · ' + hong + ' tab lệch' : ' · xong'; });
+  };
+  $('khoTatCa').onclick = function () { chayLan(_kho.ds.slice()); };
+  $('khoChua').onclick = function () { chayLan(_kho.ds.filter(function (t) { return !t.daNap; })); };
+  $('khoBang').onclick = function (ev) { var b = ev.target.closest('[data-kho-chep]'); if (b && !_kho.chay) chayLan([_kho.ds[+b.dataset.khoChep]]); };
+  khoGoi('khoDanhSach').then(function (d) { _kho.ds = d.tab; khoVe(); })
+    .catch(function (e) { baoLoi('khoLoi', e.message); $('khoTom').textContent = ''; });
+};
 
 $('nutLoc').onclick = function () {
   S.trang = 1;
