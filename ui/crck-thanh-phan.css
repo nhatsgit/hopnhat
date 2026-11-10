@@ -1,0 +1,54 @@
+/* Thành phần dùng trong nội dung trang (thẻ, lưới thẻ, nhãn trạng thái, bảng, nút lọc).
+   Dùng cùng crck.css: chỉ dựa vào các biến màu ở :root nên đổi màu thương hiệu ở một chỗ là đổi hết. */
+
+/* Thẻ */
+.ck-the { background: var(--mau-card); border: 1px solid var(--mau-line); border-radius: var(--r-lg); box-shadow: var(--sh-1); padding: 14px 16px; }
+.ck-the h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.ck-the .phu { margin: 2px 0 8px; font-size: 13.5px; color: var(--muted); }
+
+/* Lưới thẻ kiểu tổng quan: thẻ tự chia cột theo bề rộng (330px/cột), thẻ không bị cắt đôi giữa hai cột */
+.ck-luoi { column-width: 330px; column-gap: 16px; margin-top: 16px; }
+.ck-luoi > .ck-the { break-inside: avoid; margin-bottom: 16px; display: flex; flex-direction: column; gap: 2px; }
+.ck-luoi > .ck-the.rong { column-span: all; }
+
+/* Dòng tin trong thẻ: biểu tượng + chữ */
+.ck-tin { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-size: 14px; line-height: 1.45; }
+.ck-tin > i { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: var(--brand-700); }
+.ck-tin > i svg { width: 18px; height: 18px; }
+.ck-them { align-self: flex-start; margin-top: 6px; border: 0; background: none; padding: 4px 0; color: var(--brand-700); font: 600 13.5px var(--font); cursor: pointer; }
+
+/* Nhãn trạng thái: ok / canh-bao / loi / tin / xam */
+.ck-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 99px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ck-chip.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.ck-chip.canh-bao { background: var(--warn-bg); color: var(--warn-fg); }
+.ck-chip.loi { background: var(--bad-bg); color: var(--bad-fg); }
+.ck-chip.tin { background: var(--info-bg); color: var(--info-fg); }
+.ck-chip.xam { background: var(--gray-bg); color: var(--gray-fg); }
+
+/* Nút lọc dạng hộp nhóm (Tất cả | A | B): nút đang chọn nền xanh */
+.ck-loc { display: inline-flex; padding: 3px; gap: 2px; background: var(--mau-card); border: 1px solid var(--mau-line); border-radius: 10px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.ck-loc::-webkit-scrollbar { display: none; }
+.ck-loc button { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--ink-phu); font: 500 14px var(--font); cursor: pointer; white-space: nowrap; }
+.ck-loc button:hover { background: var(--hover-bg); }
+.ck-loc button.chon { background: var(--brand); color: #fff; font-weight: 600; }
+.ck-hang-loc { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; margin: 16px 0 0; }
+
+/* Bảng: cuộn ngang trong khung bo góc, tiêu đề dính khi cuộn dọc */
+.ck-bang { overflow-x: auto; background: var(--mau-card); border: 1px solid var(--mau-line); border-radius: var(--r-lg); box-shadow: var(--sh-1); }
+.ck-bang table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ck-bang th { position: sticky; top: 0; padding: 10px 14px; background: var(--soft); border-bottom: 1px solid var(--mau-line); color: var(--muted); font-size: 12.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; text-align: left; white-space: nowrap; }
+.ck-bang td { padding: 10px 14px; border-bottom: 1px solid var(--vach); vertical-align: top; }
+.ck-bang tbody tr:hover { background: var(--row-hover); }
+.ck-bang tr:last-child td { border-bottom: 0; }
+.ck-bang .so { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Điện thoại: bảng thành danh sách thẻ. Thêm data-nhan="Tên cột" vào từng <td> */
+@media (max-width: 720px) {
+  .ck-luoi { column-width: auto; }
+  .ck-bang.the-dt { border: 0; background: none; box-shadow: none; overflow: visible; }
+  .ck-bang.the-dt table, .ck-bang.the-dt tbody, .ck-bang.the-dt tr, .ck-bang.the-dt td { display: block; width: 100%; }
+  .ck-bang.the-dt thead { display: none; }
+  .ck-bang.the-dt tr { margin-bottom: 10px; padding: 10px 14px; background: var(--mau-card); border: 1px solid var(--mau-line); border-radius: var(--r); box-shadow: var(--sh-1); }
+  .ck-bang.the-dt td { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border: 0; text-align: right; }
+  .ck-bang.the-dt td::before { content: attr(data-nhan); flex: none; color: var(--muted); text-align: left; }
+}
