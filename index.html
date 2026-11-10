@@ -212,7 +212,7 @@ body.ck .gdm-phai .nut-chuong{position:relative;top:auto;right:auto;width:38px;h
 @media (max-width:900px){body.ck .ck-tim{display:block!important;flex:0 0 38px;min-width:38px;margin-left:auto}
 body.ck .ck-tim input{width:38px;padding:0;color:transparent;background:none;border-color:transparent;cursor:pointer}
 body.ck .ck-tim input::placeholder{color:transparent}
-body.ck .ck-tim:focus-within{position:absolute;left:8px;right:8px;top:10px;z-index:70;flex:none;margin:0}
+body.ck .ck-tim:focus-within{position:absolute;left:8px;right:8px;top:10px;z-index:120;flex:none;margin:0}
 body.ck .ck-tim:focus-within input{width:100%;padding:0 12px 0 36px;color:var(--mau-ink);background:var(--mau-card);border-color:var(--brand-200);cursor:text}
 body.ck .ck-tim:focus-within input::placeholder{color:var(--faint)}}
 @media (max-width:720px){body.ck .ck-top{padding-left:10px;padding-right:10px;gap:8px}.gdm-phai{gap:2px}body.ck .gdm-phai .nut-chuong,.gdm-av{width:34px;height:34px}}
@@ -3434,7 +3434,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 296;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 297;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
