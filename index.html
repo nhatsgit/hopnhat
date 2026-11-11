@@ -3315,7 +3315,7 @@ var API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbxYf9uiBWGamSgj6CZ7W
 var API_DOC_MAC_DINH = 'https://hopnhat-api-736195905021.us-central1.run.app/api/exec';
 /* BỎ SHEET + APPS SCRIPT: true = mọi lệnh trước đây gửi Apps Script nay gửi máy Apps Script giả lập trên Cloud Run
    (/gas/exec, chạy nguyên mã .gs trên kho BigQuery). Chỉ bật cùng lúc Cloud Run bật KHO_CHINH=1. */
-var KHO_CHINH = false;
+var KHO_CHINH = true;
 if (KHO_CHINH) API_MAC_DINH = API_DOC_MAC_DINH.replace(/\/api\/exec$/, '/gas/exec');
 var LENH_DOC = {
   meta: 1, dangNhap: 1, tongQuan: 1, sanLuong: 1, xuatTatCa: 1, phieu: 1,
@@ -3570,7 +3570,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 306;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 307;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
