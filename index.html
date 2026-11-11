@@ -2363,7 +2363,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     </section>
     <section id="pBanLamViec" style="display:none">
       <div class="blv-dau">
-        <div style="min-width:0"><h1 id="blvChao">Xin chào</h1><div class="blv-phu" id="blvPhu"></div></div>
+        <div style="min-width:0"><div class="blv-phu" id="blvPhu"></div></div>
         <div class="blv-nut"><button class="btn nho" id="blvNutHd" type="button">Hướng dẫn</button><button class="btn nho" id="blvLamMoi" type="button">Làm mới</button></div>
       </div>
       <div class="blv-hd" id="blvHd" hidden>
@@ -3570,7 +3570,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 307;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 308;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17165,9 +17165,6 @@ var BLV_NHOM_MUC = { cao: 'Gấp', vua: 'Trong ngày', thap: 'Nên làm' };
 function blvMauAi(ai) { for (var i = 0; i < (ai || []).length; i++) if (BLV_MAU[ai[i]]) return ai[i]; return '__HE_THONG'; }
 
 function veDauBlv() {
-  var gio = new Date().getHours();
-  var buoi = gio < 11 ? 'Chào buổi sáng' : gio < 13 ? 'Chào buổi trưa' : gio < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
-  $('blvChao').textContent = buoi + ', ' + (S.hoTenDN || tenVaiTro(S.vaiTroHienThi));
   var thu = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'][new Date().getDay()];
   $('blvPhu').textContent = tenVaiTro(S.vaiTroHienThi) + ' · ' + (S.maDonVi || '') + ' · ' + thu + ', ' + ngayVN(dinhDangISO(new Date()));
 }
