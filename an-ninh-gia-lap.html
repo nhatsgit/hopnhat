@@ -309,9 +309,10 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
         <button class="btn sm" id="btnAuto" aria-pressed="false">Bắt đầu tự phát</button>
         <label class="chip">Nhịp
           <select id="autoSpeed" aria-label="Nhịp tự phát">
-            <option value="5000">5 giây</option>
-            <option value="2500">2,5 giây</option>
-            <option value="9000">9 giây</option>
+            <option value="60000" selected>1 phút / lần</option>
+            <option value="30000">30 giây / lần</option>
+            <option value="10000">10 giây / lần</option>
+            <option value="5000">5 giây / lần</option>
           </select>
         </label>
         <label class="chip"><input type="checkbox" id="swDem"> Giờ đêm (02:30)</label>
@@ -867,7 +868,7 @@ function veTQ(){
       '<rect class="z '+nong('Đội 5')+'" x="280" y="140" width="220" height="80" rx="8"/><text class="zt" x="294" y="163">Đội 5</text><text class="zs" x="294" y="179">đường lô · cổng barie</text>'+
       '<rect class="z '+nong('Trạm cân')+'" x="150" y="250" width="220" height="76" rx="8"/><text class="zt" x="164" y="273">Trạm cân</text><text class="zs" x="164" y="289">xe mủ vào cân · biển gắn phiếu cân</text>'+
       pulse('Cổng nông trường',150,85)+pulse('Kho mủ',390,85)+pulse('Đội 1',150,195)+pulse('Đội 5',390,195)+pulse('Trạm cân',300,300)+
-      mg('chinh',226,52)+mg('kho',294,52)+mg('d1',226,162)+mg('d5',294,162)+mg('tc',346,272)+mc('cam-kho',486,48)+mc('cam-rao',486,92)+
+      mg('chinh',222,48)+mg('kho',482,48)+mg('d1',222,158)+mg('d5',482,158)+mg('tc',352,268)+mc('cam-kho',486,96)+mc('cam-rao',466,96)+
       '</svg></div>'+
     '<div class="card"><h3>Sự kiện mới nhất <span class="r">'+S.events.filter(e => hopKhu(e.khu)).length+' sự kiện</span></h3>'+
       (gan.length ? '<div class="list">'+gan.map(e => '<div class="inl"><span class="mono muted">'+hms(e.t)+'</span>'+(e.nhom==='xe'?'<span class="plate">'+esc(e.bien)+'</span>':'<b>'+esc(e.ten||e.vung||'Không xác định')+'</b>')+'<span class="muted">'+esc(e.cong||e.vung)+'</span><span class="pill '+pillMuc(e.kq.muc)+'">'+esc(e.kq.tenKQ)+'</span>'+(e.delayed?'<span class="pill late">đến trễ</span>':'')+'</div>').join('')+'</div>' : '<div class="empty">Chưa có sự kiện. Bấm một nút “Phát tín hiệu giả lập” ở cột trái.</div>')+
