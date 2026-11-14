@@ -218,6 +218,12 @@ details summary{cursor:pointer;color:var(--accent);font-size:12px;white-space:no
 td pre.raw{max-width:min(520px,70vw);max-height:220px;margin-top:6px}
 .gate-sub{margin:-4px 0 8px;font-size:12px;color:var(--muted)}
 [hidden]{display:none!important}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(10,16,12,.5);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal-box{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(1000px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:14px 16px;display:grid;gap:10px}
+.modal-head{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;position:sticky;top:-14px;background:var(--surface);padding:4px 0 8px;border-bottom:1px solid var(--line);z-index:1}
+.modal-head h3{margin:0;font-size:16px;font-weight:650}
+.modal-head p{margin:2px 0 0;font-size:12px;color:var(--muted)}
 </style>
 <script>
 /* Nhúng trong app CRCK2: theo chế độ sáng/tối của app mẹ */
@@ -368,6 +374,12 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
     </section>
   </div>
   <p class="foot">Trang giả lập chạy hoàn toàn trên trình duyệt. Tên người, biển số, địa chỉ IP là dữ liệu mẫu, tải lại trang là mất.</p>
+</div>
+<div class="modal" id="tbModal" hidden role="dialog" aria-modal="true" aria-labelledby="tbModalTitle">
+  <div class="modal-box">
+    <div class="modal-head"><div><h3 id="tbModalTitle">Sự kiện thiết bị</h3><p id="tbModalSub"></p></div><button class="btn sm" data-act="tbdong" id="tbModalDong">Đóng</button></div>
+    <div id="tbModalBody"></div>
+  </div>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -619,6 +631,7 @@ function phat(sig){
     if (Math.random() < .35) m.queue.push(Object.assign({}, e, {banSao:true}));   // relay gửi lại 2 lần — máy chủ phải bỏ bản trùng
   }
   // Thông báo cho mỗi tín hiệu (cảnh báo đã có thông báo riêng thì không lặp)
+  if (!taoCB) guiChuong(TEN_SIG[sig]+' · '+moTaNgan(e), (e.cong || e.vung)+' → '+e.kq.tenKQ+(m.online ? '' : ' · relay giữ lại, chờ có mạng'), m.online ? e.kq.muc : 'warn');
   if (S.tb && !taoCB){
     const noi = e.cong || e.vung;
     thongBao(m.online ? (e.kq.muc==='crit'?'crit':e.kq.muc==='warn'?'warn':'ok') : 'warn',
@@ -652,9 +665,15 @@ function taoCanhBao(c){
   const a = Object.assign({id:'CB-'+String(S.aSeq++).padStart(3,'0'), ms, han: ms + han*1000, hanGiay:han, tt:'moi', leo:false, lichSu:[], t:c.t||gioMo()}, c);
   S.alerts.unshift(a);
   ghiNhatKy('Hệ thống', 'Tạo cảnh báo '+a.id, a.tieuDe + ' · ' + (a.vung||'') + (a.tre ? ' · đến trễ do relay mất mạng' : ''));
+  guiChuong((a.muc==='crit'?'Khẩn: ':'Cảnh báo: ')+a.tieuDe, (a.vung||'')+' · '+a.id+(a.tre?' · đến trễ':''), a.muc);
   if (a.muc==='crit'){ thongBao('crit', a.tieuDe, a.vung+' · '+a.id+' · cần xác nhận trong 60 giây'); beep(true); }
   else if (a.muc==='warn'){ thongBao('warn', a.tieuDe, a.vung+' · '+a.id); beep(false); }
   return a;
+}
+/** Đưa vào chuông 🔔 của app mẹ (khi trang được nhúng trong CRCK2). Chạy riêng thì bỏ qua. */
+function guiChuong(tieuDe, noiDung, muc){
+  if (S.khoiTao) return;
+  try { if (window.parent !== window && typeof window.parent.crck2ThongBaoGiaLap === 'function') window.parent.crck2ThongBaoGiaLap({tieuDe, noiDung, muc}); } catch (x) {}
 }
 function ghiNhatKy(ai, viec, ct){ S.audit.unshift({t:gioMo(), ai, viec, ct:ct||''}); }
 
@@ -673,6 +692,7 @@ function datMang(mat){
     m.queue.forEach(e => { if (mayChuNhan(e, true)) nhan++; else bo++; });
     m.queue = [];
     ghiNhatKy('Relay '+g.ten, 'Gửi bù sau khi có mạng', nhan+' sự kiện đến trễ, bỏ '+bo+' bản trùng (mất mạng từ '+hms(m.lechMang)+')');
+    guiChuong('Relay '+g.ten+' có mạng trở lại', 'Gửi bù '+nhan+' sự kiện, bỏ '+bo+' bản trùng', 'ok');
     thongBao('ok', 'Relay '+g.ten+' có mạng trở lại', n ? ('Đã gửi bù '+nhan+' sự kiện, bỏ '+bo+' bản trùng. Các dòng gắn nhãn “đến trễ”.') : 'Không có sự kiện tồn.');
     S.alerts.filter(a => a.hTang==='relay-'+g.id && a.tt!=='dong').forEach(a => { a.tt='dong'; a.ketLuan='Tự đóng: relay có mạng lại'; a.lichSu.push(hms(gioMo())+' tự đóng'); });
     m.lechMang = null;
@@ -806,7 +826,7 @@ function veBanner(){
   $('#bdTb').innerHTML = off ? '<span class="badge">'+off+'</span>' : '';
   $('#khuLoc').innerHTML = '<option value="">Tất cả khu vực</option>' + KHU.map(k => '<option'+(S.khuLoc===k?' selected':'')+'>'+esc(k)+'</option>').join('');
 }
-function veTat(){ veTrai(); veBanner(); vePanel(); }
+function veTat(){ veTrai(); veBanner(); vePanel(); veModalTb(); }
 
 function vePanel(){
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab===S.tab ? 'true' : 'false'));
@@ -931,14 +951,13 @@ function veTB(){
       return '<tr'+(S.tbChon===d.id?' class="chon"':'')+'><td><b>'+esc(d.ten)+'</b></td><td>'+esc(d.khu)+(d.cong?'<br><span class="muted">'+esc(congTheoId(d.cong).ten)+'</span>':'')+'</td><td>'+esc(d.loai)+'<br><span class="muted">'+esc(d.model)+' · '+esc(d.fw)+'</span></td><td class="mono">'+d.ip+'</td><td class="mono" data-last="'+d.id+'">'+giay+' giây trước</td><td><span class="pill '+(tat?'crit':'ok')+'">'+(tat?(d.loai==='Relay'?'Mất Internet':'Mất kết nối'):'Trực tuyến')+'</span></td>'+
         '<td><button class="btn sm'+(S.tbChon===d.id?' pri':'')+'" data-act="tbxem" data-dev="'+d.id+'" aria-pressed="'+(S.tbChon===d.id)+'">'+(S.tbChon===d.id?'Đang xem · ':'Xem · ')+n+'</button></td></tr>';
     }).join('')+'</tbody></table></div>';
-  return bang + (S.tbChon ? veNhatKyTb(dev(S.tbChon)) : '<p class="note">Bấm “Xem” ở một thiết bị để mở nhật ký sự kiện riêng của thiết bị đó. Relay mỗi cổng gửi heartbeat 10 giây một lần; lỡ 3 nhịp thì máy chủ báo mất kết nối.</p>');
+  return bang + ('<p class="note">Bấm “Xem” ở một thiết bị để mở cửa sổ danh sách sự kiện riêng của thiết bị đó. Relay mỗi cổng gửi heartbeat 10 giây một lần; lỡ 3 nhịp thì máy chủ báo mất kết nối.</p>');
 }
 function veNhatKyTb(d){
   const ds = logCua(d), sk = ds.filter(x => !x.hb);
   const dem = k => sk.filter(x => trangThaiTb(x)[0].indexOf(k) === 0).length;
   const tre = sk.filter(x => !x.mat && x.e.delayed && daNhan.has(x.e.id)).length;
-  return '<div class="card"><h3>Nhật ký sự kiện · '+esc(d.ten)+' <span class="r"><button class="btn sm" data-act="tbxem" data-dev="'+d.id+'">Đóng</button></span></h3>'+
-    '<div class="kpis" style="margin-bottom:10px">'+
+  return '<div class="kpis">'+
       '<div class="kpi"><span>Tín hiệu đã phát</span><b>'+sk.length+'</b><small>'+esc(d.ip)+' · '+esc(d.model)+'</small></div>'+
       '<div class="kpi ok"><span>Đã lên máy chủ</span><b>'+dem('Đã lên')+'</b><small>'+tre+' đến trễ</small></div>'+
       '<div class="kpi '+(dem('Chờ')?'warn':'')+'"><span>Chờ gửi tại relay</span><b>'+dem('Chờ')+'</b><small>gửi khi có mạng lại</small></div>'+
@@ -950,8 +969,17 @@ function veNhatKyTb(d){
         if (x.hb) return '<tr><td class="mono">'+hms(x.t)+'</td><td>Heartbeat</td><td class="muted">—</td><td class="muted">'+esc(x.d)+'</td><td><span class="pill '+tt[1]+'">'+tt[0]+'</span></td><td><details><summary>Xem</summary><pre class="raw mono">'+esc(x.raw)+'</pre></details></td></tr>';
         const e = x.e;
         return '<tr><td class="mono">'+hms(e.t)+'</td><td>'+esc(TEN_SIG[e.sig]||e.sig)+'</td><td>'+(e.nhom==='xe'?'<span class="plate">'+esc(e.bien)+'</span>':esc(moTaNgan(e)))+'</td><td>'+(x.mat?'<span class="muted">—</span>':'<span class="pill '+pillMuc(e.kq.muc)+'">'+esc(e.kq.tenKQ)+'</span>')+'</td><td><span class="pill '+tt[1]+'">'+tt[0]+'</span></td><td><details><summary>'+esc(e.rawLoai.split(' · ').pop())+'</summary><pre class="raw mono">'+esc(e.raw)+'</pre></details></td></tr>';
-      }).join('')+'</tbody></table></div>' : '<div class="empty">Thiết bị này chưa phát tín hiệu nào. Chọn đúng cổng ở thanh “Phát tín hiệu giả lập” rồi bấm một nút.</div>')+
-  '</div>';
+      }).join('')+'</tbody></table></div>' : '<div class="empty">Thiết bị này chưa phát tín hiệu nào. Chọn đúng cổng ở thanh “Phát tín hiệu giả lập” rồi bấm một nút.</div>');
+}
+/** Cửa sổ nổi danh sách sự kiện của 1 thiết bị — tự cập nhật khi có tín hiệu mới (giữ nguyên nếu không có gì đổi). */
+function veModalTb(){
+  const m = $('#tbModal');
+  if (!S.tbChon){ m.hidden = true; return; }
+  const d = dev(S.tbChon), n = logCua(d).length + ':' + daNhan.size;
+  $('#tbModalTitle').textContent = 'Sự kiện · ' + d.ten;
+  $('#tbModalSub').textContent = d.khu + (d.cong ? ' · ' + congTheoId(d.cong).ten : '') + ' · ' + d.ip + ' · ' + d.model;
+  if (m.hidden || S.tbModalN !== n){ $('#tbModalBody').innerHTML = veNhatKyTb(d); S.tbModalN = n; }
+  if (m.hidden){ m.hidden = false; $('#tbModalDong').focus(); }
 }
 
 function veNK(){
@@ -962,6 +990,7 @@ function veNK(){
 
 /* ---------- Sự kiện giao diện ---------- */
 document.addEventListener('click', ev => {
+  if (ev.target.id==='tbModal'){ dongModalTb(); return; }   // bấm ra ngoài cửa sổ
   const nh = ev.target.closest('[data-nhom]');
   if (nh){ document.querySelectorAll('[data-nhom]').forEach(b => b.setAttribute('aria-selected', b===nh ? 'true' : 'false'));
     document.querySelectorAll('[data-nhomp]').forEach(p => { p.hidden = p.dataset.nhomp !== nh.dataset.nhom; }); return; }
@@ -972,7 +1001,8 @@ document.addEventListener('click', ev => {
   const a = ev.target.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act, id = a.dataset.id;
   if (act==='choxe' || act==='tuchoi'){ const ly = document.getElementById('ly-'+id); xuLy(id, act, ly ? ly.value.trim() : ''); return; }
-  if (act==='tbxem'){ S.tbChon = S.tbChon===a.dataset.dev ? '' : a.dataset.dev; vePanel(); return; }
+  if (act==='tbxem'){ S.tbChon = a.dataset.dev; S.tbModalN = ''; veModalTb(); vePanel(); return; }
+  if (act==='tbdong'){ dongModalTb(); return; }
   if (act==='dong'){ xuLy(id, 'dong', a.dataset.kl); return; }
   if (act==='xacnhan' || act==='xuat'){ xuLy(id, act); return; }
   if (act==='motay'){
@@ -1005,6 +1035,11 @@ document.addEventListener('change', ev => {
   if (id==='swDem'){ S.dem = ev.target.checked; thongBao('info', S.dem?'Đã chuyển giờ đêm':'Đã chuyển giờ ngày', S.dem?'Xâm nhập thành báo động khẩn; công nhân hành chính bị từ chối.':'Xâm nhập là cần xử lý.'); }
   if (id==='autoSpeed' && S.auto){ batTuDong(false); batTuDong(true); }
 });
+function dongModalTb(){
+  const id = S.tbChon; S.tbChon = ''; veModalTb(); vePanel();
+  const b = id && document.querySelector('[data-act="tbxem"][data-dev="'+id+'"]'); if (b) b.focus();
+}
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && S.tbChon) dongModalTb(); });
 function doiCong(){
   const g = congHt();
   $('#gate').classList.remove('mo'); $('#gateState').textContent = 'Barie đóng';
@@ -1072,7 +1107,7 @@ setInterval(() => {
 
 /* ---------- Dữ liệu mẫu ban đầu ---------- */
 function khoiTao(){
-  const snd = S.sound, tb = S.tb; S.sound = false; S.tb = false;
+  const snd = S.sound, tb = S.tb; S.sound = false; S.tb = false; S.khoiTao = true;   // dữ liệu mẫu: không đẩy vào chuông
   S.congHt = 'chinh'; ['xe_trang','mat_ok','mat_ok','xe_trang','xe_ra'].forEach(s => phat(s));
   S.congHt = 'khuo'; ['mat_ok','mat_ra'].forEach(s => phat(s));
   S.congHt = 'kho'; phat('xe_trang');
@@ -1082,7 +1117,7 @@ function khoiTao(){
   S.feed.forEach(f => { if (f.e) f.e.t = new Date(f.e.t.getTime() - 60000*(3 + Math.random()*40)); });
   S.ravao.sort((a,b) => b.t - a.t); S.events.sort((a,b) => b.t - a.t);
   document.querySelectorAll('.toast').forEach(t => t.remove());
-  S.sound = snd; S.tb = tb; S.tab = 'tq'; S.chon = null;
+  S.sound = snd; S.tb = tb; S.khoiTao = false; S.tab = 'tq'; S.chon = null;
   $('#gate').classList.remove('mo'); $('#gateState').textContent = 'Barie đóng';
   $('#ledTxt').textContent='XIN CHÀO'; $('#ledSub').textContent=congHt().ten;
   veTat();
