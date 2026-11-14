@@ -396,7 +396,9 @@ const CONG = [
   {id:'chinh', ten:'Cổng chính', khu:'Cổng nông trường', mang:'10.20.1', xe:true, nguoi:true},
   {id:'khuo', ten:'Cổng khu ở ĐSX02', khu:'Khu ở công nhân', mang:'10.20.2', xe:false, nguoi:true},
   {id:'kho', ten:'Cổng kho mủ', khu:'Kho mủ', mang:'10.20.4', xe:true, nguoi:true},
-  {id:'pb', ten:'Cổng kho phân bón', khu:'Kho phân bón', mang:'10.20.5', xe:true, nguoi:false}
+  {id:'pb', ten:'Cổng kho phân bón', khu:'Kho phân bón', mang:'10.20.5', xe:true, nguoi:false},
+  {id:'d1', ten:'Cổng barie Đội 1', khu:'Đội 1', mang:'10.20.6', xe:true, nguoi:false},
+  {id:'d5', ten:'Cổng barie Đội 5', khu:'Đội 5', mang:'10.20.7', xe:true, nguoi:false}
 ];
 const KHU = [...new Set(CONG.map(c => c.khu))];
 const loaiCong = c => c.xe && c.nguoi ? 'Người và xe' : c.xe ? 'Xe' : 'Người đi bộ';
@@ -858,14 +860,14 @@ function veTQ(){
   '</div>'+
   '<div class="two">'+
     '<div class="card map"><h3>Sơ đồ khu vực <span class="r">ô vuông: cổng · chấm: camera · đỏ: mất kết nối</span></h3>'+
-      '<svg viewBox="0 0 520 300" role="img" aria-label="Sơ đồ khu vực, cổng và camera">'+
-      '<path class="road" d="M20 250 H260 V40 M260 150 H500"/>'+
+      '<svg viewBox="0 0 520 400" role="img" aria-label="Sơ đồ khu vực, cổng và camera">'+
+      '<path class="road" d="M20 250 H260 V40 M260 150 H500 M260 250 V340 M130 340 H390"/>'+
       '<rect class="z '+nong('Cổng nông trường')+'" x="20" y="205" width="170" height="80" rx="8"/><text class="zt" x="34" y="228">Cổng nông trường</text><text class="zs" x="34" y="244">2 làn xe · cổng xoay</text>'+
       '<rect class="z '+nong('Khu ở công nhân')+'" x="20" y="30" width="200" height="120" rx="8"/><text class="zt" x="34" y="54">Khu ở công nhân</text><text class="zs" x="34" y="70">ký túc xá ĐSX02</text>'+
       '<rect class="z '+nong('Kho mủ')+'" x="300" y="30" width="200" height="95" rx="8"/><text class="zt" x="314" y="54">Kho mủ</text><text class="zs" x="314" y="70">vùng cấm ngoài giờ</text>'+
       '<rect class="z '+nong('Kho phân bón')+'" x="300" y="175" width="200" height="110" rx="8" stroke-dasharray="6 4"/><text class="zt" x="314" y="199">Kho phân bón</text><text class="zs" x="314" y="215">hàng rào có camera</text>'+
-      pulse('Cổng nông trường',105,262)+pulse('Khu ở công nhân',120,105)+pulse('Kho mủ',400,95)+pulse('Kho phân bón',400,250)+
-      mg('chinh',172,250)+mg('khuo',202,132)+mg('kho',312,110)+mg('pb',312,268)+mc('cam-kho',480,50)+mc('cam-rao',480,195)+
+      pulse('Cổng nông trường',105,262)+pulse('Khu ở công nhân',120,105)+pulse('Kho mủ',400,95)+pulse('Kho phân bón',400,250)+'<rect class="z '+nong('Đội 1')+'" x="20" y="310" width="220" height="76" rx="8"/><text class="zt" x="34" y="333">Đội 1</text><text class="zs" x="34" y="349">đường lô · cổng barie</text>'+'<rect class="z '+nong('Đội 5')+'" x="280" y="310" width="220" height="76" rx="8"/><text class="zt" x="294" y="333">Đội 5</text><text class="zs" x="294" y="349">đường lô · cổng barie</text>'+
+      mg('chinh',172,250)+mg('khuo',202,132)+mg('kho',312,110)+mg('pb',312,268)+mg('d1',222,328)+mg('d5',298,328)+mc('cam-kho',480,50)+mc('cam-rao',480,195)+
       '</svg></div>'+
     '<div class="card"><h3>Sự kiện mới nhất <span class="r">'+S.events.filter(e => hopKhu(e.khu)).length+' sự kiện</span></h3>'+
       (gan.length ? '<div class="list">'+gan.map(e => '<div class="inl"><span class="mono muted">'+hms(e.t)+'</span>'+(e.nhom==='xe'?'<span class="plate">'+esc(e.bien)+'</span>':'<b>'+esc(e.ten||e.vung||'Không xác định')+'</b>')+'<span class="muted">'+esc(e.cong||e.vung)+'</span><span class="pill '+pillMuc(e.kq.muc)+'">'+esc(e.kq.tenKQ)+'</span>'+(e.delayed?'<span class="pill late">đến trễ</span>':'')+'</div>').join('')+'</div>' : '<div class="empty">Chưa có sự kiện. Bấm một nút “Phát tín hiệu giả lập” ở cột trái.</div>')+
