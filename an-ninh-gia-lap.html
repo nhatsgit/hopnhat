@@ -224,6 +224,9 @@ details summary{cursor:pointer;color:var(--accent);font-size:12px;white-space:no
 td pre.raw{max-width:min(520px,70vw);max-height:220px;margin-top:6px}
 .gate-sub{margin:-4px 0 8px;font-size:12px;color:var(--muted)}
 [hidden]{display:none!important}
+.map .bam{cursor:pointer}
+.map .bam:hover .md,.map .bam:focus-visible .md{stroke:var(--fg);stroke-width:2}
+.map .bam:focus{outline:none}
 .modal{position:fixed;inset:0;z-index:40;background:rgba(10,16,12,.5);display:grid;place-items:center;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .modal-box{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(1000px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:14px 16px;display:grid;gap:10px}
@@ -851,8 +854,8 @@ function veTQ(){
   const khach = S.khach.filter(k => (k.tt==='trong_khu'||k.tt==='qua_gio') && hopKhu(k.khu)).length;
   const nong = k => mo.some(a => a.khu===k && a.muc==='crit') ? 'hot' : mo.some(a => a.khu===k) ? 'wn' : '';
   const pulse = (k, x, y) => mo.some(a => a.khu===k) ? '<circle class="pulse" cx="'+x+'" cy="'+y+'" r="10"/>' : '';
-  const mg = (id, x, y) => { const c = congTheoId(id), m = S.mang[id]; return '<g><rect class="md'+(m.online?'':' off')+'" x="'+(x-7)+'" y="'+(y-7)+'" width="14" height="14" rx="3"><title>'+esc(c.ten)+(m.online?'':' · mất Internet')+'</title></rect>'+(id===S.congHt?'<rect x="'+(x-11)+'" y="'+(y-11)+'" width="22" height="22" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" class="muted"/>':'')+'</g>'; };
-  const mc = (id, x, y) => '<circle class="md'+(dev(id).online?'':' off')+'" cx="'+x+'" cy="'+y+'" r="5"><title>'+esc(dev(id).ten)+'</title></circle>';
+  const mg = (id, x, y) => { const c = congTheoId(id), m = S.mang[id]; return '<g class="bam" data-act="tbxem" data-dev="relay-'+id+'" role="button" tabindex="0" aria-label="Nhật ký sự kiện '+esc(c.ten)+'"><rect x="'+(x-14)+'" y="'+(y-14)+'" width="28" height="28" fill="transparent"/><rect class="md'+(m.online?'':' off')+'" x="'+(x-7)+'" y="'+(y-7)+'" width="14" height="14" rx="3"><title>'+esc(c.ten)+(m.online?'':' · mất Internet')+'</title></rect>'+(id===S.congHt?'<rect x="'+(x-11)+'" y="'+(y-11)+'" width="22" height="22" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" class="muted"/>':'')+'</g>'; };
+  const mc = (id, x, y) => '<g class="bam" data-act="tbxem" data-dev="'+id+'" role="button" tabindex="0" aria-label="Nhật ký sự kiện '+esc(dev(id).ten)+'"><circle cx="'+x+'" cy="'+y+'" r="11" fill="transparent"/><circle class="md'+(dev(id).online?'':' off')+'" cx="'+x+'" cy="'+y+'" r="5"><title>'+esc(dev(id).ten)+'</title></circle></g>';
   const gan = S.events.filter(e => hopKhu(e.khu)).slice(0,6);
   return '<div class="kpis">'+
     '<div class="kpi ok"><span>Lượt vào hợp lệ</span><b>'+hn+'</b><small>'+ra+' lượt ra · hôm nay</small></div>'+
@@ -862,7 +865,7 @@ function veTQ(){
     '<div class="kpi"><span>Khách trong khu</span><b>'+khach+'</b><small>'+gia+' báo động giả đã gắn nhãn</small></div>'+
   '</div>'+
   '<div class="two">'+
-    '<div class="card map"><h3>Sơ đồ khu vực <span class="r">ô vuông: cổng · chấm: camera · đỏ: mất kết nối</span></h3>'+
+    '<div class="card map"><h3>Sơ đồ khu vực <span class="r">bấm ô vuông (cổng) hoặc chấm (camera) để xem nhật ký · đỏ: mất kết nối</span></h3>'+
       '<svg viewBox="0 0 520 340" role="img" aria-label="Sơ đồ khu vực, cổng và camera">'+
       '<path class="road" d="M260 16 V262 M130 125 H390 M130 235 H390"/>'+
       '<rect class="z '+nong('Cổng nông trường')+'" x="20" y="30" width="220" height="80" rx="8"/><text class="zt" x="34" y="53">Cổng nông trường</text><text class="zs" x="34" y="69">2 làn xe · cổng xoay</text>'+
@@ -982,8 +985,10 @@ function veModalTb(){
   const m = $('#tbModal');
   if (!S.tbChon){ m.hidden = true; return; }
   const d = dev(S.tbChon), n = logCua(d).length + ':' + daNhan.size;
-  $('#tbModalTitle').textContent = 'Sự kiện · ' + d.ten;
-  $('#tbModalSub').textContent = d.khu + (d.cong ? ' · ' + congTheoId(d.cong).ten : '') + ' · ' + d.ip + ' · ' + d.model;
+  const laCong = d.loai === 'Relay';
+  $('#tbModalTitle').textContent = laCong ? 'Nhật ký cổng · ' + congTheoId(d.cong).ten : 'Sự kiện · ' + d.ten;
+  $('#tbModalSub').textContent = laCong ? d.khu + ' · ' + loaiCong(congTheoId(d.cong)) + ' · mọi tín hiệu qua relay ' + d.ip + (S.mang[d.cong].online ? '' : ' · đang mất Internet')
+                                        : d.khu + (d.cong ? ' · ' + congTheoId(d.cong).ten : '') + ' · ' + d.ip + ' · ' + d.model;
   if (m.hidden || S.tbModalN !== n){ $('#tbModalBody').innerHTML = veNhatKyTb(d); S.tbModalN = n; }
   if (m.hidden){ m.hidden = false; $('#tbModalDong').focus(); }
 }
@@ -1045,7 +1050,11 @@ function dongModalTb(){
   const id = S.tbChon; S.tbChon = ''; veModalTb(); vePanel();
   const b = id && document.querySelector('[data-act="tbxem"][data-dev="'+id+'"]'); if (b) b.focus();
 }
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && S.tbChon) dongModalTb(); });
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && S.tbChon) dongModalTb();
+  const g = ev.target.closest && ev.target.closest('.map .bam');   // ô cổng / camera trên sơ đồ: Enter hoặc Space để mở
+  if (g && (ev.key === 'Enter' || ev.key === ' ')){ ev.preventDefault(); S.tbChon = g.dataset.dev; S.tbModalN = ''; veModalTb(); }
+});
 function doiCong(){
   const g = congHt();
   $('#gate').classList.remove('mo'); $('#gateState').textContent = 'Barie đóng';
