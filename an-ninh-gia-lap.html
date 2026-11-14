@@ -224,6 +224,7 @@ details summary{cursor:pointer;color:var(--accent);font-size:12px;white-space:no
 td pre.raw{max-width:min(520px,70vw);max-height:220px;margin-top:6px}
 .gate-sub{margin:-4px 0 8px;font-size:12px;color:var(--muted)}
 [hidden]{display:none!important}
+.grid:has(> .sim[hidden]){grid-template-columns:minmax(0,1fr)}
 .map .bam{cursor:pointer}
 .map .bam:hover .md,.map .bam:focus-visible .md{stroke:var(--fg);stroke-width:2}
 .map .bam:focus{outline:none}
@@ -328,7 +329,7 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
   </section>
 
   <div class="grid">
-    <aside class="sim" aria-label="Cổng đang giả lập">
+    <aside class="sim" aria-label="Cổng đang giả lập" hidden>   <!-- 14/11: ẩn theo yêu cầu (hình cổng, tín hiệu vừa phát, gói tin) — gói tin xem trong popup nhật ký -->
       <section class="box">
         <h2><span id="gateTen">Cổng chính</span> <span class="r muted" id="gateState">Barie đóng</span></h2>
         <p class="gate-sub" id="gateLoai"></p>
