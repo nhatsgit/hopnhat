@@ -207,7 +207,13 @@ td .th{width:58px;height:auto;display:block}
 .pick select{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:4px 8px;min-height:32px;font-size:13px;color:var(--fg);max-width:100%}
 .ctt{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
 .chip.on{border-color:var(--accent);background:var(--accent-soft)}
-.nhom{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding-bottom:8px}
+.nhom-hang{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px;min-width:0}
+.nhom{display:flex;gap:4px;overflow-x:auto;min-width:0;flex:1 1 420px}
+.tudong{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font-size:12.5px}
+.tudong b{font-size:12.5px}
+.tudong select{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:7px;padding:3px 6px;min-height:30px;font-size:12.5px}
+.tudong label{display:inline-flex;gap:5px;align-items:center;color:var(--muted)}
+#btnAuto[aria-pressed="true"]{background:var(--crit-soft);border-color:var(--crit);color:var(--crit);font-weight:600}
 .nhom button{border:1px solid transparent;background:none;border-radius:8px;padding:6px 11px;font-size:13px;color:var(--muted);font-weight:500;white-space:nowrap;min-height:34px}
 .nhom button:hover{color:var(--fg);background:var(--surface-2)}
 .nhom button[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg);font-weight:600}
@@ -263,13 +269,25 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
       </div>
       <div class="ctt" id="congTrangThai" aria-label="Trạng thái mạng từng cổng"></div>
     </div>
+    <div class="nhom-hang">
+    <div class="tudong" title="Tự phát chọn ngẫu nhiên theo cổng đang chọn: phần lớn là lượt hợp lệ, thỉnh thoảng có xe lạ, người lạ, xâm nhập">
+      <b>Tự động phát</b>
+      <button class="btn sm" id="btnAuto" aria-pressed="false">Bắt đầu</button>
+      <select id="autoSpeed" aria-label="Nhịp tự phát">
+        <option value="60000" selected>1 phút / lần</option>
+        <option value="30000">30 giây / lần</option>
+        <option value="10000">10 giây / lần</option>
+        <option value="5000">5 giây / lần</option>
+      </select>
+      <label><input type="checkbox" id="swDem"> Giờ đêm (02:30)</label>
+    </div>
     <div class="nhom" role="tablist" aria-label="Nhóm tín hiệu">
       <button type="button" role="tab" data-nhom="xe" aria-selected="true">Xe · camera biển số</button>
       <button type="button" role="tab" data-nhom="nguoi" aria-selected="false">Người · máy quẹt mặt</button>
       <button type="button" role="tab" data-nhom="xn" aria-selected="false">Xâm nhập · camera AcuSense</button>
       <button type="button" role="tab" data-nhom="kh" aria-selected="false">Khách · nhà thầu</button>
       <button type="button" role="tab" data-nhom="ht" aria-selected="false">Hạ tầng · mạng, điện</button>
-      <button type="button" role="tab" data-nhom="td" aria-selected="false">Tự động phát</button>
+    </div>
     </div>
     <div class="sigrow" data-nhomp="xe">
       <button class="sig" data-sig="xe_trang"><b>Xe nội bộ vào</b><span>Biển có trong danh sách trắng</span></button>
@@ -303,21 +321,6 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
       <div class="tg"><div><b id="swNetTen">Mất Internet tại cổng</b><span>Relay chạy tại chỗ, xếp hàng sự kiện</span></div><input type="checkbox" class="sw inv" id="swNet" aria-label="Mất Internet tại cổng đang chọn"></div>
       <div class="tg"><div><b>Camera hàng rào mất kết nối</b><span>Lỡ 3 nhịp heartbeat</span></div><input type="checkbox" class="sw inv" id="swCam" aria-label="Camera hàng rào mất kết nối"></div>
       <div class="tg"><div><b>Mất điện lưới</b><span>Cổng đang chọn chạy bằng UPS</span></div><input type="checkbox" class="sw inv" id="swPow" aria-label="Mất điện lưới"></div>
-    </div>
-    <div class="sigrow" data-nhomp="td" hidden>
-      <div class="auto">
-        <button class="btn sm" id="btnAuto" aria-pressed="false">Bắt đầu tự phát</button>
-        <label class="chip">Nhịp
-          <select id="autoSpeed" aria-label="Nhịp tự phát">
-            <option value="60000" selected>1 phút / lần</option>
-            <option value="30000">30 giây / lần</option>
-            <option value="10000">10 giây / lần</option>
-            <option value="5000">5 giây / lần</option>
-          </select>
-        </label>
-        <label class="chip"><input type="checkbox" id="swDem"> Giờ đêm (02:30)</label>
-      </div>
-      <p class="note" style="margin:0">Tự phát chọn ngẫu nhiên theo cổng đang chọn, phần lớn là lượt hợp lệ, thỉnh thoảng có xe lạ, người lạ, xâm nhập.</p>
     </div>
   </section>
 
@@ -1076,7 +1079,7 @@ document.addEventListener('submit', ev => {
 function batTuDong(on){
   clearInterval(S.auto); S.auto = null;
   $('#btnAuto').setAttribute('aria-pressed', on ? 'true' : 'false');
-  $('#btnAuto').textContent = on ? 'Dừng tự phát' : 'Bắt đầu tự phát';
+  $('#btnAuto').textContent = on ? 'Dừng' : 'Bắt đầu';
   if (on){
     S.auto = setInterval(() => {
       const g = congHt(), tui = [];
