@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bàn trực An ninh</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Bố cục: bàn trực 2 cột — trái = thiết bị giả phát tín hiệu (camera, máy quẹt mặt, relay), phải = tab An ninh trong app mẹ */
+:root{
+  --bg:#eef1ec; --surface:#ffffff; --surface-2:#f4f6f2; --line:#d8ded4; --fg:#18211c; --muted:#5b685f;
+  --accent:#2f7a3d; --accent-soft:#e3efe4; --accent-ink:#ffffff;
+  --good:#1e7f45; --good-soft:#e2f2e8; --warn:#9a5f0c; --warn-soft:#fbf0dc; --crit:#c0342a; --crit-soft:#fbe4e1; --info:#2c67a6; --info-soft:#e2ecf7;
+  --led-bg:#17120d; --led-fg:#ffb238; --plate-bg:#fbfbf4; --plate-ink:#163a63; --shadow:0 1px 2px rgba(20,30,24,.06),0 4px 14px rgba(20,30,24,.06);
+  --f-ui:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1411; --surface:#161c18; --surface-2:#1c2420; --line:#2a342e; --fg:#e3eae5; --muted:#97a59c;
+  --accent:#5cb26d; --accent-soft:#1d3122; --accent-ink:#0c180f;
+  --good:#4cc27a; --good-soft:#163222; --warn:#e3a63c; --warn-soft:#3a2c12; --crit:#f2675c; --crit-soft:#3d1a17; --info:#6ea9e6; --info-soft:#172a3d;
+  --led-bg:#0a0806; --led-fg:#ffb238; --plate-bg:#e8ebe2; --plate-ink:#163a63; --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1411; --surface:#161c18; --surface-2:#1c2420; --line:#2a342e; --fg:#e3eae5; --muted:#97a59c;
+  --accent:#5cb26d; --accent-soft:#1d3122; --accent-ink:#0c180f;
+  --good:#4cc27a; --good-soft:#163222; --warn:#e3a63c; --warn-soft:#3a2c12; --crit:#f2675c; --crit-soft:#3d1a17; --info:#6ea9e6; --info-soft:#172a3d;
+  --led-bg:#0a0806; --led-fg:#ffb238; --plate-bg:#e8ebe2; --plate-ink:#163a63; --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-ui);padding-block:14px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.wrap{max-width:1360px;margin:0 auto;display:grid;gap:14px}
+
+/* Thanh trên */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.brand{display:grid;gap:1px;margin-right:auto;min-width:0}
+.brand small{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.brand h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.01em;text-wrap:balance}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);font-size:12.5px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.ok{background:var(--good)} .dot.warn{background:var(--warn)} .dot.crit{background:var(--crit)}
+.chip select{border:0;background:transparent;padding:0;font-size:12.5px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 11px;min-height:34px;font-size:13px}
+.btn:hover{background:var(--surface-2)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.pri:hover{filter:brightness(1.06)}
+.btn.danger{border-color:var(--crit);color:var(--crit)}
+.btn.sm{min-height:30px;padding:4px 9px;font-size:12.5px}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+
+.grid{display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Cột trái: thiết bị giả */
+.sim{display:grid;gap:12px;min-width:0}
+@media (min-width:921px){.sim{position:sticky;top:max(12px,env(safe-area-inset-top,0px));max-height:calc(100vh - 24px);overflow:auto;padding-right:2px}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.box h2{margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+.box h2 .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+
+.gate{display:grid;gap:8px}
+.gate svg{width:100%;height:auto;display:block}
+.g-road{fill:var(--surface-2)} .g-line{stroke:var(--line);stroke-width:2;stroke-dasharray:8 6}
+.g-post{fill:var(--muted)} .g-booth{fill:var(--surface-2);stroke:var(--line)}
+.g-arm{transform-origin:62px 70px;transition:transform .9s cubic-bezier(.4,.1,.2,1)}
+.g-arm rect{fill:var(--crit)} .g-arm .s{fill:var(--surface)}
+.gate.mo .g-arm{transform:rotate(-78deg)}
+.g-cam{fill:var(--fg)} .g-flash{fill:var(--led-fg);opacity:0;transition:opacity .2s}
+.gate.chup .g-flash{opacity:.9}
+.g-txt{fill:var(--muted);font:11px var(--f-ui)}
+@media (prefers-reduced-motion:reduce){.g-arm{transition:none}}
+.led{background:var(--led-bg);color:var(--led-fg);font:600 15px/1.25 var(--f-mono);letter-spacing:.08em;padding:9px 12px;border-radius:8px;text-transform:uppercase;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-shadow:0 0 6px rgba(255,178,56,.55)}
+.led small{font-size:11px;opacity:.75;letter-spacing:.04em}
+
+details.grp{border-top:1px solid var(--line)}
+details.grp:first-of-type{border-top:0}
+details.grp summary{list-style:none;display:flex;align-items:center;gap:8px;padding:9px 2px;cursor:pointer;font-weight:600;font-size:13.5px}
+details.grp summary::-webkit-details-marker{display:none}
+details.grp summary::after{content:"+";margin-left:auto;color:var(--muted);font-family:var(--f-mono)}
+details.grp[open] summary::after{content:"−"}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 0 10px}
+.sig{display:grid;gap:1px;text-align:left;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:7px 9px;min-height:44px}
+.sig:hover{border-color:var(--accent)}
+.sig b{font-size:12.5px;font-weight:600}
+.sig span{font-size:11.5px;color:var(--muted);line-height:1.3}
+.sig.crit b{color:var(--crit)} .sig.warn b{color:var(--warn)}
+.sig:disabled{opacity:.45;cursor:not-allowed}
+.toggles{display:grid;gap:6px;padding:0 0 10px}
+.tg{display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface-2)}
+.tg div{display:grid;min-width:0}
+.tg b{font-size:12.5px} .tg span{font-size:11.5px;color:var(--muted)}
+.sw{appearance:none;width:38px;height:22px;border-radius:999px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .2s;border:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.sw:checked{background:var(--good)} .sw:checked::after{transform:translateX(16px)}
+.sw.inv:checked{background:var(--crit)}
+.auto{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:6px}
+
+.feed{display:grid;gap:4px;max-height:230px;overflow:auto}
+.fi{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 8px;text-align:left;border:1px solid transparent;border-radius:7px;background:none;padding:5px 6px;font-size:12px}
+.fi:hover,.fi.sel{background:var(--surface-2);border-color:var(--line)}
+.fi .t{color:var(--muted)} .fi .d{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi .k{grid-column:2;font-size:11.5px;color:var(--muted)}
+pre.raw{margin:0;max-height:300px;overflow:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;font:11.5px/1.5 var(--f-mono);white-space:pre}
+.note{font-size:11.5px;color:var(--muted);margin:6px 0 0}
+
+/* Cột phải: tab An ninh của app mẹ */
+.app{background:var(--surface);border:1px solid var(--line);border-radius:12px;min-width:0;overflow:hidden}
+.apphead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 14px 0}
+.apphead h2{margin:0;font-size:17px;font-weight:650}
+.apphead .crumb{font-size:12px;color:var(--muted)}
+.banner{margin:10px 14px 0;padding:9px 12px;border-radius:8px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+.banner.crit{background:var(--crit-soft);color:var(--fg);border:1px solid var(--crit)}
+.banner.warn{background:var(--warn-soft);border:1px solid var(--warn)}
+.tabs{display:flex;gap:2px;padding:10px 10px 0;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{border:0;background:none;padding:9px 12px;border-bottom:2px solid transparent;color:var(--muted);font-weight:500;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.badge{min-width:19px;height:19px;padding:0 6px;border-radius:999px;background:var(--crit);color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center}
+.badge.w{background:var(--warn)}
+.panel{padding:14px;display:grid;gap:14px;min-width:0}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:2px;background:var(--surface-2)}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi b{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kpi small{font-size:11.5px;color:var(--muted)}
+.kpi.crit b{color:var(--crit)} .kpi.warn b{color:var(--warn)} .kpi.ok b{color:var(--good)}
+.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}
+@media (max-width:1100px){.two{grid-template-columns:minmax(0,1fr)}}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.card h3{margin:0 0 8px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3 .r{margin-left:auto;font-weight:400;font-size:12px;color:var(--muted)}
+.map svg{width:100%;height:auto;display:block}
+.z{fill:var(--surface-2);stroke:var(--line);stroke-width:1.2}
+.z.hot{fill:var(--crit-soft);stroke:var(--crit);stroke-width:2}
+.z.wn{fill:var(--warn-soft);stroke:var(--warn)}
+.zt{fill:var(--fg);font:600 11.5px var(--f-ui)} .zs{fill:var(--muted);font:10.5px var(--f-ui)}
+.md{fill:var(--good)} .md.off{fill:var(--crit)}
+.pulse{fill:none;stroke:var(--crit);stroke-width:2;animation:pl 1.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pl{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(2.2)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.road{stroke:var(--line);stroke-width:6;fill:none;stroke-linecap:round}
+
+.list{display:grid;gap:8px}
+.al{display:grid;grid-template-columns:4px 96px minmax(0,1fr);gap:0 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.al .bar{background:var(--muted)}
+.al.crit .bar{background:var(--crit)} .al.warn .bar{background:var(--warn)} .al.info .bar{background:var(--info)}
+.al .th{width:96px;height:auto;align-self:start;margin:10px 0}
+.al .body{padding:10px 12px 10px 0;display:grid;gap:5px;min-width:0}
+.al .row1{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.al .row1 b{font-size:14px}
+.al .meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.al .acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.al.closed{opacity:.72}
+@media (max-width:560px){.al{grid-template-columns:4px minmax(0,1fr)}.al .th{display:none}.al .body{padding-left:10px}}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);white-space:nowrap}
+.pill.crit{background:var(--crit-soft);border-color:var(--crit);color:var(--crit)}
+.pill.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.pill.ok{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.pill.info{background:var(--info-soft);border-color:var(--info);color:var(--info)}
+.pill.late{border-style:dashed}
+.sla{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.sla.over{color:var(--crit);font-weight:600}
+.plate{display:inline-block;font:600 12.5px/1.2 var(--f-mono);letter-spacing:.04em;color:var(--plate-ink);background:var(--plate-bg);border:1.5px solid var(--plate-ink);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.inl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
+.inl input,.inl select,.form input,.form select{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 8px;min-height:32px;font-size:13px;min-width:0}
+.inl input{flex:1 1 180px}
+
+.tblw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td .th{width:58px;height:auto;display:block}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:end}
+.form label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.th-bg{fill:var(--surface-2)} .th-car{fill:var(--muted)} .th-wheel{fill:var(--fg)} .th-plate{fill:var(--plate-bg);stroke:var(--plate-ink);stroke-width:.8}
+.th-pt{fill:var(--plate-ink);font:700 6.6px var(--f-mono)}
+.th-head{fill:var(--muted)} .th-box{fill:none;stroke-width:2}
+.th-box.ok{stroke:var(--good)} .th-box.warn{stroke:var(--warn)} .th-box.crit{stroke:var(--crit)}
+.th-fence{stroke:var(--line);stroke-width:2} .th-tree{fill:var(--good);opacity:.5}
+.th-lbl{font:600 7px var(--f-ui);fill:var(--fg)}
+
+.toasts{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;z-index:30;width:min(340px,calc(100vw - 28px))}
+.toast{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--info);border-radius:10px;padding:9px 12px;box-shadow:var(--shadow);font-size:13px;display:grid;gap:2px;animation:tin .25s ease-out}
+.toast.crit{border-left-color:var(--crit)} .toast.warn{border-left-color:var(--warn)} .toast.ok{border-left-color:var(--good)}
+.toast b{font-size:13px}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+</style>
+<script>
+/* Nhúng trong app CRCK2: theo chế độ sáng/tối của app mẹ */
+(function(){function dong(){try{var t=parent.document.documentElement.getAttribute('data-theme');if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme');}catch(e){}}
+dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{attributes:true,attributeFilter:['data-theme']});}catch(e){}})();
+</script>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <small>CRCK2 · Module An ninh · bản giả lập</small>
+      <h1>Bàn trực An ninh</h1>
+    </div>
+    <div class="chips">
+      <span class="chip" id="chipRelay"><span class="dot ok"></span>Relay cổng chính: trực tuyến</span>
+      <span class="chip"><span class="dot"></span><span class="mono" id="clock">--:--:--</span></span>
+      <label class="chip">Vai trò
+        <select id="vaiTro" aria-label="Vai trò đang thao tác">
+          <option value="bao_ve">Bảo vệ trực · Ca A</option>
+          <option value="quan_ly">Quản lý an ninh</option>
+        </select>
+      </label>
+      <button class="btn sm" id="btnSound" aria-pressed="false">Bật âm báo</button>
+      <button class="btn sm" id="btnReset">Làm lại từ đầu</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <aside class="sim" aria-label="Thiết bị giả lập">
+      <section class="box">
+        <h2>Cổng chính <span class="r muted" id="gateState">Barie đóng</span></h2>
+        <div class="gate" id="gate">
+          <svg viewBox="0 0 340 110" role="img" aria-label="Làn xe cổng chính, camera biển số và barie">
+            <rect class="g-road" x="0" y="74" width="340" height="36"/>
+            <line class="g-line" x1="0" y1="92" x2="340" y2="92"/>
+            <rect class="g-booth" x="8" y="26" width="40" height="48" rx="3"/>
+            <text class="g-txt" x="28" y="54" text-anchor="middle">BV</text>
+            <rect class="g-post" x="56" y="58" width="12" height="18" rx="2"/>
+            <g class="g-arm"><rect x="62" y="66" width="230" height="8" rx="2"/><rect class="s" x="100" y="66" width="18" height="8"/><rect class="s" x="150" y="66" width="18" height="8"/><rect class="s" x="200" y="66" width="18" height="8"/><rect class="s" x="250" y="66" width="18" height="8"/></g>
+            <rect class="g-post" x="300" y="8" width="5" height="68"/>
+            <rect class="g-cam" x="284" y="6" width="26" height="12" rx="3"/>
+            <circle class="g-flash" cx="286" cy="12" r="9"/>
+            <text class="g-txt" x="296" y="30" text-anchor="end">ANPR</text>
+          </svg>
+          <div class="led" id="led" aria-live="polite"><span id="ledTxt">XIN CHÀO</span><small id="ledSub">làn vào</small></div>
+        </div>
+      </section>
+
+      <section class="box" aria-label="Phát tín hiệu">
+        <h2>Phát tín hiệu</h2>
+        <details class="grp" open>
+          <summary>Xe qua cổng · camera biển số</summary>
+          <div class="sigs">
+            <button class="sig" data-sig="xe_trang"><b>Xe nội bộ vào</b><span>Biển có trong danh sách trắng</span></button>
+            <button class="sig" data-sig="xe_ra"><b>Xe nội bộ ra</b><span>Làn ra, ghi giờ ra</span></button>
+            <button class="sig warn" data-sig="xe_la"><b>Xe lạ</b><span>Biển chưa đăng ký</span></button>
+            <button class="sig crit" data-sig="xe_den"><b>Xe bị cấm</b><span>Biển trong danh sách đen</span></button>
+            <button class="sig warn" data-sig="xe_mo"><b>Biển mờ</b><span>Tin cậy 41%, không chắc</span></button>
+            <button class="sig" data-sig="khach_den"><b>Xe khách đến</b><span>Biển đã đăng ký trước</span></button>
+          </div>
+        </details>
+        <details class="grp" open>
+          <summary>Người qua cổng · máy quẹt mặt</summary>
+          <div class="sigs">
+            <button class="sig" data-sig="mat_ok"><b>Công nhân vào</b><span>Khớp khuôn mặt, đúng giờ</span></button>
+            <button class="sig" data-sig="mat_khuo"><b>Về khu ở</b><span>Máy quẹt mặt khu ở ĐSX02</span></button>
+            <button class="sig warn" data-sig="mat_la"><b>Người lạ</b><span>Không có trong thư viện mặt</span></button>
+            <button class="sig warn" data-sig="mat_nghi"><b>Người đã nghỉ việc</b><span>Khớp danh sách cảnh báo</span></button>
+            <button class="sig crit" data-sig="mat_gia"><b>Giả mạo bằng ảnh</b><span>Máy phát hiện ảnh/điện thoại</span></button>
+            <button class="sig warn" data-sig="mat_dem"><b>Vào ngoài giờ</b><span>Khớp mặt nhưng sai khung giờ</span></button>
+          </div>
+        </details>
+        <details class="grp">
+          <summary>Xâm nhập · camera AcuSense</summary>
+          <div class="sigs">
+            <button class="sig crit" data-sig="rao"><b>Vượt hàng rào</b><span>Kho phân bón, phân loại: người</span></button>
+            <button class="sig crit" data-sig="kho"><b>Vào vùng cấm</b><span>Kho mủ, ngoài giờ làm</span></button>
+            <button class="sig warn" data-sig="bao_gia"><b>Báo động giả</b><span>Bóng cây đổ qua vạch</span></button>
+            <button class="sig warn" data-sig="xe_rao"><b>Xe dừng sát rào</b><span>Phân loại: xe, quá 3 phút</span></button>
+          </div>
+        </details>
+        <details class="grp">
+          <summary>Khách · nhà thầu</summary>
+          <div class="sigs">
+            <button class="sig" data-sig="khach_den"><b>Khách đến cổng</b><span>Đã đăng ký, mở theo quyền tạm</span></button>
+            <button class="sig warn" data-sig="khach_sai"><b>Khách vào sai khu</b><span>Quẹt ở khu ở, không được phép</span></button>
+            <button class="sig warn" data-sig="khach_qua"><b>Khách quá giờ</b><span>Hết hạn nhưng chưa ra</span></button>
+            <button class="sig" data-sig="khach_ra"><b>Khách ra cổng</b><span>Thu thẻ, ghi giờ ra</span></button>
+          </div>
+        </details>
+        <details class="grp" open>
+          <summary>Hạ tầng · mạng, thiết bị</summary>
+          <div class="toggles">
+            <div class="tg"><div><b>Mất Internet tại cổng</b><span>Relay chạy tại chỗ, xếp hàng sự kiện</span></div><input type="checkbox" class="sw inv" id="swNet" aria-label="Mất Internet tại cổng"></div>
+            <div class="tg"><div><b>Camera hàng rào mất kết nối</b><span>Lỡ 3 nhịp heartbeat</span></div><input type="checkbox" class="sw inv" id="swCam" aria-label="Camera hàng rào mất kết nối"></div>
+            <div class="tg"><div><b>Mất điện lưới</b><span>Chuyển sang bộ lưu điện (UPS)</span></div><input type="checkbox" class="sw inv" id="swPow" aria-label="Mất điện lưới"></div>
+          </div>
+        </details>
+        <details class="grp">
+          <summary>Tự động phát</summary>
+          <div class="auto">
+            <button class="btn sm" id="btnAuto" aria-pressed="false">Bắt đầu tự phát</button>
+            <label class="chip">Nhịp
+              <select id="autoSpeed" aria-label="Nhịp tự phát">
+                <option value="5000">5 giây</option>
+                <option value="2500">2,5 giây</option>
+                <option value="9000">9 giây</option>
+              </select>
+            </label>
+            <label class="chip"><input type="checkbox" id="swDem"> Giờ đêm (02:30)</label>
+          </div>
+          <p class="note">Tự phát chọn ngẫu nhiên, phần lớn là lượt hợp lệ, thỉnh thoảng có xe lạ, người lạ, xâm nhập.</p>
+        </details>
+      </section>
+
+      <section class="box">
+        <h2>Tín hiệu vừa phát <span class="r muted" id="queueInfo"></span></h2>
+        <div class="feed" id="feed"></div>
+      </section>
+
+      <section class="box">
+        <h2>Gói tin <span class="r muted" id="rawTitle">chọn một tín hiệu</span></h2>
+        <pre class="raw mono" id="raw">Bấm vào một dòng ở “Tín hiệu vừa phát” để xem gói tin thiết bị gửi lên.</pre>
+        <p class="note">Gói tin mô phỏng theo dạng ISAPI của Hikvision (ANPR, AccessControllerEvent, linedetection). Mã minor và trường phụ chỉ để minh hoạ.</p>
+      </section>
+    </aside>
+
+    <section class="app" aria-label="Tab An ninh trong app mẹ">
+      <div class="apphead">
+        <h2>An ninh</h2>
+        <span class="crumb">Quản trị hợp nhất › An ninh &amp; cư trú › An ninh · dữ liệu mẫu</span>
+      </div>
+      <div id="banners"></div>
+      <nav class="tabs" role="tablist" id="tabs">
+        <button class="tab" role="tab" data-tab="tq" aria-selected="true">Tổng quan</button>
+        <button class="tab" role="tab" data-tab="cb" aria-selected="false">Cảnh báo <span id="bdCb"></span></button>
+        <button class="tab" role="tab" data-tab="rv" aria-selected="false">Ra vào</button>
+        <button class="tab" role="tab" data-tab="kh" aria-selected="false">Khách</button>
+        <button class="tab" role="tab" data-tab="dt" aria-selected="false">Đối tượng</button>
+        <button class="tab" role="tab" data-tab="tb" aria-selected="false">Thiết bị <span id="bdTb"></span></button>
+        <button class="tab" role="tab" data-tab="nk" aria-selected="false">Nhật ký</button>
+      </nav>
+      <div class="panel" id="panel"></div>
+    </section>
+  </div>
+  <p class="foot">Trang giả lập chạy hoàn toàn trên trình duyệt. Tên người, biển số, địa chỉ IP là dữ liệu mẫu, tải lại trang là mất.</p>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const T0 = Date.now();
+
+/* ---------- Dữ liệu mẫu ---------- */
+function moi(){
+  return {
+    tab:'tq', vaiTro:'bao_ve', online:true, dem:false, mayHo:false, matDien:false, ups:100, sound:false, auto:null,
+    seq:1, aSeq:1, feed:[], chon:null, events:[], alerts:[], audit:[], queue:[], ravao:[], lechMang:null,
+    barie:'dong', led:['XIN CHÀO','làn vào'],
+    devices:[
+      {id:'relay', ten:'Trạm trung chuyển · cổng chính', loai:'Relay', model:'Mini PC + hàng đợi SQLite', ip:'10.20.1.2', fw:'relay 0.3', online:true, last:Date.now()},
+      {id:'anpr-vao', ten:'Camera biển số · làn vào', loai:'ANPR', model:'iDS-2CD7A26G0/P-IZHS', ip:'10.20.1.11', fw:'V5.5.800', online:true, last:Date.now()},
+      {id:'anpr-ra', ten:'Camera biển số · làn ra', loai:'ANPR', model:'iDS-2CD7A26G0/P-IZHS', ip:'10.20.1.12', fw:'V5.5.800', online:true, last:Date.now()},
+      {id:'mat-cong', ten:'Máy quẹt mặt · cổng chính', loai:'Khuôn mặt', model:'DS-K1T671MF', ip:'10.20.1.21', fw:'V3.2.30', online:true, last:Date.now()},
+      {id:'mat-khuo', ten:'Máy quẹt mặt · khu ở ĐSX02', loai:'Khuôn mặt', model:'DS-K1T671MF', ip:'10.20.2.21', fw:'V3.2.30', online:true, last:Date.now()},
+      {id:'cam-rao', ten:'Camera hàng rào · kho phân bón', loai:'AcuSense', model:'DS-2CD2646G2-IZS', ip:'10.20.3.31', fw:'V5.7.15', online:true, last:Date.now()},
+      {id:'cam-kho', ten:'Camera kho mủ', loai:'AcuSense', model:'DS-2CD2646G2-IZS', ip:'10.20.3.32', fw:'V5.7.15', online:true, last:Date.now()}
+    ],
+    xe:[
+      {bien:'KT 2A-4471', ghi:'Xe tải chở mủ · Đội 2', ds:'trang'},
+      {bien:'KT 3C-0218', ghi:'Xe bán tải · Ban giám đốc', ds:'trang'},
+      {bien:'PP 2B-9054', ghi:'Xe ben · Đội 4', ds:'trang'},
+      {bien:'KT 1A-6630', ghi:'Xe cứu thương nội bộ', ds:'trang'},
+      {bien:'PP 2BD-7730', ghi:'Cấm từ 09/2026 · vi phạm nội quy kho', ds:'den'}
+    ],
+    nguoi:[
+      {ma:'CN-D2-0141', ten:'Sok Dara', to:'Đ2-KV1', tt:'lam', ca:'Ca cạo 04:00–11:00'},
+      {ma:'CN-D2-0157', ten:'Chan Sophea', to:'Đ2-KV1', tt:'lam', ca:'Ca cạo 04:00–11:00'},
+      {ma:'CN-D1-0033', ten:'Nguyễn Văn Hùng', to:'Đ1-KV3', tt:'lam', ca:'Ca cạo 04:00–11:00'},
+      {ma:'CN-D3-0210', ten:'Phan Thị Lan', to:'Đ3-KV2', tt:'lam', ca:'Hành chính 07:00–17:00'},
+      {ma:'CN-D4-0072', ten:'Keo Ratha', to:'Đ4-KV1', tt:'lam', ca:'Hành chính 07:00–17:00'},
+      {ma:'CN-D2-0099', ten:'Chea Vanna', to:'Đ2-KV2', tt:'nghi', ca:'Nghỉ việc 30/10/2026'}
+    ],
+    khach:[]
+  };
+}
+let S = moi();
+const LA = ['PP 2AA-5512','SR 1B-2047','KC 3A-8810','BTB 2A-3391'];
+
+/* ---------- Thời gian ---------- */
+function gioMo(){
+  const d = new Date();
+  if (S.dem){ const p = Math.floor((Date.now()-T0)/60000); d.setHours(2, 30 + (p % 29)); }
+  return d;
+}
+const hms = d => pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+const iso = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+hms(d)+'+07:00';
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const dev = id => S.devices.find(d => d.id === id);
+const actor = () => S.vaiTro === 'quan_ly' ? 'Quản lý an ninh' : 'Bảo vệ trực · Ca A';
+
+/* ---------- Ảnh chụp giả ---------- */
+function thXe(bien){ return '<svg class="th" viewBox="0 0 120 72" aria-hidden="true"><rect class="th-bg" width="120" height="72"/><path class="th-car" d="M14 50 L22 32 Q25 26 32 26 H78 Q84 26 88 32 L98 44 H106 Q110 44 110 48 V55 H14Z"/><circle class="th-wheel" cx="34" cy="56" r="7"/><circle class="th-wheel" cx="90" cy="56" r="7"/><rect class="th-plate" x="38" y="43" width="44" height="12" rx="1.5"/><text class="th-pt" x="60" y="51.6" text-anchor="middle">'+esc(bien)+'</text></svg>'; }
+function thMat(muc, nhan){ return '<svg class="th" viewBox="0 0 120 72" aria-hidden="true"><rect class="th-bg" width="120" height="72"/><circle class="th-head" cx="60" cy="30" r="13"/><path class="th-head" d="M34 72 Q36 48 60 47 Q84 48 86 72Z"/><rect class="th-box '+muc+'" x="42" y="12" width="36" height="38" rx="3"/>'+(nhan?'<text class="th-lbl" x="60" y="9" text-anchor="middle">'+esc(nhan)+'</text>':'')+'</svg>'; }
+function thRao(muc, gia){ return '<svg class="th" viewBox="0 0 120 72" aria-hidden="true"><rect class="th-bg" width="120" height="72"/>'+[12,28,44,60,76,92,108].map(x=>'<line class="th-fence" x1="'+x+'" y1="20" x2="'+x+'" y2="66"/>').join('')+'<line class="th-fence" x1="4" y1="30" x2="116" y2="30"/><line class="th-fence" x1="4" y1="48" x2="116" y2="48"/>'+(gia?'<ellipse class="th-tree" cx="66" cy="40" rx="20" ry="13"/>':'<circle class="th-head" cx="66" cy="30" r="6"/><path class="th-head" d="M58 62 Q58 40 66 38 Q74 40 74 62Z"/>')+'<rect class="th-box '+muc+'" x="50" y="18" width="32" height="48" rx="2"/></svg>'; }
+function thTb(){ return '<svg class="th" viewBox="0 0 120 72" aria-hidden="true"><rect class="th-bg" width="120" height="72"/><rect class="th-car" x="40" y="24" width="40" height="20" rx="4"/><circle class="th-wheel" cx="50" cy="34" r="5"/><path class="th-fence" d="M60 44 V60"/><text class="th-lbl" x="60" y="16" text-anchor="middle">thiết bị</text></svg>'; }
+
+/* ---------- Gói tin ---------- */
+const bienTho = b => b.replace(/[\s-]/g,'');
+function xmlANPR(e){
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<EventNotificationAlert version="2.0">\n  <ipAddress>'+e.dev.ip+'</ipAddress>\n  <channelID>1</channelID>\n  <dateTime>'+iso(e.t)+'</dateTime>\n  <activePostCount>1</activePostCount>\n  <eventType>ANPR</eventType>\n  <eventState>active</eventState>\n  <eventDescription>ANPR</eventDescription>\n  <ANPR>\n    <country>KH</country>\n    <licensePlate>'+(e.tinCay<50?bienTho(e.bien).slice(0,4)+'??':bienTho(e.bien))+'</licensePlate>\n    <confidenceLevel>'+e.tinCay+'</confidenceLevel>\n    <direction>'+(e.huong==='ra'?'reverse':'forward')+'</direction>\n    <vehicleType>'+e.loaiXe+'</vehicleType>\n    <plateColor>white</plateColor>\n  </ANPR>\n  <pictureNum>2</pictureNum>\n</EventNotificationAlert>';
+}
+function jsonAcs(e){
+  return JSON.stringify({ipAddress:e.dev.ip, dateTime:iso(e.t), activePostCount:1, eventType:'AccessControllerEvent', eventState:'active',
+    AccessControllerEvent:{deviceName:e.dev.ten, major:5, minor:e.minor, employeeNoString:e.ma||'', name:e.ten||'', currentVerifyMode:'face',
+      attendanceStatus:e.huong==='ra'?'checkOut':'checkIn', mask:'no', livenessCheck:e.gia?'fail':'pass', similarity:e.giong, picturesNumber:1}}, null, 2);
+}
+function xmlXN(e){
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<EventNotificationAlert version="2.0">\n  <ipAddress>'+e.dev.ip+'</ipAddress>\n  <channelID>1</channelID>\n  <dateTime>'+iso(e.t)+'</dateTime>\n  <eventType>'+e.loaiXN+'</eventType>\n  <eventState>active</eventState>\n  <eventDescription>'+(e.loaiXN==='linedetection'?'Line Crossing':'Intrusion')+'</eventDescription>\n  <DetectionRegionList>\n    <DetectionRegionEntry>\n      <regionID>1</regionID>\n      <sensitivityLevel>60</sensitivityLevel>\n      <targetType>'+e.mucTieu+'</targetType>\n    </DetectionRegionEntry>\n  </DetectionRegionList>\n  <channelName>'+e.dev.ten+'</channelName>\n</EventNotificationAlert>';
+}
+function jsonHB(d, trang){ return JSON.stringify({type:'heartbeat', relay:'cong-chinh', device:d.id, ipAddress:d.ip, status:trang, missedBeats:trang==='timeout'?3:0, at:iso(gioMo())}, null, 2); }
+
+/* ---------- Thiết bị tạo tín hiệu ---------- */
+function taoTinHieu(sig){
+  const t = gioMo(), e = {id:'E'+(S.seq++), sig, t, ms:Date.now(), delayed:false};
+  const xeTrang = S.xe.filter(x => x.ds==='trang'), xeDen = S.xe.filter(x => x.ds==='den');
+  const lam = S.nguoi.filter(n => n.tt==='lam'), nghi = S.nguoi.filter(n => n.tt==='nghi');
+  if (sig.indexOf('xe_')===0 && sig!=='xe_rao' || sig==='khach_den' || sig==='khach_ra'){
+    let x, huong = (sig==='xe_ra'||sig==='khach_ra') ? 'ra' : 'vao';
+    if (sig==='xe_trang'||sig==='xe_ra') x = pick(xeTrang) || {bien:'KT 2A-4471', ghi:'Xe nội bộ'};
+    else if (sig==='xe_den') x = pick(xeDen) || {bien:'PP 2BD-7730', ghi:'Xe bị cấm'};
+    else if (sig==='xe_la') x = {bien:pick(LA), ghi:'Chưa đăng ký'};
+    else if (sig==='xe_mo') x = {bien:pick(xeTrang.concat([{bien:'KT 2A-4471'}])).bien, ghi:'Không đọc rõ'};
+    else if (sig==='khach_den'){
+      let k = S.khach.find(k => k.tt==='dang_ky');
+      if (!k){ k = taoKhachMau(); }
+      x = {bien:k.bien, ghi:'Khách: '+k.ten, khach:k.id};
+    } else {
+      const k = S.khach.find(k => k.tt==='trong_khu' || k.tt==='qua_gio');
+      if (!k){ thongBao('info','Chưa có khách nào trong khu','Bấm “Khách đến cổng” trước.'); return null; }
+      x = {bien:k.bien, ghi:'Khách: '+k.ten, khach:k.id};
+    }
+    Object.assign(e, {nhom:'xe', dev:dev(huong==='ra'?'anpr-ra':'anpr-vao'), bien:x.bien, ghi:x.ghi, khach:x.khach, huong,
+      tinCay: sig==='xe_mo' ? 41 : 90+Math.floor(Math.random()*9), loaiXe: pick(['truck','vehicle','SUVMPV','pickupTruck']), cong:'Cổng chính'});
+    e.raw = xmlANPR(e); e.rawLoai = 'ISAPI · XML · ANPR'; e.thumb = thXe(e.tinCay<50 ? bienTho(e.bien).slice(0,4)+'??' : e.bien);
+    return e;
+  }
+  if (sig.indexOf('mat_')===0 || sig==='khach_sai'){
+    let n = null, minor = 75, giong = 92+Math.floor(Math.random()*7), devId = 'mat-cong', huong = 'vao';
+    if (sig==='mat_ok'||sig==='mat_dem') n = pick(lam);
+    if (sig==='mat_khuo'){ n = pick(lam); devId = 'mat-khuo'; }
+    if (sig==='mat_nghi') n = pick(nghi) || {ma:'CN-D2-0099', ten:'Chea Vanna'};
+    if (sig==='mat_la'){ minor = 76; giong = 31+Math.floor(Math.random()*20); }
+    if (sig==='mat_gia'){ n = pick(lam); minor = 76; giong = 0; }
+    if (sig==='khach_sai'){
+      const k = S.khach.find(k => k.tt==='trong_khu' || k.tt==='qua_gio') || S.khach.find(k=>k.tt==='dang_ky');
+      if (!k){ thongBao('info','Chưa có khách','Đăng ký khách ở tab Khách hoặc bấm “Khách đến cổng”.'); return null; }
+      n = {ma:k.id, ten:k.ten}; devId = 'mat-khuo'; e.khach = k.id;
+    }
+    Object.assign(e, {nhom:'nguoi', dev:dev(devId), ma:n&&n.ma, ten:n&&n.ten, minor, giong, gia: sig==='mat_gia', huong,
+      cong: devId==='mat-khuo' ? 'Khu ở ĐSX02' : 'Cổng chính'});
+    e.raw = jsonAcs(e); e.rawLoai = 'ISAPI · JSON · AccessControllerEvent';
+    const muc = sig==='mat_gia' ? 'crit' : (sig==='mat_ok'||sig==='mat_khuo') ? 'ok' : 'warn';
+    e.thumb = thMat(muc, sig==='mat_gia' ? 'ảnh điện thoại' : n ? n.ma : 'không rõ');
+    return e;
+  }
+  if (sig==='rao'||sig==='kho'||sig==='bao_gia'||sig==='xe_rao'){
+    const d = dev(sig==='kho' ? 'cam-kho' : 'cam-rao');
+    Object.assign(e, {nhom:'xamnhap', dev:d, vung: sig==='kho' ? 'Kho mủ' : 'Hàng rào kho phân bón',
+      loaiXN: sig==='kho' ? 'fielddetection' : 'linedetection', mucTieu: sig==='xe_rao' ? 'vehicle' : 'human', gia: sig==='bao_gia'});
+    e.raw = xmlXN(e); e.rawLoai = 'ISAPI · XML · '+e.loaiXN;
+    e.thumb = sig==='xe_rao' ? thXe('?') : thRao(sig==='bao_gia' ? 'warn' : 'crit', sig==='bao_gia');
+    return e;
+  }
+  if (sig==='khach_qua'){
+    const k = S.khach.find(k => k.tt==='trong_khu');
+    if (!k){ thongBao('info','Chưa có khách trong khu','Bấm “Khách đến cổng” trước.'); return null; }
+    Object.assign(e, {nhom:'khach', dev:dev('relay'), khach:k.id, ten:k.ten, bien:k.bien});
+    e.raw = JSON.stringify({type:'visitorOverstay', relay:'cong-chinh', visitorId:k.id, plate:k.bien, validUntil:k.het, at:iso(t)}, null, 2);
+    e.rawLoai = 'Relay · JSON · quá hạn khách'; e.thumb = thXe(k.bien);
+    return e;
+  }
+  return null;
+}
+
+/* ---------- Relay tại cổng: quyết định tại chỗ, không cần Internet ---------- */
+function relayXuLy(e){
+  const kq = {ketQua:'ghi', tenKQ:'Ghi nhận', muc:'ok', canhBao:null, led:null, mo:false};
+  if (e.nhom==='xe'){
+    const x = S.xe.find(v => v.bien===e.bien);
+    const k = e.khach ? S.khach.find(v => v.id===e.khach) : S.khach.find(v => v.bien===e.bien && (v.tt==='dang_ky'||v.tt==='trong_khu'||v.tt==='qua_gio'));
+    if (e.tinCay < 50){ Object.assign(kq, {ketQua:'cho', tenKQ:'Chờ bảo vệ', muc:'warn', led:['VUI LÒNG CHỜ','đọc biển chưa rõ'],
+      canhBao:{muc:'warn', tieuDe:'Không đọc rõ biển số', chiTiet:'Độ tin cậy '+e.tinCay+'%. Bảo vệ đối chiếu ảnh rồi cho vào hoặc từ chối.', vung:'Cổng chính', choXe:true}}); }
+    else if (x && x.ds==='den'){ Object.assign(kq, {ketQua:'chan', tenKQ:'Chặn · danh sách đen', muc:'crit', led:['DỪNG XE','liên hệ bảo vệ'],
+      canhBao:{muc:'crit', tieuDe:'Xe trong danh sách đen tại cổng', chiTiet:x.ghi, vung:'Cổng chính'}}); }
+    else if (e.huong==='ra'){ Object.assign(kq, {ketQua:'qua', tenKQ:'Cho ra', mo:true, led:['CHÚC THƯỢNG LỘ BÌNH AN','làn ra']}); if (k) k.tt='da_ra', k.ra=hms(e.t); }
+    else if (x && x.ds==='trang'){ Object.assign(kq, {ketQua:'qua', tenKQ:'Cho vào', mo:true, led:['MỜI VÀO', x.ghi]}); }
+    else if (k){
+      const hetHan = k.hetMs < Date.now();
+      if (hetHan){ Object.assign(kq, {ketQua:'cho', tenKQ:'Chờ bảo vệ · quyền tạm hết hạn', muc:'warn', led:['VUI LÒNG CHỜ','quyền tạm hết hạn'],
+        canhBao:{muc:'warn', tieuDe:'Khách đến khi quyền tạm đã hết hạn', chiTiet:k.ten+' · '+k.cty, vung:'Cổng chính', choXe:true}}); }
+      else { Object.assign(kq, {ketQua:'qua', tenKQ:'Cho vào · khách', mo:true, led:['MỜI VÀO','khách · '+k.tiep]}); k.tt='trong_khu'; k.vao=hms(e.t); }
+    } else { Object.assign(kq, {ketQua:'cho', tenKQ:'Chờ bảo vệ · xe lạ', muc:'warn', led:['XE CHƯA ĐĂNG KÝ','bấm chuông gọi bảo vệ'],
+      canhBao:{muc:'warn', tieuDe:'Xe lạ chờ ở cổng', chiTiet:'Biển '+e.bien+' chưa đăng ký. Bảo vệ hỏi giấy tờ rồi quyết định.', vung:'Cổng chính', choXe:true}}); }
+  } else if (e.nhom==='nguoi'){
+    const s = e.sig, ten = e.ten ? e.ten+' ('+e.ma+')' : 'Không xác định';
+    if (s==='mat_ok'||s==='mat_khuo'){ Object.assign(kq, {ketQua:'qua', tenKQ: s==='mat_khuo'?'Cho vào khu ở':'Cho qua cổng xoay'}); }
+    else if (s==='mat_dem'){
+      if (S.dem){ Object.assign(kq, {ketQua:'chan', tenKQ:'Từ chối · ngoài khung giờ', muc:'warn', canhBao:{muc:'warn', tieuDe:'Vào ngoài khung giờ được phép', chiTiet:ten+' quẹt mặt lúc '+hms(e.t)+'. Ca làm không cho vào giờ này.', vung:e.cong}}); }
+      else { Object.assign(kq, {ketQua:'qua', tenKQ:'Cho qua (đang trong giờ)'}); }
+    }
+    else if (s==='mat_la'){ Object.assign(kq, {ketQua:'chan', tenKQ:'Từ chối · người lạ', muc:'warn', canhBao:{muc:'warn', tieuDe:'Người lạ quẹt mặt tại cổng', chiTiet:'Không khớp thư viện khuôn mặt (giống '+e.giong+'%).', vung:e.cong}}); }
+    else if (s==='mat_nghi'){ Object.assign(kq, {ketQua:'chan', tenKQ:'Từ chối · đã nghỉ việc', muc:'warn', canhBao:{muc:'warn', tieuDe:'Người đã nghỉ việc quay lại cổng', chiTiet:ten+' khớp danh sách cảnh báo.', vung:e.cong}}); }
+    else if (s==='mat_gia'){ Object.assign(kq, {ketQua:'chan', tenKQ:'Từ chối · giả mạo', muc:'crit', canhBao:{muc:'crit', tieuDe:'Phát hiện giả mạo khuôn mặt', chiTiet:'Máy phát hiện ảnh hoặc màn hình điện thoại đưa trước camera (gắn với '+ten+').', vung:e.cong}}); }
+    else if (s==='khach_sai'){ Object.assign(kq, {ketQua:'chan', tenKQ:'Từ chối · sai khu', muc:'warn', canhBao:{muc:'warn', tieuDe:'Khách vào sai khu vực', chiTiet:e.ten+' chỉ được vào khu được đăng ký, đã quẹt tại khu ở ĐSX02.', vung:'Khu ở ĐSX02'}}); }
+  } else if (e.nhom==='xamnhap'){
+    const dem = S.dem;
+    if (e.sig==='bao_gia') Object.assign(kq, {ketQua:'bao', tenKQ:'Báo động · cần xác minh', muc:'warn', canhBao:{muc:'warn', tieuDe:'Vượt vạch hàng rào (chưa xác minh)', chiTiet:'Camera báo vượt vạch. Xem ảnh: có thể là bóng cây.', vung:e.vung, giaThat:true}});
+    else if (e.sig==='xe_rao') Object.assign(kq, {ketQua:'bao', tenKQ:'Báo động · xe dừng sát rào', muc:'warn', canhBao:{muc:'warn', tieuDe:'Xe dừng sát hàng rào quá 3 phút', chiTiet:'Phân loại: xe. Có thể đang bốc dỡ trộm qua rào.', vung:e.vung}});
+    else Object.assign(kq, {ketQua:'bao', tenKQ: dem ? 'Báo động · bật còi + đèn' : 'Báo động', muc: dem ? 'crit' : 'warn',
+      canhBao:{muc: dem ? 'crit' : 'warn', tieuDe: e.sig==='kho' ? 'Có người trong vùng cấm kho mủ' : 'Có người vượt hàng rào', chiTiet:'Phân loại: người. '+(dem?'Relay đã bật còi và đèn pha tại chỗ.':'Trong giờ hành chính: xác minh trước khi điều động.'), vung:e.vung}});
+  } else if (e.nhom==='khach'){
+    const k = S.khach.find(v => v.id===e.khach); if (k) k.tt='qua_gio';
+    Object.assign(kq, {ketQua:'bao', tenKQ:'Quá giờ', muc:'warn', canhBao:{muc:'warn', tieuDe:'Khách quá giờ chưa ra', chiTiet:e.ten+' · biển '+e.bien+'. Liên hệ người tiếp để đưa khách ra.', vung:'Kho phân bón'}});
+  }
+  e.kq = kq;
+  if (kq.mo) moBarie(e.nhom==='xe' ? (e.huong==='ra'?'làn ra':'làn vào') : null);
+  if (kq.led) datLed(kq.led[0], kq.led[1]);
+  if (e.nhom==='xe') chup();
+}
+
+/* ---------- Hiệu ứng cổng ---------- */
+let hBarie = null, hLed = null;
+function moBarie(lan){
+  S.barie = 'mo'; $('#gate').classList.add('mo'); $('#gateState').textContent = 'Barie mở' + (lan ? ' · '+lan : '');
+  clearTimeout(hBarie); hBarie = setTimeout(() => { S.barie='dong'; $('#gate').classList.remove('mo'); $('#gateState').textContent='Barie đóng'; }, 4200);
+}
+function chup(){ const g = $('#gate'); g.classList.add('chup'); setTimeout(() => g.classList.remove('chup'), 220); }
+function datLed(a, b){ $('#ledTxt').textContent = a; $('#ledSub').textContent = b || ''; clearTimeout(hLed); hLed = setTimeout(() => { $('#ledTxt').textContent='XIN CHÀO'; $('#ledSub').textContent='làn vào'; }, 6000); }
+
+/* ---------- Phát tín hiệu: thiết bị → relay → (Internet) → máy chủ ---------- */
+function phat(sig){
+  const e = taoTinHieu(sig);
+  if (!e) return;
+  if (!e.dev.online){
+    S.feed.unshift({e, mat:true}); S.feed.length = Math.min(S.feed.length, 40);
+    thongBao('warn', e.dev.ten+' đang mất kết nối', 'Tín hiệu không tới được relay. Sự kiện này bị mất.');
+    veTrai(); return;
+  }
+  relayXuLy(e);
+  S.feed.unshift({e}); S.feed.length = Math.min(S.feed.length, 40);
+  if (S.online){ mayChuNhan(e, false); }
+  else {
+    S.queue.push(e);
+    if (Math.random() < .35) S.queue.push(Object.assign({}, e, {banSao:true}));   // relay gửi lại 2 lần — máy chủ phải bỏ bản trùng
+  }
+  S.chon = e.id;
+  veTat();
+}
+
+/* ---------- Máy chủ (Cloud Run) + app mẹ ---------- */
+const daNhan = new Set();
+function mayChuNhan(e, tre){
+  if (daNhan.has(e.id)) return false;
+  daNhan.add(e.id);
+  e.delayed = !!tre;
+  S.events.unshift(e);
+  if (e.nhom==='xe' || e.nhom==='nguoi'){
+    S.ravao.unshift({id:e.id, t:e.t, cong:e.cong, huong:e.huong==='ra'?'Ra':'Vào', doiTuong: e.nhom==='xe' ? e.bien : (e.ten ? e.ten+' · '+e.ma : 'Không xác định'),
+      laXe:e.nhom==='xe', ghi:e.ghi||'', cach: e.nhom==='xe' ? 'Biển số' : 'Khuôn mặt', kq:e.kq.tenKQ, muc:e.kq.muc, thumb:e.thumb, tre:e.delayed});
+  }
+  if (e.kq.canhBao) taoCanhBao(Object.assign({evt:e.id, thumb:e.thumb, tre:e.delayed, t:e.t, bien:e.bien}, e.kq.canhBao));
+  return true;
+}
+function taoCanhBao(c){
+  const ms = Date.now(), han = c.muc==='crit' ? 60 : c.muc==='warn' ? 120 : 300;
+  const a = Object.assign({id:'CB-'+String(S.aSeq++).padStart(3,'0'), ms, han: ms + han*1000, hanGiay:han, tt:'moi', leo:false, lichSu:[], t:c.t||gioMo()}, c);
+  S.alerts.unshift(a);
+  ghiNhatKy('Hệ thống', 'Tạo cảnh báo '+a.id, a.tieuDe + (a.tre ? ' · đến trễ do relay mất mạng' : ''));
+  if (a.muc==='crit'){ thongBao('crit', a.tieuDe, a.vung+' · '+a.id+' · cần xác nhận trong 60 giây'); beep(true); }
+  else if (a.muc==='warn'){ thongBao('warn', a.tieuDe, a.vung+' · '+a.id); beep(false); }
+  return a;
+}
+function ghiNhatKy(ai, viec, ct){ S.audit.unshift({t:gioMo(), ai, viec, ct:ct||''}); }
+
+/* ---------- Hạ tầng ---------- */
+function datMang(mat){
+  S.online = !mat;
+  const r = dev('relay');
+  if (mat){
+    S.lechMang = gioMo();
+    taoCanhBao({muc:'warn', tieuDe:'Relay cổng chính mất kết nối', chiTiet:'Không nhận heartbeat từ relay. Barie và còi vẫn chạy theo danh sách tại chỗ; sự kiện được xếp hàng chờ gửi.', vung:'Cổng chính', thumb:thTb(), hTang:'relay'});
+    r.online = true; // relay vẫn chạy, chỉ mất đường lên
+    S.feed.unshift({hb:true, ten:'relay', raw:jsonHB(r,'timeout'), t:gioMo(), d:'Relay mất Internet'});
+  } else {
+    const n = S.queue.length; let bo = 0, nhan = 0;
+    S.queue.forEach(e => { if (mayChuNhan(e, true)) nhan++; else bo++; });
+    S.queue = [];
+    ghiNhatKy('Relay cổng chính', 'Gửi bù sau khi có mạng', nhan+' sự kiện đến trễ, bỏ '+bo+' bản trùng (mất mạng từ '+hms(S.lechMang)+')');
+    thongBao('ok', 'Relay có mạng trở lại', n ? ('Đã gửi bù '+nhan+' sự kiện, bỏ '+bo+' bản trùng. Các dòng gắn nhãn “đến trễ”.') : 'Không có sự kiện tồn.');
+    S.alerts.filter(a => a.hTang==='relay' && a.tt!=='dong').forEach(a => { a.tt='dong'; a.ketLuan='Tự đóng: relay có mạng lại'; a.lichSu.push(hms(gioMo())+' tự đóng'); });
+    S.lechMang = null;
+    if (S.chuaBao){ S.chuaBao(); S.chuaBao = null; }
+    S.feed.unshift({hb:true, ten:'relay', raw:jsonHB(r,'online'), t:gioMo(), d:'Relay có mạng lại · gửi bù '+n});
+  }
+  veTat();
+}
+function datCam(mat){
+  const d = dev('cam-rao');
+  d.online = !mat;
+  if (mat){
+    S.feed.unshift({hb:true, ten:d.id, raw:jsonHB(d,'timeout'), t:gioMo(), d:'Heartbeat lỡ 3 nhịp'});
+    const tao = () => taoCanhBao({muc:'warn', tieuDe:'Mất kết nối: '+d.ten, chiTiet:'Lỡ 3 nhịp heartbeat (30 giây). Hàng rào kho phân bón đang là điểm mù.', vung:'Hàng rào kho phân bón', thumb:thTb(), hTang:d.id});
+    if (S.online) tao(); else S.chuaBao = tao;
+  } else {
+    d.last = Date.now();
+    S.alerts.filter(a => a.hTang===d.id && a.tt!=='dong').forEach(a => { a.tt='dong'; a.ketLuan='Tự đóng: thiết bị kết nối lại'; });
+    ghiNhatKy('Hệ thống', 'Thiết bị kết nối lại', d.ten);
+    S.feed.unshift({hb:true, ten:d.id, raw:jsonHB(d,'online'), t:gioMo(), d:'Heartbeat bình thường'});
+  }
+  veTat();
+}
+function datDien(mat){
+  S.matDien = mat;
+  if (mat){ S.ups = 100; taoCanhBao({muc:'warn', tieuDe:'Mất điện lưới tại cổng chính', chiTiet:'Relay, switch PoE, camera đang chạy bằng UPS. Báo kỹ thuật kiểm tra máy phát.', vung:'Cổng chính', thumb:thTb(), hTang:'dien'}); }
+  else { S.alerts.filter(a => a.hTang==='dien' && a.tt!=='dong').forEach(a => { a.tt='dong'; a.ketLuan='Tự đóng: có điện lại (UPS còn '+S.ups+'%)'; }); ghiNhatKy('Hệ thống','Có điện lưới trở lại','UPS còn '+S.ups+'%'); }
+  veTat();
+}
+
+/* ---------- Khách ---------- */
+function taoKhachMau(){
+  const k = {id:'KH-'+String(S.khach.length+1).padStart(3,'0'), ten:pick(['Lê Minh Tuấn','Heng Sopheak','Trần Quốc Bảo']), cty:pick(['Nhà thầu phân bón (mẫu)','Đơn vị vận chuyển mủ (mẫu)','Đoàn kiểm tra PCCC (mẫu)']),
+    bien:pick(['PP 3A-1188','KT 2E-0456','PP 2C-7781']), tiep:'Phòng KTNN', khu:'Kho phân bón', tt:'dang_ky'};
+  k.hetMs = Date.now() + 2*3600e3; k.het = hms(new Date(gioMo().getTime() + 2*3600e3));
+  S.khach.unshift(k);
+  ghiNhatKy(actor(), 'Đăng ký khách '+k.id, k.ten+' · '+k.cty+' · biển '+k.bien+' · hạn '+k.het);
+  ghiNhatKy('Hệ thống', 'Đồng bộ quyền tạm xuống relay', k.id+(S.online?'':' · chờ có mạng'));
+  return k;
+}
+
+/* ---------- Thao tác trên cảnh báo ---------- */
+function xuLy(id, viec, them){
+  const a = S.alerts.find(x => x.id===id); if (!a) return;
+  const now = hms(gioMo()), ai = actor();
+  if (viec==='xacnhan'){ a.tt='xacnhan'; a.xacNhanMs = Date.now(); a.lichSu.push(now+' xác nhận · '+ai); ghiNhatKy(ai,'Xác nhận '+a.id, a.tieuDe+' · sau '+Math.round((a.xacNhanMs-a.ms)/1000)+' giây'); }
+  if (viec==='dieudong'){ a.tt='dieudong'; a.nguoi = them; a.lichSu.push(now+' điều động '+them); ghiNhatKy(ai,'Điều động '+a.id, them+' tới '+a.vung); }
+  if (viec==='dong'){ a.tt='dong'; a.ketLuan = them; a.dongMs = Date.now(); if (!a.xacNhanMs) a.xacNhanMs = Date.now(); a.lichSu.push(now+' đóng · '+them); ghiNhatKy(ai,'Đóng '+a.id, them); }
+  if (viec==='choxe' || viec==='tuchoi'){
+    const e = S.events.find(x => x.id===a.evt);
+    if (viec==='choxe'){ moBarie('làn vào'); datLed('MỜI VÀO','bảo vệ cho phép'); }
+    else datLed('XIN QUAY ĐẦU','không được vào');
+    const r = e && S.ravao.find(x => x.id===e.id); if (r){ r.kq = viec==='choxe' ? 'Cho vào · bảo vệ mở tay' : 'Từ chối · bảo vệ'; r.muc = viec==='choxe' ? 'ok' : 'warn'; r.cach = 'Biển số + bảo vệ'; }
+    a.tt='dong'; a.ketLuan = (viec==='choxe'?'Cho vào: ':'Từ chối: ')+(them||'không ghi lý do'); if (!a.xacNhanMs) a.xacNhanMs = Date.now(); a.dongMs = Date.now();
+    ghiNhatKy(ai, (viec==='choxe'?'Mở barie tay cho ':'Từ chối ')+(a.bien||a.id), them||'');
+  }
+  if (viec==='xuat'){ ghiNhatKy(ai, 'Xuất bằng chứng '+a.id, 'Ảnh + gói tin + lịch sử xử lý · mã băm '+Math.random().toString(16).slice(2,14)); thongBao('ok','Đã tạo gói bằng chứng '+a.id,'Ghi vào nhật ký (mô phỏng, không tải file).'); }
+  veTat();
+}
+
+/* ---------- Âm báo + thông báo ---------- */
+let ac = null;
+function beep(manh){
+  if (!S.sound) return;
+  try { ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    const n = manh ? 3 : 1;
+    for (let i=0;i<n;i++){ const o = ac.createOscillator(), g = ac.createGain(); o.type='square'; o.frequency.value = manh ? 880 : 620;
+      g.gain.setValueAtTime(.0001, ac.currentTime+i*.28); g.gain.exponentialRampToValueAtTime(.12, ac.currentTime+i*.28+.02); g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime+i*.28+.2);
+      o.connect(g).connect(ac.destination); o.start(ac.currentTime+i*.28); o.stop(ac.currentTime+i*.28+.22); }
+  } catch(x){}
+}
+function thongBao(muc, tieuDe, ct){
+  const d = document.createElement('div'); d.className = 'toast '+muc;
+  d.innerHTML = '<b>'+esc(tieuDe)+'</b><span class="muted">'+esc(ct||'')+'</span>';
+  const box = $('#toasts'); box.prepend(d);
+  while (box.children.length > 4) box.lastChild.remove();
+  setTimeout(() => d.remove(), muc==='crit' ? 9000 : 5500);
+}
+
+/* ---------- Vẽ ---------- */
+const pillMuc = m => m==='crit' ? 'crit' : m==='warn' ? 'warn' : m==='ok' ? 'ok' : 'info';
+const TT = {moi:'Mới', xacnhan:'Đã xác nhận', dieudong:'Đang điều động', dong:'Đã đóng'};
+function slaTxt(a){
+  if (a.tt!=='moi') return '';
+  const con = Math.round((a.han - Date.now())/1000);
+  return con >= 0 ? 'Còn '+Math.floor(con/60)+':'+pad(con%60)+' để xác nhận' : 'Quá hạn '+Math.floor(-con/60)+':'+pad((-con)%60);
+}
+function veTrai(){
+  const r = dev('relay');
+  $('#chipRelay').innerHTML = S.online ? '<span class="dot ok"></span>Relay cổng chính: trực tuyến' : '<span class="dot crit"></span>Relay: mất Internet · '+S.queue.length+' sự kiện chờ gửi';
+  $('#queueInfo').textContent = S.online ? '' : S.queue.length+' đang xếp hàng tại relay';
+  $('#feed').innerHTML = S.feed.length ? S.feed.map((f,i) => {
+    if (f.hb) return '<button class="fi" data-feed="'+i+'"><span class="t mono">'+hms(f.t)+'</span><span class="d">Heartbeat · '+esc(f.ten)+'</span><span class="k">'+esc(f.d)+'</span></button>';
+    const e = f.e, ten = e.nhom==='xe' ? e.bien : e.nhom==='nguoi' ? (e.ten||'Người lạ') : e.nhom==='xamnhap' ? e.vung : (e.ten||'');
+    const kq = f.mat ? 'Mất: thiết bị không kết nối' : e.kq.tenKQ + (S.queue.indexOf(e) > -1 ? ' · chờ gửi' : '');
+    return '<button class="fi'+(S.chon===e.id?' sel':'')+'" data-feed="'+i+'"><span class="t mono">'+hms(e.t)+'</span><span class="d">'+esc(e.dev.ten)+' · '+esc(ten)+'</span><span class="k">Relay: '+esc(kq)+'</span></button>';
+  }).join('') : '<p class="note">Chưa có tín hiệu. Bấm một nút ở trên.</p>';
+  const f = S.feed.find(x => (x.e && x.e.id===S.chon)) || null;
+  if (f){ $('#raw').textContent = f.e.raw; $('#rawTitle').textContent = f.e.rawLoai; }
+  else if (S.rawHb){ $('#raw').textContent = S.rawHb.raw; $('#rawTitle').textContent = 'Heartbeat · JSON'; }
+}
+function veBanner(){
+  let h = '';
+  if (!S.online) h += '<div class="banner crit"><b>Relay cổng chính mất kết nối từ '+hms(S.lechMang)+'.</b><span>Dữ liệu trên màn hình có thể trễ. Barie, còi vẫn chạy theo danh sách tại chỗ; '+S.queue.length+' sự kiện đang chờ gửi bù.</span></div>';
+  if (S.matDien) h += '<div class="banner warn"><b>Đang chạy bằng UPS · còn '+S.ups+'%.</b><span>Ước tính còn '+Math.max(0,Math.round(S.ups*0.9))+' phút.</span></div>';
+  $('#banners').innerHTML = h;
+  const mo = S.alerts.filter(a => a.tt!=='dong'), crit = mo.filter(a => a.muc==='crit').length;
+  $('#bdCb').innerHTML = mo.length ? '<span class="badge'+(crit?'':' w')+'">'+mo.length+'</span>' : '';
+  const off = S.devices.filter(d => !d.online).length + (S.online?0:1);
+  $('#bdTb').innerHTML = off ? '<span class="badge">'+off+'</span>' : '';
+}
+function veTat(){ veTrai(); veBanner(); vePanel(); }
+
+function vePanel(){
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab===S.tab ? 'true' : 'false'));
+  const p = $('#panel');
+  const giuInput = p.querySelector('input:focus, select:focus');
+  if (giuInput && (S.tab==='kh' || S.tab==='dt')) return;   // đang gõ: không vẽ lại đè lên ô nhập
+  p.innerHTML = ({tq:veTQ, cb:veCB, rv:veRV, kh:veKH, dt:veDT, tb:veTB, nk:veNK})[S.tab]();
+}
+
+function veTQ(){
+  const hn = S.ravao.filter(r => r.huong==='Vào' && r.muc==='ok').length;
+  const ra = S.ravao.filter(r => r.huong==='Ra' && r.muc==='ok').length;
+  const mo = S.alerts.filter(a => a.tt!=='dong'), crit = mo.filter(a => a.muc==='crit').length;
+  const on = S.devices.filter(d => d.online).length, tong = S.devices.length;
+  const xn = S.alerts.filter(a => a.xacNhanMs), tb = xn.length ? Math.round(xn.reduce((s,a)=>s+(a.xacNhanMs-a.ms),0)/xn.length/1000) : null;
+  const gia = S.alerts.filter(a => a.ketLuan==='Báo động giả').length;
+  const khach = S.khach.filter(k => k.tt==='trong_khu'||k.tt==='qua_gio').length;
+  const nong = v => mo.some(a => a.vung===v && a.muc==='crit') ? 'hot' : mo.some(a => a.vung===v) ? 'wn' : '';
+  const pulse = (v, x, y) => mo.some(a => a.vung===v) ? '<circle class="pulse" cx="'+x+'" cy="'+y+'" r="10"/>' : '';
+  const md = (id, x, y) => '<circle class="md'+(dev(id).online && (id!=='relay'||S.online)?'':' off')+'" cx="'+x+'" cy="'+y+'" r="5"><title>'+esc(dev(id).ten)+'</title></circle>';
+  const gan = S.events.slice(0,6);
+  return '<div class="kpis">'+
+    '<div class="kpi ok"><span>Lượt vào hợp lệ</span><b>'+hn+'</b><small>'+ra+' lượt ra · hôm nay</small></div>'+
+    '<div class="kpi '+(crit?'crit':mo.length?'warn':'')+'"><span>Cảnh báo đang mở</span><b>'+mo.length+'</b><small>'+crit+' khẩn · '+mo.filter(a=>a.tt==='moi').length+' chưa xác nhận</small></div>'+
+    '<div class="kpi '+(on<tong||!S.online?'warn':'ok')+'"><span>Thiết bị trực tuyến</span><b>'+on+'/'+tong+'</b><small>'+(S.online?'Relay có Internet':'Relay mất Internet')+'</small></div>'+
+    '<div class="kpi"><span>Xác nhận trung bình</span><b>'+(tb==null?'—':tb+' giây')+'</b><small>Mục tiêu dưới 60 giây</small></div>'+
+    '<div class="kpi"><span>Khách trong khu</span><b>'+khach+'</b><small>'+gia+' báo động giả đã gắn nhãn</small></div>'+
+  '</div>'+
+  '<div class="two">'+
+    '<div class="card map"><h3>Sơ đồ khu vực <span class="r">chấm xanh: thiết bị chạy · đỏ: mất kết nối</span></h3>'+
+      '<svg viewBox="0 0 520 300" role="img" aria-label="Sơ đồ khu vực và thiết bị">'+
+      '<path class="road" d="M20 250 H260 V40 M260 150 H500"/>'+
+      '<rect class="z '+nong('Cổng chính')+'" x="20" y="205" width="150" height="80" rx="8"/><text class="zt" x="34" y="228">Cổng chính</text><text class="zs" x="34" y="244">2 làn xe · cổng xoay</text>'+
+      '<rect class="z '+nong('Khu ở ĐSX02')+'" x="20" y="30" width="200" height="120" rx="8"/><text class="zt" x="34" y="54">Khu ở ĐSX02</text><text class="zs" x="34" y="70">ký túc xá công nhân</text>'+
+      '<rect class="z '+nong('Kho mủ')+'" x="300" y="30" width="200" height="95" rx="8"/><text class="zt" x="314" y="54">Kho mủ</text><text class="zs" x="314" y="70">vùng cấm ngoài giờ</text>'+
+      '<rect class="z '+nong('Hàng rào kho phân bón')+'" x="300" y="175" width="200" height="110" rx="8" stroke-dasharray="6 4"/><text class="zt" x="314" y="199">Kho phân bón</text><text class="zs" x="314" y="215">hàng rào có camera</text>'+
+      pulse('Cổng chính',95,262)+pulse('Khu ở ĐSX02',120,105)+pulse('Kho mủ',400,95)+pulse('Hàng rào kho phân bón',400,250)+
+      md('anpr-vao',150,222)+md('anpr-ra',150,240)+md('mat-cong',150,262)+md('relay',36,268)+md('mat-khuo',200,130)+md('cam-kho',480,50)+md('cam-rao',480,195)+
+      '</svg></div>'+
+    '<div class="card"><h3>Sự kiện mới nhất <span class="r">'+S.events.length+' sự kiện</span></h3>'+
+      (gan.length ? '<div class="list">'+gan.map(e => '<div class="inl"><span class="mono muted">'+hms(e.t)+'</span>'+(e.nhom==='xe'?'<span class="plate">'+esc(e.bien)+'</span>':'<b>'+esc(e.ten||e.vung||'Không xác định')+'</b>')+'<span class="pill '+pillMuc(e.kq.muc)+'">'+esc(e.kq.tenKQ)+'</span>'+(e.delayed?'<span class="pill late">đến trễ</span>':'')+'</div>').join('')+'</div>' : '<div class="empty">Chưa có sự kiện. Bấm một nút “Phát tín hiệu” ở cột trái.</div>')+
+    '</div>'+
+  '</div>';
+}
+
+function veCB(){
+  const mo = S.alerts.filter(a => a.tt!=='dong').sort((a,b) => (a.muc==='crit'?0:1)-(b.muc==='crit'?0:1) || a.ms-b.ms);
+  const dong = S.alerts.filter(a => a.tt==='dong').slice(0,15);
+  const the = a => {
+    let acts = '';
+    if (a.tt==='moi') acts += '<button class="btn sm pri" data-act="xacnhan" data-id="'+a.id+'">Xác nhận</button>';
+    if (a.tt==='moi'||a.tt==='xacnhan') acts += '<select class="btn sm" data-dd="'+a.id+'" aria-label="Điều động"><option value="">Điều động…</option><option>Tổ tuần tra 1</option><option>Tổ tuần tra 2</option><option>Bảo vệ cổng</option></select>';
+    if (a.choXe && a.tt!=='dong') acts += '<button class="btn sm" data-act="choxe" data-id="'+a.id+'">Mở barie cho xe</button><button class="btn sm" data-act="tuchoi" data-id="'+a.id+'">Từ chối</button>';
+    if (a.tt!=='dong') acts += '<button class="btn sm" data-act="dong" data-id="'+a.id+'" data-kl="Đã xử lý">Đóng · đã xử lý</button><button class="btn sm" data-act="dong" data-id="'+a.id+'" data-kl="Báo động giả">Báo động giả</button>';
+    if (a.tt==='dong' && S.vaiTro==='quan_ly') acts += '<button class="btn sm" data-act="xuat" data-id="'+a.id+'">Xuất bằng chứng</button>';
+    const sla = slaTxt(a);
+    return '<article class="al '+(a.tt==='dong'?'closed ':'')+pillMuc(a.muc)+'"><div class="bar"></div>'+(a.thumb||thTb())+
+      '<div class="body"><div class="row1"><b>'+esc(a.tieuDe)+'</b><span class="pill '+pillMuc(a.muc)+'">'+(a.muc==='crit'?'Khẩn':a.muc==='warn'?'Cần xử lý':'Thông tin')+'</span><span class="pill">'+TT[a.tt]+'</span>'+(a.tre?'<span class="pill late">đến trễ</span>':'')+(a.leo?'<span class="pill crit">đã báo quản lý</span>':'')+'</div>'+
+      '<div class="muted" style="font-size:13px">'+esc(a.chiTiet||'')+'</div>'+
+      '<div class="meta"><span class="mono">'+a.id+'</span><span>'+esc(a.vung||'')+'</span><span class="mono">'+hms(a.t)+'</span>'+(a.bien?'<span class="plate">'+esc(a.bien)+'</span>':'')+(a.nguoi?'<span>Điều động: '+esc(a.nguoi)+'</span>':'')+(sla?'<span class="sla'+(a.han<Date.now()?' over':'')+'" data-sla="'+a.id+'">'+sla+'</span>':'')+(a.ketLuan?'<span>Kết luận: '+esc(a.ketLuan)+'</span>':'')+'</div>'+
+      (acts?'<div class="acts">'+acts+'</div>':'')+
+      (a.choXe && a.tt!=='dong' ? '<div class="inl"><input id="ly-'+a.id+'" placeholder="Lý do mở hoặc từ chối (ghi vào nhật ký)" aria-label="Lý do"></div>' : '')+
+      '</div></article>';
+  };
+  return '<div class="card"><h3>Hàng đợi cảnh báo <span class="r">khẩn: xác nhận trong 60 giây · cần xử lý: 120 giây · quá hạn tự báo quản lý</span></h3>'+
+    (mo.length ? '<div class="list">'+mo.map(the).join('')+'</div>' : '<div class="empty">Không có cảnh báo đang mở. Thử phát “Vượt hàng rào” hoặc “Xe lạ”.</div>')+'</div>'+
+    (dong.length ? '<div class="card"><h3>Đã đóng gần đây <span class="r">'+(S.vaiTro==='quan_ly'?'Quản lý xuất được bằng chứng':'Đổi vai trò Quản lý để xuất bằng chứng')+'</span></h3><div class="list">'+dong.map(the).join('')+'</div></div>' : '');
+}
+
+function veRV(){
+  return '<div class="card"><h3>Mở barie thủ công <span class="r">mọi lần mở tay đều ghi người, giờ, lý do</span></h3>'+
+    '<div class="inl"><input id="lyDoMo" placeholder="Lý do, ví dụ: xe cứu thương, camera không đọc được" aria-label="Lý do mở barie"><button class="btn sm pri" data-act="motay">Mở barie làn vào</button></div></div>'+
+    (S.ravao.length ? '<div class="tblw"><table><thead><tr><th>Giờ</th><th>Ảnh</th><th>Cổng</th><th>Hướng</th><th>Đối tượng</th><th>Cách nhận</th><th>Kết quả</th></tr></thead><tbody>'+
+      S.ravao.slice(0,60).map(r => '<tr><td class="mono">'+hms(r.t)+(r.tre?'<br><span class="pill late">đến trễ</span>':'')+'</td><td>'+(r.thumb||'')+'</td><td>'+esc(r.cong)+'</td><td>'+r.huong+'</td><td>'+(r.laXe?'<span class="plate">'+esc(r.doiTuong)+'</span><br><span class="muted">'+esc(r.ghi)+'</span>':esc(r.doiTuong))+'</td><td>'+esc(r.cach)+'</td><td><span class="pill '+pillMuc(r.muc)+'">'+esc(r.kq)+'</span></td></tr>').join('')+
+      '</tbody></table></div>' : '<div class="empty">Chưa có lượt ra vào. Bấm “Xe nội bộ vào” hoặc “Công nhân vào”.</div>');
+}
+
+function veKH(){
+  const ttKh = {dang_ky:['Đã đăng ký','info'], trong_khu:['Trong khu','ok'], qua_gio:['Quá giờ','warn'], da_ra:['Đã ra','']};
+  return '<div class="card"><h3>Đăng ký khách trước <span class="r">tạo quyền tạm và đồng bộ xuống relay</span></h3>'+
+    '<form class="form" id="fKhach"><label>Họ tên<input id="khTen" required placeholder="Họ tên khách"></label><label>Đơn vị<input id="khCty" placeholder="Công ty, nhà thầu"></label>'+
+    '<label>Biển số xe<input id="khBien" placeholder="PP 3A-1188"></label><label>Người tiếp<select id="khTiep"><option>Phòng KTNN</option><option>Phòng TCHC</option><option>Ban giám đốc</option></select></label>'+
+    '<label>Khu được vào<select id="khKhu"><option>Kho phân bón</option><option>Văn phòng</option><option>Kho mủ</option></select></label><label>Hạn (phút)<input id="khHan" type="number" min="1" value="120"></label>'+
+    '<button class="btn pri" type="submit">Đăng ký và đồng bộ</button></form></div>'+
+    (S.khach.length ? '<div class="tblw"><table><thead><tr><th>Mã</th><th>Khách</th><th>Biển số</th><th>Người tiếp · khu</th><th>Vào</th><th>Hạn</th><th>Ra</th><th>Trạng thái</th></tr></thead><tbody>'+
+      S.khach.map(k => '<tr><td class="mono">'+k.id+'</td><td><b>'+esc(k.ten)+'</b><br><span class="muted">'+esc(k.cty)+'</span></td><td>'+(k.bien?'<span class="plate">'+esc(k.bien)+'</span>':'—')+'</td><td>'+esc(k.tiep)+'<br><span class="muted">'+esc(k.khu)+'</span></td><td class="mono">'+(k.vao||'—')+'</td><td class="mono">'+k.het+'</td><td class="mono">'+(k.ra||'—')+'</td><td><span class="pill '+ttKh[k.tt][1]+'">'+ttKh[k.tt][0]+'</span></td></tr>').join('')+
+      '</tbody></table></div>' : '<div class="empty">Chưa có khách. Đăng ký ở trên, hoặc bấm “Khách đến cổng” để tạo khách mẫu.</div>');
+}
+
+function veDT(){
+  const ql = S.vaiTro==='quan_ly';
+  return '<div class="two"><div class="card"><h3>Biển số xe <span class="r">'+(ql?'danh sách trắng và đen':'chỉ Quản lý sửa được')+'</span></h3>'+
+    (ql?'<form class="inl" id="fXe"><input id="xeBien" placeholder="Biển số, ví dụ KT 2A-1234" required aria-label="Biển số"><select id="xeDs" aria-label="Danh sách"><option value="trang">Trắng</option><option value="den">Đen</option></select><input id="xeGhi" placeholder="Ghi chú" aria-label="Ghi chú"><button class="btn sm pri" type="submit">Thêm</button></form>':'')+
+    '<div class="tblw" style="margin-top:8px"><table><thead><tr><th>Biển số</th><th>Ghi chú</th><th>Danh sách</th></tr></thead><tbody>'+
+    S.xe.map(x => '<tr><td><span class="plate">'+esc(x.bien)+'</span></td><td>'+esc(x.ghi)+'</td><td><span class="pill '+(x.ds==='den'?'crit':'ok')+'">'+(x.ds==='den'?'Đen':'Trắng')+'</span></td></tr>').join('')+'</tbody></table></div></div>'+
+    '<div class="card"><h3>Khuôn mặt trên máy quẹt <span class="r">2 máy · đồng bộ qua relay</span></h3><div class="tblw"><table><thead><tr><th>Mã</th><th>Họ tên</th><th>Tổ · ca</th><th>Trạng thái</th><th></th></tr></thead><tbody>'+
+    S.nguoi.map(n => '<tr><td class="mono">'+n.ma+'</td><td>'+esc(n.ten)+'</td><td>'+esc(n.to)+'<br><span class="muted">'+esc(n.ca)+'</span></td><td><span class="pill '+(n.tt==='lam'?'ok':'warn')+'">'+(n.tt==='lam'?'Đang làm':'Nghỉ việc · danh sách cảnh báo')+'</span></td><td>'+(ql&&n.tt==='lam'?'<button class="btn sm" data-act="nghi" data-ma="'+n.ma+'">Cho nghỉ việc</button>':'')+'</td></tr>').join('')+'</tbody></table></div></div></div>';
+}
+
+function veTB(){
+  return '<div class="tblw"><table><thead><tr><th>Thiết bị</th><th>Loại · model</th><th>Địa chỉ</th><th>Firmware</th><th>Lần cuối</th><th>Trạng thái</th></tr></thead><tbody>'+
+    S.devices.map(d => {
+      const tat = d.id==='relay' ? !S.online : !d.online;
+      const giay = Math.round((Date.now() - d.last)/1000);
+      return '<tr><td><b>'+esc(d.ten)+'</b></td><td>'+esc(d.loai)+'<br><span class="muted">'+esc(d.model)+'</span></td><td class="mono">'+d.ip+'</td><td class="mono">'+esc(d.fw)+'</td><td class="mono" data-last="'+d.id+'">'+giay+' giây trước</td><td><span class="pill '+(tat?'crit':'ok')+'">'+(tat?(d.id==='relay'?'Mất Internet':'Mất kết nối'):'Trực tuyến')+'</span></td></tr>';
+    }).join('')+'</tbody></table></div><p class="note">Relay gửi heartbeat 10 giây một lần cho từng thiết bị. Lỡ 3 nhịp thì máy chủ báo mất kết nối.</p>';
+}
+
+function veNK(){
+  return S.audit.length ? '<div class="tblw"><table><thead><tr><th>Giờ</th><th>Ai</th><th>Việc</th><th>Chi tiết</th></tr></thead><tbody>'+
+    S.audit.slice(0,120).map(a => '<tr><td class="mono">'+hms(a.t)+'</td><td>'+esc(a.ai)+'</td><td><b>'+esc(a.viec)+'</b></td><td class="muted">'+esc(a.ct)+'</td></tr>').join('')+'</tbody></table></div><p class="note">Nhật ký chỉ thêm, không sửa, không xoá.</p>'
+    : '<div class="empty">Chưa có thao tác nào.</div>';
+}
+
+/* ---------- Sự kiện giao diện ---------- */
+document.addEventListener('click', ev => {
+  const s = ev.target.closest('[data-sig]'); if (s){ phat(s.dataset.sig); return; }
+  const t = ev.target.closest('[data-tab]'); if (t){ S.tab = t.dataset.tab; vePanel(); return; }
+  const f = ev.target.closest('[data-feed]');
+  if (f){ const it = S.feed[+f.dataset.feed]; if (it.hb){ S.chon = null; S.rawHb = it; } else { S.chon = it.e.id; S.rawHb = null; } veTrai(); return; }
+  const a = ev.target.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act, id = a.dataset.id;
+  if (act==='choxe' || act==='tuchoi'){ const ly = document.getElementById('ly-'+id); xuLy(id, act, ly ? ly.value.trim() : ''); return; }
+  if (act==='dong'){ xuLy(id, 'dong', a.dataset.kl); return; }
+  if (act==='xacnhan' || act==='xuat'){ xuLy(id, act); return; }
+  if (act==='motay'){
+    const ly = $('#lyDoMo').value.trim();
+    if (!ly){ thongBao('warn','Cần ghi lý do','Nhập lý do trước khi mở barie thủ công.'); $('#lyDoMo').focus(); return; }
+    moBarie('làn vào'); datLed('MỜI VÀO','bảo vệ mở tay');
+    S.ravao.unshift({id:'M'+Date.now(), t:gioMo(), cong:'Cổng chính', huong:'Vào', doiTuong:'Không rõ biển', laXe:true, ghi:ly, cach:'Thủ công', kq:'Mở tay · '+actor(), muc:'ok', thumb:thXe('?'), tre:false});
+    ghiNhatKy(actor(), 'Mở barie thủ công', ly); thongBao('ok','Đã mở barie làn vào','Đã ghi nhật ký: '+ly); veTat(); return;
+  }
+  if (act==='nghi'){
+    const n = S.nguoi.find(x => x.ma===a.dataset.ma); if (!n) return;
+    n.tt = 'nghi'; n.ca = 'Nghỉ việc '+pad(new Date().getDate())+'/'+pad(new Date().getMonth()+1)+'/'+new Date().getFullYear();
+    ghiNhatKy(actor(),'Cho nghỉ việc '+n.ma, n.ten+' · xoá khuôn mặt khỏi 2 máy, chuyển vào danh sách cảnh báo'+(S.online?'':' · chờ relay có mạng'));
+    thongBao('ok','Đã chuyển '+n.ten+' sang nghỉ việc','Khuôn mặt sẽ bị gỡ khỏi 2 máy quẹt mặt.'); veTat();
+  }
+});
+document.addEventListener('change', ev => {
+  const d = ev.target.closest('[data-dd]');
+  if (d && d.value){ xuLy(d.dataset.dd, 'dieudong', d.value); return; }
+  if (ev.target.id==='vaiTro'){ S.vaiTro = ev.target.value; ghiNhatKy(actor(),'Đổi vai trò thao tác',''); veTat(); }
+  if (ev.target.id==='swNet') datMang(ev.target.checked);
+  if (ev.target.id==='swCam') datCam(ev.target.checked);
+  if (ev.target.id==='swPow') datDien(ev.target.checked);
+  if (ev.target.id==='swDem'){ S.dem = ev.target.checked; thongBao('info', S.dem?'Đã chuyển giờ đêm':'Đã chuyển giờ ngày', S.dem?'Xâm nhập thành báo động khẩn; công nhân hành chính bị từ chối.':'Xâm nhập là cần xử lý.'); }
+  if (ev.target.id==='autoSpeed' && S.auto){ batTuDong(false); batTuDong(true); }
+});
+document.addEventListener('submit', ev => {
+  ev.preventDefault();
+  if (ev.target.id==='fKhach'){
+    const ten = $('#khTen').value.trim(); if (!ten) return;
+    const han = Math.max(1, +$('#khHan').value || 120);
+    const k = {id:'KH-'+String(S.khach.length+1).padStart(3,'0'), ten, cty:$('#khCty').value.trim()||'—', bien:$('#khBien').value.trim().toUpperCase(), tiep:$('#khTiep').value, khu:$('#khKhu').value, tt:'dang_ky'};
+    k.hetMs = Date.now() + han*60e3; k.het = hms(new Date(gioMo().getTime() + han*60e3));
+    S.khach.unshift(k);
+    ghiNhatKy(actor(),'Đăng ký khách '+k.id, k.ten+' · '+k.cty+(k.bien?' · biển '+k.bien:'')+' · hạn '+k.het);
+    ghiNhatKy('Hệ thống','Đồng bộ quyền tạm xuống relay', k.id+(S.online?'':' · chờ có mạng'));
+    thongBao('ok','Đã đăng ký '+k.id, 'Quyền tạm vào '+k.khu+' đến '+k.het+'.');
+    ev.target.reset(); S.tab='kh'; veTat();
+  }
+  if (ev.target.id==='fXe'){
+    const bien = $('#xeBien').value.trim().toUpperCase(); if (!bien) return;
+    const ds = $('#xeDs').value, ghi = $('#xeGhi').value.trim() || (ds==='den'?'Bị cấm':'Xe nội bộ');
+    const cu = S.xe.find(x => x.bien===bien); if (cu){ cu.ds = ds; cu.ghi = ghi; } else S.xe.push({bien, ds, ghi});
+    ghiNhatKy(actor(),'Cập nhật danh sách '+(ds==='den'?'đen':'trắng'), bien+' · '+ghi+' · đồng bộ xuống 2 camera biển số');
+    thongBao('ok','Đã lưu '+bien,'Đồng bộ xuống camera biển số qua relay.'); veTat();
+  }
+});
+
+/* ---------- Tự phát ---------- */
+function batTuDong(on){
+  clearInterval(S.auto); S.auto = null;
+  $('#btnAuto').setAttribute('aria-pressed', on ? 'true' : 'false');
+  $('#btnAuto').textContent = on ? 'Dừng tự phát' : 'Bắt đầu tự phát';
+  if (on){
+    const tui = ['xe_trang','xe_trang','xe_ra','mat_ok','mat_ok','mat_ok','mat_khuo','mat_khuo','xe_la','mat_la','bao_gia','rao','xe_mo','khach_den','mat_nghi'];
+    S.auto = setInterval(() => phat(pick(tui)), +$('#autoSpeed').value);
+  }
+}
+$('#btnAuto').addEventListener('click', () => batTuDong(!S.auto));
+$('#btnSound').addEventListener('click', ev => { S.sound = !S.sound; ev.currentTarget.setAttribute('aria-pressed', S.sound); ev.currentTarget.textContent = S.sound ? 'Tắt âm báo' : 'Bật âm báo'; if (S.sound) beep(false); });
+$('#btnReset').addEventListener('click', () => { batTuDong(false); S = moi(); daNhan.clear(); ['#swNet','#swCam','#swPow','#swDem'].forEach(s => $(s).checked = false); $('#vaiTro').value='bao_ve'; khoiTao(); thongBao('ok','Đã làm lại từ đầu','Dữ liệu mẫu đã được nạp lại.'); });
+
+/* ---------- Đồng hồ, SLA, heartbeat ---------- */
+setInterval(() => {
+  $('#clock').textContent = hms(gioMo());
+  const now = Date.now();
+  S.devices.forEach(d => { if (d.online && (d.id!=='relay' || S.online) && now - d.last > 10000) d.last = now; });
+  S.alerts.forEach(a => {
+    if (a.tt==='moi' && !a.leo && a.han < now){
+      a.leo = true; ghiNhatKy('Hệ thống','Quá hạn xác nhận '+a.id,'Tự báo Quản lý an ninh · '+a.tieuDe);
+      thongBao('crit','Quá hạn xác nhận '+a.id,'Đã tự báo Quản lý an ninh.'); beep(true); veBanner();
+      if (S.tab==='cb' || S.tab==='tq') vePanel();
+    }
+  });
+  document.querySelectorAll('[data-sla]').forEach(el => { const a = S.alerts.find(x => x.id===el.dataset.sla); if (a){ el.textContent = slaTxt(a); el.classList.toggle('over', a.han < now); } });
+  document.querySelectorAll('[data-last]').forEach(el => { const d = dev(el.dataset.last); el.textContent = Math.round((now - d.last)/1000)+' giây trước'; });
+  if (S.matDien && Math.random() < .35){ S.ups = Math.max(5, S.ups - 1); veBanner(); }
+}, 1000);
+
+/* ---------- Dữ liệu mẫu ban đầu ---------- */
+function khoiTao(){
+  const snd = S.sound; S.sound = false;
+  ['xe_trang','mat_ok','mat_ok','xe_trang','mat_khuo','xe_ra'].forEach(s => phat(s));
+  taoKhachMau();
+  phat('xe_mo');
+  S.feed.forEach(f => { if (f.e) f.e.t = new Date(f.e.t.getTime() - 60000*(3 + Math.random()*40)); });
+  S.ravao.sort((a,b) => b.t - a.t); S.events.sort((a,b) => b.t - a.t);
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  S.sound = snd; S.tab = 'tq';
+  $('#ledTxt').textContent='XIN CHÀO'; $('#ledSub').textContent='làn vào';
+  veTat();
+}
+khoiTao();
+})();
+</script>
+
+</body>
+</html>
