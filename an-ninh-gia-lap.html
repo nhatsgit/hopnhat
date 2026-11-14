@@ -288,7 +288,7 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
       <button class="sig warn" data-sig="mat_dem"><b>Vào ngoài giờ</b><span>Khớp mặt nhưng sai khung giờ</span></button>
     </div>
     <div class="sigrow" data-nhomp="xn" hidden>
-      <button class="sig crit" data-sig="rao"><b>Vượt hàng rào</b><span>Kho phân bón, phân loại: người</span></button>
+      <button class="sig crit" data-sig="rao"><b>Vượt hàng rào</b><span>Hàng rào kho mủ, phân loại: người</span></button>
       <button class="sig crit" data-sig="kho"><b>Vào vùng cấm</b><span>Trong kho mủ, ngoài giờ làm</span></button>
       <button class="sig warn" data-sig="bao_gia"><b>Báo động giả</b><span>Bóng cây đổ qua vạch</span></button>
       <button class="sig warn" data-sig="xe_rao"><b>Xe dừng sát rào</b><span>Phân loại: xe, quá 3 phút</span></button>
@@ -394,11 +394,10 @@ const T0 = Date.now();
 /* ---------- Cổng, khu vực, thiết bị (dữ liệu mẫu) ---------- */
 const CONG = [
   {id:'chinh', ten:'Cổng chính', khu:'Cổng nông trường', mang:'10.20.1', xe:true, nguoi:true},
-  {id:'khuo', ten:'Cổng khu ở ĐSX02', khu:'Khu ở công nhân', mang:'10.20.2', xe:false, nguoi:true},
   {id:'kho', ten:'Cổng kho mủ', khu:'Kho mủ', mang:'10.20.4', xe:true, nguoi:true},
-  {id:'pb', ten:'Cổng kho phân bón', khu:'Kho phân bón', mang:'10.20.5', xe:true, nguoi:false},
   {id:'d1', ten:'Cổng barie Đội 1', khu:'Đội 1', mang:'10.20.6', xe:true, nguoi:false},
-  {id:'d5', ten:'Cổng barie Đội 5', khu:'Đội 5', mang:'10.20.7', xe:true, nguoi:false}
+  {id:'d5', ten:'Cổng barie Đội 5', khu:'Đội 5', mang:'10.20.7', xe:true, nguoi:false},
+  {id:'tc', ten:'Cổng trạm cân', khu:'Trạm cân', mang:'10.20.8', xe:true, nguoi:false}
 ];
 const KHU = [...new Set(CONG.map(c => c.khu))];
 const loaiCong = c => c.xe && c.nguoi ? 'Người và xe' : c.xe ? 'Xe' : 'Người đi bộ';
@@ -412,7 +411,7 @@ function taoThietBi(){
     }
     if (c.nguoi) ds.push({id:'mat-'+c.id, cong:c.id, khu:c.khu, ten:'Máy quẹt mặt · '+c.ten, loai:'Khuôn mặt', model:'DS-K1T671MF', ip:c.mang+'.21', fw:'V3.2.30', online:true, last:Date.now()});
   });
-  ds.push({id:'cam-rao', cong:'', khu:'Kho phân bón', ten:'Camera hàng rào · kho phân bón', loai:'AcuSense', model:'DS-2CD2646G2-IZS', ip:'10.20.3.31', fw:'V5.7.15', online:true, last:Date.now()});
+  ds.push({id:'cam-rao', cong:'', khu:'Kho mủ', ten:'Camera hàng rào · kho mủ', loai:'AcuSense', model:'DS-2CD2646G2-IZS', ip:'10.20.3.31', fw:'V5.7.15', online:true, last:Date.now()});
   ds.push({id:'cam-kho', cong:'', khu:'Kho mủ', ten:'Camera trong kho mủ', loai:'AcuSense', model:'DS-2CD2646G2-IZS', ip:'10.20.3.32', fw:'V5.7.15', online:true, last:Date.now()});
   return ds;
 }
@@ -530,7 +529,7 @@ function taoTinHieu(sig){
   }
   if (sig==='rao'||sig==='kho'||sig==='bao_gia'||sig==='xe_rao'){
     const d = dev(sig==='kho' ? 'cam-kho' : 'cam-rao');
-    Object.assign(e, {nhom:'xamnhap', dev:d, vung: sig==='kho' ? 'Trong kho mủ' : 'Hàng rào kho phân bón', khu:d.khu, cong:'', congId:'',
+    Object.assign(e, {nhom:'xamnhap', dev:d, vung: sig==='kho' ? 'Trong kho mủ' : 'Hàng rào kho mủ', khu:d.khu, cong:'', congId:'',
       loaiXN: sig==='kho' ? 'fielddetection' : 'linedetection', mucTieu: sig==='xe_rao' ? 'vehicle' : 'human', gia: sig==='bao_gia'});
     e.raw = xmlXN(e); e.rawLoai = 'ISAPI · XML · '+e.loaiXN;
     e.thumb = sig==='xe_rao' ? thXe('?') : thRao(sig==='bao_gia' ? 'warn' : 'crit', sig==='bao_gia');
@@ -560,7 +559,7 @@ function relayXuLy(e){
     else if (x && x.ds==='den'){ Object.assign(kq, {ketQua:'chan', tenKQ:'Chặn · danh sách đen', muc:'crit', led:['DỪNG XE','liên hệ bảo vệ'],
       canhBao:{muc:'crit', tieuDe:'Xe trong danh sách đen tại cổng', chiTiet:x.ghi, vung:noi}}); }
     else if (e.huong==='ra'){ Object.assign(kq, {ketQua:'qua', tenKQ:'Cho ra', mo:true, led:['THƯỢNG LỘ BÌNH AN','làn ra']}); if (k){ k.tt='da_ra'; k.ra=hms(e.t); } }
-    else if (x && x.ds==='trang'){ Object.assign(kq, {ketQua:'qua', tenKQ:'Cho vào', mo:true, led:['MỜI VÀO', x.ghi]}); }
+    else if (x && x.ds==='trang'){ Object.assign(kq, e.congId==='tc' ? {ketQua:'qua', tenKQ:'Cho vào cân · gắn biển vào phiếu cân', mo:true, led:['MỜI VÀO CÂN', x.ghi]} : {ketQua:'qua', tenKQ:'Cho vào', mo:true, led:['MỜI VÀO', x.ghi]}); }
     else if (k){
       if (k.hetMs < Date.now()){ Object.assign(kq, {ketQua:'cho', tenKQ:'Chờ bảo vệ · quyền tạm hết hạn', muc:'warn', led:['VUI LÒNG CHỜ','quyền tạm hết hạn'],
         canhBao:{muc:'warn', tieuDe:'Khách đến khi quyền tạm đã hết hạn', chiTiet:k.ten+' · '+k.cty, vung:noi, choXe:true}}); }
@@ -707,7 +706,7 @@ function datCam(mat){
   d.online = !mat;
   if (mat){
     hb(d, 'timeout', 'Heartbeat lỡ 3 nhịp');
-    taoCanhBao({muc:'warn', tieuDe:'Mất kết nối: '+d.ten, chiTiet:'Lỡ 3 nhịp heartbeat (30 giây). Hàng rào kho phân bón đang là điểm mù.', vung:'Hàng rào kho phân bón', khu:d.khu, thumb:thTb(), hTang:d.id});
+    taoCanhBao({muc:'warn', tieuDe:'Mất kết nối: '+d.ten, chiTiet:'Lỡ 3 nhịp heartbeat (30 giây). Hàng rào kho mủ đang là điểm mù.', vung:'Hàng rào kho mủ', khu:d.khu, thumb:thTb(), hTang:d.id});
   } else {
     d.last = Date.now();
     S.alerts.filter(a => a.hTang===d.id && a.tt!=='dong').forEach(a => { a.tt='dong'; a.ketLuan='Tự đóng: thiết bị kết nối lại'; });
@@ -727,7 +726,7 @@ function datDien(mat){
 
 /* ---------- Khách ---------- */
 function taoKhachMau(khu){
-  const k = {id:'KH-'+String(S.khach.length+1).padStart(3,'0'), ten:pick(['Lê Minh Tuấn','Heng Sopheak','Trần Quốc Bảo']), cty:pick(['Nhà thầu phân bón (mẫu)','Đơn vị vận chuyển mủ (mẫu)','Đoàn kiểm tra PCCC (mẫu)']),
+  const k = {id:'KH-'+String(S.khach.length+1).padStart(3,'0'), ten:pick(['Lê Minh Tuấn','Heng Sopheak','Trần Quốc Bảo']), cty:pick(['Nhà thầu vật tư (mẫu)','Đơn vị vận chuyển mủ (mẫu)','Đoàn kiểm tra PCCC (mẫu)']),
     bien:pick(['PP 3A-1188','KT 2E-0456','PP 2C-7781']), tiep:'Phòng KTNN', khu:khu || congHt().khu, tt:'dang_ky'};
   k.hetMs = Date.now() + 2*3600e3; k.het = hms(new Date(gioMo().getTime() + 2*3600e3));
   S.khach.unshift(k);
@@ -860,14 +859,15 @@ function veTQ(){
   '</div>'+
   '<div class="two">'+
     '<div class="card map"><h3>Sơ đồ khu vực <span class="r">ô vuông: cổng · chấm: camera · đỏ: mất kết nối</span></h3>'+
-      '<svg viewBox="0 0 520 400" role="img" aria-label="Sơ đồ khu vực, cổng và camera">'+
-      '<path class="road" d="M20 250 H260 V40 M260 150 H500 M260 250 V340 M130 340 H390"/>'+
-      '<rect class="z '+nong('Cổng nông trường')+'" x="20" y="205" width="170" height="80" rx="8"/><text class="zt" x="34" y="228">Cổng nông trường</text><text class="zs" x="34" y="244">2 làn xe · cổng xoay</text>'+
-      '<rect class="z '+nong('Khu ở công nhân')+'" x="20" y="30" width="200" height="120" rx="8"/><text class="zt" x="34" y="54">Khu ở công nhân</text><text class="zs" x="34" y="70">ký túc xá ĐSX02</text>'+
-      '<rect class="z '+nong('Kho mủ')+'" x="300" y="30" width="200" height="95" rx="8"/><text class="zt" x="314" y="54">Kho mủ</text><text class="zs" x="314" y="70">vùng cấm ngoài giờ</text>'+
-      '<rect class="z '+nong('Kho phân bón')+'" x="300" y="175" width="200" height="110" rx="8" stroke-dasharray="6 4"/><text class="zt" x="314" y="199">Kho phân bón</text><text class="zs" x="314" y="215">hàng rào có camera</text>'+
-      pulse('Cổng nông trường',105,262)+pulse('Khu ở công nhân',120,105)+pulse('Kho mủ',400,95)+pulse('Kho phân bón',400,250)+'<rect class="z '+nong('Đội 1')+'" x="20" y="310" width="220" height="76" rx="8"/><text class="zt" x="34" y="333">Đội 1</text><text class="zs" x="34" y="349">đường lô · cổng barie</text>'+'<rect class="z '+nong('Đội 5')+'" x="280" y="310" width="220" height="76" rx="8"/><text class="zt" x="294" y="333">Đội 5</text><text class="zs" x="294" y="349">đường lô · cổng barie</text>'+
-      mg('chinh',172,250)+mg('khuo',202,132)+mg('kho',312,110)+mg('pb',312,268)+mg('d1',222,328)+mg('d5',298,328)+mc('cam-kho',480,50)+mc('cam-rao',480,195)+
+      '<svg viewBox="0 0 520 340" role="img" aria-label="Sơ đồ khu vực, cổng và camera">'+
+      '<path class="road" d="M260 16 V262 M130 125 H390 M130 235 H390"/>'+
+      '<rect class="z '+nong('Cổng nông trường')+'" x="20" y="30" width="220" height="80" rx="8"/><text class="zt" x="34" y="53">Cổng nông trường</text><text class="zs" x="34" y="69">2 làn xe · cổng xoay</text>'+
+      '<rect class="z '+nong('Kho mủ')+'" x="280" y="30" width="220" height="80" rx="8"/><text class="zt" x="294" y="53">Kho mủ</text><text class="zs" x="294" y="69">hàng rào có camera · cấm ngoài giờ</text>'+
+      '<rect class="z '+nong('Đội 1')+'" x="20" y="140" width="220" height="80" rx="8"/><text class="zt" x="34" y="163">Đội 1</text><text class="zs" x="34" y="179">đường lô · cổng barie</text>'+
+      '<rect class="z '+nong('Đội 5')+'" x="280" y="140" width="220" height="80" rx="8"/><text class="zt" x="294" y="163">Đội 5</text><text class="zs" x="294" y="179">đường lô · cổng barie</text>'+
+      '<rect class="z '+nong('Trạm cân')+'" x="150" y="250" width="220" height="76" rx="8"/><text class="zt" x="164" y="273">Trạm cân</text><text class="zs" x="164" y="289">xe mủ vào cân · biển gắn phiếu cân</text>'+
+      pulse('Cổng nông trường',150,85)+pulse('Kho mủ',390,85)+pulse('Đội 1',150,195)+pulse('Đội 5',390,195)+pulse('Trạm cân',300,300)+
+      mg('chinh',226,52)+mg('kho',294,52)+mg('d1',226,162)+mg('d5',294,162)+mg('tc',346,272)+mc('cam-kho',486,48)+mc('cam-rao',486,92)+
       '</svg></div>'+
     '<div class="card"><h3>Sự kiện mới nhất <span class="r">'+S.events.filter(e => hopKhu(e.khu)).length+' sự kiện</span></h3>'+
       (gan.length ? '<div class="list">'+gan.map(e => '<div class="inl"><span class="mono muted">'+hms(e.t)+'</span>'+(e.nhom==='xe'?'<span class="plate">'+esc(e.bien)+'</span>':'<b>'+esc(e.ten||e.vung||'Không xác định')+'</b>')+'<span class="muted">'+esc(e.cong||e.vung)+'</span><span class="pill '+pillMuc(e.kq.muc)+'">'+esc(e.kq.tenKQ)+'</span>'+(e.delayed?'<span class="pill late">đến trễ</span>':'')+'</div>').join('')+'</div>' : '<div class="empty">Chưa có sự kiện. Bấm một nút “Phát tín hiệu giả lập” ở cột trái.</div>')+
@@ -1111,10 +1111,10 @@ setInterval(() => {
 function khoiTao(){
   const snd = S.sound, tb = S.tb; S.sound = false; S.tb = false; S.khoiTao = true;   // dữ liệu mẫu: không đẩy vào chuông
   S.congHt = 'chinh'; ['xe_trang','mat_ok','mat_ok','xe_trang','xe_ra'].forEach(s => phat(s));
-  S.congHt = 'khuo'; ['mat_ok','mat_ra'].forEach(s => phat(s));
-  S.congHt = 'kho'; phat('xe_trang');
+  S.congHt = 'kho'; ['xe_trang','mat_ok'].forEach(s => phat(s));
+  S.congHt = 'tc'; phat('xe_trang');
   S.congHt = 'chinh';
-  taoKhachMau('Kho phân bón');
+  taoKhachMau('Kho mủ');
   phat('xe_mo');
   S.feed.forEach(f => { if (f.e) f.e.t = new Date(f.e.t.getTime() - 60000*(3 + Math.random()*40)); });
   S.ravao.sort((a,b) => b.t - a.t); S.events.sort((a,b) => b.t - a.t);

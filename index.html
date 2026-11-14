@@ -255,8 +255,7 @@ body.ck .wrap td{border-bottom-color:var(--vach)}
 body.ck .wrap tbody tr:hover{background:var(--row-hover)}
 /* Đầu trang chuẩn của từng trang */
 #gdDau.ck-ph{margin-bottom:16px}
-#gdDau #gatTrangThai{flex-wrap:nowrap;gap:4px}
-#gdDau .gd-chep-link{margin-left:auto}
+#gdDau #gatTrangThai{margin-left:auto;flex-wrap:nowrap;gap:4px}
 #gdDau #gatTrangThai .chip{white-space:nowrap}
 @media (max-width:640px){#gdDau #gatTrangThai{margin-left:0;width:100%}#gdDau #gatTrangThai .chip{flex:1;text-align:center}}
 body.ck .hs-hero{background:var(--mau-card);border-radius:var(--r-lg);box-shadow:var(--sh-1);text-align:left}
@@ -3260,12 +3259,6 @@ function gdDauTrang() {
   var gat = $('gatTrangThai');   // gạt Chưa duyệt / Đã duyệt / Tất cả: thanh bên cũ bị ẩn ở giao diện mới -> đặt bên phải đầu trang
   d.innerHTML = '<div class="ck-ph-ico" aria-hidden="true">' + CRCK.hinh(GD_HINH_TAB[S.tab] || 'ds') + '</div><div class="ck-ph-chu"><h1>' + thoat(ten) + '</h1><p>' +
     thoat((nh && nh.ten !== ten ? nh.ten + ' · ' : '') + (GD_MO_TA[S.tab] || '')) + '</p></div>';
-  d.insertAdjacentHTML('beforeend', '<button class="btn nho gd-chep-link" type="button" id="gdChepLink" title="Chép link mở thẳng trang này">Chép link trang</button>');
-  $('gdChepLink').onclick = function () {
-    var url = location.origin + location.pathname + '?tab=' + encodeURIComponent(S.tab), nut = this;
-    var xong = function () { nut.textContent = 'Đã chép link'; setTimeout(function () { if (nut.isConnected) nut.textContent = 'Chép link trang'; }, 1800); };
-    try { navigator.clipboard.writeText(url).then(xong, function () { prompt('Chép link này:', url); }); } catch (e) { prompt('Chép link này:', url); }
-  };
   if (gat) d.appendChild(gat);
 }
 /** Điện thoại: bảng ít cột (≤ 7, không có ô nhập) thành danh sách thẻ — gắn data-nhan = tên cột cho từng ô. */
@@ -3589,7 +3582,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 314;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 315;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
