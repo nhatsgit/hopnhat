@@ -248,6 +248,8 @@ td .th-nut{margin:0}
 .rec{position:absolute;right:10px;bottom:10px;color:#ff4d4d;font:700 13px var(--f-mono);background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px;animation:recNhay 1s steps(2) infinite}
 @keyframes recNhay{50%{opacity:.25}}
 .clip-gio{position:absolute;left:0;right:0;top:0;padding:4px 10px;background:rgba(0,0,0,.6);color:#fff;font-size:14px}
+.drive-ok{display:grid;gap:3px;font-size:12.5px;padding:8px 10px;border:1px solid var(--good);background:var(--good-soft);border-radius:8px;overflow-wrap:anywhere}
+.drive-ok a{color:var(--accent);font-weight:600}
 .map .bam{cursor:pointer}
 .map .bam:hover .md,.map .bam:focus-visible .md{stroke:var(--fg);stroke-width:2}
 .map .bam:focus{outline:none}
@@ -282,6 +284,7 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
         </select>
       </label>
       <label class="chip"><input type="checkbox" id="swTB" checked> Thông báo mỗi tín hiệu</label>
+      <label class="chip" id="chipDrive" hidden><input type="checkbox" id="swDrive" checked> Lưu ảnh thử lên Drive<span id="soDrive"></span></label>
       <button class="btn sm" id="btnSound" aria-pressed="false">Bật âm báo</button>
       <button class="btn sm" id="btnReset">Làm lại từ đầu</button>
     </div>
@@ -456,7 +459,7 @@ function moi(){
   const mang = {}; CONG.forEach(c => { mang[c.id] = {online:true, queue:[], lechMang:null}; });
   return {
     tab:'tq', vaiTro:'bao_ve', dem:false, matDien:false, ups:100, sound:false, tb:true, auto:null,
-    congHt:'chinh', khuChon:'', khuLoc:'', mang, chuaBao:[],
+    congHt:'chinh', khuChon:'', khuLoc:'', mang, chuaBao:[], luuDrive:true,
     seq:1, aSeq:1, feed:[], chon:null, rawHb:null, events:[], alerts:[], audit:[], ravao:[], tbLog:[], tbChon:'',
     devices: taoThietBi(),
     xe:[
@@ -717,6 +720,45 @@ function ganAnh(e){
   if (e.anh.length) e.raw += '\n\n--- ảnh đính kèm (multipart/form-data) ---\n' + e.anh.map(a => 'Content-Disposition: form-data; name="'+a.file.replace('.jpg','')+'"; filename="'+a.file+'"\nContent-Type: image/jpeg   ('+a.kb+' KB)').join('\n');
 }
 
+
+/* ---------- Lưu ảnh thử lên Drive (khi nhúng trong app CRCK2 đã đăng nhập) ---------- */
+const coApp = () => { try { return window.parent !== window && typeof window.parent.hsPost === 'function' && !!(window.parent.S && window.parent.S.vaiTro); } catch (x) { return false; } };
+const LOAI_GUI = {'Toàn cảnh':'TOAN_CANH', 'Cận biển số':'BIEN_SO', 'Khuôn mặt lúc quẹt':'KHUON_MAT', 'Ảnh lúc phát hiện':'PHAT_HIEN'};
+function svgSangJpeg(svg){
+  return new Promise((ok, loi) => {
+    const img = new Image();
+    img.onload = () => { try { const c = document.createElement('canvas'); c.width = 1280; c.height = 720; c.getContext('2d').drawImage(img, 0, 0, 1280, 720); ok(c.toDataURL('image/jpeg', .82).split(',')[1]); } catch (e) { loi(e); } };
+    img.onerror = () => loi(new Error('Không vẽ được ảnh'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+async function luuDrive(e){
+  if (S.khoiTao || !S.luuDrive || !coApp() || !e.anh || !e.anh.length || e.drive) return;
+  e.drive = {dang:true}; capNhatDriveUI(e);
+  try {
+    const anh = [];
+    for (const a of e.anh) anh.push({loai: LOAI_GUI[a.ten] || 'PHAT_HIEN', mime:'image/jpeg', b64: await svgSangJpeg(a.svg)});
+    const kq = await window.parent.hsPost('hsLuuAnhCamera', {thu:1, maSuKien:'GL-'+T0.toString(36)+'-'+e.id, cong:e.cong || e.vung, camera:e.dev.ten,
+      doiTuong:e.bien || e.ma || '', lucChup:NGAY(e.t), anh});
+    e.drive = {ds:kq.ds, hetHan:kq.hetHan};
+    S.soDrive = (S.soDrive || 0) + kq.ds.length;
+    $('#soDrive').textContent = S.soDrive ? ' · ' + S.soDrive + ' ảnh' : '';
+  } catch (err) {
+    e.drive = {loi: String(err && err.message || err)};
+    if (!S.daBaoLoiDrive){ S.daBaoLoiDrive = true; thongBao('warn', 'Chưa lưu được ảnh lên Drive', e.drive.loi); }
+  }
+  capNhatDriveUI(e);
+}
+function capNhatDriveUI(e){ if (S.anhMo === e.id){ const k = $('#anhDrive'); if (k) k.innerHTML = driveHtml(e); } }
+function driveHtml(e){
+  if (!coApp()) return '<p class="note">Bản chạy riêng: không lưu ảnh lên Drive. Mở trong app CRCK2 (An ninh &amp; cư trú → Bàn trực) để lưu ảnh thử.</p>';
+  const d = e.drive;
+  if (!d) return '<p class="note">'+(S.luuDrive ? 'Chưa lưu lên Drive: tín hiệu chưa tới máy chủ (cổng mất mạng thì có mạng lại mới lưu).' : 'Đang tắt lưu ảnh thử lên Drive.')+'</p>';
+  if (d.dang) return '<p class="note">Đang lưu ảnh lên Drive…</p>';
+  if (d.loi) return '<div class="banner warn">Chưa lưu được lên Drive: '+esc(d.loi)+'</div>';
+  return '<div class="drive-ok"><b>Đã lưu lên Drive · thư mục thử, tự xoá ngày '+esc(d.hetHan)+'</b>'+d.ds.map(x => '<div><span class="mono">'+esc(x.duong)+'/'+esc(x.tep)+'</span> · '+Math.round(x.kichThuoc/1024)+' KB · <a href="https://drive.google.com/file/d/'+encodeURIComponent(x.driveId)+'/view" target="_blank" rel="noopener">Mở trên Drive</a></div>').join('')+'</div>';
+}
+
 /* ---------- Cửa sổ ảnh + clip giả lập + mở Hik-Connect ---------- */
 let hClip = null;
 function moAnh(evtId){
@@ -726,7 +768,7 @@ function moAnh(evtId){
   $('#anhTitle').textContent = (TEN_SIG[e.sig]||'') + ' · ' + moTaNgan(e);
   $('#anhSub').textContent = e.dev.ten + ' · ' + NGAY(e.t) + (e.kq ? ' · relay: ' + e.kq.tenKQ : '');
   $('#anhBody').innerHTML = '<div class="anh-luoi">' + e.anh.map(a => '<figure>'+a.svg+'<figcaption>'+esc(a.ten)+' · '+esc(a.file)+' · '+a.kb+' KB</figcaption></figure>').join('') + '</div>' +
-    '<div id="clipKhu"></div>' +
+    '<div id="anhDrive">' + driveHtml(e) + '</div><div id="clipKhu"></div>' +
     '<div class="acts"><button class="btn sm pri" data-act="clip" data-evt="'+e.id+'">Xem clip 20 giây</button><button class="btn sm" data-act="hikc" data-evt="'+e.id+'">Mở Hik-Connect</button></div>' +
     '<p class="note">Giả lập: ảnh do camera gửi kèm tín hiệu. Clip được trạm trung chuyển cắt từ đầu ghi tại cổng khi bấm xem (10 giây trước + 10 giây sau mốc giờ).</p>';
   $('#anhModal').hidden = false; $('#anhDong').focus();
@@ -803,6 +845,7 @@ function mayChuNhan(e, tre){
   daNhan.add(e.id);
   e.delayed = !!tre;
   S.events.unshift(e);
+  luuDrive(e);
   if (e.nhom==='xe' || e.nhom==='nguoi'){
     S.ravao.unshift({id:e.id, t:e.t, cong:e.cong, khu:e.khu, huong:e.huong==='ra'?'Ra':'Vào', doiTuong: e.nhom==='xe' ? e.bien : (e.ten ? e.ten+' · '+e.ma : 'Không xác định'),
       laXe:e.nhom==='xe', ghi:e.ghi||'', cach: e.nhom==='xe' ? 'Biển số' : 'Khuôn mặt', kq:e.kq.tenKQ, muc:e.kq.muc, thumb:e.thumb, tre:e.delayed});
@@ -1191,6 +1234,7 @@ document.addEventListener('change', ev => {
   if (id==='swCam') datCam(ev.target.checked);
   if (id==='swPow') datDien(ev.target.checked);
   if (id==='swTB'){ S.tb = ev.target.checked; }
+  if (id==='swDrive'){ S.luuDrive = ev.target.checked; thongBao('info', S.luuDrive ? 'Bật lưu ảnh thử lên Drive' : 'Tắt lưu ảnh thử lên Drive', S.luuDrive ? 'Ảnh của tín hiệu mới vào thư mục anh-camera-thu, tự xoá sau 7 ngày.' : 'Tín hiệu mới chỉ giữ ảnh trên trang.'); }
   if (id==='swDem'){ S.dem = ev.target.checked; thongBao('info', S.dem?'Đã chuyển giờ đêm':'Đã chuyển giờ ngày', S.dem?'Xâm nhập thành báo động khẩn; công nhân hành chính bị từ chối.':'Xâm nhập là cần xử lý.'); }
   if (id==='autoSpeed' && S.auto){ batTuDong(false); batTuDong(true); }
 });
@@ -1250,7 +1294,7 @@ function batTuDong(on){
 }
 $('#btnAuto').addEventListener('click', () => batTuDong(!S.auto));
 $('#btnSound').addEventListener('click', ev => { S.sound = !S.sound; ev.currentTarget.setAttribute('aria-pressed', S.sound); ev.currentTarget.textContent = S.sound ? 'Tắt âm báo' : 'Bật âm báo'; if (S.sound) beep(false); });
-$('#btnReset').addEventListener('click', () => { batTuDong(false); S = moi(); daNhan.clear(); ['#swNet','#swCam','#swPow','#swDem'].forEach(s => $(s).checked = false); $('#swTB').checked = true; $('#vaiTro').value='bao_ve'; khoiTao(); thongBao('ok','Đã làm lại từ đầu','Dữ liệu mẫu đã được nạp lại.'); });
+$('#btnReset').addEventListener('click', () => { batTuDong(false); S = moi(); daNhan.clear(); ['#swNet','#swCam','#swPow','#swDem'].forEach(s => $(s).checked = false); $('#swTB').checked = true; $('#swDrive').checked = true; $('#soDrive').textContent = ''; $('#vaiTro').value='bao_ve'; khoiTao(); thongBao('ok','Đã làm lại từ đầu','Dữ liệu mẫu đã được nạp lại.'); });
 
 /* ---------- Đồng hồ, SLA, heartbeat ---------- */
 setInterval(() => {
@@ -1287,6 +1331,7 @@ function khoiTao(){
   veTat();
 }
 khoiTao();
+if (coApp()) $('#chipDrive').hidden = false;
 })();
 
 </script>
