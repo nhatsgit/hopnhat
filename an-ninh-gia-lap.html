@@ -250,6 +250,17 @@ td .th-nut{margin:0}
 .clip-gio{position:absolute;left:0;right:0;top:0;padding:4px 10px;background:rgba(0,0,0,.6);color:#fff;font-size:14px}
 .drive-ok{display:grid;gap:3px;font-size:12.5px;padding:8px 10px;border:1px solid var(--good);background:var(--good-soft);border-radius:8px;overflow-wrap:anywhere}
 .drive-ok a{color:var(--accent);font-weight:600}
+.tc-the{border:1px solid var(--line);border-left:4px solid var(--good);border-radius:10px;padding:8px 10px;display:grid;gap:6px}
+.tc-the.crit{border-left-color:var(--crit)} .tc-the.warn{border-left-color:var(--warn)}
+.tc-ls{display:grid;gap:3px;font-size:12.5px}
+.tc-nhom{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:8px 0 2px;font-weight:600}
+.tc-db{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.tc-db>div{display:grid;min-width:0}.tc-db span.muted{font-size:12px}
+.tc-so{user-select:all;font-size:13px}
+.tc-qt{border-bottom:1px solid var(--line);padding:6px 0}
+.tc-qt summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
+.tc-qt ol{margin:6px 0 4px;padding-left:20px;display:grid;gap:3px;font-size:13px}
+#tcQ{flex:1 1 260px;font-size:15px;min-height:40px}
 .map .bam{cursor:pointer}
 .map .bam:hover .md,.map .bam:focus-visible .md{stroke:var(--fg);stroke-width:2}
 .map .bam:focus{outline:none}
@@ -403,6 +414,7 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
         <button class="tab" role="tab" data-tab="kh" aria-selected="false">Khách</button>
         <button class="tab" role="tab" data-tab="dt" aria-selected="false">Đối tượng</button>
         <button class="tab" role="tab" data-tab="tb" aria-selected="false">Thiết bị <span id="bdTb"></span></button>
+        <button class="tab" role="tab" data-tab="tc" aria-selected="false">Tra cứu &amp; liên lạc</button>
         <button class="tab" role="tab" data-tab="nk" aria-selected="false">Nhật ký</button>
         <button class="tab" role="tab" data-tab="db" aria-selected="false" id="tabDB" hidden>Database</button>
       </nav>
@@ -809,6 +821,61 @@ function veDB(){
     '</tbody></table></div>';
 }
 
+
+/* ---------- Tra cứu nhanh + danh bạ khẩn cấp + quy trình xử lý ---------- */
+const DANH_BA = [
+  {nhom:'An ninh', ten:'Quản lý an ninh', vai:'Quyết định khi quá hạn, xe bị cấm, xâm nhập', so:'+855 12 000 101'},
+  {nhom:'An ninh', ten:'Trưởng ca bảo vệ', vai:'Điều động người trong ca', so:'+855 12 000 102'},
+  {nhom:'An ninh', ten:'Tổ tuần tra 1', vai:'Khu Cổng nông trường, Kho mủ', so:'+855 12 000 111'},
+  {nhom:'An ninh', ten:'Tổ tuần tra 2', vai:'Đội 1, Đội 5, Trạm cân', so:'+855 12 000 112'},
+  {nhom:'Đơn vị', ten:'Đội trưởng Đội 1', vai:'Xe, người của Đội 1', so:'+855 12 000 201'},
+  {nhom:'Đơn vị', ten:'Đội trưởng Đội 5', vai:'Xe, người của Đội 5', so:'+855 12 000 205'},
+  {nhom:'Đơn vị', ten:'Trạm cân', vai:'Xe chở mủ vào cân', so:'+855 12 000 301'},
+  {nhom:'Khẩn cấp', ten:'Y tế công ty', vai:'Tai nạn, sơ cứu', so:'+855 12 000 401'},
+  {nhom:'Khẩn cấp', ten:'Đội PCCC nông trường', vai:'Cháy kho, cháy lô', so:'+855 12 000 402'},
+  {nhom:'Khẩn cấp', ten:'Công an xã', vai:'Trộm cắp, gây rối', so:'+855 12 000 403'},
+  {nhom:'Kỹ thuật', ten:'Kỹ thuật camera / mạng', vai:'Mất kết nối, mất điện, barie hỏng', so:'+855 12 000 501'}
+];
+const QUY_TRINH = [
+  {ten:'Xe lạ ở cổng', goi:'Trưởng ca bảo vệ', buoc:['Giữ barie đóng, mời tài xế dừng đúng vạch.','Hỏi giấy tờ xe, lý do vào, người cần gặp; gọi người được hỏi để xác nhận.','Đúng hẹn: mở barie tay, ghi lý do. Không rõ: từ chối, mời quay đầu.','Ghi biển số, ảnh vào cảnh báo rồi đóng cảnh báo.']},
+  {ten:'Xe trong danh sách đen', goi:'Quản lý an ninh', buoc:['Không mở barie dù tài xế nài nỉ.','Báo ngay Quản lý an ninh, giữ khoảng cách an toàn.','Ghi lại người trên xe, hàng hoá nhìn thấy được.','Gây rối: gọi Công an xã. Đóng cảnh báo khi xe đã rời.']},
+  {ten:'Người lạ / không nhận ra mặt', goi:'Trưởng ca bảo vệ', buoc:['Mời ra quầy bảo vệ, hỏi họ tên, đơn vị, giấy tờ.','Tra cứu tên hoặc mã CN ở ô tra cứu phía trên.','Là công nhân chưa có ảnh: cho qua bằng thẻ QR, báo TCHC chụp lại ảnh.','Không xác minh được: không cho vào, ghi cảnh báo.']},
+  {ten:'Giả mạo khuôn mặt (ảnh / điện thoại)', goi:'Quản lý an ninh', buoc:['Giữ người tại cổng, không cho qua cổng xoay.','Đối chiếu người thật với ảnh hồ sơ của mã bị dùng.','Báo Quản lý an ninh và đội trưởng của người bị mạo danh.','Lưu ảnh làm bằng chứng (nút Xuất bằng chứng).']},
+  {ten:'Xâm nhập hàng rào / kho mủ', goi:'Tổ tuần tra gần nhất', buoc:['Xem ảnh, clip: người hay bóng cây, động vật.','Người thật: điều động tổ tuần tra, ban đêm bật còi đèn.','Không tự đối đầu một mình; giữ liên lạc với trưởng ca.','Mất trộm: giữ hiện trường, gọi Công an xã, lập biên bản.']},
+  {ten:'Cổng mất mạng / mất điện', goi:'Kỹ thuật camera / mạng', buoc:['Barie và danh sách tại chỗ vẫn chạy, không cần mở tay hàng loạt.','Mất điện: kiểm tra UPS, báo kỹ thuật bật máy phát.','Ghi lượt ra vào bằng QR hoặc sổ tay cho tới khi có mạng.','Có mạng lại: kiểm tra sự kiện “đến trễ” đã lên đủ.']},
+  {ten:'Khách quá giờ / sai khu', goi:'Người tiếp khách', buoc:['Gọi người tiếp khách để đưa khách ra hoặc gia hạn.','Sai khu: mời khách quay lại khu được đăng ký.','Quá 30 phút không liên lạc được: báo trưởng ca.','Khách ra: thu thẻ, ghi giờ ra.']}
+];
+const boDau = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+const gon = v => boDau(v).replace(/[\s.\-]/g, '');
+function veKqTC(){
+  const q = String(S.tcQ || '').trim();
+  if (q.length < 2) return '<p class="note">Gõ ít nhất 2 ký tự: biển số (vd 2A4471), tên (vd dara) hoặc mã CN (vd D2-0141).</p>';
+  const k = gon(q), kq = [];
+  const lichSu = khop => S.ravao.filter(khop).slice(0, 5);
+  const veLs = ds => ds.length ? '<div class="tc-ls">'+ds.map(r => '<div><span class="mono">'+hms(r.t)+'</span> · '+esc(r.cong)+' · '+r.huong+' · <span class="pill '+pillMuc(r.muc)+'">'+esc(r.kq)+'</span>'+(S.events.some(x => x.id===r.id) ? ' <button class="btn sm" data-act="anh" data-evt="'+r.id+'">Ảnh</button>' : '')+'</div>').join('')+'</div>' : '<p class="note">Chưa có lượt ra vào nào trong ca này.</p>';
+  S.xe.filter(x => gon(x.bien).indexOf(k) > -1 || boDau(x.ghi).indexOf(boDau(q)) > -1).forEach(x => kq.push(
+    '<div class="tc-the '+(x.ds==='den'?'crit':'')+'"><div class="inl"><span class="plate">'+esc(x.bien)+'</span><span class="pill '+(x.ds==='den'?'crit':'ok')+'">'+(x.ds==='den'?'Danh sách đen':'Danh sách trắng')+'</span><span class="muted">'+esc(x.ghi)+'</span></div>'+veLs(lichSu(r => r.laXe && gon(r.doiTuong)===gon(x.bien)))+'</div>'));
+  S.nguoi.filter(n => gon(n.ma).indexOf(k) > -1 || boDau(n.ten).indexOf(boDau(q)) > -1).forEach(n => kq.push(
+    '<div class="tc-the '+(n.tt==='nghi'?'warn':'')+'"><div class="inl"><b>'+esc(n.ten)+'</b><span class="mono muted">'+esc(n.ma)+'</span><span class="pill '+(n.tt==='lam'?'ok':'warn')+'">'+(n.tt==='lam'?'Đang làm':'Nghỉ việc · không cho vào')+'</span><span class="muted">'+esc(n.to)+' · '+esc(n.ca)+'</span></div>'+veLs(lichSu(r => !r.laXe && r.doiTuong.indexOf(n.ma) > -1))+'</div>'));
+  S.khach.filter(x => boDau(x.ten).indexOf(boDau(q)) > -1 || gon(x.bien).indexOf(k) > -1 || gon(x.id).indexOf(k) > -1).forEach(x => kq.push(
+    '<div class="tc-the"><div class="inl"><b>'+esc(x.ten)+'</b><span class="pill info">Khách · '+esc(x.id)+'</span>'+(x.bien?'<span class="plate">'+esc(x.bien)+'</span>':'')+'<span class="muted">'+esc(x.cty)+' · tiếp: '+esc(x.tiep)+' · khu '+esc(x.khu)+' · hạn '+esc(x.het)+'</span></div></div>'));
+  const laXeLa = S.ravao.filter(r => r.laXe && gon(r.doiTuong).indexOf(k) > -1 && !S.xe.some(x => gon(x.bien)===gon(r.doiTuong)) && !S.khach.some(x => gon(x.bien)===gon(r.doiTuong)));
+  const bienLa = [...new Set(laXeLa.map(r => r.doiTuong))];
+  bienLa.forEach(b => kq.push('<div class="tc-the warn"><div class="inl"><span class="plate">'+esc(b)+'</span><span class="pill warn">Chưa đăng ký</span></div>'+veLs(lichSu(r => r.laXe && r.doiTuong===b))+'</div>'));
+  return kq.length ? kq.join('') : '<div class="empty">Không tìm thấy “'+esc(q)+'” trong danh sách xe, người, khách và lượt ra vào hôm nay.</div>';
+}
+function veTC(){
+  const nhom = [...new Set(DANH_BA.map(x => x.nhom))];
+  return '<div class="card"><h3>Tra cứu nhanh <span class="r">biển số · tên · mã CN · mã khách</span></h3>'+
+    '<div class="inl"><input id="tcQ" type="search" placeholder="Gõ biển số, tên hoặc mã CN…" value="'+esc(S.tcQ||'')+'" aria-label="Tra cứu nhanh" autocomplete="off"></div>'+
+    '<div id="tcKq" class="list" style="margin-top:8px">'+veKqTC()+'</div></div>'+
+    '<div class="two"><div class="card"><h3>Danh bạ khẩn cấp <span class="r">số mẫu · Admin cập nhật khi làm thật</span></h3>'+
+      nhom.map(g => '<div class="tc-nhom">'+esc(g)+'</div>'+DANH_BA.filter(x => x.nhom===g).map(x => '<div class="tc-db"><div><b>'+esc(x.ten)+'</b><span class="muted">'+esc(x.vai)+'</span></div><span class="mono tc-so">'+esc(x.so)+'</span><button class="btn sm" data-act="chepso" data-so="'+esc(x.so)+'">Chép số</button></div>').join('')).join('')+
+    '</div><div class="card"><h3>Quy trình xử lý nhanh <span class="r">bấm để mở từng tình huống</span></h3>'+
+      QUY_TRINH.map(t => '<details class="tc-qt"><summary>'+esc(t.ten)+'<span class="muted"> · gọi '+esc(t.goi)+'</span></summary><ol>'+t.buoc.map(b => '<li>'+esc(b)+'</li>').join('')+'</ol></details>').join('')+
+    '</div></div>';
+}
+
 /* ---------- Cửa sổ ảnh + clip giả lập + mở Hik-Connect ---------- */
 let hClip = null;
 function moAnh(evtId){
@@ -1076,8 +1143,8 @@ function vePanel(){
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab===S.tab ? 'true' : 'false'));
   const p = $('#panel');
   const dangGo = p.querySelector('input:focus, select:focus');
-  if (dangGo && (S.tab==='kh' || S.tab==='dt' || S.tab==='rv' || S.tab==='cb')) return;   // đang gõ: không vẽ lại đè lên ô nhập
-  p.innerHTML = ({tq:veTQ, cb:veCB, rv:veRV, kh:veKH, dt:veDT, tb:veTB, nk:veNK, db:veDB})[S.tab]();
+  if (dangGo && (S.tab==='kh' || S.tab==='dt' || S.tab==='rv' || S.tab==='cb' || S.tab==='tc')) return;   // đang gõ: không vẽ lại đè lên ô nhập
+  p.innerHTML = ({tq:veTQ, cb:veCB, rv:veRV, kh:veKH, dt:veDT, tb:veTB, nk:veNK, db:veDB, tc:veTC})[S.tab]();
 }
 
 function veTQ(){
@@ -1253,6 +1320,12 @@ document.addEventListener('click', ev => {
   if (act==='tbdong'){ dongModalTb(); return; }
   if (act==='anh'){ moAnh(a.dataset.evt); return; }
   if (act==='dbtai'){ taiDB(); return; }
+  if (act==='chepso'){
+    const so = a.dataset.so, xong = () => { a.textContent = 'Đã chép'; setTimeout(() => { if (a.isConnected) a.textContent = 'Chép số'; }, 1500); };
+    try { navigator.clipboard.writeText(so).then(xong, () => { const r = document.createRange(); r.selectNodeContents(a.previousElementSibling); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); thongBao('info', 'Đã chọn số', 'Bấm Ctrl+C để chép: ' + so); }); }
+    catch (x) { thongBao('info', 'Số điện thoại', so); }
+    return;
+  }
   if (act==='dbxoa'){
     if (!a.dataset.xacNhan){ a.dataset.xacNhan = '1'; a.textContent = 'Chắc chắn xoá dữ liệu thử?'; return; }
     a.disabled = true; a.textContent = 'Đang xoá…';
@@ -1315,6 +1388,9 @@ function doiCong(){
   thongBao('info', 'Đang giả lập '+g.ten, g.khu+' · '+loaiCong(g)+(S.mang[g.id].online?'':' · relay đang mất Internet'));
   veTat();
 }
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'tcQ'){ S.tcQ = ev.target.value; const k = $('#tcKq'); if (k) k.innerHTML = veKqTC(); }
+});
 document.addEventListener('submit', ev => {
   ev.preventDefault();
   if (ev.target.id==='fKhach'){
