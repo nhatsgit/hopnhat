@@ -285,6 +285,7 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
       </label>
       <label class="chip"><input type="checkbox" id="swTB" checked> Thông báo mỗi tín hiệu</label>
       <label class="chip" id="chipDrive" hidden><input type="checkbox" id="swDrive" checked> Lưu ảnh thử lên Drive<span id="soDrive"></span></label>
+      <label class="chip" id="chipDB" hidden><input type="checkbox" id="swDB"> Lưu tín hiệu vào database<span id="soDB"></span></label>
       <button class="btn sm" id="btnSound" aria-pressed="false">Bật âm báo</button>
       <button class="btn sm" id="btnReset">Làm lại từ đầu</button>
     </div>
@@ -403,6 +404,7 @@ dong();try{new MutationObserver(dong).observe(parent.document.documentElement,{a
         <button class="tab" role="tab" data-tab="dt" aria-selected="false">Đối tượng</button>
         <button class="tab" role="tab" data-tab="tb" aria-selected="false">Thiết bị <span id="bdTb"></span></button>
         <button class="tab" role="tab" data-tab="nk" aria-selected="false">Nhật ký</button>
+        <button class="tab" role="tab" data-tab="db" aria-selected="false" id="tabDB" hidden>Database</button>
       </nav>
       <div class="panel" id="panel"></div>
     </section>
@@ -459,7 +461,7 @@ function moi(){
   const mang = {}; CONG.forEach(c => { mang[c.id] = {online:true, queue:[], lechMang:null}; });
   return {
     tab:'tq', vaiTro:'bao_ve', dem:false, matDien:false, ups:100, sound:false, tb:true, auto:null,
-    congHt:'chinh', khuChon:'', khuLoc:'', mang, chuaBao:[], luuDrive:true,
+    congHt:'chinh', khuChon:'', khuLoc:'', mang, chuaBao:[], luuDrive:true, luuDB:false, choDB:[],
     seq:1, aSeq:1, feed:[], chon:null, rawHb:null, events:[], alerts:[], audit:[], ravao:[], tbLog:[], tbChon:'',
     devices: taoThietBi(),
     xe:[
@@ -759,6 +761,54 @@ function driveHtml(e){
   return '<div class="drive-ok"><b>Đã lưu lên Drive · thư mục thử, tự xoá ngày '+esc(d.hetHan)+'</b>'+d.ds.map(x => '<div><span class="mono">'+esc(x.duong)+'/'+esc(x.tep)+'</span> · '+Math.round(x.kichThuoc/1024)+' KB · <a href="https://drive.google.com/file/d/'+encodeURIComponent(x.driveId)+'/view" target="_blank" rel="noopener">Mở trên Drive</a></div>').join('')+'</div>';
 }
 
+
+/* ---------- Lưu tín hiệu vào database (bảng FACT_SU_KIEN_CAMERA, nguồn THU) — chỉ khi bật ô và chạy trong app ---------- */
+let hDB = null;
+function ghiDB(e){
+  if (S.khoiTao || !S.luuDB || !coApp()) return;
+  S.choDB.push({ma:'GL-'+T0.toString(36)+'-'+e.id, luc:NGAY(e.t), cong:e.cong || e.vung, khu:e.khu, thietBi:e.dev.ten, loai:TEN_SIG[e.sig] || e.sig,
+    doiTuong: e.nhom==='xe' ? e.bien : moTaNgan(e), ketQua:e.kq.tenKQ, muc:e.kq.muc, tre:!!e.delayed, canhBao: e.kq.canhBao ? e.kq.canhBao.tieuDe : '', goiTin:String(e.raw || '').slice(0, 4000)});
+  clearTimeout(hDB); hDB = setTimeout(dayDB, 1500);
+}
+async function dayDB(){
+  if (!S.choDB.length) return;
+  const goi = S.choDB.splice(0, 50);
+  try {
+    const kq = await window.parent.hsPost('hsLuuSuKienCamera', {thu:1, ds:goi});
+    S.soDB = (S.soDB || 0) + kq.daLuu;
+    $('#soDB').textContent = S.soDB ? ' · ' + S.soDB + ' tín hiệu' : '';
+    if (S.tab==='db') taiDB();
+  } catch (err) {
+    S.choDB = goi.concat(S.choDB);
+    if (!S.daBaoLoiDB){ S.daBaoLoiDB = true; thongBao('warn', 'Chưa lưu được vào database', String(err && err.message || err)); }
+    return;
+  }
+  if (S.choDB.length) hDB = setTimeout(dayDB, 500);
+}
+function taiDB(){
+  if (!coApp()) return;
+  S.dbDang = true; if (S.tab==='db') vePanel();
+  window.parent.goiAPI('hsSuKienCamera', window.parent.hsP({nguon:'THU'}), 30000)
+    .then(d => { S.db = d; S.dbLoi = ''; }, err => { S.dbLoi = String(err && err.message || err); })
+    .then(() => { S.dbDang = false; if (S.tab==='db') vePanel(); });
+}
+function veDB(){
+  if (!coApp()) return '<div class="empty">Mở trang trong app CRCK2 để xem tín hiệu đã lưu trong database.</div>';
+  const d = S.db;
+  const dau = '<div class="card"><h3>Tín hiệu thử trong database <span class="r">bảng FACT_SU_KIEN_CAMERA · nguồn THU · tách khỏi sổ ra vào thật</span></h3>'+
+    '<div class="inl"><span class="pill '+(S.luuDB?'ok':'')+'">'+(S.luuDB?'Đang lưu tín hiệu mới':'Đang tắt lưu: bật ô “Lưu tín hiệu vào database” ở thanh trên')+'</span>'+
+    (S.choDB.length?'<span class="pill warn">'+S.choDB.length+' chờ ghi</span>':'')+
+    '<button class="btn sm" data-act="dbtai">Tải lại</button><button class="btn sm danger" data-act="dbxoa">Xoá tín hiệu thử</button></div></div>';
+  if (S.dbDang && !d) return dau + '<div class="empty">Đang đọc database…</div>';
+  if (S.dbLoi) return dau + '<div class="banner warn">'+esc(S.dbLoi)+'</div>';
+  if (!d || !d.rows.length) return dau + '<div class="empty">Chưa có tín hiệu thử nào trong database.</div>';
+  return dau + '<p class="note">'+d.tong+' tín hiệu · '+d.canhBao+' có cảnh báo'+(d.tong>d.rows.length?' · hiện 300 dòng mới nhất':'')+'</p>'+
+    '<div class="tblw"><table><thead><tr><th>Lúc</th><th>Cổng · khu vực</th><th>Thiết bị</th><th>Tín hiệu</th><th>Đối tượng</th><th>Relay quyết định</th><th>Cảnh báo</th><th>Ảnh Drive</th><th>Người ghi</th></tr></thead><tbody>'+
+    d.rows.map(r => '<tr><td class="mono">'+esc(r.luc)+(r.tre?'<br><span class="pill late">đến trễ</span>':'')+'</td><td>'+esc(r.cong)+'<br><span class="muted">'+esc(r.khu)+'</span></td><td>'+esc(r.thietBi)+'</td><td>'+esc(r.loai)+'</td><td>'+esc(r.doiTuong)+'</td>'+
+      '<td><span class="pill '+pillMuc(r.muc)+'">'+esc(r.ketQua)+'</span></td><td>'+esc(r.canhBao || '—')+'</td><td>'+(r.soAnh ? r.soAnh+' ảnh' : '—')+'</td><td class="muted">'+esc(r.nguoi)+'</td></tr>').join('')+
+    '</tbody></table></div>';
+}
+
 /* ---------- Cửa sổ ảnh + clip giả lập + mở Hik-Connect ---------- */
 let hClip = null;
 function moAnh(evtId){
@@ -846,6 +896,7 @@ function mayChuNhan(e, tre){
   e.delayed = !!tre;
   S.events.unshift(e);
   luuDrive(e);
+  ghiDB(e);
   if (e.nhom==='xe' || e.nhom==='nguoi'){
     S.ravao.unshift({id:e.id, t:e.t, cong:e.cong, khu:e.khu, huong:e.huong==='ra'?'Ra':'Vào', doiTuong: e.nhom==='xe' ? e.bien : (e.ten ? e.ten+' · '+e.ma : 'Không xác định'),
       laXe:e.nhom==='xe', ghi:e.ghi||'', cach: e.nhom==='xe' ? 'Biển số' : 'Khuôn mặt', kq:e.kq.tenKQ, muc:e.kq.muc, thumb:e.thumb, tre:e.delayed});
@@ -1026,7 +1077,7 @@ function vePanel(){
   const p = $('#panel');
   const dangGo = p.querySelector('input:focus, select:focus');
   if (dangGo && (S.tab==='kh' || S.tab==='dt' || S.tab==='rv' || S.tab==='cb')) return;   // đang gõ: không vẽ lại đè lên ô nhập
-  p.innerHTML = ({tq:veTQ, cb:veCB, rv:veRV, kh:veKH, dt:veDT, tb:veTB, nk:veNK})[S.tab]();
+  p.innerHTML = ({tq:veTQ, cb:veCB, rv:veRV, kh:veKH, dt:veDT, tb:veTB, nk:veNK, db:veDB})[S.tab]();
 }
 
 function veTQ(){
@@ -1192,7 +1243,7 @@ document.addEventListener('click', ev => {
   if (nh){ document.querySelectorAll('[data-nhom]').forEach(b => b.setAttribute('aria-selected', b===nh ? 'true' : 'false'));
     document.querySelectorAll('[data-nhomp]').forEach(p => { p.hidden = p.dataset.nhomp !== nh.dataset.nhom; }); return; }
   const s = ev.target.closest('[data-sig]'); if (s){ if (!s.disabled) phat(s.dataset.sig); return; }
-  const t = ev.target.closest('[data-tab]'); if (t){ S.tab = t.dataset.tab; vePanel(); return; }
+  const t = ev.target.closest('[data-tab]'); if (t){ S.tab = t.dataset.tab; if (S.tab==='db') taiDB(); vePanel(); return; }
   const f = ev.target.closest('[data-feed]');
   if (f){ const it = S.feed[+f.dataset.feed]; if (it.hb){ S.chon = null; S.rawHb = it; } else { S.chon = it.e.id; S.rawHb = null; } veTrai(); return; }
   const a = ev.target.closest('[data-act]'); if (!a) return;
@@ -1201,6 +1252,14 @@ document.addEventListener('click', ev => {
   if (act==='tbxem'){ S.tbChon = a.dataset.dev; S.tbModalN = ''; veModalTb(); vePanel(); return; }
   if (act==='tbdong'){ dongModalTb(); return; }
   if (act==='anh'){ moAnh(a.dataset.evt); return; }
+  if (act==='dbtai'){ taiDB(); return; }
+  if (act==='dbxoa'){
+    if (!a.dataset.xacNhan){ a.dataset.xacNhan = '1'; a.textContent = 'Chắc chắn xoá dữ liệu thử?'; return; }
+    a.disabled = true; a.textContent = 'Đang xoá…';
+    window.parent.hsPost('hsXoaSuKienThu', {}).then(kq => { thongBao('ok', 'Đã xoá '+kq.daXoa+' tín hiệu thử', 'Chỉ xoá nguồn THU, dữ liệu thật không bị đụng.'); S.soDB = 0; $('#soDB').textContent = ''; taiDB(); },
+      err => { thongBao('warn', 'Chưa xoá được', String(err && err.message || err)); vePanel(); });
+    return;
+  }
   if (act==='anhdong'){ dongAnh(); return; }
   if (act==='clip'){ xemClip(a.dataset.evt); return; }
   if (act==='hikc'){ const e = S.events.find(x => x.id===a.dataset.evt) || (S.tbLog.find(x => x.e && x.e.id===a.dataset.evt) || {}).e;
@@ -1234,6 +1293,7 @@ document.addEventListener('change', ev => {
   if (id==='swCam') datCam(ev.target.checked);
   if (id==='swPow') datDien(ev.target.checked);
   if (id==='swTB'){ S.tb = ev.target.checked; }
+  if (id==='swDB'){ S.luuDB = ev.target.checked; thongBao('info', S.luuDB ? 'Bật lưu tín hiệu vào database' : 'Tắt lưu tín hiệu vào database', S.luuDB ? 'Tín hiệu mới ghi vào bảng FACT_SU_KIEN_CAMERA (nguồn THU). Xem ở tab Database.' : 'Tín hiệu mới chỉ giữ trên trang.'); if (S.tab==='db') vePanel(); }
   if (id==='swDrive'){ S.luuDrive = ev.target.checked; thongBao('info', S.luuDrive ? 'Bật lưu ảnh thử lên Drive' : 'Tắt lưu ảnh thử lên Drive', S.luuDrive ? 'Ảnh của tín hiệu mới vào thư mục anh-camera-thu, tự xoá sau 7 ngày.' : 'Tín hiệu mới chỉ giữ ảnh trên trang.'); }
   if (id==='swDem'){ S.dem = ev.target.checked; thongBao('info', S.dem?'Đã chuyển giờ đêm':'Đã chuyển giờ ngày', S.dem?'Xâm nhập thành báo động khẩn; công nhân hành chính bị từ chối.':'Xâm nhập là cần xử lý.'); }
   if (id==='autoSpeed' && S.auto){ batTuDong(false); batTuDong(true); }
@@ -1294,7 +1354,7 @@ function batTuDong(on){
 }
 $('#btnAuto').addEventListener('click', () => batTuDong(!S.auto));
 $('#btnSound').addEventListener('click', ev => { S.sound = !S.sound; ev.currentTarget.setAttribute('aria-pressed', S.sound); ev.currentTarget.textContent = S.sound ? 'Tắt âm báo' : 'Bật âm báo'; if (S.sound) beep(false); });
-$('#btnReset').addEventListener('click', () => { batTuDong(false); S = moi(); daNhan.clear(); ['#swNet','#swCam','#swPow','#swDem'].forEach(s => $(s).checked = false); $('#swTB').checked = true; $('#swDrive').checked = true; $('#soDrive').textContent = ''; $('#vaiTro').value='bao_ve'; khoiTao(); thongBao('ok','Đã làm lại từ đầu','Dữ liệu mẫu đã được nạp lại.'); });
+$('#btnReset').addEventListener('click', () => { batTuDong(false); S = moi(); daNhan.clear(); ['#swNet','#swCam','#swPow','#swDem'].forEach(s => $(s).checked = false); $('#swTB').checked = true; $('#swDrive').checked = true; $('#soDrive').textContent = ''; $('#swDB').checked = false; $('#soDB').textContent = ''; $('#vaiTro').value='bao_ve'; khoiTao(); thongBao('ok','Đã làm lại từ đầu','Dữ liệu mẫu đã được nạp lại.'); });
 
 /* ---------- Đồng hồ, SLA, heartbeat ---------- */
 setInterval(() => {
@@ -1331,7 +1391,7 @@ function khoiTao(){
   veTat();
 }
 khoiTao();
-if (coApp()) $('#chipDrive').hidden = false;
+if (coApp()){ $('#chipDrive').hidden = false; $('#chipDB').hidden = false; $('#tabDB').hidden = false; }
 })();
 
 </script>
