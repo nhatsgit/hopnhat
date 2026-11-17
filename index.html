@@ -2339,7 +2339,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         </div>
       </div>
       <div class="the" id="anCamThe" style="margin-bottom:16px;display:none">
-        <div class="hs-the-dau"><div><h3>Sự kiện camera</h3><div class="hs-phu">Từ trạm trung chuyển ở cổng (đầu ghi Hikvision) · tự cập nhật mỗi phút</div></div><span style="display:flex;gap:8px;align-items:center"><span class="vi tap" id="anCamTT"></span><button class="btn nho" id="anCamTai" type="button">Tải lại</button></span></div>
+        <div class="hs-the-dau"><div><h3>Sự kiện camera</h3><div class="hs-phu">Từ trạm trung chuyển ở cổng (đầu ghi Hikvision) · tự cập nhật mỗi phút</div></div><span style="display:flex;gap:8px;align-items:center"><span class="vi tap" id="anCamTT"></span><button class="btn nho" id="anCamTram" type="button" onclick="tcMo()">Trạm camera</button><button class="btn nho" id="anCamTai" type="button">Tải lại</button></span></div>
         <div class="cuon cuon-doc" style="max-height:420px"><table id="bangCam"></table></div>
       </div>
       <div class="the" style="margin-bottom:16px">
@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 324;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 325;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16740,7 +16740,9 @@ function veAnNinh() {
   }
   $('anQlCong').style.display = hsCo('quanLyCong', 'THEM') || hsCo('quanLyCong', 'SUA') || hsCo('quanLyCong', 'XOA') ? '' : 'none';
   $('anTramCam').style.display = $('anQlCong').style.display;
+  $('anCamTram').style.display = $('anQlCong').style.display;
   camTai(false);
+  if (_cam.canMoTram) { _cam.canMoTram = false; tcMo(); }
   var khus = []; dsC.forEach(function (c) { if (c.khu && khus.indexOf(c.khu) < 0) khus.push(c.khu); });
   if (_hs.khuCong && khus.indexOf(_hs.khuCong) < 0) _hs.khuCong = '';
   $('anLocKhu').style.display = khus.length > 1 && _hs.cheDo !== 'kiem' ? '' : 'none';
@@ -16905,7 +16907,7 @@ function qlCongForm(c) {
 }
 
 /* ---------- Camera thật (17/11/2026): sự kiện từ trạm trung chuyển ở cổng + quản lý trạm (khoá) + chuông ---------- */
-var _cam = { d: null, luc: 0, sau: '', chuong: 0 };
+var _cam = { d: null, luc: 0, sau: '', chuong: 0, canMoTram: /[?&]tram=1/.test(location.search) };
 var CAM_MUC = { info: ['tap', 'Ghi nhận'], ok: ['ok', 'Bình thường'], warn: ['canh', 'Cần xem'], crit: ['canh', 'Khẩn'] };
 function camTai(ep) {
   var coXem = hsCo('anNinh', 'XEM') || hsCo('anNinh', 'THEM');
