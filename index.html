@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 325;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 326;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17071,7 +17071,10 @@ function hsVeKq(k) {
     h += '<dl class="hs-su-kien"><div><dt>Tổ</dt><dd>' + thoat(n.to || n.toCu || '—') + '</dd></div><div><dt>Phòng</dt><dd>' + thoat(n.phong || '—') + '</dd></div>' +
       '<div><dt>Giấy tờ</dt><dd>' + (n.thieuGiayTo ? 'Thiếu' : 'Có') + '</dd></div><div><dt>Cổng đang chọn</dt><dd>' + thoat($('anCong').value || '—') + '</dd></div></dl>';
   }
-  if (!laKhach && hsCo('hoSo', 'XEM')) h += '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho" type="button" data-an-mo-hs="' + n.loai + '|' + thoat(n.id) + '">Mở hồ sơ</button></div>';
+  if (!laKhach) h += '<div class="hs-chan" style="justify-content:flex-start">' +
+    (n.anh && n.anh.CHAN_DUNG ? '<button class="btn" type="button" data-an-mat="1">🙂 Quét mặt xác minh</button>' : '<span class="hs-phu">Chưa có ảnh chân dung — chưa xác minh mặt được</span>') +
+    (k.mat ? ' <span class="vi ' + (k.mat.kq === 'KHOP' ? 'ok' : 'canh') + '">' + thoat(k.mat.chu) + '</span>' : '') +
+    (hsCo('hoSo', 'XEM') ? '<button class="btn nho" type="button" data-an-mo-hs="' + n.loai + '|' + thoat(n.id) + '">Mở hồ sơ</button>' : '') + '</div>';
   if (!hsCo('anNinh', 'THEM')) {
     h += '<div class="goi-y" style="margin:10px 0 0">Vai trò của bạn chỉ quét để tra cứu, đối chiếu. Ghi lượt ra/vào và biên bản do Bảo vệ thực hiện; Admin cấp thêm ở Quản trị → Phân quyền → "Ra vào cổng & kiểm tra thẻ".</div>';
   } else if (_hs.cheDo === 'cong') {
@@ -17083,6 +17086,107 @@ function hsVeKq(k) {
   }
   el.innerHTML = h;
   hsNapAnh(el);
+}
+/* ---------- Xác minh khuôn mặt 1:1 (17/11/2026, bản thử): quét QR -> so mặt trước camera trước với ảnh chân dung đã lưu.
+   Chạy hoàn toàn trên điện thoại (face-api, mô hình ~7 MB tải 1 lần), không gửi ảnh mặt đi đâu. Có bước chớp mắt chống giơ ảnh. ---------- */
+var _mat = { nap: null, mau: {}, luong: null, chay: false };
+var MAT_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/';
+var MAT_KHOP = 0.5, MAT_NGHI = 0.58;   // khoảng cách đặc trưng: < 0.5 khớp · 0.5–0.58 không chắc · > 0.58 không khớp
+function matNapThuVien() {
+  if (_mat.nap) return _mat.nap;
+  _mat.nap = new Promise(function (ok, loi) {
+    if (window.faceapi) return ok();
+    var sc = document.createElement('script'); sc.src = MAT_CDN + 'dist/face-api.js'; sc.onload = ok; sc.onerror = function () { loi(new Error('Không tải được thư viện nhận diện (cần mạng lần đầu).')); };
+    document.head.appendChild(sc);
+  }).then(function () {
+    var m = MAT_CDN + 'model/';
+    return Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(m), faceapi.nets.faceLandmark68Net.loadFromUri(m), faceapi.nets.faceRecognitionNet.loadFromUri(m)]);
+  });
+  _mat.nap.catch(function () { _mat.nap = null; });
+  return _mat.nap;
+}
+function matAnh(src) { return new Promise(function (ok, loi) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = loi; i.src = src; }); }
+function matEar(mat) {   // tỉ lệ mở mắt (eye aspect ratio) trung bình 2 mắt
+  var f = function (e) { var d = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }; return (d(e[1], e[5]) + d(e[2], e[4])) / (2 * d(e[0], e[3])); };
+  return (f(mat.getLeftEye()) + f(mat.getRightEye())) / 2;
+}
+function matDung() {
+  _mat.chay = false;
+  if (_mat.luong) { _mat.luong.getTracks().forEach(function (t) { t.stop(); }); _mat.luong = null; }
+}
+function matMo(k) {
+  if (!k || !k.nguoi || !k.nguoi.anh || !k.nguoi.anh.CHAN_DUNG) return;
+  var n = k.nguoi, maAnh = n.anh.CHAN_DUNG;
+  if (typeof anTatCam === 'function') try { anTatCam(); } catch (e) {}
+  hsMo('Xác minh khuôn mặt · ' + n.ten,
+    '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
+    '<div style="text-align:center"><div class="hs-phu">Ảnh đã lưu</div>' + hsAnhHtml(maAnh, n.ten, true) + '</div>' +
+    '<div style="flex:1;min-width:220px;max-width:360px"><div class="hs-phu">Camera</div><video id="matVideo" playsinline muted style="width:100%;border-radius:10px;background:#000;transform:scaleX(-1)"></video></div></div>' +
+    '<div id="matTT" class="goi-y" style="margin:10px 0 0">Đang chuẩn bị…</div>' +
+    '<div class="hs-chan"><button class="btn nho" type="button" id="matLai" style="display:none">Thử lại</button><button class="btn nho" type="button" id="matDong">Đóng</button></div>');
+  hsNapAnh($('hsThan'));
+  var tt = function (h, loai) { var o = $('matTT'); if (o) { o.className = loai === 'ok' ? 'vi ok' : loai === 'loi' ? 'bao-loi' : 'goi-y'; o.style.display = 'block'; o.innerHTML = h; } };
+  $('matDong').onclick = function () { matDung(); hsDongHop(); };
+  $('matLai').onclick = function () { matMo(k); };
+  var choAnh = function () {   // ảnh chân dung có thể đang tải
+    return new Promise(function (ok, loi) {
+      var t0 = Date.now();
+      (function doi() { if (_hs.anh[maAnh]) return ok(_hs.anh[maAnh]); if (Date.now() - t0 > 20000) return loi(new Error('Không tải được ảnh chân dung.')); setTimeout(doi, 300); })();
+    });
+  };
+  tt('Đang tải mô hình nhận diện (lần đầu khoảng 7 MB, các lần sau dùng lại)…');
+  matNapThuVien().then(function () {
+    if (_mat.mau[maAnh]) return _mat.mau[maAnh];
+    tt('Đang đọc khuôn mặt trên ảnh đã lưu…');
+    return choAnh().then(matAnh).then(function (img) {
+      return faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 })).withFaceLandmarks().withFaceDescriptor();
+    }).then(function (r) {
+      if (!r) throw new Error('Ảnh chân dung đã lưu không thấy rõ khuôn mặt — cần chụp lại ảnh chân dung trong hồ sơ.');
+      return (_mat.mau[maAnh] = r.descriptor);
+    });
+  }).then(function (mau) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Trình duyệt không cho dùng camera.');
+    tt('Đang bật camera trước…');
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }).then(function (luong) {
+      _mat.luong = luong;
+      var v = $('matVideo'); if (!v) { matDung(); return; }
+      v.srcObject = luong; return v.play().then(function () { matQuet(v, mau, n, k, tt); });
+    });
+  }).catch(function (e) { matDung(); tt(thoat(e.message || e), 'loi'); if ($('matLai')) $('matLai').style.display = ''; });
+}
+function matQuet(v, mau, n, k, tt) {
+  _mat.chay = true;
+  var t0 = Date.now(), moMat = 0, nham = false, daChop = false, ds = [], opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+  tt('<b>Nhìn thẳng vào camera và chớp mắt 1 lần.</b>');
+  (function vong() {
+    if (!_mat.chay || !$('matVideo') || !$('nenHs').classList.contains('hien')) { matDung(); return; }
+    faceapi.detectSingleFace(v, opt).withFaceLandmarks().withFaceDescriptor().then(function (r) {
+      if (!_mat.chay) return;
+      if (!r) { tt(Date.now() - t0 > 4000 ? 'Chưa thấy mặt — đưa mặt vào giữa khung, đủ sáng, bỏ khẩu trang / kính râm.' : '<b>Nhìn thẳng vào camera và chớp mắt 1 lần.</b>'); }
+      else {
+        var ear = matEar(r.landmarks);
+        if (ear > moMat) moMat = moMat ? moMat * 0.9 + ear * 0.1 : ear;   // mức mắt mở (trôi chậm)
+        if (moMat && ear < moMat * 0.65) nham = true;
+        else if (nham && ear > moMat * 0.85) { nham = false; daChop = true; }
+        if (ear > moMat * 0.85 && r.detection.score > 0.6) ds.push(faceapi.euclideanDistance(mau, r.descriptor));
+        if (!daChop) tt('<b>Đã thấy mặt.</b> Chớp mắt 1 lần để xác nhận người thật…');
+      }
+      if (daChop && ds.length >= 3) {
+        matDung();
+        var d = ds.sort(function (a, b) { return a - b; }).slice(0, 3).reduce(function (a, b) { return a + b; }, 0) / 3;
+        var diem = Math.round(Math.max(0, Math.min(1, (0.75 - d) / 0.45)) * 100);
+        var kq = d < MAT_KHOP ? 'KHOP' : d < MAT_NGHI ? 'NGHI' : 'KHONG_KHOP';
+        var chu = kq === 'KHOP' ? '✓ Khuôn mặt khớp ' + diem + '%' : kq === 'NGHI' ? '? Không chắc (' + diem + '%) — đối chiếu bằng mắt' : '✗ Khuôn mặt KHÔNG khớp (' + diem + '%)';
+        tt('<span style="font-size:18px">' + thoat(chu) + '</span><div class="hs-phu">Khoảng cách đặc trưng ' + d.toFixed(3) + ' · ngưỡng khớp < ' + MAT_KHOP + ' · bản thử, chưa ghi vào sổ</div>', kq === 'KHOP' ? 'ok' : 'loi');
+        if ($('matLai')) $('matLai').style.display = '';
+        k.mat = { kq: kq, diem: diem, chu: chu };
+        if (_hs.kqTra === k) hsVeKq(k);
+        return;
+      }
+      if (Date.now() - t0 > 25000) { matDung(); tt('Hết thời gian: ' + (daChop ? 'chưa lấy đủ ảnh mặt rõ' : 'chưa thấy chớp mắt') + '. Bấm Thử lại.', 'loi'); if ($('matLai')) $('matLai').style.display = ''; return; }
+      setTimeout(vong, 60);
+    }).catch(function (e) { matDung(); tt(thoat(e.message || e), 'loi'); });
+  })();
 }
 function hsGhiCongTram(chieu, nut) {
   var k = _hs.kqTra; if (!k) return;
@@ -17098,6 +17202,7 @@ $('anKq').addEventListener('click', function (ev) {
   var b = ev.target.closest('button'); if (!b) return;
   if (b.dataset.anMoHs) { var kh = b.dataset.anMoHs.split('|'); moHoSo(kh[0], kh[1]); return; }
   if (b.dataset.anGhi) { hsGhiCongTram(b.dataset.anGhi, b); return; }
+  if (b.dataset.anMat) { matMo(_hs.kqTra); return; }
   if (b.dataset.anKiem) {
     var kk = _hs.kqTra, khu = hsV('anKhu');
     if (!khu) { baoLoi('anLoi', 'Ghi khu vực kiểm tra ở ô trên cùng trước.'); $('anKhu').focus(); return; }
