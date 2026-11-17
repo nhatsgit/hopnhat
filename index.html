@@ -2306,7 +2306,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     <section id="pAnNinh" style="display:none">
       <div class="hs-dau-trang">
         <div><div class="hs-eyebrow">An ninh đơn vị</div><h1>Kiểm soát an ninh</h1><p>Quét QR thẻ để đối chiếu, ghi nhật ký ra/vào và kiểm tra đột xuất tại khu vực.</p></div>
-        <div class="hs-dau-nut"><button class="btn" type="button" id="anQlCong" style="display:none">Quản lý cổng</button></div>
+        <div class="hs-dau-nut"><button class="btn" type="button" id="anTramCam" style="display:none">Trạm camera</button><button class="btn" type="button" id="anQlCong" style="display:none">Quản lý cổng</button></div>
       </div>
       <div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div><b>Quét QR bằng camera điện thoại</b>, không cần máy quét chuyên dụng: bảo vệ đọc mã in trên thẻ, đối chiếu ảnh với người thật rồi mới xác nhận ra/vào. Nhật ký cổng không tự động dùng để tính công.</div></div>
       <div class="kpis gian" id="kpisAn" style="--cot:4"></div>
@@ -2337,6 +2337,10 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
           </div>
           <div class="hs-kq" id="anKq"><div class="goi-y" style="margin:0">Quét mã QR trên thẻ nhận diện (hoặc gõ mã) để hiện ảnh và thông tin đối chiếu, rồi bấm ghi vào / ra.</div></div>
         </div>
+      </div>
+      <div class="the" id="anCamThe" style="margin-bottom:16px;display:none">
+        <div class="hs-the-dau"><div><h3>Sự kiện camera</h3><div class="hs-phu">Từ trạm trung chuyển ở cổng (đầu ghi Hikvision) · tự cập nhật mỗi phút</div></div><span style="display:flex;gap:8px;align-items:center"><span class="vi tap" id="anCamTT"></span><button class="btn nho" id="anCamTai" type="button">Tải lại</button></span></div>
+        <div class="cuon cuon-doc" style="max-height:420px"><table id="bangCam"></table></div>
       </div>
       <div class="the" style="margin-bottom:16px">
         <div class="hs-the-dau"><div><h3>Đang trong cổng</h3><div class="hs-phu">Danh sách mở theo lượt vào gần nhất</div></div><span class="vi tap" id="anSoTrong"></span></div>
@@ -3334,7 +3338,7 @@ var LENH_DOC = {
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1, thongBaoDs: 1,
   xemPhieuBase: 1,   // 17/10/2026: xem trước khi đẩy phiếu sản lượng lên Base — Cloud Run (Apps Script ~20 giây)
-  hsTongQuan: 1, hsXuatCong: 1, hsDanhSach: 1, hsChiTiet: 1, hsCuTru: 1, hsDanhGia: 1, hsAnNinh: 1, hsAnh: 1, hsTraMa: 1, hsDsCong: 1, hsSuKienCamera: 1, hsAnhCamera: 1,   // 31/10/2026: an ninh & cư trú (lib/ho_so.js)
+  hsTongQuan: 1, hsXuatCong: 1, hsDanhSach: 1, hsChiTiet: 1, hsCuTru: 1, hsDanhGia: 1, hsAnNinh: 1, hsAnh: 1, hsTraMa: 1, hsDsCong: 1, hsSuKienCamera: 1, hsAnhCamera: 1, hsDsTramCamera: 1,   // 31/10/2026: an ninh & cư trú (lib/ho_so.js)
   heSoLuong: 1,    // 26/10/2026: tab Hệ số lương (HeSoLuong.gs) — đọc Sheet trên Cloud Run, ghi qua Apps Script
   banLamViec: 1,   // 26/10/2026: Bàn làm việc — Cloud Run đọc Sheet (có dòng chờ duyệt) cho mọi vai trò
   truyXuat: 1, lichSu: 1,   // 22/10/2026: truy xuất nguồn gốc + lịch sử chỉnh sửa (TruyXuat.gs)
@@ -3582,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 323;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 324;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3604,7 +3608,7 @@ var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1,
                        chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1,
                        dangKyThongBao: 1, huyThongBao: 1, phieuBaseCho: 1, duyetPhieuBaseWeb: 1,
                        hsLuuHoSo: 1, hsLuuGiaThuoc: 1, hsLuuPhong: 1, hsXepPhong: 1, hsYeuCauChuyenPhong: 1, hsDuyetChuyenPhong: 1,
-                       hsLuuDanhGia: 1, hsLuuKyLuat: 1, hsGhiCong: 1, hsKiemTra: 1, hsLuuKhach: 1, hsHuyKhach: 1, hsLuuCong: 1 };
+                       hsLuuDanhGia: 1, hsLuuKyLuat: 1, hsGhiCong: 1, hsKiemTra: 1, hsLuuKhach: 1, hsHuyKhach: 1, hsLuuCong: 1, hsLuuTramCamera: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho, _daGoi) {
@@ -14470,7 +14474,7 @@ window.crck2ThongBaoGiaLap = function (x) {
   tbVeSo();
   if ($('nenPhieu').classList.contains('hien') && $('tbDanhSach')) tbVeDs();
 };
-var TB_ICON = { AN_NINH_GL: '🛡️', PC_MOI: '⚖️', NHAC_CC: '⏰', TO_GUI_SL: '🌿', TO_GUI_CC: '📝', BASE_DUYET: '✅', BASE_TU_CHOI: '↩️', BASE_CAP_NHAT: '✏️',
+var TB_ICON = { AN_NINH_GL: '🛡️', CAMERA: '📹', PC_MOI: '⚖️', NHAC_CC: '⏰', TO_GUI_SL: '🌿', TO_GUI_CC: '📝', BASE_DUYET: '✅', BASE_TU_CHOI: '↩️', BASE_CAP_NHAT: '✏️',
                 NHAC_DRC: '🧪', TONG_HOP_NGAY: '📋', NHAN_SU: '👤', LOI_DONG_BO: '⚠️' };
 function tbKhoaDoc() { return 'crck2_tb_doc_' + (S.vaiTroHienThi || S.vaiTro) + '_' + S.maDonVi; }
 function tbVeSo() {
@@ -16735,6 +16739,8 @@ function veAnNinh() {
     _hs.khoaCong = khoaC;
   }
   $('anQlCong').style.display = hsCo('quanLyCong', 'THEM') || hsCo('quanLyCong', 'SUA') || hsCo('quanLyCong', 'XOA') ? '' : 'none';
+  $('anTramCam').style.display = $('anQlCong').style.display;
+  camTai(false);
   var khus = []; dsC.forEach(function (c) { if (c.khu && khus.indexOf(c.khu) < 0) khus.push(c.khu); });
   if (_hs.khuCong && khus.indexOf(_hs.khuCong) < 0) _hs.khuCong = '';
   $('anLocKhu').style.display = khus.length > 1 && _hs.cheDo !== 'kiem' ? '' : 'none';
@@ -16896,6 +16902,138 @@ function qlCongForm(c) {
     hsGhi('hsLuuCong', { ma: sua ? c.ma : '', ten: hsV('qcTen'), khu: khu, maDoi: hsV('qcDoi'), loai: hsV('qcLoai'), baoVe: hsV('qcBv'), ghiChu: hsV('qcGhi') }, this,
       function () { nsBaoOkChung(sua ? 'Đã lưu cổng.' : 'Đã thêm cổng.'); _hs.khoaCong = ''; qlCongMo(); taiAnNinh(); }, 'qcLoi');
   };
+}
+
+/* ---------- Camera thật (17/11/2026): sự kiện từ trạm trung chuyển ở cổng + quản lý trạm (khoá) + chuông ---------- */
+var _cam = { d: null, luc: 0, sau: '', chuong: 0 };
+var CAM_MUC = { info: ['tap', 'Ghi nhận'], ok: ['ok', 'Bình thường'], warn: ['canh', 'Cần xem'], crit: ['canh', 'Khẩn'] };
+function camTai(ep) {
+  var coXem = hsCo('anNinh', 'XEM') || hsCo('anNinh', 'THEM');
+  $('anCamThe').style.display = coXem ? '' : 'none';
+  if (!coXem || (!ep && Date.now() - _cam.luc < 20000)) return;
+  _cam.luc = Date.now();
+  if (!_cam.d) $('bangCam').innerHTML = '<tr><td class="rong">Đang tải sự kiện camera…</td></tr>';
+  goiAPI('hsSuKienCamera', hsP({ nguon: 'THAT' }), 30000).then(function (d) { _cam.d = d; if (!_cam.sau) _cam.sau = d.luc; camVe(); })
+    .catch(function (e) { $('bangCam').innerHTML = '<tr><td><div class="bao-loi">' + thoat(e.message) + '</div></td></tr>'; });
+}
+function camVe() {
+  var d = _cam.d, rows = d.rows.slice(0, 100), hn = hsHomNay();
+  var soHn = d.rows.filter(function (r) { return r.luc.slice(0, 10) === hn; }).length;
+  $('anCamTT').textContent = soHn + ' sự kiện hôm nay';
+  if (!rows.length) { $('bangCam').innerHTML = '<tr><td class="rong">Chưa có sự kiện nào. Admin tạo trạm ở nút “Trạm camera”, cài chương trình lên máy ở cổng là sự kiện sẽ về đây.</td></tr>'; return; }
+  $('bangCam').innerHTML = '<thead><tr><th>Lúc</th><th>Cổng</th><th>Camera</th><th>Sự kiện</th><th>Mức</th><th>Ảnh</th></tr></thead><tbody>' + rows.map(function (r) {
+    var m = CAM_MUC[r.muc] || CAM_MUC.info;
+    return '<tr><td style="white-space:nowrap">' + thoat(r.luc) + (r.tre ? '<div class="hs-phu">gửi bù</div>' : '') + '</td><td>' + thoat(r.cong) + '</td><td>' + thoat(r.thietBi) + '</td>' +
+      '<td>' + thoat(r.ketQua || r.loai) + (r.canhBao ? '<div class="hs-phu">' + thoat(r.canhBao) + '</div>' : '') + '</td>' +
+      '<td><span class="vi ' + m[0] + '">' + m[1] + '</span></td>' +
+      '<td>' + (r.dsAnh && r.dsAnh.length ? '<button class="btn nho" type="button" data-cam-anh="' + thoat(r.dsAnh[0]) + '" data-cam-tieu="' + thoat(r.luc + ' · ' + r.thietBi) + '">Xem</button>' : '<span class="hs-phu">—</span>') + '</td></tr>';
+  }).join('') + '</tbody>';
+}
+$('anCamTai').onclick = function () { camTai(true); };
+$('bangCam').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-cam-anh]'); if (!b) return;
+  hsMo('Ảnh camera · ' + b.dataset.camTieu, '<div class="rong">Đang tải ảnh…</div>');
+  goiAPI('hsAnhCamera', hsP({ ma: b.dataset.camAnh }), 30000).then(function (a) {
+    $('hsThan').innerHTML = '<img alt="Ảnh camera" style="max-width:100%;border-radius:8px;display:block" src="data:' + thoat(a.mime || 'image/jpeg') + ';base64,' + a.b64 + '">' +
+      '<div class="hs-phu" style="margin-top:6px">' + thoat(a.tep || '') + ' · lưu trên Drive 90 ngày</div>';
+  }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+});
+/** Chuông: mỗi phút hỏi sự kiện camera mới (chỉ sự kiện có cảnh báo: xâm nhập, che camera, chuyển động ban đêm). */
+function camHoiChuong() {
+  if (document.hidden || !S.vaiTro || !(coQuyen('anNinh', 'XEM') || coQuyen('anNinh', 'THEM'))) return;
+  goiAPI('hsSuKienCamera', hsP({ nguon: 'THAT', sau: _cam.sau || '' }), 30000).then(function (d) {
+    var lanDau = !_cam.sau; _cam.sau = d.luc;
+    if (S.tab === 'anNinh' && d.rows.length) camTai(true);
+    if (lanDau) return;
+    d.rows.slice().reverse().forEach(function (r) {
+      if (!r.canhBao) return;
+      _tb.gl.unshift({ loai: 'CAMERA', muc: r.muc, tieuDe: r.canhBao + ' · ' + r.cong, noiDung: r.thietBi + ' · ' + r.luc + (r.soAnh ? ' · có ảnh' : ''), luc: r.lucGhi || r.luc, url: './?tab=anNinh' });
+    });
+    if (_tb.gl.length > 100) _tb.gl.length = 100;
+    tbVeSo();
+    if ($('nenPhieu').classList.contains('hien') && $('tbDanhSach')) tbVeDs();
+  }).catch(function () {});
+}
+setInterval(camHoiChuong, 60000);
+setTimeout(camHoiChuong, 8000);
+
+$('anTramCam').onclick = function () { tcMo(); };
+function tcMo() {
+  hsMo('Trạm camera', '<div id="tcLoi"></div><div class="rong">Đang tải danh sách trạm…</div>');
+  goiAPI('hsDsTramCamera', hsP({}), 30000).then(function (d) { _cam.tc = d; _hs.q = Object.assign({}, _hs.q, d.quyen); tcVe(); })
+    .catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+function tcTinhTrang(t) {
+  if (!t.hoat) return ['tap', 'Đã thu hồi khoá'];
+  if (!t.lucNhip) return t.skCuoi ? ['tap', 'Lần cuối gửi ' + t.skCuoi.slice(5, 16)] : ['tap', 'Chưa kết nối'];
+  var phut = (Date.parse(_cam.tc.luc.replace(' ', 'T')) - Date.parse(t.lucNhip.replace(' ', 'T'))) / 60000;
+  if (phut > 10) return ['canh', 'Mất liên lạc từ ' + t.lucNhip.slice(11, 16)];
+  if (t.ketNoi && t.ketNoi !== 'OK') return ['canh', 'Không nối được đầu ghi'];
+  return ['ok', 'Đang chạy'];
+}
+function tcVe() {
+  var d = _cam.tc, coThem = hsCo('quanLyCong', 'THEM'), coSua = hsCo('quanLyCong', 'SUA'), coXoa = hsCo('quanLyCong', 'XOA');
+  var hang = d.ds.map(function (t) {
+    var tt = tcTinhTrang(t);
+    return '<tr' + (t.hoat ? '' : ' style="opacity:.6"') + '><td><b>' + thoat(t.ten) + '</b><div class="hs-phu">' + thoat(t.ma) + ' · khoá ' + thoat(t.dauKhoa) + '…</div></td>' +
+      '<td>' + thoat(t.cong) + '<div class="hs-phu">' + thoat(t.khu || '') + '</div></td>' +
+      '<td><span class="vi ' + tt[0] + '">' + thoat(tt[1]) + '</span>' + (t.loi ? '<div class="hs-phu">' + thoat(t.loi) + '</div>' : '') + '</td>' +
+      '<td>' + thoat(t.dauGhi || '—') + (t.phienBan ? '<div class="hs-phu">chương trình ' + thoat(t.phienBan) + '</div>' : '') + '</td>' +
+      '<td>' + t.skHomNay + (t.hangCho ? '<div class="hs-phu">' + t.hangCho + ' chờ gửi</div>' : '') + '</td>' +
+      '<td style="text-align:right;white-space:nowrap">' + (coSua && t.hoat ? '<button class="btn nho" type="button" data-tc-cap="' + thoat(t.ma) + '">Cấp lại khoá</button> ' : '') +
+      (t.hoat && coXoa ? '<button class="btn nho" type="button" data-tc-thu="' + thoat(t.ma) + '">Thu hồi</button>' : '') +
+      (!t.hoat && coSua ? '<button class="btn nho" type="button" data-tc-mo="' + thoat(t.ma) + '">Mở lại</button>' : '') + '</td></tr>';
+  }).join('');
+  hsMo('Trạm camera', '<div id="tcLoi"></div><div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div>Mỗi trạm là một máy đặt ở cổng (laptop / mini PC) chạy chương trình trung chuyển: nghe đầu ghi Hikvision, chụp ảnh khi có sự kiện, gửi về đây. Trạm báo trạng thái 5 phút một lần.</div></div>' +
+    (d.ds.length ? '<div class="cuon"><table><thead><tr><th>Trạm</th><th>Cổng</th><th>Tình trạng</th><th>Đầu ghi</th><th>Sự kiện hôm nay</th><th></th></tr></thead><tbody>' + hang + '</tbody></table></div>'
+      : '<div class="rong">Chưa có trạm nào.</div>') +
+    '<div class="hs-chan">' + (coThem ? '<button class="btn chinh" type="button" id="tcThem">Thêm trạm</button>' : '') + '<button class="btn nho" type="button" id="tcLai">Tải lại</button><button class="btn nho" type="button" id="tcDong">Đóng</button></div>');
+  $('tcDong').onclick = hsDongHop; $('tcLai').onclick = tcMo;
+  if ($('tcThem')) $('tcThem').onclick = tcForm;
+  $('hsThan').querySelectorAll('[data-tc-cap]').forEach(function (b) {
+    b.onclick = function () {
+      if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Khoá cũ sẽ ngừng — chắc chắn?'; return; }
+      var t = d.ds.filter(function (x) { return x.ma === b.dataset.tcCap; })[0];
+      hsGhi('hsLuuTramCamera', { ma: t.ma, capLai: 1 }, b, function (r) { tcKhoa(r.khoa, t.ten); }, 'tcLoi');
+    };
+  });
+  $('hsThan').querySelectorAll('[data-tc-thu]').forEach(function (b) {
+    b.onclick = function () {
+      if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Trạm sẽ ngừng gửi — chắc chắn?'; return; }
+      hsGhi('hsLuuTramCamera', { ma: b.dataset.tcThu, thuHoi: 1 }, b, function () { nsBaoOkChung('Đã thu hồi khoá trạm.'); tcMo(); }, 'tcLoi');
+    };
+  });
+  $('hsThan').querySelectorAll('[data-tc-mo]').forEach(function (b) {
+    b.onclick = function () { hsGhi('hsLuuTramCamera', { ma: b.dataset.tcMo, moLai: 1 }, b, function () { nsBaoOkChung('Đã mở lại trạm.'); tcMo(); }, 'tcLoi'); };
+  });
+}
+function tcForm() {
+  var cong = (_cam.tc.cong || []).map(function (c) { return [c.ten, c.ten + (c.khu ? ' · ' + c.khu : '')]; });
+  hsMo('Thêm trạm camera', '<div id="tcLoi"></div><div class="hs-form">' +
+    hsO('tcTen', 'Tên trạm', '', { max: 60, goiY: 'vd Laptop cổng barie Đội 1' }) +
+    hsO('tcCong', 'Cổng của trạm (sự kiện sẽ gắn vào cổng này)', cong.length ? cong[0][0] : '', { chon: cong }) +
+    hsO('tcGhi', 'Ghi chú', '', { max: 200, rong: 1, goiY: 'vd Đầu ghi DS-7608NI-K1, kênh D1 nhìn đường vào' }) + '</div>' +
+    '<div class="hs-chan"><button class="btn nho" type="button" id="tcQuay">Quay lại</button><button class="btn chinh" type="button" id="tcLuu">Tạo trạm và lấy khoá</button></div>');
+  $('tcQuay').onclick = tcVe;
+  $('tcLuu').onclick = function () {
+    var ten = hsV('tcTen');
+    hsGhi('hsLuuTramCamera', { ten: ten, cong: hsV('tcCong'), ghiChu: hsV('tcGhi') }, this, function (r) { tcKhoa(r.khoa, ten); }, 'tcLoi');
+  };
+}
+/** Khoá trạm chỉ hiện 1 lần (máy chủ chỉ giữ bản băm). */
+function tcKhoa(khoa, ten) {
+  var mayChu = String(API_DOC_MAC_DINH).replace(/\/api\/exec$/, '');
+  hsMo('Khoá trạm · ' + ten, '<div class="hs-ghichu"><span aria-hidden="true">⚠</span><div><b>Khoá chỉ hiện một lần.</b> Chép ngay vào ô <code>khoaTram</code> trong tệp <code>cau_hinh.json</code> của chương trình trên máy ở cổng. Mất khoá thì bấm “Cấp lại khoá”. Không gửi khoá qua nhóm chat.</div></div>' +
+    '<label class="nhan">Khoá trạm</label><div style="display:flex;gap:8px"><input class="o" id="tcKhoaO" readonly value="' + thoat(khoa) + '" style="font-family:monospace"><button class="btn" type="button" id="tcChep">Chép</button></div>' +
+    '<label class="nhan" style="margin-top:12px">Địa chỉ máy chủ (ô <code>mayChu</code>)</label><input class="o" readonly value="' + thoat(mayChu) + '" style="font-family:monospace">' +
+    '<div class="hs-chan"><button class="btn chinh" type="button" id="tcXong">Đã chép, quay lại danh sách</button></div>');
+  $('tcChep').onclick = function () {
+    var o = $('tcKhoaO'); o.select();
+    var xong = function () { $('tcChep').textContent = 'Đã chép'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(khoa).then(xong, function () { document.execCommand('copy'); xong(); });
+    else { document.execCommand('copy'); xong(); }
+  };
+  $('tcXong').onclick = tcMo;
 }
 
 /** Tra mã vừa quét / gõ: hiện ảnh + thông tin để bảo vệ đối chiếu. Bật "tự ghi" thì ghi luôn lượt cổng. */
