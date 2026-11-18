@@ -3687,7 +3687,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 341;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 342;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17226,13 +17226,22 @@ var AN2_QT = [
     { k: 'kiem', ten: 'Kiểm tra đột xuất', ai: 'Bảo vệ / Đội', mau: 'bv', mo: function (t) { return t ? t.kiemHomNay + ' lượt hôm nay · đối chiếu thẻ tại lô' : 'Đối chiếu thẻ tại khu vực'; } },
     { k: 'cam', ten: 'Camera cảnh báo', ai: 'Trạm camera', mau: 'cam', mo: function (t) { return t ? t.tramCam + ' trạm · ' + t.camHomNay + ' sự kiện hôm nay' : 'Chuyển động, xâm nhập kèm ảnh'; } },
     { k: 'bc', ten: 'Báo cáo & đối soát', ai: 'Ban lãnh đạo', mau: 'ld', mo: function () { return 'Ban đêm, ghi tay, không khớp, lịch sử'; } }] },
+  { ten: 'Cư trú & phòng ở', moTa: 'Phòng ở, xếp người, chuyển phòng', buoc: [
+    { k: 'phong', ten: 'Phòng ở', ai: 'TC-HC', mau: 'tchc', mo: function (t) { return t && t.soPhong !== undefined ? t.soPhong + ' phòng · ' + t.choTrong + ' chỗ trống' : 'Thêm / sửa phòng, sức chứa'; } },
+    { k: 'xep', ten: 'Xếp người vào phòng', ai: 'TC-HC / Đội', mau: 'tchc', mo: function (t) { return t && t.chuaPhong !== undefined ? t.chuaPhong + ' người lao động chưa có phòng' : 'Gán người vào phòng'; }, so: function (t) { return t && t.chuaPhong || 0; } },
+    { k: 'chuyen', ten: 'Chuyển phòng', ai: 'Đội', mau: 'bv', mo: function (t) { return t && t.chuyenCho ? t.chuyenCho + ' yêu cầu đang chờ xử lý' : 'Đổi phòng cho người lao động / gia thuộc'; } },
+    { k: 'tra', ten: 'Trả phòng khi nghỉ việc', ai: 'Hệ thống tự làm', mau: 'cam', mo: function () { return 'Nghỉ việc được duyệt bên Nhân sự thì tự trả phòng, báo trợ lý'; } }] },
+  { ten: 'Đánh giá & kỷ luật', moTa: 'Chấm điểm hằng tháng, biên bản, theo dõi khắc phục', buoc: [
+    { k: 'cham', ten: 'Chấm điểm tháng', ai: 'Tổ trưởng / Đội', mau: 'bv', mo: function (t) { return t && t.chuaCham !== undefined ? t.chuaCham + ' người chưa chấm tháng ' + t.kyNay.slice(5) + '/' + t.kyNay.slice(0, 4) : 'Kỹ năng, ý thức thang 1–5'; }, so: function (t) { return t && t.chuaCham || 0; } },
+    { k: 'kl', ten: 'Lập biên bản kỷ luật', ai: 'Đội / TC-HC', mau: 'bv', mo: function () { return 'Vi phạm, hình thức xử lý'; } },
+    { k: 'kp', ten: 'Theo dõi khắc phục', ai: 'Đội / TC-HC', mau: 'tchc', mo: function (t) { return t && t.kyLuatMo !== undefined ? t.kyLuatMo + ' biên bản chưa khắc phục xong' : 'Cập nhật tiến bộ đến khi đạt chuẩn'; }, so: function (t) { return t && t.kyLuatMo || 0; } }] },
   { ten: 'Thiết lập', moTa: 'Admin: cổng, bảo vệ, giờ ca, trạm camera', admin: 1, buoc: [
     { k: 'cong', ten: 'Cổng & bảo vệ', ai: 'Admin', mau: 'admin', mo: function (t) { return t ? t.soCong + ' cổng · ' + t.congChuaBv + ' chưa gán bảo vệ' : 'Danh sách cổng'; }, so: function (t) { return t ? t.congChuaBv : 0; } },
     { k: 'gioCa', ten: 'Giờ các ca', ai: 'Admin', mau: 'admin', mo: function (t, c) { return c ? c.ca.filter(function (x) { return x.hoat; }).map(function (x) { return x.ten.replace('Ca ', '') + ' ' + x.bd + '–' + x.kt; }).join(' · ') : 'Ca sáng / chiều / đêm'; } },
     { k: 'tram', ten: 'Trạm camera', ai: 'Admin', mau: 'cam', mo: function (t) { return t ? t.tramCam + ' trạm đang hoạt động' : 'Khoá trạm, tình trạng kết nối'; } }] }];
 function an2VeLuong() {
   var t = _an2.tt, c = _ca.d, coAdmin = hsCo('quanLyCong', 'THEM') || hsCo('quanLyCong', 'SUA');
-  var mo = _an2.qtMo || (_an2.qtMo = { 0: 0, 1: 1, 2: 0, 3: 0, 4: 0 });
+  var mo = _an2.qtMo || (_an2.qtMo = { 0: 0, 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 });
   if (S.vaiTroHienThi === 'BAO_VE' && !_an2.qtBv) { _an2.qtBv = 1; mo[0] = 0; mo[1] = 1; }
   $('an2Luong').innerHTML = AN2_QT.map(function (q, qi) {
     if (q.admin && !coAdmin) return '';
@@ -17268,8 +17277,15 @@ $('an2Luong').addEventListener('toggle', function (ev) { var d = ev.target; if (
 $('an2Luong').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-an2-buoc]'); if (!b) return;
   var k = b.dataset.an2Buoc, cuon = function (id) { an2Sub('tq'); setTimeout(function () { var o = $(id); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); };
-  var trang = { hoSo: 'hoSo', anh: 'hoSo', the: 'theId', khach: 'khach' }[k];
-  if (trang) { if (tabAn(trang)) { baoLoi('thongBao', 'Vai trò của bạn không mở trang này.'); return; } an2Popup(trang); return; }
+  var trang = { hoSo: 'hoSo', anh: 'hoSo', the: 'theId', khach: 'khach', phong: 'cuTru', xep: 'cuTru', chuyen: 'cuTru', tra: 'cuTru', cham: 'danhGia', kl: 'danhGia', kp: 'danhGia' }[k];
+  if (trang) {
+    if (tabAn(trang)) { baoLoi('thongBao', 'Vai trò của bạn không mở trang này.'); return; }
+    an2Popup(trang);
+    if (k === 'kl') setTimeout(function () { var n = $('dgThemKl'); if (n && n.style.display !== 'none') n.click(); }, 600);
+    return;
+  }
+  if (k === 'trong') { var th = $('bangTrongCong').closest('.the'); an2PopupEl(th, 'Đang trong cổng'); return; }
+  if (k === 'cam') { an2PopupEl($('anCamThe'), 'Sự kiện camera'); camTai(true); return; }
   if (k === 'cong') { if (hsCo('quanLyCong', 'XEM')) qlCongMo(); else baoLoi('thongBao', 'Bạn chưa có quyền xem danh sách cổng.'); }
   else if (k === 'tram') tcMo();
   else if (k === 'gioCa') { if (_ca.d) caSuaCa(); else { caTai(); setTimeout(function () { if (_ca.d) caSuaCa(); }, 1500); } }
@@ -17304,7 +17320,8 @@ function an2PopDong(doi) {
   var o = _an2Pop;
   if (o.sec.id === 'anTram') { anTatCam(); _an2.hienTram = ''; }
   o.cha.insertBefore(o.sec, o.sau);
-  o.sec.style.display = o.trang ? (S.tab === o.sec.id.charAt(1).toLowerCase() + o.sec.id.slice(2) ? '' : 'none') : (o.sec.id === 'anTram' && S.tab === 'anNinh' ? '' : 'none');
+  o.sec.style.display = o.trang ? (S.tab === o.sec.id.charAt(1).toLowerCase() + o.sec.id.slice(2) ? '' : 'none')
+    : o.sec.id === 'anTram' ? (S.tab === 'anNinh' ? '' : 'none') : o.hien;   // khối thường (Đang trong cổng, camera, ca trực): trả lại như lúc mở
   _an2Pop = null;
   if (doi === true) return;
   $('an2Pop').classList.remove('hien');
