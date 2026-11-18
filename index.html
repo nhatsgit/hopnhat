@@ -3700,7 +3700,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 346;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 347;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -14304,8 +14304,8 @@ function nsMoTuyenMoi() {
     var dsTo = '<option value="">— chọn tổ —</option>';
     for (var i = 0; i < S.dsTo.length; i++) dsTo += '<option value="' + thoat(S.dsTo[i].ma) + '">' + thoat(S.dsTo[i].ma) + '</option>';
     var h = '<div class="the" style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
-      '<label class="btn chinh" style="cursor:pointer">📷 Chụp mặt sau căn cước<input type="file" id="tmMrzAnh" accept="image/*" capture="environment" hidden></label>' +
-      '<span class="hs-phu" id="tmMrzTT">Chụp rõ 3 dòng chữ <b>IDKHM…&lt;&lt;&lt;</b> ở mặt sau: hệ thống tự điền số căn cước, họ tên, giới tính, ngày sinh. Ảnh không lưu, không gửi đi.</span></div>' +
+      '<label class="btn chinh" style="cursor:pointer">📷 Chụp căn cước<input type="file" id="tmMrzAnh" accept="image/*" capture="environment" hidden></label>' +
+      '<span class="hs-phu" id="tmMrzTT">Chụp mặt có 3 dòng chữ <b>IDKHM…&lt;&lt;&lt;</b>: hệ thống tự điền số căn cước, họ tên, giới tính, ngày sinh. Ảnh không lưu, không gửi đi.</span></div>' +
       '<div class="the form-luoi" style="margin-bottom:12px">' +
       '<div><label class="nhan" for="tmCccd">Số căn cước (9 chữ số)</label><input class="o" id="tmCccd" maxlength="9" inputmode="numeric"></div>' +
       '<div><label class="nhan" for="tmTen">Họ tên (chữ Latin)</label><input class="o" id="tmTen" maxlength="60"></div>' +
@@ -14359,59 +14359,118 @@ function mrzSoKiem(chuoi) {   // ICAO 9303: trọng số 7,3,1; A-Z = 10..35; < 
   return String(tong % 10);
 }
 function mrzSo(x) { return x.replace(/O|Q|D/g, '0').replace(/I|L/g, '1').replace(/Z/g, '2').replace(/S/g, '5').replace(/G/g, '6').replace(/B/g, '8'); }
-/** Tách TD1 từ chữ OCR. Trả { soThe, ten, gt, sinh, hetHan, hopLe: {so, sinh, hetHan} } hoặc null. */
+/** Tách TD1 từ chữ OCR (dòng có thể dính chữ rác hai đầu). Trả { soThe, ten, gt, sinh, hetHan, hopLe } hoặc null. */
 function mrzTach(van) {
-  var dong = String(van || '').toUpperCase().split(/\n+/).map(function (x) { return x.replace(/[^A-Z0-9<]/g, ''); }).filter(function (x) { return x.length >= 20; });
-  var i1 = -1;
-  for (var i = 0; i < dong.length; i++) if (/^I[A-Z<]?KHM/.test(dong[i]) || /^[I1][DO0<]KHM/.test(dong[i])) { i1 = i; break; }
-  if (i1 < 0) for (i = 0; i < dong.length; i++) if (dong[i].indexOf('KHM') > -1 && dong[i].indexOf('KHM') < 6) { i1 = i; break; }
-  if (i1 < 0 || !dong[i1 + 1]) return null;
-  var d1 = dong[i1].replace(/^.*?KHM/, ''), d2 = dong[i1 + 1], d3 = dong[i1 + 2] || '';
-  var soThe = mrzSo(d1.slice(0, 9)), kSo = mrzSo(d1.charAt(9));
-  var m2 = /^([0-9OQDILZSGB]{6})([0-9OQDILZSGB])([MF<])([0-9OQDILZSGB]{6})([0-9OQDILZSGB])/.exec(d2);
+  var dong = String(van || '').toUpperCase().split(/\n+/).map(function (x) { return x.replace(/[^A-Z0-9<]/g, ''); }).filter(function (x) { return x.length >= 12; });
+  var so = '[0-9OQDILZSGB]', re2 = new RegExp('(' + so + '{6})(' + so + ')([MF<])(' + so + '{6})(' + so + ')', 'g');
+  var i2 = -1, m2 = null;
+  dong.forEach(function (d, i) {   // dòng 2: ưu tiên chỗ khớp số kiểm tra ngày sinh
+    var m; re2.lastIndex = 0;
+    while ((m = re2.exec(d))) {
+      var dung = mrzSoKiem(mrzSo(m[1])) === mrzSo(m[2]), coKhm = d.indexOf('KHM', m.index) > -1;
+      if (!m2 || (dung && !m2.dung) || (dung === m2.dung && coKhm && !m2.coKhm)) { m2 = { m: m, dung: dung, coKhm: coKhm }; i2 = i; }
+      re2.lastIndex = m.index + 1;
+    }
+  });
   if (!m2) return null;
-  var sinh = mrzSo(m2[1]), kSinh = mrzSo(m2[2]), het = mrzSo(m2[4]), kHet = mrzSo(m2[5]);
-  var ten = '';
-  if (d3) { var p = d3.replace(/<+$/, '').split('<<'); ten = [p[0], (p[1] || '')].join(' ').replace(/</g, ' ').replace(/\s+/g, ' ').trim(); }
-  var nam = function (yymmdd, tuongLai) { var yy = +yymmdd.slice(0, 2), nay = new Date().getFullYear() % 100; var y = tuongLai ? 2000 + yy : (yy > nay ? 1900 + yy : 2000 + yy); return y + '-' + yymmdd.slice(2, 4) + '-' + yymmdd.slice(4, 6); };
-  return { soThe: soThe.replace(/</g, ''), ten: ten, gt: m2[3] === 'M' ? 'NAM' : m2[3] === 'F' ? 'NU' : '', sinh: nam(sinh, false), hetHan: nam(het, true),
+  var d1 = '', i;
+  for (i = i2 - 1; i >= 0 && !d1; i--) { var k = dong[i].search(/[I1L][A-Z0<]?KHM/); if (k > -1) d1 = dong[i].slice(dong[i].indexOf('KHM', k) + 3); }
+  if (!d1) for (i = i2 - 1; i >= 0 && !d1; i--) { var k2 = dong[i].indexOf('KHM'); if (k2 > -1) d1 = dong[i].slice(k2 + 3); }
+  if (!d1) return null;
+  var soThe = mrzSo(d1.slice(0, 9)), kSo = mrzSo(d1.charAt(9)), m = m2.m;
+  var sinh = mrzSo(m[1]), kSinh = mrzSo(m[2]), het = mrzSo(m[4]), kHet = mrzSo(m[5]), ten = '';
+  for (i = i2 + 1; i < dong.length && !ten; i++) {
+    var t = /([A-Z]+(?:<[A-Z]+)*)<<([A-Z]+(?:<[A-Z]+)*)/.exec(dong[i]);
+    if (t) ten = (t[1] + ' ' + t[2]).replace(/</g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  var nam = function (y, tuongLai) { var yy = +y.slice(0, 2), nay = new Date().getFullYear() % 100, n = tuongLai ? 2000 + yy : (yy > nay ? 1900 + yy : 2000 + yy); return n + '-' + y.slice(2, 4) + '-' + y.slice(4, 6); };
+  return { soThe: soThe.replace(/</g, ''), ten: ten, gt: m[3] === 'M' ? 'NAM' : m[3] === 'F' ? 'NU' : '', sinh: nam(sinh, false), hetHan: nam(het, true),
            hopLe: { so: mrzSoKiem(soThe) === kSo, sinh: mrzSoKiem(sinh) === kSinh, hetHan: mrzSoKiem(het) === kHet } };
 }
-/** Ảnh -> canvas xám, rộng ~1600 px (ảnh điện thoại quá to làm OCR chậm, quá nhỏ đọc sai). */
-function mrzChuanBi(tep) {
+function mrzDiem(k) { return !k ? -1 : (k.hopLe.so ? 3 : 0) + (k.hopLe.sinh ? 3 : 0) + (k.hopLe.hetHan ? 1 : 0) + (k.ten ? 1 : 0); }
+function mrzAnh(tep) {
   return new Promise(function (ok, loi) {
     var url = URL.createObjectURL(tep), img = new Image();
     img.onload = function () {
-      var r = Math.min(1, 1600 / Math.max(img.width, img.height)), w = Math.round(img.width * r), h = Math.round(img.height * r);
-      var c = document.createElement('canvas'); c.width = w; c.height = h;
-      var x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
-      var d = x.getImageData(0, 0, w, h), a = d.data;
-      for (var i = 0; i < a.length; i += 4) { var g = a[i] * 0.299 + a[i + 1] * 0.587 + a[i + 2] * 0.114; g = g < 110 ? 0 : g > 170 ? 255 : (g - 110) * 255 / 60; a[i] = a[i + 1] = a[i + 2] = g; }
-      x.putImageData(d, 0, 0); URL.revokeObjectURL(url); ok(c);
+      var r = Math.min(1, 2400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c);
     };
     img.onerror = function () { URL.revokeObjectURL(url); loi(new Error('Không mở được ảnh.')); };
     img.src = url;
   });
 }
+function mrzXoay(c, goc) {
+  if (!goc) return c;
+  var d = document.createElement('canvas'), q = goc % 180 !== 0; d.width = q ? c.height : c.width; d.height = q ? c.width : c.height;
+  var x = d.getContext('2d'); x.translate(d.width / 2, d.height / 2); x.rotate(goc * Math.PI / 180); x.drawImage(c, -c.width / 2, -c.height / 2);
+  return d;
+}
+/** Tìm các dải có khả năng là 3 dòng MRZ: hàng ảnh có nhiều lần đổi sáng-tối trải rộng; thêm các dải trượt dự phòng. */
+function mrzVung(c) {
+  var W = 700, H = Math.round(c.height * W / c.width), t = document.createElement('canvas'); t.width = W; t.height = H;
+  var x = t.getContext('2d', { willReadFrequently: true }); x.drawImage(c, 0, 0, W, H);
+  var a = x.getImageData(0, 0, W, H).data, doi = new Array(H).fill(0), y, i;
+  for (y = 0; y < H; y++) {
+    var truoc = 0, n = 0;
+    for (i = 0; i < W; i++) { var o = (y * W + i) * 4, g = a[o] * .3 + a[o + 1] * .59 + a[o + 2] * .11; if (i && Math.abs(g - truoc) > 28) n++; truoc = g; }
+    doi[y] = n;
+  }
+  var tb = doi.slice().sort(function (p, q) { return p - q; })[Math.floor(H * .7)] || 1, bang = [], dau = -1;
+  for (y = 0; y <= H; y++) {
+    var co = y < H && doi[y] > Math.max(tb * 1.05, 25);
+    if (co && dau < 0) dau = y;
+    if (!co && dau >= 0) { if (y - dau >= 5) bang.push([dau, y]); dau = -1; }
+  }
+  var vung = [], them = function (t0, t1) { t0 = Math.max(0, t0); t1 = Math.min(1, t1); if (t1 - t0 > .05 && !vung.some(function (v) { return Math.abs(v[0] - t0) < .02 && Math.abs(v[1] - t1) < .02; })) vung.push([t0, t1]); };
+  for (i = 0; i + 2 < bang.length; i++) {   // 3 dải cao gần bằng nhau, cách đều
+    var A = bang[i], B = bang[i + 1], C = bang[i + 2], h = (A[1] - A[0] + B[1] - B[0] + C[1] - C[0]) / 3, g1 = B[0] - A[0], g2 = C[0] - B[0];
+    if (Math.abs(g1 - g2) <= Math.max(4, g1 * .3) && g1 < h * 3.2 && g1 > h * .8) them((A[0] - h) / H, (C[1] + h) / H);
+  }
+  [[.55, 1], [.45, .85], [.6, .95], [.35, .75], [.25, .65], [.15, .55], [.05, .45], [0, 1]].forEach(function (v) { them(v[0], v[1]); });
+  return vung.slice(0, 9);
+}
+/** Cắt dải, phóng to, chuyển đen trắng theo độ sáng từng vùng (hết bóng đổ, hoa văn nền nhạt đi). */
+function mrzCat(c, v) {
+  var y0 = Math.round(c.height * v[0]), h0 = Math.max(10, Math.round(c.height * (v[1] - v[0])));
+  var tl = Math.min(3, Math.max(1, 1800 / c.width)), W = Math.round(c.width * tl), H = Math.round(h0 * tl), d = document.createElement('canvas'); d.width = W; d.height = H;
+  var x = d.getContext('2d', { willReadFrequently: true }); x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, y0, c.width, h0, 0, 0, W, H);
+  var im = x.getImageData(0, 0, W, H), a = im.data, I = new Float64Array((W + 1) * (H + 1)), r = Math.max(12, Math.round(W / 40)), yy, xx;
+  for (yy = 0; yy < H; yy++) { var tong = 0; for (xx = 0; xx < W; xx++) { var o = (yy * W + xx) * 4, g = a[o] * .3 + a[o + 1] * .59 + a[o + 2] * .11; a[o] = g; tong += g; I[(yy + 1) * (W + 1) + xx + 1] = I[yy * (W + 1) + xx + 1] + tong; } }
+  for (yy = 0; yy < H; yy++) for (xx = 0; xx < W; xx++) {
+    var x1 = Math.max(0, xx - r), x2 = Math.min(W, xx + r + 1), y1 = Math.max(0, yy - r), y2 = Math.min(H, yy + r + 1);
+    var tb = (I[y2 * (W + 1) + x2] - I[y1 * (W + 1) + x2] - I[y2 * (W + 1) + x1] + I[y1 * (W + 1) + x1]) / ((x2 - x1) * (y2 - y1)), p = (yy * W + xx) * 4, v2 = a[p] < tb * .82 ? 0 : 255;
+    a[p] = a[p + 1] = a[p + 2] = v2;
+  }
+  x.putImageData(im, 0, 0);
+  return d;
+}
+/** Thử lần lượt các hướng + dải; đủ số kiểm tra (số thẻ + ngày sinh) thì dừng ngay, không thì lấy kết quả tốt nhất. */
+function mrzDoc(w, goc, baoTien) {
+  var tot = null, viec = [];
+  // Ảnh dọc thì thẻ thường nằm xoay ngang: thử hướng 90° / 270° trước
+  (goc.height > goc.width ? [90, 270, 0, 180] : [0, 180, 90, 270]).forEach(function (a, tt) { var c = mrzXoay(goc, a); mrzVung(c).forEach(function (v, i) { viec.push({ c: c, v: v, uu: i + tt * 2 }); }); });
+  viec.sort(function (p, q) { return p.uu - q.uu; });
+  viec = viec.slice(0, 28);
+  var i = 0;
+  return (function tiep() {
+    if (i >= viec.length) return Promise.resolve(tot);
+    var o = viec[i++]; if (baoTien) baoTien(i, viec.length);
+    return w.recognize(mrzCat(o.c, o.v)).then(function (r) {
+      var k = mrzTach(r.data.text);
+      if (mrzDiem(k) > mrzDiem(tot)) tot = k;
+      return tot && tot.hopLe.so && tot.hopLe.sinh && tot.ten ? tot : tiep();
+    });
+  })();
+}
 function mrzQuetTep(tep) {
   var tt = function (h, loi) { var o = $('tmMrzTT'); if (o) { o.innerHTML = h; o.style.color = loi ? 'var(--clay, #b4532a)' : ''; } };
   tt('Đang tải bộ đọc chữ (lần đầu khoảng 5 MB)…');
-  var cv;
   mrzNapThuVien().then(function (w) {
-    tt('Đang đọc mặt sau căn cước…');
-    return mrzChuanBi(tep).then(function (c) {
-      cv = c;
-      return w.recognize(c);
-    }).then(function (r) {
-      var kq = mrzTach(r.data.text);
-      if (kq) return kq;
-      // ảnh chụp ngược / dọc: xoay 90° và 180° thử lại
-      var xoay = function (goc) { var c2 = document.createElement('canvas'), q = goc % 180 !== 0; c2.width = q ? cv.height : cv.width; c2.height = q ? cv.width : cv.height;
-        var x = c2.getContext('2d'); x.translate(c2.width / 2, c2.height / 2); x.rotate(goc * Math.PI / 180); x.drawImage(cv, -cv.width / 2, -cv.height / 2); return c2; };
-      return [180, 90, 270].reduce(function (p, goc) { return p.then(function (k) { return k || w.recognize(xoay(goc)).then(function (r2) { return mrzTach(r2.data.text); }); }); }, Promise.resolve(null));
-    });
+    tt('Đang tìm 3 dòng chữ trên căn cước…');
+    return mrzAnh(tep).then(function (c) { return mrzDoc(w, c, function (i, n) { tt('Đang đọc căn cước… (' + i + '/' + n + ')'); }); });
   }).then(function (kq) {
-    if (!kq) { tt('Không tìm thấy 3 dòng chữ IDKHM… trong ảnh. Chụp lại: đặt thẻ trên nền tối, đủ sáng, không loá, chụp thẳng và gần (dải chữ chiếm gần hết bề ngang).', true); return; }
+    if (!kq) { tt('Không đọc được 3 dòng chữ IDKHM… Chụp lại: thẻ nằm ngang, đủ sáng, không loá, chụp thẳng và gần (thẻ chiếm gần hết khung hình).', true); return; }
     var dung = kq.hopLe.so && kq.hopLe.sinh;
     if (kq.soThe && kq.hopLe.so) $('tmCccd').value = kq.soThe.replace(/\D/g, '').slice(0, 9) || kq.soThe;
     if (kq.ten) $('tmTen').value = kq.ten;
