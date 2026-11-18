@@ -974,7 +974,7 @@ tr[data-tx]:hover > td{background:var(--leaf-soft)}
 #an2Tq>.the:has(#bangLuot){order:4}
 #an2Tq>.the:has(#bangKiem){order:5}
 @media (max-width:900px){#an2Tq>.the:has(#bangTrongCong),#an2Tq>#anCamThe{grid-column:1/-1}}
-#an2TramO #anLocKhu{padding:0 20px}
+:is(#an2TramO,#an2PopThan) #anLocKhu{padding:0 20px}
 .ca-luoi{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .ca-the{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card)}
 .ca-the.cho{border-color:var(--clay);background:var(--clay-soft)}
@@ -987,27 +987,27 @@ tr[data-tx]:hover > td{background:var(--leaf-soft)}
 .ca-bang .ten{display:inline-block;background:var(--leaf-soft);color:var(--leaf);border-radius:6px;padding:1px 6px;margin:1px 0;font-size:12px}
 .ca-bang .ten.toi{background:var(--leaf);color:#fff}
 .ca-bang .trong{color:var(--ink-3);font-size:12px}
-#an2TramO .hs-cong-luoi{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px 20px 0}
-#an2TramO .hs-cong-luoi::before{content:'1. Chọn cổng';grid-column:1/-1;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em}
-#an2TramO .hs-cong-the{position:relative;cursor:pointer;padding:10px 12px;gap:4px}
-#an2TramO .hs-cong-the:hover{border-color:var(--leaf)}
-#an2TramO .hs-cong-the .hs-cong-nut{display:none}
-#an2TramO .hs-cong-the h4{padding-right:78px}
-#an2TramO .hs-cong-the p{margin:0 0 2px}
-#an2TramO .hs-cong-the>div>.vi{display:none}
-#an2TramO .hs-cong-the.on::after{content:'✓ Đang chọn';position:absolute;top:10px;right:12px;font-size:11.5px;font-weight:700;color:var(--leaf)}
-#an2TramO .hs-tram{grid-template-columns:minmax(280px,360px) minmax(0,1fr);align-items:start}
-#an2TramO .hs-tram>div:first-child{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg,transparent)}
-#an2TramO .hs-tram>div:first-child::before{content:'2. Quét thẻ';font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em}
-#an2TramO .hs-tram>div:first-child>div{margin-top:0!important}
-#an2TramO #anBatCam,#an2TramO .hs-tram label.btn{flex:1 1 100%;justify-content:center;text-align:center}
-#an2TramO #anBatCam{min-height:48px;font-size:15px}
-#an2TramO .hs-tram label.goi-y{flex:1 1 100%;order:3}
-#an2TramO .hs-tram>div:first-child>div:last-child{flex-wrap:wrap}
-#an2TramO .hs-tram>div:first-child>div:last-child::before{content:'Hoặc nhập mã thẻ / mã CN / mã khách';flex:1 1 100%;font-size:12px;color:var(--ink-3)}
-#an2TramO .hs-tram>div:first-child>div:last-child .o{flex:1;min-width:0}
-#an2TramO .hs-kq{min-height:240px}
-#an2TramO .hs-kq::before{content:'3. Kết quả đối chiếu';display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
+:is(#an2TramO,#an2PopThan) .hs-cong-luoi{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px 20px 0}
+:is(#an2TramO,#an2PopThan) .hs-cong-luoi::before{content:'1. Chọn cổng';grid-column:1/-1;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em}
+:is(#an2TramO,#an2PopThan) .hs-cong-the{position:relative;cursor:pointer;padding:10px 12px;gap:4px}
+:is(#an2TramO,#an2PopThan) .hs-cong-the:hover{border-color:var(--leaf)}
+:is(#an2TramO,#an2PopThan) .hs-cong-the .hs-cong-nut{display:none}
+:is(#an2TramO,#an2PopThan) .hs-cong-the h4{padding-right:78px}
+:is(#an2TramO,#an2PopThan) .hs-cong-the p{margin:0 0 2px}
+:is(#an2TramO,#an2PopThan) .hs-cong-the>div>.vi{display:none}
+:is(#an2TramO,#an2PopThan) .hs-cong-the.on::after{content:'✓ Đang chọn';position:absolute;top:10px;right:12px;font-size:11.5px;font-weight:700;color:var(--leaf)}
+:is(#an2TramO,#an2PopThan) .hs-tram{grid-template-columns:minmax(280px,360px) minmax(0,1fr);align-items:start}
+:is(#an2TramO,#an2PopThan) .hs-tram>div:first-child{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg,transparent)}
+:is(#an2TramO,#an2PopThan) .hs-tram>div:first-child::before{content:'2. Quét thẻ';font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em}
+:is(#an2TramO,#an2PopThan) .hs-tram>div:first-child>div{margin-top:0!important}
+:is(#an2TramO,#an2PopThan) #anBatCam,:is(#an2TramO,#an2PopThan) .hs-tram label.btn{flex:1 1 100%;justify-content:center;text-align:center}
+:is(#an2TramO,#an2PopThan) #anBatCam{min-height:48px;font-size:15px}
+:is(#an2TramO,#an2PopThan) .hs-tram label.goi-y{flex:1 1 100%;order:3}
+:is(#an2TramO,#an2PopThan) .hs-tram>div:first-child>div:last-child{flex-wrap:wrap}
+:is(#an2TramO,#an2PopThan) .hs-tram>div:first-child>div:last-child::before{content:'Hoặc nhập mã thẻ / mã CN / mã khách';flex:1 1 100%;font-size:12px;color:var(--ink-3)}
+:is(#an2TramO,#an2PopThan) .hs-tram>div:first-child>div:last-child .o{flex:1;min-width:0}
+:is(#an2TramO,#an2PopThan) .hs-kq{min-height:240px}
+:is(#an2TramO,#an2PopThan) .hs-kq::before{content:'3. Kết quả đối chiếu';display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
 @media (max-width:640px){.an2-luoi2{grid-template-columns:1fr}.an2-cong .tieu{width:100%;margin:4px 0}}
 .blv-buoc{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;width:170px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;
   background:var(--card);color:var(--ink);font:inherit;cursor:pointer;transition:border-color .15s,box-shadow .15s}
@@ -3687,7 +3687,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 339;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 340;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17259,7 +17259,8 @@ function an2HienCa(phan) {
   var cuon = function () { var o = $('caKhu_' + phan); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   if (_ca.d) { caVe(); setTimeout(cuon, 60); } else { caTai(); setTimeout(cuon, 1500); }
 }
-$('an2TramO').addEventListener('click', function (ev) {
+$('anCongLuoi').addEventListener('click', function (ev) {   // thẻ cổng bấm cả thẻ để chọn (tab An ninh: dưới quy trình hoặc trong cửa sổ nổi)
+  if (!ev.target.closest('#an2TramO,#an2PopThan')) return;
   var the = ev.target.closest('.hs-cong-the'); if (!the || ev.target.closest('button')) return;
   var nut = the.querySelector('[data-viec="tay"]'); if (nut) nut.click();
 });
