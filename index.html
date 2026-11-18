@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 328;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 329;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17089,7 +17089,7 @@ function hsVeKq(k) {
 }
 /* ---------- Xác minh khuôn mặt 1:1 (17/11/2026, bản thử): quét QR -> so mặt trước camera trước với ảnh chân dung đã lưu.
    Chạy hoàn toàn trên điện thoại (face-api, mô hình ~7 MB tải 1 lần), không gửi ảnh mặt đi đâu. Đã bỏ bước chớp mắt (18/11) theo yêu cầu — bảo vệ tự để ý người giơ ảnh. ---------- */
-var _mat = { nap: null, mau: {}, luong: null, chay: false };
+var _mat = { nap: null, mau: {}, luong: null, chay: false, cam: (function () { try { return localStorage.getItem('crck2_mat_cam') || 'user'; } catch (e) { return 'user'; } })() };
 var MAT_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/';
 var MAT_KHOP = 0.5, MAT_NGHI = 0.58;   // khoảng cách đặc trưng: < 0.5 khớp · 0.5–0.58 không chắc · > 0.58 không khớp
 function matNapThuVien() {
@@ -17121,13 +17121,21 @@ function matMo(k) {
   hsMo('Xác minh khuôn mặt · ' + n.ten,
     '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
     '<div style="text-align:center"><div class="hs-phu">Ảnh đã lưu</div>' + hsAnhHtml(maAnh, n.ten, true) + '</div>' +
-    '<div style="flex:1;min-width:220px;max-width:360px"><div class="hs-phu">Camera</div><video id="matVideo" playsinline muted style="width:100%;border-radius:10px;background:#000;transform:scaleX(-1)"></video></div></div>' +
+    '<div style="flex:1;min-width:220px;max-width:360px"><div class="gat" id="matChonCam" style="margin-bottom:6px"><button class="chip' + (_mat.cam === 'user' ? ' on' : '') + '" type="button" data-mat-cam="user">Camera trước</button><button class="chip' + (_mat.cam === 'environment' ? ' on' : '') + '" type="button" data-mat-cam="environment">Camera sau</button></div>' +
+    '<video id="matVideo" playsinline muted style="width:100%;border-radius:10px;background:#000' + (_mat.cam === 'user' ? ';transform:scaleX(-1)' : '') + '"></video></div></div>' +
     '<div id="matTT" class="goi-y" style="margin:10px 0 0">Đang chuẩn bị…</div>' +
     '<div class="hs-chan"><button class="btn nho" type="button" id="matLai" style="display:none">Thử lại</button><button class="btn nho" type="button" id="matDong">Đóng</button></div>');
   hsNapAnh($('hsThan'));
   var tt = function (h, loai) { var o = $('matTT'); if (o) { o.className = loai === 'ok' ? 'vi ok' : loai === 'loi' ? 'bao-loi' : 'goi-y'; o.style.display = 'block'; o.innerHTML = h; } };
   $('matDong').onclick = function () { matDung(); hsDongHop(); };
   $('matLai').onclick = function () { matMo(k); };
+  $('matChonCam').querySelectorAll('[data-mat-cam]').forEach(function (b) {
+    b.onclick = function () {
+      if (_mat.cam === b.dataset.matCam) return;
+      _mat.cam = b.dataset.matCam; try { localStorage.setItem('crck2_mat_cam', _mat.cam); } catch (e) {}
+      matDung(); matMo(k);
+    };
+  });
   var choAnh = function () {   // ảnh chân dung có thể đang tải
     return new Promise(function (ok, loi) {
       var t0 = Date.now();
@@ -17146,8 +17154,8 @@ function matMo(k) {
     });
   }).then(function (mau) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Trình duyệt không cho dùng camera.');
-    tt('Đang bật camera trước…');
-    return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }).then(function (luong) {
+    tt('Đang bật camera ' + (_mat.cam === 'user' ? 'trước' : 'sau') + '…');
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: _mat.cam, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }).then(function (luong) {
       _mat.luong = luong;
       var v = $('matVideo'); if (!v) { matDung(); return; }
       v.srcObject = luong; return v.play().then(function () { matQuet(v, mau, n, k, tt); });
