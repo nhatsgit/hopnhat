@@ -2288,7 +2288,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
     <!-- Bàn trực An ninh (giả lập): trang riêng an-ninh-gia-lap.html nhúng vào, chỉ chạy trên trình duyệt, dữ liệu mẫu -->
     <section id="pAnNinh2" style="display:none">
       <div class="hs-dau-trang">
-        <div><div class="hs-eyebrow">An ninh đơn vị</div><h1>An ninh</h1><p>Tổng quan, quy trình, báo cáo và lịch ra vào cổng.</p></div>
+        <div><div class="hs-eyebrow">An ninh đơn vị</div><h1>An ninh &amp; cư trú</h1><p>Tổng quan, quy trình, báo cáo và lịch ra vào cổng.</p></div>
         <div class="hs-dau-nut" id="an2Nut"><button class="btn" type="button" id="an2LamMoi">Làm mới</button></div>
       </div>
       <div class="an2-tabs" role="tablist" id="an2Tabs">
@@ -3716,7 +3716,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 355;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 356;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -12955,7 +12955,7 @@ var TEN_TAB = {
   khoMieng: 'Khô miệng cạo', xepLoai: 'Xếp loại', luong: 'Lương', baoCao: 'Xuất biểu mẫu', nangSuatVuon: 'Năng suất vườn cây',
   phanQuyen: 'Phân quyền', taiKhoan: 'Tài khoản', phieuBase: 'Phiếu Base', banDoLo: 'Bản đồ lô', baoCaoTD: 'Báo cáo Tập đoàn',
   nguoiDung: 'Người dùng', banLamViec: 'Bàn làm việc', heSoLuong: 'Hệ số lương',
-  hoSo: 'Hồ sơ & thẻ', cuTru: 'Cư trú & phòng ở', danhGia: 'Đánh giá & kỷ luật', anNinh: 'Cổng & kiểm soát', khach: 'Khách & nhà thầu', tqAnNinh: 'Tổng quan công ty', theId: 'Thẻ ID & QR', baoCaoAn: 'Báo cáo & thống kê', anNinhGL: 'Bàn trực (giả lập)', anNinh2: 'An ninh'
+  hoSo: 'Hồ sơ & thẻ', cuTru: 'Cư trú & phòng ở', danhGia: 'Đánh giá & kỷ luật', anNinh: 'Cổng & kiểm soát', khach: 'Khách & nhà thầu', tqAnNinh: 'Tổng quan công ty', theId: 'Thẻ ID & QR', baoCaoAn: 'Báo cáo & thống kê', anNinhGL: 'Bàn trực (giả lập)', anNinh2: 'An ninh & cư trú'
 };
 /** 1 icon (SVG nét, currentColor) đại diện mỗi nhóm — vẽ tay, khỏi phụ thuộc thư viện ngoài. */
 var ICON_NHOM = {
