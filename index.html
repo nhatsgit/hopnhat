@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 331;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 332;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17175,7 +17175,8 @@ function hsVeKq(k) {
   }
   if (!laKhach) h += '<div class="hs-chan" style="justify-content:flex-start">' +
     (n.anh && n.anh.CHAN_DUNG ? '<button class="btn" type="button" data-an-mat="1">🙂 Quét mặt xác minh</button>' : '<span class="hs-phu">Chưa có ảnh chân dung — chưa xác minh mặt được</span>') +
-    (k.mat ? ' <span class="vi ' + (k.mat.kq === 'KHOP' ? 'ok' : 'canh') + '">' + thoat(k.mat.chu) + '</span>' : '') +
+    (k.mat ? ' <span class="vi ' + (k.mat.kq === 'KHOP' ? 'ok' : 'canh') + '">' + thoat(k.mat.chu) + '</span>' +
+      (k.mat.anh ? ' <img alt="Ảnh vừa quét" title="Ảnh vừa quét (tạm, không lưu)" src="' + k.mat.anh + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;vertical-align:middle">' : '') : '') +
     (hsCo('hoSo', 'XEM') ? '<button class="btn nho" type="button" data-an-mo-hs="' + n.loai + '|' + thoat(n.id) + '">Mở hồ sơ</button>' : '') + '</div>';
   if (!hsCo('anNinh', 'THEM')) {
     h += '<div class="goi-y" style="margin:10px 0 0">Vai trò của bạn chỉ quét để tra cứu, đối chiếu. Ghi lượt ra/vào và biên bản do Bảo vệ thực hiện; Admin cấp thêm ở Quản trị → Phân quyền → "Ra vào cổng & kiểm tra thẻ".</div>';
@@ -17266,7 +17267,7 @@ function matMo(k) {
 }
 function matQuet(v, mau, n, k, tt) {
   _mat.chay = true;
-  var t0 = Date.now(), ds = [], opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+  var t0 = Date.now(), ds = [], anhTot = { kc: Infinity, url: '' }, opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
   tt('<b>Nhìn thẳng vào camera, giữ yên 1–2 giây.</b>');
   (function vong() {
     if (!_mat.chay || !$('matVideo') || !$('nenHs').classList.contains('hien')) { matDung(); return; }
@@ -17274,7 +17275,17 @@ function matQuet(v, mau, n, k, tt) {
       if (!_mat.chay) return;
       if (!r) { tt(Date.now() - t0 > 4000 ? 'Chưa thấy mặt — đưa mặt vào giữa khung, đủ sáng, bỏ khẩu trang / kính râm.' : '<b>Nhìn thẳng vào camera, giữ yên 1–2 giây.</b>'); }
       else {
-        if (r.detection.score > 0.6) ds.push(faceapi.euclideanDistance(mau, r.descriptor));
+        if (r.detection.score > 0.6) {
+          var kc = faceapi.euclideanDistance(mau, r.descriptor);
+          ds.push(kc);
+          if (!(kc >= anhTot.kc)) {   // giữ khung giống nhất để hiện lại (chỉ trong bộ nhớ, không lưu)
+            var cv = document.createElement('canvas'), rr = Math.min(1, 480 / v.videoWidth);
+            cv.width = Math.round(v.videoWidth * rr); cv.height = Math.round(v.videoHeight * rr);
+            var cx = cv.getContext('2d'); if (_mat.cam === 'user') { cx.translate(cv.width, 0); cx.scale(-1, 1); }
+            cx.drawImage(v, 0, 0, cv.width, cv.height);
+            anhTot = { kc: kc, url: cv.toDataURL('image/jpeg', 0.8) };
+          }
+        }
         tt('<b>Đã thấy mặt.</b> Giữ yên… (' + Math.min(ds.length, 3) + '/3)');
       }
       if (ds.length >= 3) {
@@ -17285,7 +17296,9 @@ function matQuet(v, mau, n, k, tt) {
         var chu = kq === 'KHOP' ? '✓ Khuôn mặt khớp ' + diem + '%' : kq === 'NGHI' ? '? Không chắc (' + diem + '%) — đối chiếu bằng mắt' : '✗ Khuôn mặt KHÔNG khớp (' + diem + '%)';
         tt('<span style="font-size:18px">' + thoat(chu) + '</span><div class="hs-phu">Khoảng cách đặc trưng ' + d.toFixed(3) + ' · ngưỡng khớp < ' + MAT_KHOP + ' · bản thử, chưa ghi vào sổ</div>', kq === 'KHOP' ? 'ok' : 'loi');
         if ($('matLai')) $('matLai').style.display = '';
-        k.mat = { kq: kq, diem: diem, chu: chu };
+        if (anhTot.url && $('matVideo')) $('matVideo').insertAdjacentHTML('afterend', '<img alt="Ảnh vừa quét" src="' + anhTot.url + '" style="width:100%;border-radius:10px;display:block"><div class="hs-phu">Ảnh vừa quét — chỉ hiện tạm, không lưu</div>');
+        if ($('matVideo')) $('matVideo').style.display = 'none';
+        k.mat = { kq: kq, diem: diem, chu: chu, anh: anhTot.url };
         if (_hs.kqTra === k) hsVeKq(k);
         return;
       }
