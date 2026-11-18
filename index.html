@@ -3704,7 +3704,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 350;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 351;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16478,7 +16478,7 @@ function hsFormXepPhong(d, tc) {
     }
     h += '<div class="hs-chan"><button class="btn nho" type="button" id="hsFHuy">Quay lại</button></div>';
     hsMo((tc ? (tc.che === 'xep' ? 'Xếp phòng — ' : 'Chuyển phòng — ') : 'Phòng ở — ') + d.ten, h);
-    var sauLuu = function () { if (tc) { nsBaoOkChung('Đã lưu.'); an2TaiTomTat(); tc.quay(); return; } hsLamMoiTrang(); moHoSo(d.loai, d.id); };
+    var sauLuu = function () { hsLamMoiTrang(); if (tc) { nsBaoOkChung('Đã lưu.'); an2TaiTomTat(); tc.quay(); return; } moHoSo(d.loai, d.id); };
     $('hsFHuy').onclick = function () { if (tc) tc.quay(); else veChiTietHs(); };
     if ($('hsFXep')) $('hsFXep').onclick = function () {
       hsGhi('hsXepPhong', { loai: d.loai, id: d.id, phong: hsV('hsFPhong'), ngay: hsV('hsFNgay'), chuPhong: $('hsFChuPhong') && $('hsFChuPhong').checked ? 1 : 0 },
@@ -17072,7 +17072,7 @@ $('dgThemKl').onclick = function () {
     '</div><div class="hs-chan"><button class="btn chinh" type="button" id="hsFTiep">Tiếp</button></div>');
   $('hsFTiep').onclick = function () { var n = ds.filter(function (x) { return x.id === hsV('hsFNguoi'); })[0]; _hs.ct = null; if (n) hsFormKyLuat(n); };
 };
-$('an2Pop').addEventListener('click', function (ev) { if (ev.target.closest('#bangDg,#bangKl')) dgBam(ev); });
+$('an2Pop').addEventListener('click', function (ev) { if (ev.target.closest('#bangDg,#bangKl') && !ev.target.closest('#pDanhGia')) dgBam(ev); });
 $('pDanhGia').addEventListener('click', dgBam);
 function dgBam(ev) {
   var a = ev.target.closest('[data-hs-mo]');
@@ -17401,11 +17401,11 @@ function an2HienCa(phan) {
   (_ca.d ? Promise.resolve() : caTai()).then(function () {
     var d = _ca.d; if (!d) return;
     var cho = d.giaoCa.filter(function (g) { return g.trangThai === 'CHO_NHAN'; }), giao = d.dangTruc.filter(function (o) { return !o.daGiao; });
-    if (phan === 'cho' && cho.length === 1 && hsCo('anNinh', 'THEM')) { caMoNhan(cho[0].ma); return; }
-    if (phan === 'dang' && giao.length === 1 && hsCo('anNinh', 'THEM')) { caMoGiao(giao[0].cong); return; }
     $('an2Ca').dataset.phan = phan;
     an2PopupEl($('an2Ca'), phan === 'lich' ? 'Phân ca trực' : phan === 'cho' ? 'Nhận ca' : 'Bàn giao ca');
     caVe();
+    if (phan === 'cho' && cho.length === 1 && hsCo('anNinh', 'THEM')) caMoNhan(cho[0].ma);
+    if (phan === 'dang' && giao.length === 1 && hsCo('anNinh', 'THEM')) caMoGiao(giao[0].cong);
   }).catch(function (e) { baoLoi('thongBao', e.message); });
 }
 /** Hộp chọn người có tìm kiếm: loc = bộ lọc hsDanhSach, loc2 = lọc thêm, nut(r) = HTML nút, bam(nút, r) khi bấm. */
@@ -17435,7 +17435,7 @@ function an2AnhChanDung() {
     bam: function (b, r, d) {
       khChonAnh(b.dataset.c === '1', function (url) {
         b.disabled = true; b.textContent = 'Đang lưu…';
-        hsPost('hsTaiAnh', { loai: r.loai, id: r.id, loaiAnh: 'CHAN_DUNG', mime: 'image/jpeg', b64: url }).then(function () { d.remove(); nsBaoOkChung('Đã lưu ảnh của ' + r.ten + '.'); an2TaiTomTat(); })
+        hsPost('hsTaiAnh', { loai: r.loai, id: r.id, loaiAnh: 'CHAN_DUNG', mime: 'image/jpeg', b64: url }).then(function () { d.remove(); nsBaoOkChung('Đã lưu ảnh của ' + r.ten + '.'); an2TaiTomTat(); hsLamMoiTrang(); })
           .catch(function (e) { b.disabled = false; b.textContent = 'Thử lại'; $('an2DsLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
       });
     } };
@@ -17486,7 +17486,7 @@ function an2KhachRa() {
     }).join('') || '<div class="rong">Không có khách nào đang trong cổng.</div>') + '</div>');
     $('an2KhDs').onclick = function (ev) {
       var b = ev.target.closest('[data-ra]'); if (!b) return;
-      hsGhi('hsGhiCong', { maQuet: b.dataset.ra, cong: $('anCong').value || '', cach: 'TAY' }, b, function () { nsBaoOkChung('Đã ghi khách ra cổng.'); an2TaiTomTat(); taiAnNinh(); an2KhachRa(); }, 'an2DsLoi');
+      hsGhi('hsGhiCong', { maQuet: b.dataset.ra, cong: $('anCong').value || '', cach: 'TAY' }, b, function () { nsBaoOkChung('Đã ghi khách ra cổng.'); an2TaiTomTat(); taiAnNinh(); hsLamMoiTrang(); an2KhachRa(); }, 'an2DsLoi');
     };
   }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
@@ -17497,6 +17497,7 @@ function an2DgSan() {
 }
 function an2DgKhoi(idBang, tieu) {
   var the = $(idBang).closest('.the');
+  if (_an2Pop && _an2Pop.sec.id === 'pDanhGia') { setTimeout(function () { the.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350); return; }   // đang mở cả trang: cuộn tới đúng bảng
   an2PopupEl(the, tieu);
   an2DgSan().catch(function (e) { baoLoi('thongBao', e.message); });
 }
@@ -17509,6 +17510,9 @@ $('an2Luong').addEventListener('toggle', function (ev) { var d = ev.target; if (
 $('an2Luong').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-an2-buoc]'); if (!b) return;
   var k = b.dataset.an2Buoc, cuon = function (id) { an2Sub('tq'); setTimeout(function () { var o = $(id); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); };
+  // Trang chính nằm ở lớp cửa sổ dưới, chức năng mở đè lên trên (vai trò không xem được trang thì chỉ mở chức năng)
+  var trangDuoi = { hoSo: 'hoSo', gt: 'hoSo', anh: 'hoSo', khDk: 'khach', khRa: 'khach', phong: 'cuTru', xep: 'cuTru', chuyen: 'cuTru', cham: 'danhGia', kl: 'danhGia', kp: 'danhGia' }[k];
+  if (trangDuoi && !tabAn(trangDuoi)) an2Popup(trangDuoi);
   if (k === 'hoSo') { nsMoTuyenMoi(); return; }
   if (k === 'gt') { hsFormGiaThuoc(null, null); return; }
   if (k === 'anh') { an2AnhChanDung(); return; }
