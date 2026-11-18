@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 330;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 331;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -14144,7 +14144,10 @@ function nsMoTuyenMoi() {
   nsGoi('viTriNS', { trangThai: 'CHUA_GIAO', moiTrang: 300 }).then(function (d) {
     var dsTo = '<option value="">— chọn tổ —</option>';
     for (var i = 0; i < S.dsTo.length; i++) dsTo += '<option value="' + thoat(S.dsTo[i].ma) + '">' + thoat(S.dsTo[i].ma) + '</option>';
-    var h = '<div class="the form-luoi" style="margin-bottom:12px">' +
+    var h = '<div class="the" style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+      '<label class="btn chinh" style="cursor:pointer">📷 Chụp mặt sau căn cước<input type="file" id="tmMrzAnh" accept="image/*" capture="environment" hidden></label>' +
+      '<span class="hs-phu" id="tmMrzTT">Chụp rõ 3 dòng chữ <b>IDKHM…&lt;&lt;&lt;</b> ở mặt sau: hệ thống tự điền số căn cước, họ tên, giới tính, ngày sinh. Ảnh không lưu, không gửi đi.</span></div>' +
+      '<div class="the form-luoi" style="margin-bottom:12px">' +
       '<div><label class="nhan" for="tmCccd">Số căn cước (9 chữ số)</label><input class="o" id="tmCccd" maxlength="9" inputmode="numeric"></div>' +
       '<div><label class="nhan" for="tmTen">Họ tên (chữ Latin)</label><input class="o" id="tmTen" maxlength="60"></div>' +
       '<div><label class="nhan" for="tmGt">Giới tính</label><select class="o" id="tmGt"><option value="">—</option><option value="NAM">Nam</option><option value="NU">Nữ</option></select></div>' +
@@ -14159,6 +14162,7 @@ function nsMoTuyenMoi() {
       '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">' + nsNut('dxHuy', 'Huỷ', false) + nsNut('dxGui', 'Gửi đề xuất', true) + '</div>';
     nsMoModal('Tuyển mới', h);
     $('dxMa').onchange = function () { $('tmKhungTo').style.display = this.value === 'CHAM_SOC' ? '' : 'none'; };
+    $('tmMrzAnh').onchange = function () { var f = this.files && this.files[0]; this.value = ''; if (f) mrzQuetTep(f); };
     $('dxHuy').onclick = dongSuaSanLuong;
     $('dxGui').onclick = function () {
       var cs = $('dxMa').value === 'CHAM_SOC';
@@ -14167,6 +14171,98 @@ function nsMoTuyenMoi() {
                     ngay: $('dxNgay').value, soQd: $('dxQd').value, ghiChu: $('dxGhiChu').value });
     };
   }).catch(function (e) { $('thanPhieu').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+
+/* ---------- Đọc dải MRZ mặt sau căn cước Campuchia (18/11/2026): Tesseract chạy trên máy, kiểm số kiểm tra ICAO 9303 (TD1, 3 dòng × 30) ---------- */
+var _mrz = { nap: null };
+function mrzNapThuVien() {
+  if (_mrz.nap) return _mrz.nap;
+  _mrz.nap = new Promise(function (ok, loi) {
+    if (window.Tesseract) return ok();
+    var sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload = ok; sc.onerror = function () { loi(new Error('Không tải được bộ đọc chữ (cần mạng lần đầu).')); };
+    document.head.appendChild(sc);
+  }).then(function () {
+    // Mô hình riêng cho chữ MRZ (OCR-B, đọc đúng dấu <), bản nhanh 1,4 MB — ghim commit để không đổi ngầm
+    return Tesseract.createWorker('mrz', 1, { langPath: 'https://cdn.jsdelivr.net/gh/DoubangoTelecom/tesseractMRZ@1e7adfecda5f3c9ae1fb12cf6b4b8c3958c63e46/tessdata_fast', gzip: false }).then(function (w) {
+      return w.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<', tessedit_pageseg_mode: '6', preserve_interword_spaces: '0' }).then(function () { return w; });
+    });
+  });
+  _mrz.nap.catch(function () { _mrz.nap = null; });
+  return _mrz.nap;
+}
+function mrzSoKiem(chuoi) {   // ICAO 9303: trọng số 7,3,1; A-Z = 10..35; < = 0
+  var tong = 0, ts = [7, 3, 1];
+  for (var i = 0; i < chuoi.length; i++) {
+    var c = chuoi.charAt(i), v = c === '<' ? 0 : /\d/.test(c) ? +c : c.charCodeAt(0) - 55;
+    tong += v * ts[i % 3];
+  }
+  return String(tong % 10);
+}
+function mrzSo(x) { return x.replace(/O|Q|D/g, '0').replace(/I|L/g, '1').replace(/Z/g, '2').replace(/S/g, '5').replace(/G/g, '6').replace(/B/g, '8'); }
+/** Tách TD1 từ chữ OCR. Trả { soThe, ten, gt, sinh, hetHan, hopLe: {so, sinh, hetHan} } hoặc null. */
+function mrzTach(van) {
+  var dong = String(van || '').toUpperCase().split(/\n+/).map(function (x) { return x.replace(/[^A-Z0-9<]/g, ''); }).filter(function (x) { return x.length >= 20; });
+  var i1 = -1;
+  for (var i = 0; i < dong.length; i++) if (/^I[A-Z<]?KHM/.test(dong[i]) || /^[I1][DO0<]KHM/.test(dong[i])) { i1 = i; break; }
+  if (i1 < 0) for (i = 0; i < dong.length; i++) if (dong[i].indexOf('KHM') > -1 && dong[i].indexOf('KHM') < 6) { i1 = i; break; }
+  if (i1 < 0 || !dong[i1 + 1]) return null;
+  var d1 = dong[i1].replace(/^.*?KHM/, ''), d2 = dong[i1 + 1], d3 = dong[i1 + 2] || '';
+  var soThe = mrzSo(d1.slice(0, 9)), kSo = mrzSo(d1.charAt(9));
+  var m2 = /^([0-9OQDILZSGB]{6})([0-9OQDILZSGB])([MF<])([0-9OQDILZSGB]{6})([0-9OQDILZSGB])/.exec(d2);
+  if (!m2) return null;
+  var sinh = mrzSo(m2[1]), kSinh = mrzSo(m2[2]), het = mrzSo(m2[4]), kHet = mrzSo(m2[5]);
+  var ten = '';
+  if (d3) { var p = d3.replace(/<+$/, '').split('<<'); ten = [p[0], (p[1] || '')].join(' ').replace(/</g, ' ').replace(/\s+/g, ' ').trim(); }
+  var nam = function (yymmdd, tuongLai) { var yy = +yymmdd.slice(0, 2), nay = new Date().getFullYear() % 100; var y = tuongLai ? 2000 + yy : (yy > nay ? 1900 + yy : 2000 + yy); return y + '-' + yymmdd.slice(2, 4) + '-' + yymmdd.slice(4, 6); };
+  return { soThe: soThe.replace(/</g, ''), ten: ten, gt: m2[3] === 'M' ? 'NAM' : m2[3] === 'F' ? 'NU' : '', sinh: nam(sinh, false), hetHan: nam(het, true),
+           hopLe: { so: mrzSoKiem(soThe) === kSo, sinh: mrzSoKiem(sinh) === kSinh, hetHan: mrzSoKiem(het) === kHet } };
+}
+/** Ảnh -> canvas xám, rộng ~1600 px (ảnh điện thoại quá to làm OCR chậm, quá nhỏ đọc sai). */
+function mrzChuanBi(tep) {
+  return new Promise(function (ok, loi) {
+    var url = URL.createObjectURL(tep), img = new Image();
+    img.onload = function () {
+      var r = Math.min(1, 1600 / Math.max(img.width, img.height)), w = Math.round(img.width * r), h = Math.round(img.height * r);
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      var x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
+      var d = x.getImageData(0, 0, w, h), a = d.data;
+      for (var i = 0; i < a.length; i += 4) { var g = a[i] * 0.299 + a[i + 1] * 0.587 + a[i + 2] * 0.114; g = g < 110 ? 0 : g > 170 ? 255 : (g - 110) * 255 / 60; a[i] = a[i + 1] = a[i + 2] = g; }
+      x.putImageData(d, 0, 0); URL.revokeObjectURL(url); ok(c);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); loi(new Error('Không mở được ảnh.')); };
+    img.src = url;
+  });
+}
+function mrzQuetTep(tep) {
+  var tt = function (h, loi) { var o = $('tmMrzTT'); if (o) { o.innerHTML = h; o.style.color = loi ? 'var(--clay, #b4532a)' : ''; } };
+  tt('Đang tải bộ đọc chữ (lần đầu khoảng 5 MB)…');
+  var cv;
+  mrzNapThuVien().then(function (w) {
+    tt('Đang đọc mặt sau căn cước…');
+    return mrzChuanBi(tep).then(function (c) {
+      cv = c;
+      return w.recognize(c);
+    }).then(function (r) {
+      var kq = mrzTach(r.data.text);
+      if (kq) return kq;
+      // ảnh chụp ngược / dọc: xoay 90° và 180° thử lại
+      var xoay = function (goc) { var c2 = document.createElement('canvas'), q = goc % 180 !== 0; c2.width = q ? cv.height : cv.width; c2.height = q ? cv.width : cv.height;
+        var x = c2.getContext('2d'); x.translate(c2.width / 2, c2.height / 2); x.rotate(goc * Math.PI / 180); x.drawImage(cv, -cv.width / 2, -cv.height / 2); return c2; };
+      return [180, 90, 270].reduce(function (p, goc) { return p.then(function (k) { return k || w.recognize(xoay(goc)).then(function (r2) { return mrzTach(r2.data.text); }); }); }, Promise.resolve(null));
+    });
+  }).then(function (kq) {
+    if (!kq) { tt('Không tìm thấy 3 dòng chữ IDKHM… trong ảnh. Chụp lại: đặt thẻ trên nền tối, đủ sáng, không loá, chụp thẳng và gần (dải chữ chiếm gần hết bề ngang).', true); return; }
+    var dung = kq.hopLe.so && kq.hopLe.sinh;
+    if (kq.soThe && kq.hopLe.so) $('tmCccd').value = kq.soThe.replace(/\D/g, '').slice(0, 9) || kq.soThe;
+    if (kq.ten) $('tmTen').value = kq.ten;
+    if (kq.gt) $('tmGt').value = kq.gt;
+    if (kq.hopLe.sinh) $('tmSinh').value = kq.sinh;
+    tt((dung ? '✓ Đã điền từ căn cước' : '⚠ Đọc được một phần — kiểm tra lại ô đánh dấu') + ': số <b>' + thoat(kq.soThe) + '</b>' + (kq.hopLe.so ? '' : ' (sai số kiểm tra, chưa điền)') +
+       ' · ' + thoat(kq.ten || '—') + ' · ' + (kq.gt === 'NAM' ? 'Nam' : kq.gt === 'NU' ? 'Nữ' : '—') + ' · sinh ' + thoat(kq.sinh) + (kq.hopLe.sinh ? '' : ' (sai số kiểm tra, chưa điền)') +
+       ' · hết hạn ' + thoat(kq.hetHan) + (kq.hopLe.hetHan ? '' : ' (?)') + '. Soát lại họ tên trước khi gửi.', !dung);
+    ['tmCccd', 'tmTen', 'tmGt', 'tmSinh'].forEach(function (id) { var o = $(id); if (o) { o.style.outline = '2px solid ' + (dung ? 'var(--leaf, #2f7d4f)' : 'var(--clay, #b4532a)'); setTimeout(function () { o.style.outline = ''; }, 4000); } });
+  }).catch(function (e) { tt(thoat(e.message || e), true); });
 }
 
 function nsMoCapNhat(r) {
