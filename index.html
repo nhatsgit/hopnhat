@@ -2269,17 +2269,14 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         <div class="hs-dau-nut" id="an2Nut"><button class="btn" type="button" id="an2LamMoi">Làm mới</button></div>
       </div>
       <div class="an2-tabs" role="tablist" id="an2Tabs">
-        <button type="button" role="tab" class="on" data-an2="tq">Tổng quan</button><button type="button" role="tab" data-an2="qt">Quy trình</button><button type="button" role="tab" data-an2="ca">Ca trực</button><button type="button" role="tab" data-an2="bc">Báo cáo</button><button type="button" role="tab" data-an2="lich">Lịch</button>
+        <button type="button" role="tab" class="on" data-an2="tq">Tổng quan</button><button type="button" role="tab" data-an2="qt">Quy trình</button><button type="button" role="tab" data-an2="bc">Báo cáo</button><button type="button" role="tab" data-an2="lich">Lịch</button>
       </div>
       <div id="an2Tq"></div>
       <div id="an2Qt" style="display:none">
-        <div class="the" style="margin-bottom:16px">
-          <div class="hs-the-dau"><div><h3>Quy trình kiểm soát an ninh</h3><div class="hs-phu">Từ nhập hồ sơ đến đối soát. Bấm từng bước để làm việc · số trên góc là việc đang chờ</div></div></div>
-          <div class="blv-luong" id="an2Luong"><div class="blv-trong">Đang tải…</div></div>
-        </div>
+        <div id="an2Luong"><div class="blv-trong">Đang tải…</div></div>
         <div id="an2TramO"></div>
+        <div id="an2Ca" style="display:none"></div>
       </div>
-      <div id="an2Ca" style="display:none"></div>
       <div id="an2Bc" style="display:none"></div>
       <div id="an2Lich" style="display:none"></div>
     </section>
@@ -3690,7 +3687,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 337;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 338;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16379,7 +16376,7 @@ function hsFormKyLuat(d) {
 
 /** Sau khi ghi: tải lại trang đang đứng (giữ trang số). */
 function hsLamMoiTrang() {
-  if (_an2Pop) { var tp = _an2Pop.sec.id.charAt(1).toLowerCase() + _an2Pop.sec.id.slice(2); if (tp === 'hoSo') taiHoSo(true); else if (HS_TAB[tp]) HS_TAB[tp](); return; }   // trang đang mở trong cửa sổ nổi của tab An ninh
+  if (_an2Pop && _an2Pop.trang) { var tp = _an2Pop.sec.id.charAt(1).toLowerCase() + _an2Pop.sec.id.slice(2); if (tp === 'hoSo') taiHoSo(true); else if (HS_TAB[tp]) HS_TAB[tp](); return; }   // trang đang mở trong cửa sổ nổi của tab An ninh
   if (S.tab === 'hoSo') taiHoSo(true);
   else if (S.tab === 'cuTru') taiCuTru();
   else if (S.tab === 'danhGia') taiDanhGia();
@@ -17123,6 +17120,7 @@ function an2Cong(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return
 function an2DauTuan(d) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); var t = (x.getDay() + 6) % 7; return an2Cong(x, -t); }
 /** Chuyển khối của trang Cổng & kiểm soát qua lại giữa trang cũ và tab mới. */
 function an2DiChuyen(ten) {
+  if (_an2Pop && ten !== 'anNinh2') { an2PopDong(true); $('an2Pop').classList.remove('hien'); }
   var goc = $('pAnNinh');
   if (!_an2.goc) {
     _an2.goc = Array.prototype.slice.call(goc.children);
@@ -17137,6 +17135,7 @@ function an2DiChuyen(ten) {
     Array.prototype.slice.call(_an2.nut.children).forEach(function (b) { $('an2Nut').insertBefore(b, $('an2LamMoi')); });
   } else if (ten === 'anNinh' && $('an2Tq').children.length) {
     _an2.goc.forEach(function (el) { goc.appendChild(el); });
+    $('anTram').style.display = '';
     Array.prototype.slice.call($('an2Nut').children).forEach(function (b) { if (b.id !== 'an2LamMoi') _an2.nut.appendChild(b); });
   }
 }
@@ -17147,16 +17146,16 @@ function an2Mo() {
 }
 function an2Sub(sub, khongTai) {
   _an2.sub = sub;
-  $('an2Tabs').querySelectorAll('[data-an2]').forEach(function (b) { b.classList.toggle('on', b.dataset.an2 === sub); b.setAttribute('aria-selected', b.dataset.an2 === sub); });
-  ['tq', 'qt', 'ca', 'bc', 'lich'].forEach(function (k) { $('an2' + k.charAt(0).toUpperCase() + k.slice(1)).style.display = k === sub ? '' : 'none'; });
+  $('an2Tabs').querySelectorAll('[data-an2]').forEach(function (b) { b.classList.toggle('on', b.dataset.an2 === (sub === 'ca' ? 'qt' : sub)); b.setAttribute('aria-selected', b.dataset.an2 === sub); });
+  if (sub === 'ca') { sub = 'qt'; _an2.sub = 'qt'; setTimeout(function () { an2HienCa('dang'); }, 0); }
+  ['tq', 'qt', 'bc', 'lich'].forEach(function (k) { $('an2' + k.charAt(0).toUpperCase() + k.slice(1)).style.display = k === sub ? '' : 'none'; });
   if (sub !== 'qt') anTatCam();
-  if (sub === 'qt') { $('anTram').style.display = _an2.hienTram ? '' : 'none'; an2VeLuong(); }
+  if (sub === 'qt') { if (!_an2Pop || _an2Pop.sec.id !== 'anTram') $('anTram').style.display = 'none'; an2VeLuong(); caTai(); }
   if (sub === 'lich') an2TaiLich(khongTai === true && _an2.lich.d);
   if (sub === 'bc') an2TaiBc(khongTai === true && _an2.bc.d);
-  if (sub === 'ca') caTai();
 }
 $('an2Tabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-an2]'); if (b) an2Sub(b.dataset.an2); });
-$('an2LamMoi').onclick = function () { taiAnNinh(); an2TaiTomTat(); if (_an2.sub === 'lich') an2TaiLich(); if (_an2.sub === 'bc') an2TaiBc(); if (_an2.sub === 'ca') caTai(); };
+$('an2LamMoi').onclick = function () { taiAnNinh(); an2TaiTomTat(); if (_an2.sub === 'lich') an2TaiLich(); if (_an2.sub === 'bc') an2TaiBc(); if (_an2.sub === 'qt') caTai(); };
 
 /* ---------- Quy trình ---------- */
 function an2TaiTomTat() {
@@ -17164,49 +17163,78 @@ function an2TaiTomTat() {
   goiAPI('hsLichAnNinh', hsP({ tu: h, den: h }), 45000).then(function (d) { _an2.tt = d.tomTat; _hs.q = Object.assign({}, _hs.q, d.quyen); if (_an2.sub === 'qt') an2VeLuong(); })
     .catch(function (e) { if (_an2.sub === 'qt') $('an2Luong').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
-var AN2_BUOC = [
-  { k: 'hoSo', ten: 'Nhập hồ sơ', ai: 'TC-HC', mau: '#2f7d4f', mo: function (t) { return t ? t.nguoi + ' người · ' + (t.nguoi - t.coAnh) + ' chưa có ảnh chân dung' : 'Hồ sơ, ảnh chân dung, căn cước'; }, so: function (t) { return t ? t.nguoi - t.coAnh : 0; } },
-  { k: 'the', ten: 'Cấp thẻ QR', ai: 'TC-HC', mau: '#2f7d4f', mo: function () { return 'In thẻ ID có mã QR cho người đã đủ hồ sơ'; } },
-  { k: 'cong', ten: 'Gán cổng & bảo vệ', ai: 'Admin', mau: '#6b4fa0', mo: function (t) { return t ? t.soCong + ' cổng · ' + t.congChuaBv + ' chưa gán bảo vệ' : 'Danh sách cổng, bảo vệ trực'; }, so: function (t) { return t ? t.congChuaBv : 0; } },
-  { k: 'ca', ten: 'Phân ca & giao ca', ai: 'Admin · Bảo vệ', mau: '#6b4fa0', mo: function () { return 'Lịch trực theo cổng, bàn giao / nhận ca'; } },
-  { k: 'quet', ten: 'Quét mã tại cổng', ai: 'Bảo vệ', mau: '#b4532a', mo: function () { return 'Quét QR thẻ, xác minh khuôn mặt, ghi vào / ra'; }, cuaBan: 1 },
-  { k: 'trong', ten: 'Theo dõi trong cổng', ai: 'Bảo vệ', mau: '#b4532a', mo: function (t) { return t ? t.trongCong + ' người đang trong · ' + t.quaLau + ' quá 16 giờ' : 'Ai đang ở trong, ai chưa ra'; }, so: function (t) { return t ? t.quaLau : 0; } },
-  { k: 'kiem', ten: 'Kiểm tra đột xuất', ai: 'Bảo vệ / Đội', mau: '#b4532a', mo: function (t) { return t ? t.kiemHomNay + ' lượt hôm nay · đối chiếu thẻ tại lô' : 'Đối chiếu thẻ tại khu vực'; } },
-  { k: 'cam', ten: 'Camera cảnh báo', ai: 'Trạm camera', mau: '#5b6b7a', mo: function (t) { return t ? t.tramCam + ' trạm · ' + t.camHomNay + ' sự kiện hôm nay' : 'Chuyển động, xâm nhập kèm ảnh'; } },
-  { k: 'khach', ten: 'Khách & nhà thầu', ai: 'Bảo vệ', mau: '#b4532a', mo: function (t) { return t ? t.khachDangTrong + ' khách đang trong' : 'Đăng ký, thẻ khách, ra vào'; }, so: function (t) { return t ? t.khachDangTrong : 0; } },
-  { k: 'bc', ten: 'Báo cáo & đối soát', ai: 'Ban lãnh đạo', mau: '#1f5f8b', mo: function () { return 'Lượt ra vào, ban đêm, không khớp, lịch sử'; } }];
+/* 5 quy trình (gập / mở) — mỗi bước: k (việc khi bấm), ten, ai, mau, mo(t, c) mô tả, so(t, c) số chờ. t = tóm tắt hsLichAnNinh, c = dữ liệu ca trực */
+var AN2_MAU = { tchc: '#2f7d4f', admin: '#6b4fa0', bv: '#b4532a', cam: '#5b6b7a', ld: '#1f5f8b' };
+var AN2_QT = [
+  { ten: 'Hồ sơ & thẻ', moTa: 'Người mới vào làm: hồ sơ, ảnh chân dung, thẻ QR', buoc: [
+    { k: 'hoSo', ten: 'Nhập hồ sơ', ai: 'TC-HC', mau: 'tchc', mo: function (t) { return t ? t.nguoi + ' người đang làm việc · ' + t.giaThuoc + ' gia thuộc' : 'Thông tin, căn cước, phòng ở'; } },
+    { k: 'anh', ten: 'Ảnh chân dung', ai: 'TC-HC', mau: 'tchc', mo: function (t) { return t ? (t.nguoi - t.coAnh) + ' người chưa có ảnh (cần cho quét mặt)' : 'Chụp ảnh để in thẻ, xác minh mặt'; }, so: function (t) { return t ? t.nguoi - t.coAnh : 0; } },
+    { k: 'the', ten: 'Cấp thẻ QR', ai: 'TC-HC', mau: 'tchc', mo: function () { return 'In thẻ ID có mã QR cho người đủ hồ sơ'; } }] },
+  { ten: 'Trực cổng hằng ngày', moTa: 'Nhận ca → kiểm soát ra vào → bàn giao cho ca sau', buoc: [
+    { k: 'caLich', ten: 'Phân ca', ai: 'Admin', mau: 'admin', mo: function (t, c) { return c ? c.dangTruc.filter(function (o) { return !o.nguoi.length; }).length + ' cổng đang trống người trực' : 'Lịch trực theo cổng, theo tuần'; }, so: function (t, c) { return c ? c.dangTruc.filter(function (o) { return !o.nguoi.length; }).length : 0; } },
+    { k: 'caNhan', ten: 'Nhận ca', ai: 'Bảo vệ ca sau', mau: 'bv', mo: function (t, c) { return c ? c.giaoCa.filter(function (g) { return g.trangThai === 'CHO_NHAN'; }).length + ' lượt bàn giao chờ nhận' : 'Đọc tình hình, xác nhận nhận ca'; }, so: function (t, c) { return c ? c.giaoCa.filter(function (g) { return g.trangThai === 'CHO_NHAN'; }).length : 0; }, cuaBan: 1 },
+    { k: 'quet', ten: 'Quét mã & ghi vào / ra', ai: 'Bảo vệ', mau: 'bv', mo: function () { return 'Quét QR thẻ, xác minh khuôn mặt'; }, cuaBan: 1 },
+    { k: 'trong', ten: 'Theo dõi trong cổng', ai: 'Bảo vệ', mau: 'bv', mo: function (t) { return t ? t.trongCong + ' người đang trong · ' + t.quaLau + ' quá 16 giờ' : 'Ai đang ở trong, ai chưa ra'; }, so: function (t) { return t ? t.quaLau : 0; } },
+    { k: 'caGiao', ten: 'Bàn giao ca', ai: 'Bảo vệ đang trực', mau: 'bv', mo: function (t, c) { return c ? c.dangTruc.filter(function (o) { return !o.daGiao; }).length + ' cổng chưa bàn giao ca này' : 'Ghi tình hình, giao ca sau'; }, cuaBan: 1 }] },
+  { ten: 'Khách & nhà thầu', moTa: 'Đăng ký trước → vào cổng → rời đi', buoc: [
+    { k: 'khach', ten: 'Đăng ký khách', ai: 'Đội / Bảo vệ', mau: 'bv', mo: function () { return 'Người đón, mục đích, ngày đến, giấy tờ'; } },
+    { k: 'quet', ten: 'Đối chiếu & cho vào', ai: 'Bảo vệ', mau: 'bv', mo: function () { return 'Quét mã khách / gõ mã KH tại cổng'; } },
+    { k: 'khach', ten: 'Theo dõi & cho ra', ai: 'Bảo vệ', mau: 'bv', mo: function (t) { return t ? t.khachDangTrong + ' khách đang trong' : 'Khách chưa rời đi'; }, so: function (t) { return t ? t.khachDangTrong : 0; } }] },
+  { ten: 'Kiểm tra & cảnh báo', moTa: 'Kiểm tra đột xuất, camera, đối soát', buoc: [
+    { k: 'kiem', ten: 'Kiểm tra đột xuất', ai: 'Bảo vệ / Đội', mau: 'bv', mo: function (t) { return t ? t.kiemHomNay + ' lượt hôm nay · đối chiếu thẻ tại lô' : 'Đối chiếu thẻ tại khu vực'; } },
+    { k: 'cam', ten: 'Camera cảnh báo', ai: 'Trạm camera', mau: 'cam', mo: function (t) { return t ? t.tramCam + ' trạm · ' + t.camHomNay + ' sự kiện hôm nay' : 'Chuyển động, xâm nhập kèm ảnh'; } },
+    { k: 'bc', ten: 'Báo cáo & đối soát', ai: 'Ban lãnh đạo', mau: 'ld', mo: function () { return 'Ban đêm, ghi tay, không khớp, lịch sử'; } }] },
+  { ten: 'Thiết lập', moTa: 'Admin: cổng, bảo vệ, giờ ca, trạm camera', admin: 1, buoc: [
+    { k: 'cong', ten: 'Cổng & bảo vệ', ai: 'Admin', mau: 'admin', mo: function (t) { return t ? t.soCong + ' cổng · ' + t.congChuaBv + ' chưa gán bảo vệ' : 'Danh sách cổng'; }, so: function (t) { return t ? t.congChuaBv : 0; } },
+    { k: 'gioCa', ten: 'Giờ các ca', ai: 'Admin', mau: 'admin', mo: function (t, c) { return c ? c.ca.filter(function (x) { return x.hoat; }).map(function (x) { return x.ten.replace('Ca ', '') + ' ' + x.bd + '–' + x.kt; }).join(' · ') : 'Ca sáng / chiều / đêm'; } },
+    { k: 'tram', ten: 'Trạm camera', ai: 'Admin', mau: 'cam', mo: function (t) { return t ? t.tramCam + ' trạm đang hoạt động' : 'Khoá trạm, tình trạng kết nối'; } }] }];
 function an2VeLuong() {
-  var t = _an2.tt;
-  $('an2Luong').innerHTML = AN2_BUOC.map(function (b, i) {
-    var so = b.so ? b.so(t) : 0;
-    return (i ? '<span class="blv-mui" aria-hidden="true">→</span>' : '') +
-      '<button type="button" class="blv-buoc' + (b.cuaBan || (b.k === 'kiem' && _an2.hienTram === 'kiem') ? ' cua-ban' : '') + '" data-an2-buoc="' + b.k + '">' +
-      '<span class="blv-b-dau"><i class="blv-cham" style="background:' + b.mau + '"></i><span class="blv-b-ten">' + (i + 1) + '. ' + thoat(b.ten) + '</span></span>' +
-      '<span class="blv-b-ai">' + thoat(b.ai) + '</span><span class="blv-b-mo">' + thoat(b.mo(t)) + '</span>' + (so ? '<span class="blv-dem">' + so + '</span>' : '') + '</button>';
+  var t = _an2.tt, c = _ca.d, coAdmin = hsCo('quanLyCong', 'THEM') || hsCo('quanLyCong', 'SUA');
+  var mo = _an2.qtMo || (_an2.qtMo = { 0: 0, 1: 1, 2: 0, 3: 0, 4: 0 });
+  if (S.vaiTroHienThi === 'BAO_VE' && !_an2.qtBv) { _an2.qtBv = 1; mo[0] = 0; mo[1] = 1; }
+  $('an2Luong').innerHTML = AN2_QT.map(function (q, qi) {
+    if (q.admin && !coAdmin) return '';
+    var tong = 0;
+    var buoc = q.buoc.map(function (b, i) {
+      var so = b.so ? b.so(t, c) : 0; tong += so;
+      return (i ? '<span class="blv-mui" aria-hidden="true">→</span>' : '') +
+        '<button type="button" class="blv-buoc' + (b.cuaBan ? ' cua-ban' : '') + '" data-an2-buoc="' + b.k + '">' +
+        '<span class="blv-b-dau"><i class="blv-cham" style="background:' + AN2_MAU[b.mau] + '"></i><span class="blv-b-ten">' + (i + 1) + '. ' + thoat(b.ten) + '</span></span>' +
+        '<span class="blv-b-ai">' + thoat(b.ai) + '</span><span class="blv-b-mo">' + thoat(b.mo(t, c)) + '</span>' + (so ? '<span class="blv-dem">' + so + '</span>' : '') + '</button>';
+    }).join('');
+    return '<details class="blv-the" data-an2-qt="' + qi + '"' + (mo[qi] || tong ? ' open' : '') + '><summary><span class="blv-s-chu"><b>' + thoat(q.ten) + '</b><span>' + thoat(q.moTa) + '</span></span>' +
+      '<span class="blv-huy' + (tong ? '' : ' xam') + '">' + tong + '</span></summary><div class="blv-than"><div class="blv-luong">' + buoc + '</div></div></details>';
   }).join('');
 }
+/** Khu làm việc bên dưới các quy trình: Trạm QR hoặc Ca trực (một trong hai). */
 function an2HienTram(cheDo) {
   _an2.hienTram = cheDo;
-  $('anTram').style.display = '';
+  an2PopupEl($('anTram'), cheDo === 'kiem' ? 'Kiểm tra đột xuất' : 'Quét mã tại cổng');
   var nut = $('anCheDo').querySelector('[data-che-do="' + cheDo + '"]'); if (nut && !nut.classList.contains('on')) nut.click();
-  an2VeLuong();
-  setTimeout(function () { $('anTram').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+}
+function an2HienCa(phan) {
+  an2PopupEl($('an2Ca'), phan === 'lich' ? 'Phân ca trực' : phan === 'cho' ? 'Nhận ca' : 'Bàn giao ca');
+  var cuon = function () { var o = $('caKhu_' + phan); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  if (_ca.d) { caVe(); setTimeout(cuon, 60); } else { caTai(); setTimeout(cuon, 1500); }
 }
 $('an2TramO').addEventListener('click', function (ev) {
   var the = ev.target.closest('.hs-cong-the'); if (!the || ev.target.closest('button')) return;
   var nut = the.querySelector('[data-viec="tay"]'); if (nut) nut.click();
 });
+$('an2Luong').addEventListener('toggle', function (ev) { var d = ev.target; if (d.dataset && d.dataset.an2Qt !== undefined) { _an2.qtMo = _an2.qtMo || {}; _an2.qtMo[d.dataset.an2Qt] = d.open ? 1 : 0; } }, true);
 $('an2Luong').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-an2-buoc]'); if (!b) return;
   var k = b.dataset.an2Buoc, cuon = function (id) { an2Sub('tq'); setTimeout(function () { var o = $(id); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); };
-  if ((k === 'hoSo' || k === 'the' || k === 'khach') && tabAn(k === 'the' ? 'theId' : k)) { baoLoi('thongBao', 'Vai trò của bạn không mở trang này.'); return; }
-  if (k === 'hoSo') an2Popup('hoSo');
-  else if (k === 'the') an2Popup('theId');
-  else if (k === 'khach') { an2Popup('khach'); return; }
-  else if (k === 'cong') { if (hsCo('quanLyCong', 'XEM')) qlCongMo(); else baoLoi('thongBao', 'Bạn chưa có quyền xem danh sách cổng.'); }
+  var trang = { hoSo: 'hoSo', anh: 'hoSo', the: 'theId', khach: 'khach' }[k];
+  if (trang) { if (tabAn(trang)) { baoLoi('thongBao', 'Vai trò của bạn không mở trang này.'); return; } an2Popup(trang); return; }
+  if (k === 'cong') { if (hsCo('quanLyCong', 'XEM')) qlCongMo(); else baoLoi('thongBao', 'Bạn chưa có quyền xem danh sách cổng.'); }
+  else if (k === 'tram') tcMo();
+  else if (k === 'gioCa') { if (_ca.d) caSuaCa(); else { caTai(); setTimeout(function () { if (_ca.d) caSuaCa(); }, 1500); } }
   else if (k === 'quet') an2HienTram('cong');
-  else if (k === 'ca') an2Sub('ca');
   else if (k === 'kiem') an2HienTram('kiem');
+  else if (k === 'caLich') an2HienCa('lich');
+  else if (k === 'caNhan') an2HienCa('cho');
+  else if (k === 'caGiao') an2HienCa('dang');
   else if (k === 'trong') cuon('bangTrongCong');
   else if (k === 'cam') cuon('anCamThe');
   else if (k === 'bc') an2Sub('bc');
@@ -17215,25 +17243,33 @@ $('an2Luong').addEventListener('click', function (ev) {
 /** Mở 1 trang khác (Hồ sơ, Thẻ ID, Khách) trong cửa sổ nổi trên tab An ninh: chuyển tạm khối trang vào cửa sổ, đóng thì trả về chỗ cũ. */
 var _an2Pop = null;
 function an2Popup(tab) {
-  an2PopDong();
   var sec = $('p' + tab.charAt(0).toUpperCase() + tab.slice(1)); if (!sec) return;
-  _an2Pop = { sec: sec, cha: sec.parentNode, sau: sec.nextSibling, hien: sec.style.display };
-  $('an2PopTieu').textContent = (TEN_TAB[tab] || tab);
-  $('an2PopThan').appendChild(sec);
-  sec.style.display = '';
-  $('an2Pop').classList.add('hien');
+  an2PopupEl(sec, TEN_TAB[tab] || tab, true);
   if (HS_TAB[tab]) HS_TAB[tab]();
 }
-function an2PopDong() {
-  if (!_an2Pop) return;
-  _an2Pop.cha.insertBefore(_an2Pop.sec, _an2Pop.sau);
-  _an2Pop.sec.style.display = S.tab === _an2Pop.sec.id.charAt(1).toLowerCase() + _an2Pop.sec.id.slice(2) ? '' : 'none';
-  _an2Pop = null;
-  $('an2Pop').classList.remove('hien');
-  if (S.tab === 'anNinh2') { taiAnNinh(); an2TaiTomTat(); }
+/** Đưa 1 khối bất kỳ vào cửa sổ nổi (trang = true: khối là cả trang, lúc trả về ẩn nếu không phải trang đang mở). */
+function an2PopupEl(el, tieu, trang) {
+  an2PopDong(true);
+  _an2Pop = { sec: el, cha: el.parentNode, sau: el.nextSibling, trang: !!trang, hien: el.style.display };
+  $('an2PopTieu').textContent = tieu;
+  $('an2PopThan').appendChild(el);
+  el.style.display = '';
+  $('an2Pop').classList.add('hien');
 }
-$('an2PopDong').onclick = an2PopDong;
+function an2PopDong(doi) {
+  if (!_an2Pop) return;
+  var o = _an2Pop;
+  if (o.sec.id === 'anTram') { anTatCam(); _an2.hienTram = ''; }
+  o.cha.insertBefore(o.sec, o.sau);
+  o.sec.style.display = o.trang ? (S.tab === o.sec.id.charAt(1).toLowerCase() + o.sec.id.slice(2) ? '' : 'none') : (o.sec.id === 'anTram' && S.tab === 'anNinh' ? '' : 'none');
+  _an2Pop = null;
+  if (doi === true) return;
+  $('an2Pop').classList.remove('hien');
+  if (S.tab === 'anNinh2') { taiAnNinh(); an2TaiTomTat(); if (_an2.sub === 'qt') caTai(); }
+}
+$('an2PopDong').onclick = function () { an2PopDong(); };
 $('an2Pop').addEventListener('click', function (ev) { if (ev.target === this) an2PopDong(); });
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && _an2Pop && !$('nenHs').classList.contains('hien')) an2PopDong(); });
 
 /* ---------- Lịch ra vào ---------- */
 function an2Khoang() {
@@ -17430,7 +17466,7 @@ function caTuan() { var t = an2DauTuan(_ca.moc || new Date()); return { tu: an2N
 function caTai() {
   var k = caTuan();
   if (!_ca.d) $('an2Ca').innerHTML = '<div class="rong">Đang tải ca trực…</div>';
-  goiAPI('hsCaTruc', hsP({ tu: k.tu, den: k.den }), 45000).then(function (d) { _ca.d = d; _hs.q = Object.assign({}, _hs.q, d.quyen); caVe(); })
+  goiAPI('hsCaTruc', hsP({ tu: k.tu, den: k.den }), 45000).then(function (d) { _ca.d = d; _hs.q = Object.assign({}, _hs.q, d.quyen); caVe(); if (_an2.sub === 'qt') an2VeLuong(); })
     .catch(function (e) { $('an2Ca').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
 function caToi(ten) {
@@ -17442,7 +17478,7 @@ function caVe() {
   var d = _ca.d, k = caTuan(), coSua = hsCo('quanLyCong', 'THEM') || hsCo('quanLyCong', 'SUA'), coGhi = hsCo('anNinh', 'THEM');
   var nguoiHtml = function (ds) { return ds && ds.length ? ds.map(function (n) { return '<span class="ten' + (caToi(n) ? ' toi' : '') + '">' + thoat(n) + '</span>'; }).join(' ') : '<span class="trong">Chưa phân</span>'; };
   // 1. Đang trực
-  var h = '<div class="the" style="margin-bottom:16px"><div class="hs-the-dau"><div><h3>Đang trực bây giờ</h3><div class="hs-phu">' + thoat(d.luc) + ' · người đang trực bấm “Bàn giao ca” khi hết ca</div></div></div><div class="ca-luoi" style="padding:0 20px 16px">' +
+  var h = '<div class="the" id="caKhu_dang" style="margin-bottom:16px"><div class="hs-the-dau"><div><h3>Đang trực bây giờ</h3><div class="hs-phu">' + thoat(d.luc) + ' · người đang trực bấm “Bàn giao ca” khi hết ca</div></div></div><div class="ca-luoi" style="padding:0 20px 16px">' +
     (d.dangTruc.length ? d.dangTruc.map(function (o) {
       var th = d.tinhHinh[o.cong] || {}, g = o.daGiao;
       return '<div class="ca-the"><h4>' + thoat(o.cong) + '</h4><div class="hs-phu">' + thoat(caTenCa(o.maCa)) + '</div><div class="ca-nguoi">' + nguoiHtml(o.nguoi) + '</div>' +
@@ -17454,6 +17490,7 @@ function caVe() {
     }).join('') : '<div class="rong">Chưa có cổng hoặc giờ này không thuộc ca nào.</div>') + '</div></div>';
   // 2. Chờ nhận ca
   var cho = d.giaoCa.filter(function (g) { return g.trangThai === 'CHO_NHAN'; });
+  h += '<div id="caKhu_cho"></div>';
   if (cho.length) h += '<div class="the" style="margin-bottom:16px"><div class="hs-the-dau"><div><h3>Chờ nhận ca</h3><div class="hs-phu">Người ca sau đọc tình hình rồi bấm “Nhận ca”</div></div><span class="vi canh">' + cho.length + '</span></div><div class="ca-luoi" style="padding:0 20px 16px">' +
     cho.map(function (g) {
       return '<div class="ca-the cho"><h4>' + thoat(g.cong) + ' · ' + thoat(caTenCa(g.ca)) + '</h4><div class="hs-phu">' + thoat(g.nguoiGiao) + ' giao lúc ' + thoat(g.lucGiao.slice(5, 16)) + (g.nguoiNhan ? ' → <b>' + thoat(g.nguoiNhan) + '</b>' : '') + '</div>' +
@@ -17466,7 +17503,7 @@ function caVe() {
   // 4. Lịch phân ca tuần
   var ngay = []; for (var i = 0; i < 7; i++) ngay.push(an2Ngay(an2Cong(k.d0, i)));
   var hn = an2Ngay(new Date()), caHoat = d.ca.filter(function (c) { return c.hoat; });
-  h += '<div class="the" style="margin-bottom:16px"><div class="hs-the-dau"><div><h3>Lịch phân ca</h3><div class="hs-phu">' + (coSua ? 'Bấm vào ô để xếp người trực' : 'Chỉ Admin xếp ca') + '</div></div>' +
+  h += '<div class="the" id="caKhu_lich" style="margin-bottom:16px"><div class="hs-the-dau"><div><h3>Lịch phân ca</h3><div class="hs-phu">' + (coSua ? 'Bấm vào ô để xếp người trực' : 'Chỉ Admin xếp ca') + '</div></div>' +
     '<div class="an2-cong" style="margin:0"><button class="btn nho" type="button" data-ca-l="nay">Tuần này</button><button class="btn nho" type="button" data-ca-l="lui">‹</button><button class="btn nho" type="button" data-ca-l="toi">›</button>' +
     '<span class="tieu" style="font-size:14px">' + thoat(k.tu.split('-').reverse().join('/')) + ' – ' + thoat(k.den.split('-').reverse().join('/')) + '</span>' +
     (coSua ? '<button class="btn nho" type="button" id="caChep">Chép tuần trước sang</button><button class="btn nho" type="button" id="caSuaCa">Sửa giờ ca</button>' : '') + '</div></div>' +
