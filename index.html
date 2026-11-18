@@ -3687,7 +3687,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 338;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 339;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16622,7 +16622,49 @@ $('hsNhap').onclick = function () {
     '<div id="hsFKq" style="margin-top:12px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXem">Xem trước</button><button class="btn chinh" type="button" id="hsFNhap" disabled>Nhập vào hệ thống</button></div>' +
     '<h4 style="margin:22px 0 6px">Bước 2 — Gắn ảnh</h4><p class="goi-y" style="margin-top:0">Chọn file <b>worker_images.csv</b> trong gói dữ liệu của CN Workforce. Hệ thống chép ảnh từ Drive của họ sang Shared Drive công ty rồi gắn vào đúng người — không tải ảnh về máy; chạy lại không chép trùng.</p>' +
     '<div class="hs-form"><div class="rong2"><input class="o" type="file" id="hsFCsvAnh" accept=".csv,text/csv"></div></div>' +
-    '<div id="hsFKqAnh" style="margin-top:10px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXemAnh">Xem trước ảnh</button><button class="btn chinh" type="button" id="hsFGanAnh" disabled>Chép và gắn ảnh</button></div>');
+    '<div id="hsFKqAnh" style="margin-top:10px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXemAnh">Xem trước ảnh</button><button class="btn chinh" type="button" id="hsFGanAnh" disabled>Chép và gắn ảnh</button></div>' +
+    '<h4 style="margin:22px 0 6px">Bước 3 — Ảnh bổ sung có sẵn trong gói (gói v2)</h4><p class="goi-y" style="margin-top:0">Giải nén gói, chọn <b>cả thư mục image-update</b> (có file <b>image_updates.csv</b> và thư mục <b>images</b>). Ảnh tải từ máy lên Shared Drive công ty, kiểm mã SHA-256 từng tệp, người đã có ảnh cùng loại thì bỏ qua.</p>' +
+    '<div class="hs-form"><div class="rong2"><input class="o" type="file" id="hsFThuMucV2" webkitdirectory multiple></div></div>' +
+    '<div id="hsFKqV2" style="margin-top:10px"></div><div class="hs-chan"><button class="btn" type="button" id="hsFXemV2">Xem trước</button><button class="btn chinh" type="button" id="hsFGanV2" disabled>Tải lên và gắn ảnh</button></div>');
+  var chayV2 = function (apDung, nut) {
+    $('hsFLoi').innerHTML = '';
+    var tep = Array.prototype.slice.call($('hsFThuMucV2').files || []);
+    var csv = tep.filter(function (f) { return /(^|\/)image_updates\.csv$/i.test(f.webkitRelativePath || f.name); })[0];
+    if (!csv) { $('hsFLoi').innerHTML = '<div class="bao-loi">Không thấy image_updates.csv — chọn đúng thư mục image-update.</div>'; return; }
+    var theoTen = {}; tep.forEach(function (f) { theoTen[String(f.webkitRelativePath || f.name).replace(/^.*?image-update\//i, '')] = f; });
+    nut.disabled = true; var chuCu = nut.textContent; nut.textContent = 'Đang xử lý…';
+    var docB64 = function (f) { return new Promise(function (ok, loi) { var r = new FileReader(); r.onload = function () { ok(String(r.result).replace(/^data:[^,]*,/, '')); }; r.onerror = loi; r.readAsDataURL(f); }); };
+    csv.text().then(function (t) {
+      var ds = hsDocCsv(t).filter(function (r) { return r.person_id && r.kind && theoTen[r.image_file]; });
+      var thieu = hsDocCsv(t).length - ds.length;
+      if (!apDung) {
+        return hsPost('hsNhapAnhCnw', { anh: JSON.stringify(ds.map(function (r) { return { person_id: r.person_id, kind: r.kind, b64: '1' }; })), apDung: 0 }).then(function (k) {
+          $('hsFKqV2').innerHTML = '<div class="goi-y">Xem trước: ' + ds.length + ' ảnh có tệp' + (thieu ? ' (thiếu tệp ' + thieu + ')' : '') + ' · <b>' + k.canGan + '</b> ảnh cần gắn (' + k.chanDung + ' chân dung, ' + k.giayTo + ' giấy tờ) · đã có ' + k.daCo + ' · chưa biết của ai ' + k.khongRoNguoi + '</div>';
+          $('hsFGanV2').disabled = !k.canGan;
+        });
+      }
+      var lo = [], i = 0; for (; i < ds.length; i += 20) lo.push(ds.slice(i, i + 20));
+      var chep = 0, loi = 0, boQua = 0, mau = [], so = 0;
+      var chayLo = function () {
+        if (so >= lo.length) {
+          $('hsFKqV2').innerHTML = '<div class="vi ok" style="display:block;padding:10px">✓ Đã tải lên và gắn ' + chep + ' ảnh · bỏ qua ' + boQua + ' (đã có / chưa biết của ai)' + (loi ? ' · lỗi ' + loi + ': ' + thoat(mau.join('; ')) : '') + '</div>';
+          taiHoSo(); return;
+        }
+        var l = lo[so++];
+        return Promise.all(l.map(function (r) { return docB64(theoTen[r.image_file]).then(function (b) { return { person_id: r.person_id, kind: r.kind, b64: b, sha256: r.sha256, image_file: r.image_file }; }); }))
+          .then(function (goi) { return hsPost('hsNhapAnhCnw', { anh: JSON.stringify(goi), apDung: 1, moiLo: 20 }); })
+          .then(function (k) {
+            chep += k.daChep; loi += k.loi; boQua += k.daCo + k.khongRoNguoi; mau = mau.concat(k.loiMau).slice(0, 5);
+            $('hsFKqV2').innerHTML = '<div class="goi-y">Lô ' + so + '/' + lo.length + ': đã gắn ' + chep + ' ảnh, lỗi ' + loi + '…</div>';
+            return chayLo();
+          });
+      };
+      return chayLo();
+    }).catch(function (e) { $('hsFLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; })
+      .then(function () { nut.textContent = chuCu; if (nut.id === 'hsFXemV2') nut.disabled = false; });
+  };
+  $('hsFXemV2').onclick = function () { chayV2(false, this); };
+  $('hsFGanV2').onclick = function () { chayV2(true, this); };
   var chayAnh = function (apDung, nut) {
     $('hsFLoi').innerHTML = '';
     var f = $('hsFCsvAnh').files[0];
