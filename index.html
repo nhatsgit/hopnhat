@@ -3255,7 +3255,7 @@ function batGdMoi() {
       var nh = timNhom(ph); if (!nh) return false;
       // Nhóm 1 trang (mục bấm thẳng, data-ckmuc = nhóm:nhóm) mở trang duy nhất; nhóm nhiều trang thì muc luôn là mã trang —
       // kể cả khi trùng tên nhóm (trang "nhanSu" trong nhóm Nhân sự, "sanLuong" trong nhóm Sản lượng)
-      var ds = nh.tabs.filter(function (x) { return !tabAn(x); });
+      var ds = nh.tabs.filter(tabTrenMenu);
       var t = ds.length === 1 ? ds[0] : muc;
       if (!t) return false;
       S.trang = 1; chuyenTab(t, ph); return true;
@@ -3281,7 +3281,7 @@ function gdTimChucNang() {
     var k = gdBoDau(q).trim(), tu = k.split(/\s+/).filter(Boolean), kq = [];
     NHOM_TAB.forEach(function (nh) {
       nh.tabs.forEach(function (t) {
-        if (tabAn(t) || kq.some(function (x) { return x.t === t; })) return;
+        if (!tabTrenMenu(t) || kq.some(function (x) { return x.t === t; })) return;
         var ten = TEN_TAB[t] || t, ch = gdBoDau(ten + ' ' + nh.ten), tenK = gdBoDau(ten);
         if (tu.length && !tu.every(function (w) { return ch.indexOf(w) > -1; })) return;
         kq.push({ t: t, nh: nh.id, ten: ten, nhTen: nh.ten, diem: !k ? 2 : tenK.indexOf(k) === 0 ? 0 : tenK.indexOf(k) > -1 ? 1 : 2 });
@@ -3340,7 +3340,7 @@ function gdVeMenu() {
   var m = _gd.menu, hh = S.huyHieu || {};
   m.length = 0;
   NHOM_TAB.forEach(function (nh) {
-    var ds = nh.tabs.filter(function (t) { return !tabAn(t); });
+    var ds = nh.tabs.filter(tabTrenMenu);
     if (!ds.length) return;
     var hinh = ds.length === 1 ? (GD_HINH_TAB[ds[0]] || GD_HINH_NHOM[nh.id] || 'ds') : (GD_HINH_NHOM[nh.id] || 'ds');
     if (ds.length === 1) { m.push({ id: nh.id, ten: nh.ten, hinh: hinh, link: function () { return '#'; } }); return; }
@@ -3348,7 +3348,7 @@ function gdVeMenu() {
       return { id: t, ten: TEN_TAB[t] || t, hinh: GD_HINH_TAB[t] || 'ds', nhan: hh[t] ? String(hh[t]) : '', link: function () { return '#'; } };
     }) });
   });
-  var nh = timNhom(S.nhom), don = !!nh && nh.tabs.filter(function (t) { return !tabAn(t); }).length === 1;
+  var nh = timNhom(S.nhom), don = !!nh && nh.tabs.filter(tabTrenMenu).length === 1;
   CRCK.chon(S.nhom || '', don ? S.nhom : S.tab);
   gdDauTrang();
   CRCK.vet(!nh || don ? [TEN_TAB[S.tab] || ''] : [nh.ten, TEN_TAB[S.tab] || '']);
@@ -3618,6 +3618,9 @@ function pqChucNangCuaTab(tab) {
 function tabCu(t) { return t === 'phieu' ? 'sanLuong' : t; }
 
 /** Tab bị ẩn: danh sách cố định TAB_AN, trang Phân quyền chỉ Admin, còn lại theo quyền Xem. */
+/** 18/11/2026: nhóm An ninh & cư trú chỉ để An ninh + Bàn trực trên menu. Các trang này vẫn hoạt động, mở từ Quy trình trong tab An ninh hoặc qua link. */
+var TAB_AN_MENU = { tqAnNinh: 1, hoSo: 1, cuTru: 1, danhGia: 1, anNinh: 1, khach: 1, theId: 1, baoCaoAn: 1 };
+function tabTrenMenu(t) { return !TAB_AN_MENU[t] && !tabAn(t); }
 function tabAn(t) {
   if (TAB_AN[t]) return true;
   if (S.vaiTroHienThi === 'BAO_VE') return t !== 'anNinh2';   // 18/11/2026: Bảo vệ chỉ thấy tab An ninh
@@ -3704,7 +3707,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 352;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 353;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -13015,7 +13018,7 @@ function veNhomTab() {
   var h = '', hDon = '', hh = S.huyHieu || {};   // hDon: các nút bấm thẳng (nhóm 1 trang) gom lên đầu, sau đó mới tới các nhóm xổ
   for (var i = 0; i < NHOM_TAB.length; i++) {
     var nh = NHOM_TAB[i];
-    var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
+    var dsCon = nh.tabs.filter(tabTrenMenu);
     if (!dsCon.length) continue;
     if (dsCon.length === 1) {   // nhóm chỉ có 1 trang (Tổng quan, Bản đồ, Báo cáo…): nút bấm thẳng, không xổ
       hDon += '<button class="tab' + (S.nhom === nh.id ? ' on' : '') + '" data-tab="' + dsCon[0] + '" data-nhom-cha="' + nh.id + '">' +
@@ -13095,7 +13098,7 @@ function veTabCon() {
 function chuyenNhom(id) {
   var nh = timNhom(id);
   if (!nh) return;
-  var dsCon = nh.tabs.filter(function (t) { return !tabAn(t); });
+  var dsCon = nh.tabs.filter(tabTrenMenu);
   // Mở trang đầu của nhóm (Tổng quan của nhóm)
   if (!dsCon.length) return;
   S.trang = 1;
@@ -13767,7 +13770,7 @@ function ganSuKienPhanQuyen() {
 
 function tabDauDuocXem() {
   for (var i = 0; i < NHOM_TAB.length; i++)
-    for (var j = 0; j < NHOM_TAB[i].tabs.length; j++) if (!tabAn(NHOM_TAB[i].tabs[j])) return NHOM_TAB[i].tabs[j];
+    for (var j = 0; j < NHOM_TAB[i].tabs.length; j++) if (tabTrenMenu(NHOM_TAB[i].tabs[j])) return NHOM_TAB[i].tabs[j];
   return 'tongQuan';
 }
 
@@ -13915,6 +13918,7 @@ function vaoApp(d, vtChon) {
     var qTab = (S.thamSoURL || {}).tab, tabURL = qTab && !tabAn(tabCu(qTab)) ? tabCu(qTab) : '';
     if (!coURL) khoiPhucChoDangXem();
     if (tabURL) S.tab = tabURL;
+    else if (TAB_AN_MENU[S.tab] && !tabAn('anNinh2')) { S.tab = 'anNinh2'; S.nhom = 'anNinhCuTru'; }   // lần trước đang ở trang đã rời khỏi menu
     // Trang chủ = Bàn làm việc: mở app lần đầu trong phiên (không phải F5 / đổi vai trò) thì vào thẳng đây
     var daVao = false;
     try { daVao = sessionStorage.getItem('crck2_da_vao') === '1'; sessionStorage.setItem('crck2_da_vao', '1'); } catch (eSs) { /* chặn bộ nhớ: coi như mở mới */ }
