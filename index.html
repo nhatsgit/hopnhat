@@ -3684,7 +3684,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 335;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 336;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3706,7 +3706,7 @@ var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1,
                        chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1,
                        dangKyThongBao: 1, huyThongBao: 1, phieuBaseCho: 1, duyetPhieuBaseWeb: 1,
                        hsLuuHoSo: 1, hsLuuGiaThuoc: 1, hsLuuPhong: 1, hsXepPhong: 1, hsYeuCauChuyenPhong: 1, hsDuyetChuyenPhong: 1,
-                       hsLuuDanhGia: 1, hsLuuKyLuat: 1, hsGhiCong: 1, hsKiemTra: 1, hsLuuKhach: 1, hsHuyKhach: 1, hsLuuCong: 1, hsLuuTramCamera: 1, hsLuuCaTruc: 1, hsChepCaTruc: 1, hsLuuCa: 1, hsGiaoCa: 1, hsNhanCa: 1 };
+                       hsLuuDanhGia: 1, hsLuuKyLuat: 1, hsGhiCong: 1, hsKiemTra: 1, hsLuuKhach: 1, hsHuyKhach: 1, hsLuuCong: 1, hsLuuTramCamera: 1, hsLuuCaTruc: 1, hsChepCaTruc: 1, hsLuuCa: 1, hsGiaoCa: 1, hsNhanCa: 1, hsGiaLapRaVao: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho, _daGoi) {
@@ -17246,13 +17246,22 @@ function an2VeKhungLich(k) {
       '<input class="o" id="an2Tim" placeholder="Tìm người, mã CN, cổng, khu…" style="min-width:220px;flex:1 1 220px"><button class="btn nho" type="button" id="an2BoTim" style="display:none">Bỏ tìm</button></div>' +
       '<div class="an2-loc" id="an2Loc">' + [['vao', 'Vào'], ['ra', 'Ra'], ['kiem', 'Kiểm tra'], ['khach', 'Khách'], ['cam', 'Camera']].map(function (x) {
         return '<label class="chip"><input type="checkbox" data-loc="' + x[0] + '" checked> <span class="an2-ev ' + x[0] + '" style="display:inline;padding:0 6px">' + x[1] + '</span></label>'; }).join('') +
-      '<span class="hs-phu" id="an2LichDem" style="align-self:center"></span></div>' +
+      '<span class="hs-phu" id="an2LichDem" style="align-self:center"></span>' +
+      (S.laAdmin || S.vaiTroHienThi === 'ADMIN' ? '<span style="flex:1"></span><button class="btn nho" type="button" id="an2GlTao">Tạo dữ liệu thử Đội 1 (tuần này)</button><button class="btn nho" type="button" id="an2GlXoa">Xoá dữ liệu thử</button>' : '') + '</div>' +
       '<div id="an2LichThan"></div><div id="an2LichCt"></div></div>';
     $('an2Lich').addEventListener('click', an2BamLich);
     $('an2Loc').addEventListener('change', function (ev) { var c = ev.target.closest('[data-loc]'); if (!c) return; _an2.lich.loc[c.dataset.loc] = c.checked ? 1 : 0; an2VeLich(); });
     var hen = 0;
     $('an2Tim').addEventListener('input', function () { clearTimeout(hen); var v = this.value.trim(); hen = setTimeout(function () { _an2.lich.q = v; $('an2BoTim').style.display = v ? '' : 'none'; an2TaiLich(); }, 500); });
     $('an2BoTim').onclick = function () { $('an2Tim').value = ''; _an2.lich.q = ''; this.style.display = 'none'; an2TaiLich(); };
+    var glXong = function (txt) { nsBaoOkChung(txt); _an2.lich.khoa = ''; _an2.bc.khoa = ''; an2TaiLich(); taiAnNinh(); };
+    if ($('an2GlTao')) $('an2GlTao').onclick = function () {
+      hsGhi('hsGiaLapRaVao', { doi: 'Đ1' }, this, function (r) { $('an2GlTao').disabled = false; $('an2GlTao').textContent = 'Tạo dữ liệu thử Đội 1 (tuần này)'; glXong('Đã tạo ' + r.luot + ' lượt ra vào + ' + r.kiemTra + ' lượt kiểm tra thử cho ' + r.nguoi + ' công nhân ' + r.doi + ' (' + r.ngay + ' ngày). Người ghi: "Giả lập (thử lịch)".'); });
+    };
+    if ($('an2GlXoa')) $('an2GlXoa').onclick = function () {
+      var b = this; if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Chắc chắn xoá dữ liệu thử?'; return; }
+      hsGhi('hsGiaLapRaVao', { xoa: 1 }, b, function (r) { b.disabled = false; b.dataset.xacNhan = ''; b.textContent = 'Xoá dữ liệu thử'; glXong('Đã xoá ' + r.daXoa + ' dòng dữ liệu thử (dữ liệu thật giữ nguyên).'); });
+    };
   }
   $('an2LichTieu').textContent = tieu;
   $('an2Xem').querySelectorAll('[data-xem]').forEach(function (b) { b.classList.toggle('on', b.dataset.xem === L.xem); });
