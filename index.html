@@ -3184,10 +3184,10 @@ var _gd = { menu: [] };
 var GD_HINH_NHOM = { banLamViec: 'viec', tongQuan: 'tq', banDo: 'bando', sanLuong: 'cay', nhanSu: 'nguoi', anNinhCuTru: 'khien', baoCao: 'baoCao', quanTri: 'khoa' };
 // Biểu tượng từng trang trong menu trái (nét 24x24 cùng kiểu bộ giao diện; định nghĩa trong CRCK_CAU_HINH.hinh)
 var GD_HINH_TAB = {
-  banLamViec: 'viec', baoCaoTD: 'tq', banDoLo: 'bando',
+  banLamViec: 'viec', baoCaoTD: 'toaNha', banDoLo: 'bando',
   tongQuan: 'tq', sanLuong: 'cay', tramCan: 'can', drc: 'giot', slTheoCn: 'nguoiSo', giaoKhoan: 'giao', nangSuatVuon: 'tang',
   tqNhanSu: 'tq', nhanSu: 'nguoiNhom', chamCong: 'lichCheck', xepHang: 'cup', xepLoai: 'sao', khoMieng: 'nang', luong: 'tien', heSoLuong: 'heSo',
-  tqAnNinh: 'tq', hoSo: 'the', cuTru: 'nha', danhGia: 'danhGia', anNinh: 'qr', anNinh2: 'khien', anNinhGL: 'khien', khach: 'khach', theId: 'theQr', baoCaoAn: 'baoCao',
+  tqAnNinh: 'tq', hoSo: 'hoSo', cuTru: 'nha', danhGia: 'danhGia', anNinh: 'qr', anNinh2: 'khien', anNinhGL: 'manHinh', khach: 'khach', theId: 'the', baoCaoAn: 'baoCao',
   baoCao: 'baoCao', phanQuyen: 'khoa', taiKhoan: 'tk', nguoiDung: 'thietBi', phieuBase: 'phieu'
 };
 function batGdMoi() {
@@ -3211,6 +3211,9 @@ function batGdMoi() {
     chanMenu: 'Cao su Chư Sê – Kampong Thom', menu: _gd.menu,
     hinh: {
       viec: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m8 12 3 3 5-6"/>',
+      toaNha: '<path d="M4 21V5l8-2v18M12 9l8 2v10M2 21h20M7.5 8v.01M7.5 12v.01M7.5 16v.01M15.5 14v.01M15.5 17.5v.01"/>',
+      hoSo: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+      manHinh: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><circle cx="12" cy="10" r="2.5"/>',
       bando: '<path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
       cay: '<path d="M12 21v-8M12 13c-4 0-6-3-6-6 4 0 6 2 6 6zM12 15c3 0 5-2 5-5-3 0-5 2-5 5z"/>',
       nguoi: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
@@ -3697,7 +3700,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 344;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 345;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -5548,20 +5551,63 @@ var ICON_KPI = {
   tien: '<rect x="3.5" y="6.5" width="17" height="11" rx="2"/><circle cx="12" cy="12" r="2.4"/>',
   lich: '<rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
   cay: '<path d="M12 21v-7M12 14c-4 0-6-2.5-6-6 3.5 0 6 2 6 6zM12 12c0-4 2.5-7 6.5-7 0 4-2.5 7-6.5 7z"/>',
-  xe: '<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>'
+  xe: '<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>',
+  trang: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  canhBao: '<path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+  vao: '<path d="M14 4h5v16h-5M3 12h11M10 8l4 4-4 4"/>',
+  ra: '<path d="M10 4H5v16h5M10 12h11M17 8l4 4-4 4"/>',
+  cong: '<path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M3 21h18M15 12v.01"/>',
+  camera: '<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3z"/>',
+  but: '<path d="m4 20 1-4L16 5l3 3L8 19zM14 7l3 3"/>',
+  sai: '<circle cx="12" cy="12" r="8.5"/><path d="m9 9 6 6M15 9l-6 6"/>',
+  dung: '<circle cx="12" cy="12" r="8.5"/><path d="m8 12 3 3 5-6"/>',
+  kiem: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/>',
+  co: '<path d="M6 21V4M6 5h11l-2 4 2 4H6"/>',
+  anh: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-4 3 2.5 3-2.5 5 4"/>',
+  giayTo: '<path d="M7 3.5h7l4 4V20H7z"/><path d="M14 3.5V8h4M12 11.5v3.5M12 17.5v.01"/>',
+  nha: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10M10 20v-5h4v5"/>',
+  the: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0M14 10h4M14 14h3"/>',
+  hoSo: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  ghim: '<path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/>',
+  mucTieu: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>',
+  khien: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/>',
+  hoatDong: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+  themNguoi: '<circle cx="10" cy="8" r="3.5"/><path d="M3 20a7 7 0 0 1 14 0M19 5v5M16.5 7.5h5"/>',
+  botNguoi: '<circle cx="10" cy="8" r="3.5"/><path d="M3 20a7 7 0 0 1 14 0M16.5 7.5h5"/>',
+  doi: '<path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4"/>',
+  sao: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'
 };
+/** Luật chọn biểu tượng theo TÊN thẻ, xét từ trên xuống, gặp là dừng: việc cụ thể trước, nhóm chung sau. */
+var LUAT_ICON_KPI = [
+  [/ban đêm/, 'trang', 'clay'], [/camera/, 'camera', 'clay'], [/không khớp/, 'sai', 'clay'], [/ghi tay/, 'but', 'clay'],
+  [/lượt vào/, 'vao', 'sky'], [/lượt ra/, 'ra', 'sky'], [/trong cổng/, 'cong', 'sky'], [/kiểm tra/, 'kiem', ''],
+  [/trực tuyến|đăng nhập|thao tác/, 'hoatDong', 'sky'], [/kỷ luật/, 'co', 'clay'],
+  [/thiếu ảnh/, 'anh', 'clay'], [/thiếu giấy tờ|chưa có nssf/, 'giayTo', 'clay'], [/còn thiếu/, 'lich', 'clay'],
+  [/cảnh báo|bất thường|cần theo dõi|dưới 70|vượt sức chứa/, 'canhBao', 'clay'],
+  [/lũy kế/, 'giot', 'latex'], [/dòng nghỉ/, 'lich', ''], [/đã chấm/, 'dung', ''],
+  [/sửa sau duyệt/, 'but', 'clay'], [/chờ duyệt|đang duyệt|chưa duyệt|chưa gửi|chậm/, 'dongHo', 'clay'], [/đã duyệt/, 'dung', ''],
+  [/phòng|cư trú/, 'nha', 'sky'], [/thẻ|mã cn/, 'the', 'sky'], [/hồ sơ/, 'hoSo', 'sky'], [/phiếu|ô số|dòng/, 'phieu', 'sky'],
+  [/drc|quy khô|trạm cân/, 'can', 'latex'], [/bảo hiểm/, 'khien', 'latex'], [/tiền|lương|thu nhập|thực nhận|đơn giá|chi phí|thuế|doanh thu|lợi nhuận/, 'tien', 'latex'],
+  [/chuyến|tiêu thụ|xuất bán|vận chuyển/, 'xe', 'sky'],
+  [/kế hoạch|giao khoán|hoàn thành|ước tính|mục tiêu|tổng sản lượng giao/, 'mucTieu', ''], [/10% cao|xếp loại/, 'sao', ''],
+  [/năng suất|nsbq|bình quân|trung vị|tỷ lệ/, 'cot', ''], [/sản lượng|mủ|tươi|mỗi lần cạo|lũy kế/, 'giot', 'latex'],
+  [/chuyển tổ/, 'doi', 'sky'], [/tuyển mới/, 'themNguoi', 'sky'], [/nghỉ việc/, 'botNguoi', 'clay'],
+  [/vị trí|phần cạo|lô|bản đồ/, 'ghim', ''], [/cây|diện tích|năm trồng|vườn/, 'cay', ''],
+  [/công nhân|người|lao động|nhân sự|làm việc|tuổi/, 'nguoi', 'sky'], [/ngày|công|kỳ|tháng|nghỉ/, 'lich', '']
+];
+function chonIconKpi(ten, dv) {
+  var t = String(ten).toLowerCase(), d = String(dv || '').toLowerCase(), i;
+  for (i = 0; i < LUAT_ICON_KPI.length; i++) if (LUAT_ICON_KPI[i][0].test(t)) return LUAT_ICON_KPI[i];
+  // Tên chưa rõ: đoán theo đơn vị, không có thì biểu đồ cột (không dùng giọt nước làm mặc định)
+  if (/riel|đồng|\$/.test(d)) return [0, 'tien', 'latex'];
+  if (/kg|tấn/.test(d)) return [0, 'giot', 'latex'];
+  if (/người/.test(d)) return [0, 'nguoi', 'sky'];
+  if (/ngày|công/.test(d)) return [0, 'lich', ''];
+  if (/ha$/.test(d)) return [0, 'cay', ''];
+  return [0, 'cot', ''];
+}
 function iconKpi(ten, dv) {
-  var s = (String(ten) + ' ' + String(dv || '')).toLowerCase(), k = 'giot', mau = '';
-  if (/chờ duyệt|cảnh báo|thiếu|chậm|lệch|dưới/.test(s)) { k = 'dongHo'; mau = 'clay'; }
-  else if (/quy khô|drc/.test(s)) { k = 'can'; mau = 'latex'; }
-  else if (/tiền|lương|thu nhập|riel|chi phí|thuế|bhxh|doanh thu|lợi nhuận|đồng/.test(s)) { k = 'tien'; mau = 'latex'; }
-  else if (/tiêu thụ|xuất bán|vận chuyển/.test(s)) { k = 'xe'; mau = 'sky'; }
-  else if (/bình quân|năng suất|tỷ lệ|hoàn thành|%/.test(s)) { k = 'cot'; }
-  else if (/công nhân|người|lao động|nhân sự|tuyển|nghỉ việc/.test(s)) { k = 'nguoi'; mau = 'sky'; }
-  else if (/phiếu|dòng/.test(s)) { k = 'phieu'; mau = 'sky'; }
-  else if (/xe|cân|chuyến/.test(s)) { k = 'xe'; mau = 'sky'; }
-  else if (/lô|cây|vườn|diện tích|ha$/.test(s)) { k = 'cay'; }
-  else if (/ngày|công|kỳ|tháng/.test(s)) { k = 'lich'; }
+  var c = chonIconKpi(ten, dv), k = c[1], mau = c[2];
   return '<span class="icon-kpi ' + mau + '" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" ' +
     'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON_KPI[k] + '</svg></span>';
 }
