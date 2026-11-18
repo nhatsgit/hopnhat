@@ -965,7 +965,7 @@ tr[data-tx]:hover > td{background:var(--leaf-soft)}
 .an2-luoi2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}
 .an2-luoi2>.the{margin:0}
 /* Tổng quan tab An ninh mới: khối của trang cũ sắp lại 2 cột (trang cũ không đổi) */
-#an2Tq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
+#an2Tq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-flow:row dense;column-gap:16px;align-items:start}
 #an2Tq>*{grid-column:1/-1;order:9}
 #an2Tq>.hs-ghichu{display:none}
 #an2Tq>#kpisAn{order:1}#an2Tq>#anLoi{order:2}
@@ -974,6 +974,28 @@ tr[data-tx]:hover > td{background:var(--leaf-soft)}
 #an2Tq>.the:has(#bangLuot){order:4}
 #an2Tq>.the:has(#bangKiem){order:5}
 @media (max-width:900px){#an2Tq>.the:has(#bangTrongCong),#an2Tq>#anCamThe{grid-column:1/-1}}
+#an2TramO #anLocKhu{padding:0 20px}
+#an2TramO .hs-cong-luoi{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px 20px 0}
+#an2TramO .hs-cong-luoi::before{content:'1. Chọn cổng';grid-column:1/-1;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em}
+#an2TramO .hs-cong-the{position:relative;cursor:pointer;padding:10px 12px;gap:4px}
+#an2TramO .hs-cong-the:hover{border-color:var(--leaf)}
+#an2TramO .hs-cong-the .hs-cong-nut{display:none}
+#an2TramO .hs-cong-the h4{padding-right:78px}
+#an2TramO .hs-cong-the p{margin:0 0 2px}
+#an2TramO .hs-cong-the>div>.vi{display:none}
+#an2TramO .hs-cong-the.on::after{content:'✓ Đang chọn';position:absolute;top:10px;right:12px;font-size:11.5px;font-weight:700;color:var(--leaf)}
+#an2TramO .hs-tram{grid-template-columns:minmax(280px,360px) minmax(0,1fr);align-items:start}
+#an2TramO .hs-tram>div:first-child{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg,transparent)}
+#an2TramO .hs-tram>div:first-child::before{content:'2. Quét thẻ';font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em}
+#an2TramO .hs-tram>div:first-child>div{margin-top:0!important}
+#an2TramO #anBatCam,#an2TramO .hs-tram label.btn{flex:1 1 100%;justify-content:center;text-align:center}
+#an2TramO #anBatCam{min-height:48px;font-size:15px}
+#an2TramO .hs-tram label.goi-y{flex:1 1 100%;order:3}
+#an2TramO .hs-tram>div:first-child>div:last-child{flex-wrap:wrap}
+#an2TramO .hs-tram>div:first-child>div:last-child::before{content:'Hoặc nhập mã thẻ / mã CN / mã khách';flex:1 1 100%;font-size:12px;color:var(--ink-3)}
+#an2TramO .hs-tram>div:first-child>div:last-child .o{flex:1;min-width:0}
+#an2TramO .hs-kq{min-height:240px}
+#an2TramO .hs-kq::before{content:'3. Kết quả đối chiếu';display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
 @media (max-width:640px){.an2-luoi2{grid-template-columns:1fr}.an2-cong .tieu{width:100%;margin:4px 0}}
 .blv-buoc{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;width:170px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;
   background:var(--card);color:var(--ink);font:inherit;cursor:pointer;transition:border-color .15s,box-shadow .15s}
@@ -3648,7 +3670,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 333;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 334;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17147,6 +17169,10 @@ function an2HienTram(cheDo) {
   an2VeLuong();
   setTimeout(function () { $('anTram').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 }
+$('an2TramO').addEventListener('click', function (ev) {
+  var the = ev.target.closest('.hs-cong-the'); if (!the || ev.target.closest('button')) return;
+  var nut = the.querySelector('[data-viec="tay"]'); if (nut) nut.click();
+});
 $('an2Luong').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-an2-buoc]'); if (!b) return;
   var k = b.dataset.an2Buoc, cuon = function (id) { an2Sub('tq'); setTimeout(function () { var o = $(id); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); };
