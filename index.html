@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 329;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 330;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17038,6 +17038,11 @@ function tcKhoa(khoa, ten) {
   $('tcXong').onclick = tcMo;
 }
 
+/** Điện thoại: quét xong tự cuộn tới thông tin người vừa quét (khung kết quả nằm dưới camera). */
+function anCuonKq() {
+  if (window.innerWidth >= 900) return;
+  setTimeout(function () { var o = $('anKq'); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
+}
 /** Tra mã vừa quét / gõ: hiện ảnh + thông tin để bảo vệ đối chiếu. Bật "tự ghi" thì ghi luôn lượt cổng. */
 function hsTraMa(ma, cach) {
   if (!ma) return;
@@ -17045,9 +17050,10 @@ function hsTraMa(ma, cach) {
   $('anKq').innerHTML = '<div class="goi-y" style="margin:0">Đang tra ' + thoat(ma) + '…</div>';
   goiAPI('hsTraMa', hsP({ maQuet: ma })).then(function (r) {
     _hs.kqTra = Object.assign({ ma: ma, cach: cach }, r);
-    if (r.timThay && _hs.cheDo === 'cong' && $('anTuGhi').checked && !r.ngoaiPv) { hsGhiCongTram(); return; }
+    if (r.timThay && _hs.cheDo === 'cong' && $('anTuGhi').checked && !r.ngoaiPv) { hsGhiCongTram(); anCuonKq(); return; }
     hsVeKq(_hs.kqTra);
-  }).catch(function (e) { $('anKq').className = 'hs-kq loi'; $('anKq').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+    anCuonKq();
+  }).catch(function (e) { $('anKq').className = 'hs-kq loi'; $('anKq').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; anCuonKq(); });
 }
 function hsVeKq(k) {
   if (!k) return;
