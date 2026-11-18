@@ -3586,7 +3586,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 326;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 327;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17088,7 +17088,7 @@ function hsVeKq(k) {
   hsNapAnh(el);
 }
 /* ---------- Xác minh khuôn mặt 1:1 (17/11/2026, bản thử): quét QR -> so mặt trước camera trước với ảnh chân dung đã lưu.
-   Chạy hoàn toàn trên điện thoại (face-api, mô hình ~7 MB tải 1 lần), không gửi ảnh mặt đi đâu. Có bước chớp mắt chống giơ ảnh. ---------- */
+   Chạy hoàn toàn trên điện thoại (face-api, mô hình ~7 MB tải 1 lần), không gửi ảnh mặt đi đâu. Đã bỏ bước chớp mắt (18/11) theo yêu cầu — bảo vệ tự để ý người giơ ảnh. ---------- */
 var _mat = { nap: null, mau: {}, luong: null, chay: false };
 var MAT_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/';
 var MAT_KHOP = 0.5, MAT_NGHI = 0.58;   // khoảng cách đặc trưng: < 0.5 khớp · 0.5–0.58 không chắc · > 0.58 không khớp
@@ -17156,22 +17156,18 @@ function matMo(k) {
 }
 function matQuet(v, mau, n, k, tt) {
   _mat.chay = true;
-  var t0 = Date.now(), moMat = 0, nham = false, daChop = false, ds = [], opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
-  tt('<b>Nhìn thẳng vào camera và chớp mắt 1 lần.</b>');
+  var t0 = Date.now(), ds = [], opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+  tt('<b>Nhìn thẳng vào camera, giữ yên 1–2 giây.</b>');
   (function vong() {
     if (!_mat.chay || !$('matVideo') || !$('nenHs').classList.contains('hien')) { matDung(); return; }
     faceapi.detectSingleFace(v, opt).withFaceLandmarks().withFaceDescriptor().then(function (r) {
       if (!_mat.chay) return;
-      if (!r) { tt(Date.now() - t0 > 4000 ? 'Chưa thấy mặt — đưa mặt vào giữa khung, đủ sáng, bỏ khẩu trang / kính râm.' : '<b>Nhìn thẳng vào camera và chớp mắt 1 lần.</b>'); }
+      if (!r) { tt(Date.now() - t0 > 4000 ? 'Chưa thấy mặt — đưa mặt vào giữa khung, đủ sáng, bỏ khẩu trang / kính râm.' : '<b>Nhìn thẳng vào camera, giữ yên 1–2 giây.</b>'); }
       else {
-        var ear = matEar(r.landmarks);
-        if (ear > moMat) moMat = moMat ? moMat * 0.9 + ear * 0.1 : ear;   // mức mắt mở (trôi chậm)
-        if (moMat && ear < moMat * 0.65) nham = true;
-        else if (nham && ear > moMat * 0.85) { nham = false; daChop = true; }
-        if (ear > moMat * 0.85 && r.detection.score > 0.6) ds.push(faceapi.euclideanDistance(mau, r.descriptor));
-        if (!daChop) tt('<b>Đã thấy mặt.</b> Chớp mắt 1 lần để xác nhận người thật…');
+        if (r.detection.score > 0.6) ds.push(faceapi.euclideanDistance(mau, r.descriptor));
+        tt('<b>Đã thấy mặt.</b> Giữ yên… (' + Math.min(ds.length, 3) + '/3)');
       }
-      if (daChop && ds.length >= 3) {
+      if (ds.length >= 3) {
         matDung();
         var d = ds.sort(function (a, b) { return a - b; }).slice(0, 3).reduce(function (a, b) { return a + b; }, 0) / 3;
         var diem = Math.round(Math.max(0, Math.min(1, (0.75 - d) / 0.45)) * 100);
@@ -17183,7 +17179,7 @@ function matQuet(v, mau, n, k, tt) {
         if (_hs.kqTra === k) hsVeKq(k);
         return;
       }
-      if (Date.now() - t0 > 25000) { matDung(); tt('Hết thời gian: ' + (daChop ? 'chưa lấy đủ ảnh mặt rõ' : 'chưa thấy chớp mắt') + '. Bấm Thử lại.', 'loi'); if ($('matLai')) $('matLai').style.display = ''; return; }
+      if (Date.now() - t0 > 25000) { matDung(); tt('Hết thời gian: chưa lấy đủ ảnh mặt rõ. Bấm Thử lại.', 'loi'); if ($('matLai')) $('matLai').style.display = ''; return; }
       setTimeout(vong, 60);
     }).catch(function (e) { matDung(); tt(thoat(e.message || e), 'loi'); });
   })();
