@@ -1949,6 +1949,7 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
         <div class="thanh-nhap-chu"><b>Duyệt chấm công</b><span>Gửi phiếu từng tổ × ngày cho TCHC duyệt trên Base</span></div>
         <button class="btn chinh" id="nutCCBase" title="Chọn tổ + ngày, xem chấm công rồi tạo phiếu duyệt trên Base (TCHC duyệt)">Gửi duyệt Base</button>
       </div>
+      <div id="ccLeBang"></div>
       <div class="kpis" id="kpisCC"></div>
       <!-- Sổ chấm công dạng bảng ngang: mỗi hàng 1 công nhân, mỗi cột 1 ngày
            trong tháng — giống mẫu Excel "Sổ chấm công của Đội sản xuất". Đặt trên các biểu đồ vì đây
@@ -3464,7 +3465,7 @@ var LENH_DOC = {
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1, thongBaoDs: 1,
   xemPhieuBase: 1,   // 17/10/2026: xem trước khi đẩy phiếu sản lượng lên Base — Cloud Run (Apps Script ~20 giây)
-  hsTongQuan: 1, hsXuatCong: 1, hsDanhSach: 1, hsChiTiet: 1, hsCuTru: 1, hsDanhGia: 1, hsAnNinh: 1, hsAnh: 1, hsTraMa: 1, hsDsCong: 1, hsSuKienCamera: 1, hsAnhCamera: 1, hsDsTramCamera: 1, hsLichAnNinh: 1, hsCaTruc: 1,   // 31/10/2026: an ninh & cư trú (lib/ho_so.js)
+  hsTongQuan: 1, hsXuatCong: 1, hsDanhSach: 1, hsChiTiet: 1, hsCuTru: 1, hsDanhGia: 1, hsAnNinh: 1, hsAnh: 1, hsTraMa: 1, hsDsCong: 1, hsSuKienCamera: 1, hsAnhCamera: 1, hsDsTramCamera: 1, hsLichAnNinh: 1, hsCaTruc: 1, hsNgayLe: 1,   // 31/10/2026: an ninh & cư trú (lib/ho_so.js)
   heSoLuong: 1,    // 26/10/2026: tab Hệ số lương (HeSoLuong.gs) — đọc Sheet trên Cloud Run, ghi qua Apps Script
   banLamViec: 1,   // 26/10/2026: Bàn làm việc — Cloud Run đọc Sheet (có dòng chờ duyệt) cho mọi vai trò
   truyXuat: 1, lichSu: 1,   // 22/10/2026: truy xuất nguồn gốc + lịch sử chỉnh sửa (TruyXuat.gs)
@@ -3716,7 +3717,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 356;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 357;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -3738,7 +3739,7 @@ var LENH_GHI_CLOUD = { themChamCong: 1, nhapHangLoatChamCong: 1, suaChamCong: 1,
                        chotLuong: 1, tinhGiaoSl: 1, xepLoaiLuu: 1, hoTroKhoLuu: 1, dieuChinhQkLuu: 1, drcLuu: 1, keHoachCanLuu: 1,
                        dangKyThongBao: 1, huyThongBao: 1, phieuBaseCho: 1, duyetPhieuBaseWeb: 1,
                        hsLuuHoSo: 1, hsLuuGiaThuoc: 1, hsLuuPhong: 1, hsXepPhong: 1, hsYeuCauChuyenPhong: 1, hsDuyetChuyenPhong: 1,
-                       hsLuuDanhGia: 1, hsLuuKyLuat: 1, hsGhiCong: 1, hsKiemTra: 1, hsLuuKhach: 1, hsHuyKhach: 1, hsLuuCong: 1, hsLuuTramCamera: 1, hsLuuCaTruc: 1, hsChepCaTruc: 1, hsLuuCa: 1, hsGiaoCa: 1, hsNhanCa: 1, hsGiaLapRaVao: 1 };
+                       hsLuuDanhGia: 1, hsLuuKyLuat: 1, hsGhiCong: 1, hsKiemTra: 1, hsLuuKhach: 1, hsHuyKhach: 1, hsLuuCong: 1, hsLuuTramCamera: 1, hsLuuCaTruc: 1, hsChepCaTruc: 1, hsLuuCa: 1, hsGiaoCa: 1, hsNhanCa: 1, hsGiaLapRaVao: 1, hsLuuNgayLe: 1 };
 var _ghiCloudTat = false;
 
 function goiApiMotLan(action, thamSo, msCho, _daGoi) {
@@ -9839,7 +9840,101 @@ function bienDongTrongKhoang(tuNgay, denNgay, doi, to) {
   }).catch(function () { return null; });
 }
 
+/* =====================================================================
+   CHẤM CÔNG 5 KÝ HIỆU + LỊCH NGÀY LỄ CAMPUCHIA (20/11/2026)
+   + ngày thường · ++ cạo đúp · CN đi làm chủ nhật · L đi làm ngày lễ · NL nghỉ lễ hưởng lương · trống = không đi làm.
+   Chủ nhật trùng ngày lễ chấm theo lễ. Lịch lễ từ máy chủ (hsNgayLe), lưu máy để mất mạng vẫn dùng.
+   ===================================================================== */
+var _le = { ds: [], theoNgay: {}, luc: 0 };
+(function () { try { var x = JSON.parse(docLS('crck2_ngay_le') || 'null'); if (x && x.ds) leGan(x.ds); } catch (e) { /* bỏ qua */ } })();
+function leGan(ds) { _le.ds = ds; _le.theoNgay = {}; ds.forEach(function (x) { _le.theoNgay[x.ngay] = x.ten; }); }
+function leNap(ep) {
+  if (!S.vaiTro || (!ep && Date.now() - _le.luc < 600000)) { leVeBang(); return; }
+  _le.luc = Date.now();
+  goiAPI('hsNgayLe', hsP({}), 30000).then(function (d) { leGan(d.ds); _le.coSeed = d.coSeed; ghiLS('crck2_ngay_le', JSON.stringify({ ds: d.ds })); leVeBang(); })
+    .catch(function () { leVeBang(); });
+}
+/** Danh mục đã chuyển sang bộ 5 ký hiệu chưa (có NL đang dùng). */
+function ccCo5() { return ((S.meta && S.meta.loaiCong) || []).some(function (x) { return x.ma === 'NL' && x.dangDung !== false; }); }
+function ccLoaiNgay(ngay) {
+  if (!ngay) return '';
+  if (_le.theoNgay[ngay]) return 'LE';
+  return new Date(ngay + 'T00:00:00').getDay() === 0 ? 'CN' : 'THUONG';
+}
+/** Ký hiệu được chấm cho ngày này (ngay rỗng: mọi ký hiệu đang dùng). giuMa: ký hiệu cũ của dòng đang sửa vẫn hiện để không mất. */
+function ccKhHopLe(ngay, giuMa) {
+  var tat = (S.meta && S.meta.loaiCong) || [], ds = tat.filter(function (x) { return x.dangDung !== false; });
+  if (ccCo5() && ngay) {
+    var cho = { THUONG: ['+', '++'], CN: ['CN'], LE: ['L', 'NL'] }[ccLoaiNgay(ngay)];
+    ds = ds.filter(function (x) { return cho.indexOf(x.ma) > -1; });
+  }
+  if (giuMa && !ds.some(function (x) { return x.ma === giuMa; })) ds = ds.concat(tat.filter(function (x) { return x.ma === giuMa; }));
+  return ds;
+}
+/** Dòng nhắc cạnh ô ngày trong form: hôm đó là ngày lễ / chủ nhật thì chấm gì. */
+function ccGoiYNgay(idNgay) {
+  var o = $(idNgay); if (!o || !ccCo5()) return;
+  var id = idNgay + 'GoiY', g = $(id), n = o.value, l = ccLoaiNgay(n);
+  if (!g) { g = document.createElement('div'); g.id = id; g.className = 'nhan-mo'; g.style.marginTop = '4px'; o.parentNode.appendChild(g); }
+  g.innerHTML = l === 'LE' ? '🎌 <b>' + thoat(_le.theoNgay[n]) + '</b>: đi làm chấm <b>L</b>, nghỉ hưởng lương chấm <b>NL</b>' + (new Date(n + 'T00:00:00').getDay() === 0 ? ' (chủ nhật trùng lễ: chấm theo lễ)' : '')
+    : l === 'CN' ? 'Chủ nhật: đi làm chấm <b>CN</b>, nghỉ thì bỏ trống' : 'Ngày thường: <b>+</b> hoặc <b>++</b> (cạo đúp)';
+}
+/** Khối đầu tab Chấm công: ngày lễ trong 7 ngày trước → 14 ngày tới + nút Admin. */
+function leVeBang() {
+  var o = $('ccLeBang'); if (!o) return;
+  var nay = new Date(), tu = nsNgayCong(nay, -7), den = nsNgayCong(nay, 14), hn = nsHomNay();
+  var gan = _le.ds.filter(function (x) { return x.ngay >= tu && x.ngay <= den; });
+  var nut = '';
+  if (S.laAdmin) {
+    nut = '<button class="btn nho" type="button" id="leQuanLy">Lịch ngày lễ</button>';
+    var conCu = ((S.meta && S.meta.loaiCong) || []).some(function (x) { return ['P', 'L+', 'O', 'KL', 'M'].indexOf(x.ma) > -1 && x.dangDung !== false; });
+    if (!ccCo5() || conCu) nut += ' <button class="btn chinh nho" type="button" id="leChuanHoa">Áp dụng bộ 5 ký hiệu</button>';
+  }
+  if (!gan.length && !nut) { o.innerHTML = ''; return; }
+  o.innerHTML = '<div class="the" style="margin-bottom:14px;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+    '<div style="flex:1;min-width:220px">' + (gan.length ? '<b>🎌 Ngày lễ gần đây</b> · ' + gan.map(function (x) {
+      return '<span class="vi ' + (x.ngay === hn ? 'canh' : x.ngay < hn ? 'tap' : 'ok') + '" style="margin:2px">' + thoat(x.ngay.slice(8) + '/' + x.ngay.slice(5, 7)) + ' ' + thoat(x.ten) + '</span>';
+    }).join(' ') + '<div class="nhan-mo" style="margin-top:4px">Ngày lễ: đi làm chấm <b>L</b>, nghỉ hưởng lương chấm <b>NL</b>, không hưởng thì bỏ trống — không dùng +, ++, CN.</div>'
+      : '<span class="nhan-mo">Không có ngày lễ trong 2 tuần tới.</span>') +
+    (_le.coSeed && S.laAdmin ? '<div class="nhan-mo">Lịch đang dùng bản mặc định 2026 — nên đối chiếu văn bản chính thức (ngày lễ âm lịch).</div>' : '') + '</div>' + nut + '</div>';
+  if ($('leQuanLy')) $('leQuanLy').onclick = leMoQuanLy;
+  if ($('leChuanHoa')) $('leChuanHoa').onclick = function () {
+    var b = this;
+    if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Xác nhận: đổi danh mục ký hiệu?'; return; }
+    b.disabled = true; b.textContent = 'Đang áp dụng…';
+    hsPost('hsChuanHoaKyHieu', {}).then(function (k) {
+      nsBaoOkChung('Đã áp dụng bộ 5 ký hiệu. Thêm: ' + (k.them.join(', ') || '—') + ' · ngừng chấm mới: ' + (k.ngung.join(', ') || '—') + '. Tải lại trang để dùng.');
+      try { localStorage.removeItem('crck2_meta_offline'); } catch (e) { /* bỏ qua */ }
+      setTimeout(function () { location.reload(); }, 1500);
+    }).catch(function (e) { b.disabled = false; b.textContent = 'Áp dụng bộ 5 ký hiệu'; baoLoi('thongBao', e.message); });
+  };
+}
+function leMoQuanLy() {
+  var ve = function () {
+    hsMo('Lịch ngày lễ', '<div id="leLoi"></div><div class="hs-form"><div><label class="nhan" for="leNgay">Ngày</label><input class="o" type="date" id="leNgay"></div>' +
+      '<div><label class="nhan" for="leTen">Tên ngày lễ</label><input class="o" id="leTen" maxlength="120"></div></div><div class="hs-chan" style="justify-content:flex-start"><button class="btn chinh" type="button" id="leThem">Thêm / sửa ngày lễ</button></div>' +
+      '<div class="cuon" style="max-height:52vh"><table class="gd-bo-qua"><thead><tr><th>Ngày</th><th>Thứ</th><th>Tên</th><th>Nguồn</th><th></th></tr></thead><tbody>' + _le.ds.map(function (x) {
+        return '<tr><td>' + thoat(x.ngay.split('-').reverse().join('/')) + '</td><td>' + ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][new Date(x.ngay + 'T00:00:00').getDay()] + '</td><td>' + thoat(x.ten) + '</td><td class="nhan-mo">' +
+          (x.nguon === 'SEED' ? 'Mặc định' : 'Thêm tay') + '</td><td><button class="btn nho" type="button" data-le-huy="' + x.ngay + '">Bỏ</button></td></tr>';
+      }).join('') + '</tbody></table></div><p class="nhan-mo">Đổi lịch sau khi đã chấm: dòng đã chấm không tự đổi — kiểm tra lại các ngày bị ảnh hưởng.</p>');
+    $('leThem').onclick = function () {
+      hsGhi('hsLuuNgayLe', { ngay: $('leNgay').value, ten: hsV('leTen') }, this, function () { _le.luc = 0; leNapThen(ve); }, 'leLoi');
+    };
+    $('hsThan').querySelectorAll('[data-le-huy]').forEach(function (b) {
+      b.onclick = function () {
+        if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Chắc chắn?'; return; }
+        hsGhi('hsLuuNgayLe', { ngay: b.dataset.leHuy, huy: 1 }, b, function () { _le.luc = 0; leNapThen(ve); }, 'leLoi');
+      };
+    });
+  };
+  ve();
+}
+function leNapThen(sau) {
+  goiAPI('hsNgayLe', hsP({}), 30000).then(function (d) { leGan(d.ds); ghiLS('crck2_ngay_le', JSON.stringify({ ds: d.ds })); leVeBang(); if (sau) sau(); });
+}
+function nsNgayCong(d, n) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); }
 function taiChamCong() {
+  leNap();
   $('bangCC').innerHTML = skBang();
   var bl = layBoLocCC();
   bl.trang = S.trang; bl.moiTrang = 100; bl.nhom = 'ngayTo';
@@ -10081,9 +10176,9 @@ function taiBangChamCongThang() {
     $('tomTatBangCC').textContent = 'Sổ chấm công tháng ' + thang + ' — ' + dsCn.length + ' công nhân';
     _ccThangDL = { thang: thang, soNgay: kt.soNgay, dsCn: dsCn, o: o, doi: doiChon, to: toChon };
 
-    var dsLC = (S.meta && S.meta.loaiCong) || [];
+    var dsLC = ccKhHopLe(''), cuLC = ((S.meta && S.meta.loaiCong) || []).filter(function (x) { return x.dangDung === false; });
     var hct = dsLC.map(function (x) { return '<b>' + thoat(x.ma) + '</b> = ' + thoat(x.ten) + ' (' + soVN(x.soCong, 1) + ' công)'; }).join(' · ');
-    $('chuThichCC').innerHTML = hct ? 'Ký hiệu: ' + hct : '';
+    $('chuThichCC').innerHTML = hct ? 'Ký hiệu: ' + hct + (cuLC.length ? '<br><span class="nhan-mo">Ký hiệu cũ chỉ còn trong dữ liệu trước 20/11/2026: ' + cuLC.map(function (x) { return thoat(x.ma) + ' (' + thoat(x.ten) + ')'; }).join(', ') + '</span>' : '') : '';
   }).catch(function (e) {
     $('bangCCThang').innerHTML = '';
     baoLoi('thongBao', e.message);
@@ -10460,12 +10555,12 @@ function veChipPhien(phienDaChon) {
 }
 
 function formChamCong(r) {
-  var dsLC = (S.meta && S.meta.loaiCong) || [];
+  var dsLC = ccKhHopLe(r ? r.ngay : ($('fDenNgay') && $('fDenNgay').value) || nsHomNay(), r && r.kyHieu);
   var optKH = '';
   for (var i = 0; i < dsLC.length; i++) {
     optKH += '<option value="' + thoat(dsLC[i].ma) + '"' +
       (r && dsLC[i].ma === r.kyHieu ? ' selected' : '') + '>' +
-      thoat(dsLC[i].ma) + '</option>';   // chỉ ký hiệu (+, ++, P…), không kèm tên
+      thoat(dsLC[i].ma) + '</option>';   // chỉ ký hiệu (+, ++, CN…), không kèm tên
   }
   var phienHienTai = (r && r.phien) || '';
   return '<div><label class="nhan" for="cKyHieu">Ký hiệu công</label>' +
@@ -10559,6 +10654,12 @@ function moThemChamCong() {
       '<button class="btn" id="nutHuyCC">Huỷ</button>' +
       '<button class="btn chinh" id="nutLuuCC">Lưu</button></div>';
   ganChipPhien(function () { return $('cCn').value; });
+  var doiNgayKh = function () {   // ngày thường: + ++ · chủ nhật: CN · ngày lễ: L NL
+    var ds = ccKhHopLe($('cNgay').value), cu = $('cKyHieu').value;
+    $('cKyHieu').innerHTML = ds.map(function (x) { return '<option value="' + thoat(x.ma) + '"' + (x.ma === cu ? ' selected' : '') + '>' + thoat(x.ma) + '</option>'; }).join('');
+    ccGoiYNgay('cNgay');
+  };
+  $('cNgay').addEventListener('change', doiNgayKh); doiNgayKh();
   $('cCn').onchange = function () { capNhatPhanCaoXem('cPhanCaoXem', $('cCn').value, $('cPhien').value); };
   $('nutHuyCC').onclick = dongSuaSanLuong;
   $('nutLuuCC').onclick = function () {
@@ -12081,8 +12182,8 @@ function moChamCongCaTo() {
   if (!coQuyen('chamCong', 'THEM')) { baoLoi('thongBao', 'Vai trò của bạn chưa được cấp quyền chấm công.'); return; }
   if (!toNhapCaTo()) { baoLoi('thongBao', 'Chọn 1 tổ ở bộ lọc trước khi chấm công cả tổ.'); return; }
   if (!S.dsCn.length || !S.meta) { baoLoi('thongBao', 'Chưa có danh sách công nhân của tổ.'); return; }
-  var dsLC = S.meta.loaiCong || [], dsPh = S.meta.phien || [];
   var tam = ccDocTam();
+  var dsLC = ccKhHopLe((tam && tam.ngay) || nsHomNay()), dsPh = S.meta.phien || [];
   var coKh = function (ma) { return dsLC.some(function (x) { return x.ma === ma; }); };
   // Ký hiệu mặc định: bản tạm → ký hiệu đi làm đủ 1 công đầu tiên trong danh mục → mục đầu.
   var khMd = (tam && coKh(tam.kh) && tam.kh) ||
@@ -12200,7 +12301,17 @@ function moChamCongCaTo() {
   napDaCo();
   $('ccTrangThaiLuu').textContent = tam ? 'Đã khôi phục bản lưu tạm lúc ' + ntGio(tam.luc) : '';
 
-  $('ccNgay').onchange = function () { napDaCo().then(ccLuuTam); };
+  $('ccNgay').onchange = function () {
+    // Đổi ngày: đổi danh sách ký hiệu hợp lệ (ngày thường / chủ nhật / ngày lễ), ô đang sai thì về ký hiệu đầu
+    dsLC = ccKhHopLe($('ccNgay').value);
+    var hop = function (v) { return dsLC.some(function (x) { return x.ma === v; }); };
+    var md = hop($('ccKhMd').value) ? $('ccKhMd').value : (dsLC[0] || {}).ma || '';
+    $('ccKhMd').innerHTML = optKh(md);
+    Array.prototype.forEach.call($('bangCCTo').querySelectorAll('select.cc-kh'), function (o) { var v = o.value; o.innerHTML = optKh(v === '' ? '' : (hop(v) ? v : md)); });
+    ccGoiYNgay('ccNgay');
+    napDaCo().then(ccLuuTam);
+  };
+  setTimeout(function () { ccGoiYNgay('ccNgay'); }, 0);
   $('ccKhMd').onchange = function () { ccLuuTam(); };
   $('ccApMd').onclick = function () {
     var tr = $('bangCCTo').querySelectorAll('tr[data-cn]:not(.cc-da-co)');
@@ -12530,7 +12641,7 @@ function taiMauExcel(loai) {
     // giữ cột "Số nhát cạo" trong file mẫu nhập hàng loạt (CO_NHAP_NHAT)
   } else {
     tenSheet = 'Cham cong';
-    var khMau = (S.meta && S.meta.loaiCong && S.meta.loaiCong[0] && S.meta.loaiCong[0].ma) || '+';
+    var khMau = (ccKhHopLe('')[0] || {}).ma || '+';
     cotTieuDe = ['Ngày (yyyy-mm-dd)', 'Mã công nhân', 'Ký hiệu công', 'Phiên cạo', 'Ghi chú'];
     dongViDu = [[ngayMau, maCnMau, khMau, 'A', '']];
   }
@@ -12552,7 +12663,8 @@ function taiMauExcel(loai) {
     (S.meta && S.meta.phien || []).forEach(function (x) { dm.push([x.ma, x.ten]); });
   } else {
     dm.push(['Ký hiệu công', 'Tên', 'Số công']);
-    (S.meta && S.meta.loaiCong || []).forEach(function (x) { dm.push([x.ma, x.ten, x.soCong]); });
+    ccKhHopLe('').forEach(function (x) { dm.push([x.ma, x.ten, x.soCong]); });
+    if (ccCo5()) { dm.push([]); dm.push(['Theo loại ngày', 'Ngày thường: + hoặc ++ · Chủ nhật: CN · Ngày lễ: L (đi làm) hoặc NL (nghỉ hưởng lương) · không đi làm: bỏ trống']); }
     dm.push([]);
     dm.push(['Phiên cạo hợp lệ', '']);
     (S.meta && S.meta.phien || []).forEach(function (x) { dm.push([x.ma, x.ten]); });
