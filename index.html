@@ -589,6 +589,17 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 .nt-bang select.o{padding:5px 8px;min-width:0}
 .cc-chip{display:inline-flex;gap:4px;flex-wrap:nowrap}
 .nt-bang .cc-chip .chip{padding:3px 9px;min-width:0}
+/* Điều khiển camera (21/11/2026) */
+#dkKhung .dk-luoi{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px}
+#dkKhung .dk-anh{position:relative;background:#111;border-radius:10px;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#dkKhung .dk-anh .rong{color:#bbb}
+#dkKhung .dk-anh img{width:100%;display:block}
+#dkKhung .dk-anh canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#dkKhung .dk-nhom{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px}
+#dkKhung .dk-nhom[data-tat] .dk-pad{opacity:.55}
+#dkKhung .dk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#dkKhung .dk-k{min-height:44px;font-size:18px;padding:0}
+@media (max-width:760px){#dkKhung .dk-luoi{grid-template-columns:1fr}}
 /* PA3 — Chấm nhanh (điện thoại): mỗi người 1 dòng, bấm ký hiệu; màu theo bộ màu của web */
 #cnKhung .cn-dau{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 #cnKhung .cn-hang-nut{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px}
@@ -3488,7 +3499,7 @@ var LENH_DOC = {
   phieuChiTiet: 1, xepHang: 1, chamCong: 1, doiChieuCong: 1, phanCao: 1, phanCaoTheoCN: 1, giaoKhoan: 1, luong: 1, slTheoCn: 1, hoTroKhoDs: 1, xepLoaiDs: 1, dieuChinhQkDs: 1, nangSuatVuon: 1, banDoLo: 1, banDoSoLieu: 1, baoCaoTD: 1,
   xuHuongThang: 1, chiPhiLuongTongHop: 1, soSanLuong: 1, tramCan: 1, drcNgay: 1, danhSachScada: 1, keHoachCan: 1, vapidKey: 1, thongBaoDs: 1,
   xemPhieuBase: 1,   // 17/10/2026: xem trước khi đẩy phiếu sản lượng lên Base — Cloud Run (Apps Script ~20 giây)
-  hsTongQuan: 1, hsXuatCong: 1, hsDanhSach: 1, hsChiTiet: 1, hsCuTru: 1, hsDanhGia: 1, hsAnNinh: 1, hsAnh: 1, hsTraMa: 1, hsDsCong: 1, hsSuKienCamera: 1, hsAnhCamera: 1, hsDsTramCamera: 1, hsLichAnNinh: 1, hsCaTruc: 1, hsNgayLe: 1,   // 31/10/2026: an ninh & cư trú (lib/ho_so.js)
+  hsTongQuan: 1, hsXuatCong: 1, hsDanhSach: 1, hsChiTiet: 1, hsCuTru: 1, hsDanhGia: 1, hsAnNinh: 1, hsAnh: 1, hsTraMa: 1, hsDsCong: 1, hsSuKienCamera: 1, hsAnhCamera: 1, hsDsTramCamera: 1, hsLichAnNinh: 1, hsCaTruc: 1, hsNgayLe: 1, hsDsMat: 1,   // 31/10/2026: an ninh & cư trú (lib/ho_so.js)
   heSoLuong: 1,    // 26/10/2026: tab Hệ số lương (HeSoLuong.gs) — đọc Sheet trên Cloud Run, ghi qua Apps Script
   banLamViec: 1,   // 26/10/2026: Bàn làm việc — Cloud Run đọc Sheet (có dòng chờ duyệt) cho mọi vai trò
   truyXuat: 1, lichSu: 1,   // 22/10/2026: truy xuất nguồn gốc + lịch sử chỉnh sửa (TruyXuat.gs)
@@ -3740,7 +3751,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 358;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 359;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -17726,6 +17737,7 @@ var AN2_QT = [
     { k: 'khRa', ten: 'Theo dõi & cho ra', ai: 'Bảo vệ', mau: 'bv', q: function () { return hsCo('khach', 'XEM') || hsCo('anNinh', 'THEM'); }, mo: function (t) { return t ? t.khachDangTrong + ' khách đang trong' : 'Khách chưa rời đi'; }, so: function (t) { return t ? t.khachDangTrong : 0; } }] },
   { ten: 'Kiểm tra & cảnh báo', moTa: 'Kiểm tra đột xuất, camera, đối soát', buoc: [
     { k: 'kiem', ten: 'Kiểm tra đột xuất', ai: 'Bảo vệ / Đội', mau: 'bv', mo: function (t) { return t ? t.kiemHomNay + ' lượt hôm nay · đối chiếu thẻ tại lô' : 'Đối chiếu thẻ tại khu vực'; } },
+    { k: 'dk', ten: 'Điều khiển camera', ai: 'Bảo vệ', mau: 'cam', q: function () { return hsCo('anNinh', 'THEM'); }, mo: function () { return 'Chụp, xoay, còi/đèn, nhận diện mặt & biển số'; } },
     { k: 'cam', ten: 'Camera cảnh báo', ai: 'Trạm camera', mau: 'cam', mo: function (t) { return t ? t.tramCam + ' trạm · ' + t.camHomNay + ' sự kiện hôm nay' : 'Chuyển động, xâm nhập kèm ảnh'; } },
     { k: 'bc', ten: 'Báo cáo & đối soát', ai: 'Ban lãnh đạo', mau: 'ld', mo: function () { return 'Ban đêm, ghi tay, không khớp, lịch sử'; } }] },
   { ten: 'Cư trú & phòng ở', moTa: 'Phòng ở, xếp người, chuyển phòng', buoc: [
@@ -17896,6 +17908,7 @@ $('an2Luong').addEventListener('click', function (ev) {
   if (k === 'kl') { an2DgSan().then(function () { $('dgThemKl').click(); }).catch(function (e) { baoLoi('thongBao', e.message); }); return; }
   if (k === 'trong') { var th = $('bangTrongCong').closest('.the'); an2PopupEl(th, 'Đang trong cổng'); return; }
   if (k === 'cam') { an2PopupEl($('anCamThe'), 'Sự kiện camera'); camTai(true); return; }
+  if (k === 'dk') { dkChonTram(); return; }
   if (k === 'cong') { if (hsCo('quanLyCong', 'XEM')) qlCongMo(); else baoLoi('thongBao', 'Bạn chưa có quyền xem danh sách cổng.'); }
   else if (k === 'tram') tcMo();
   else if (k === 'gioCa') { if (_ca.d) caSuaCa(); else { caTai(); setTimeout(function () { if (_ca.d) caSuaCa(); }, 1500); } }
@@ -18292,10 +18305,303 @@ $('bangCam').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-cam-anh]'); if (!b) return;
   hsMo('Ảnh camera · ' + b.dataset.camTieu, '<div class="rong">Đang tải ảnh…</div>');
   goiAPI('hsAnhCamera', hsP({ ma: b.dataset.camAnh }), 30000).then(function (a) {
-    $('hsThan').innerHTML = '<img alt="Ảnh camera" style="max-width:100%;border-radius:8px;display:block" src="data:' + thoat(a.mime || 'image/jpeg') + ';base64,' + a.b64 + '">' +
-      '<div class="hs-phu" style="margin-top:6px">' + thoat(a.tep || '') + ' · lưu trên Drive công ty</div>';
+    $('hsThan').innerHTML = '<div style="position:relative"><img id="camXemAnh" alt="Ảnh camera" style="max-width:100%;border-radius:8px;display:block" src="data:' + thoat(a.mime || 'image/jpeg') + ';base64,' + a.b64 + '">' +
+      '<canvas id="camXemPhu" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas></div>' +
+      '<div class="hs-phu" style="margin-top:6px">' + thoat(a.tep || '') + ' · lưu trên Drive công ty</div>' +
+      '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho" type="button" id="camNdMat">🙂 Nhận diện mặt</button><button class="btn nho" type="button" id="camBienSo">🔢 Đọc biển số</button></div><div id="camNd"></div>';
+    $('camNdMat').onclick = function () { ndChay($('camXemAnh'), $('camXemPhu'), $('camNd')); };
+    $('camBienSo').onclick = function () { bsDoc($('camXemAnh'), $('camNd')); };
   }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 });
+/* =====================================================================
+   ĐIỀU KHIỂN CAMERA TỪ WEB + NHẬN DIỆN TỪ ẢNH (21/11/2026)
+   ---------------------------------------------------------------------
+   Web → hsLenhCamera (hàng lệnh máy chủ) → trạm ở cổng hỏi lệnh → ISAPI camera/đầu ghi → hsKetQuaLenh.
+   Nhận diện mặt 1:N chạy trên trình duyệt (face-api, cùng mô hình xác minh 1:1); kho đặc trưng ảnh chân dung
+   lập 1 lần (hsDsMat / hsLuuMat). Đọc biển số: Tesseract đọc chữ trên ảnh (bản thử, biển phải rõ, nhìn thẳng).
+   ===================================================================== */
+var _dk = { tram: null, kenh: 1, tuLam: null, ban: false, nd: null };
+function dkTramSan(d) { return (d.ds || []).filter(function (t) { return t.hoat; }); }
+/** Mở điều khiển: 1 trạm thì vào thẳng, nhiều trạm thì chọn. */
+function dkChonTram() {
+  hsMo('Điều khiển camera', '<div class="rong">Đang tải danh sách trạm…</div>');
+  goiAPI('hsDsTramCamera', hsP({}), 30000).then(function (d) {
+    _cam.tc = d;
+    var ds = dkTramSan(d);
+    if (ds.length === 1) return dkMo(ds[0]);
+    $('hsThan').innerHTML = ds.length ? '<p class="goi-y" style="margin-top:0">Chọn trạm (máy trung chuyển ở cổng) để điều khiển camera.</p>' + ds.map(function (t, i) {
+      return '<div class="an2-dong"><div><b>' + thoat(t.ten) + '</b><div class="hs-phu">' + thoat(t.cong) + ' · ' + (t.nhanLenh ? '<span style="color:var(--leaf)">sẵn sàng</span>' : 'chưa sẵn sàng nhận lệnh') + '</div></div>' +
+        '<button class="btn nho chinh" type="button" data-dk-i="' + i + '">Điều khiển</button></div>';
+    }).join('') : '<div class="rong">Chưa có trạm camera nào hoạt động. Admin thêm ở Quy trình → Thiết lập → Trạm camera.</div>';
+    $('hsThan').querySelectorAll('[data-dk-i]').forEach(function (b) { b.onclick = function () { dkMo(ds[+b.dataset.dkI]); }; });
+  }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+function dkDung() { if (_dk.tuLam) { clearTimeout(_dk.tuLam); _dk.tuLam = null; } }
+function dkTT(h, loai) { var o = $('dkTT'); if (o) { o.className = loai === 'loi' ? 'bao-loi' : loai === 'ok' ? 'vi ok' : 'goi-y'; o.innerHTML = h; } }
+/** Gửi 1 lệnh và chờ kết quả (≤ ~45 giây). */
+function dkLenh(lenh, ts) {
+  var t = _dk.tram;
+  return hsPost('hsLenhCamera', { maTram: t.ma, kenh: _dk.kenh, lenh: lenh, thamSo: JSON.stringify(ts || {}) }).then(function (r) {
+    var lan = 0;
+    var cho = function () {
+      return hsPost('hsKetQuaLenh', { maLenh: r.maLenh }).then(function (k) {
+        if (k.xong) { if (!k.ok) throw new Error(k.loi || 'Trạm báo lỗi.'); return k; }
+        if (++lan >= 3) throw new Error(k.daNhan ? 'Trạm đã nhận lệnh nhưng camera chưa trả lời.' : 'Trạm không nhận lệnh (mất mạng ở cổng?).');
+        return cho();
+      });
+    };
+    return cho();
+  });
+}
+function dkMo(t) {
+  dkDung();
+  _dk.tram = t; _dk.ban = false;
+  var cam = t.camera || { kenh: [{ id: 1, ten: 'Kênh D1', ptz: false }], coi: false, den: false, baoDong: 0 };
+  if (!cam.kenh || !cam.kenh.length) cam.kenh = [{ id: 1, ten: 'Kênh D1', ptz: false }];
+  if (!cam.kenh.some(function (k) { return k.id === _dk.kenh; })) _dk.kenh = cam.kenh[0].id;
+  var k0 = cam.kenh.filter(function (k) { return k.id === _dk.kenh; })[0];
+  var homNayS = nsHomNay();
+  var nut = function (id, chu, tieu) { return '<button class="btn nho" type="button" id="' + id + '"' + (tieu ? ' title="' + thoat(tieu) + '"' : '') + '>' + chu + '</button>'; };
+  var dpad = '<div class="dk-pad">' + [['↖', -1, 1], ['↑', 0, 1], ['↗', 1, 1], ['←', -1, 0], ['■', 0, 0], ['→', 1, 0], ['↙', -1, -1], ['↓', 0, -1], ['↘', 1, -1]].map(function (x) {
+    return '<button type="button" class="btn dk-k" data-dk-p="' + x[1] + '" data-dk-t="' + x[2] + '" aria-label="Xoay ' + x[0] + '">' + x[0] + '</button>';
+  }).join('') + '</div>';
+  hsMo('🎮 ' + t.ten + ' · ' + t.cong,
+    '<div id="dkKhung"><div class="gat" id="dkKenh" style="margin-bottom:8px">' + cam.kenh.map(function (k) {
+      return '<button class="chip' + (k.id === _dk.kenh ? ' on' : '') + '" type="button" data-dk-kenh="' + k.id + '">' + thoat(k.ten || ('D' + k.id)) + (k.ptz ? ' ⟳' : '') + '</button>';
+    }).join('') + '</div>' +
+    (t.nhanLenh ? '' : '<div class="bao-loi">Trạm chưa sẵn sàng nhận lệnh: cần chạy chương trình trạm bản 1.2 trở lên ở cổng, có mạng. Các nút vẫn bấm được để thử.</div>') +
+    '<div class="dk-luoi"><div class="dk-anh-o"><div class="dk-anh" id="dkAnhO"><div class="rong" id="dkAnhTrong">Bấm “📷 Chụp” để xem hình từ camera</div></div>' +
+      '<div class="hs-chan" style="justify-content:flex-start;margin-top:8px;flex-wrap:wrap">' + nut('dkChup', '📷 Chụp') + nut('dkTuLam', '▶ Xem liên tục', 'Chụp lại mỗi 2 giây (gần trực tiếp)') +
+      nut('dkLuu', '💾 Chụp & lưu Drive') + nut('dkNdMat', '🙂 Nhận diện mặt') + nut('dkBienSo', '🔢 Đọc biển số') + '</div><div id="dkNd"></div></div>' +
+    '<div class="dk-ben">' +
+      '<div class="dk-nhom" id="dkPtzO"' + (k0 && k0.ptz ? '' : ' data-tat="1"') + '><div class="nhan">Xoay camera</div>' + dpad +
+        '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn nho" data-dk-z="1">＋ Zoom</button><button type="button" class="btn nho" data-dk-z="-1">－ Zoom</button></div>' +
+        '<label class="nhan" style="margin-top:8px">Tốc độ <span id="dkTocChu">50</span></label><input type="range" id="dkToc" min="10" max="100" value="50" style="width:100%">' +
+        '<div class="nhan" style="margin-top:8px">Vị trí đặt sẵn</div><div class="gat">' + [1, 2, 3, 4].map(function (n) { return '<button class="chip" type="button" data-dk-vt="' + n + '">' + n + '</button>'; }).join('') +
+        '</div><button class="btn nho" type="button" id="dkLuuVt" style="margin-top:6px">Lưu hướng hiện tại vào…</button>' +
+        (k0 && k0.ptz ? '' : '<div class="hs-phu" style="margin-top:6px">Kênh này chưa báo xoay được (camera cố định, hoặc trạm chưa dò). Vẫn có thể bấm thử.</div>') + '</div>' +
+      '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        nut('dkCoi', '🔊 Còi / loa', 'Phát âm thanh cảnh báo cài trên camera') + nut('dkDen', '💡 Đèn nháy', 'Bật đèn cảnh báo cài trên camera') +
+        (cam.baoDong ? nut('dkBd', '🚨 Alarm Out 10 giây', 'Bật cổng báo động (còi ngoài / relay barie) 10 giây') : '') + '</div>' +
+        '<div class="hs-phu" style="margin-top:4px">Mọi lần bật đều ghi lịch sử (ai, lúc nào).</div></div>' +
+      '<div class="dk-nhom"><div class="nhan">Tìm đoạn ghi (thẻ nhớ / ổ cứng)</div>' +
+        '<input class="o" type="date" id="dkNgay" value="' + homNayS + '"><div style="display:flex;gap:6px;margin-top:6px"><input class="o" type="time" id="dkTu" value="00:00"><input class="o" type="time" id="dkDen" value="23:59"></div>' +
+        '<button class="btn nho" type="button" id="dkTim" style="margin-top:6px">Tìm</button><div id="dkGhi" class="hs-phu" style="margin-top:6px"></div></div>' +
+    '</div></div><div id="dkTT" class="goi-y" style="margin-top:10px">' + (t.nhanLenh ? 'Trạm sẵn sàng.' : '') + '</div></div>' +
+    '<div class="hs-chan"><button class="btn nho" type="button" id="dkThongTin" title="Trạm dò lại camera: kênh, xoay, còi, đèn">Dò lại thiết bị</button><button class="btn nho" type="button" id="dkDong">Đóng</button></div>');
+  var ban = function (nutEl, viec) {   // 1 lệnh 1 lúc (trừ xoay)
+    if (_dk.ban) return;
+    _dk.ban = true; if (nutEl) nutEl.disabled = true;
+    return viec().catch(function (e) { dkTT(thoat(e.message), 'loi'); }).then(function () { _dk.ban = false; if (nutEl) nutEl.disabled = false; });
+  };
+  var hienAnh = function (url) {
+    var o = $('dkAnhO'); if (!o) return;
+    if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(String(url || ''))) { dkTT('Trạm trả ảnh không hợp lệ.', 'loi'); return; }
+    o.innerHTML = '<img id="dkAnh" alt="Ảnh camera" src="' + url + '"><canvas id="dkPhu"></canvas>';
+  };
+  var chup = function (luu) {
+    var t0 = Date.now();
+    return dkLenh('chup', { luu: luu ? 1 : 0 }).then(function (k) {
+      hienAnh(k.anh);
+      dkTT('Ảnh lúc ' + new Date().toLocaleTimeString('vi-VN') + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' giây' + (k.maAnh ? ' · đã lưu lên Drive' : '') + (k.loi ? ' · ' + thoat(k.loi) : ''), 'ok');
+    });
+  };
+  $('dkDong').onclick = function () { dkDung(); hsDongHop(); };
+  $('dkKenh').onclick = function (ev) { var b = ev.target.closest('[data-dk-kenh]'); if (!b) return; _dk.kenh = +b.dataset.dkKenh; dkMo(t); };
+  $('dkChup').onclick = function () { ban(this, function () { dkTT('Đang chụp…'); return chup(false); }); };
+  $('dkLuu').onclick = function () { ban(this, function () { dkTT('Đang chụp và lưu…'); return chup(true); }); };
+  $('dkTuLam').onclick = function () {
+    var b = this;
+    if (_dk.tuLam) { dkDung(); b.textContent = '▶ Xem liên tục'; return; }
+    b.textContent = '⏸ Dừng xem';
+    var vong = function () {
+      if (!$('dkKhung') || !$('nenHs').classList.contains('hien')) { dkDung(); return; }
+      if (_dk.ban) { _dk.tuLam = setTimeout(vong, 500); return; }
+      _dk.ban = true;
+      chup(false).catch(function (e) { dkTT(thoat(e.message), 'loi'); }).then(function () { _dk.ban = false; if (_dk.tuLam !== null) _dk.tuLam = setTimeout(vong, 2000); });
+    };
+    _dk.tuLam = setTimeout(vong, 0);
+  };
+  $('dkToc').oninput = function () { $('dkTocChu').textContent = this.value; };
+  var xoay = function (p, ti, z) {
+    var toc = +$('dkToc').value;
+    dkTT('Đang xoay…');
+    dkLenh('xoay', { pan: p * toc, tilt: ti * toc, zoom: z * toc, ms: 600 }).then(function () { dkTT('Đã xoay. Bấm 📷 Chụp để xem hướng mới.', 'ok'); if (!_dk.tuLam && !_dk.ban) $('dkChup').click(); })
+      .catch(function (e) { dkTT(thoat(e.message), 'loi'); });
+  };
+  $('dkPtzO').onclick = function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.dkP !== undefined) { if (b.dataset.dkP === '0' && b.dataset.dkT === '0') return; xoay(+b.dataset.dkP, +b.dataset.dkT, 0); }
+    else if (b.dataset.dkZ) xoay(0, 0, +b.dataset.dkZ);
+    else if (b.dataset.dkVt) {
+      var so = +b.dataset.dkVt;
+      if (_dk.luuVt) {
+        _dk.luuVt = false; $('dkLuuVt').textContent = 'Lưu hướng hiện tại vào…';
+        dkLenh('viTri', { so: so, luu: 1 }).then(function () { dkTT('Đã lưu hướng hiện tại thành vị trí ' + so + '.', 'ok'); }).catch(function (e) { dkTT(thoat(e.message), 'loi'); });
+      } else dkLenh('viTri', { so: so }).then(function () { dkTT('Đã về vị trí ' + so + '.', 'ok'); if (!_dk.tuLam) $('dkChup').click(); }).catch(function (e) { dkTT(thoat(e.message), 'loi'); });
+    } else if (b.id === 'dkLuuVt') { _dk.luuVt = !_dk.luuVt; b.textContent = _dk.luuVt ? 'Bấm số 1–4 để lưu (bấm lại để huỷ)' : 'Lưu hướng hiện tại vào…'; }
+  };
+  var canhBao = function (lenh, ten, nutEl, ts) {
+    if (!confirm('Bật ' + ten + ' tại ' + t.cong + '?')) return;
+    ban(nutEl, function () { dkTT('Đang bật ' + ten + '…'); return dkLenh(lenh, ts).then(function (k) { dkTT('Đã bật ' + ten + '. ' + thoat((k.kq && k.kq.ghiChu) || ''), 'ok'); }); });
+  };
+  $('dkCoi').onclick = function () { canhBao('coi', 'còi / loa', this, { bat: 1 }); };
+  $('dkDen').onclick = function () { canhBao('den', 'đèn cảnh báo', this, { bat: 1 }); };
+  if ($('dkBd')) $('dkBd').onclick = function () { canhBao('baoDong', 'cổng báo động 10 giây', this, { bat: 1, giay: 10 }); };
+  $('dkTim').onclick = function () {
+    var ng = $('dkNgay').value;
+    ban(this, function () {
+      $('dkGhi').textContent = 'Đang tìm…';
+      return dkLenh('timGhi', { tu: ng + 'T' + ($('dkTu').value || '00:00'), den: ng + 'T' + ($('dkDen').value || '23:59') }).then(function (k) {
+        var ds = (k.kq && k.kq.doan) || [];
+        $('dkGhi').innerHTML = ds.length ? '<b>' + ds.length + ' đoạn ghi</b><br>' + ds.slice(0, 50).map(function (d) { return thoat(d.tu.slice(11, 16) + ' – ' + d.den.slice(11, 16)); }).join(' · ') +
+          '<div style="margin-top:4px">Xem lại video: dùng app Hik-Connect / iVMS (bản web xem lại sẽ làm cùng phần xem trực tiếp).</div>' : 'Không có đoạn ghi trong khoảng này.';
+      }).catch(function (e) { $('dkGhi').textContent = e.message; throw e; });
+    });
+  };
+  $('dkThongTin').onclick = function () {
+    ban(this, function () {
+      dkTT('Trạm đang dò lại thiết bị…');
+      return dkLenh('thongTin', {}).then(function (k) {
+        var q = k.kq || {};
+        t.camera = { kenh: q.kenh || [], coi: q.coi, den: q.den, baoDong: q.soBaoDong || 0 };
+        dkMo(t); dkTT('Thiết bị: ' + thoat(q.thietBi || '?') + ' · ' + (q.kenh || []).length + ' kênh · còi ' + (q.coi ? 'có' : 'chưa rõ') + ' · đèn ' + (q.den ? 'có' : 'chưa rõ') + ' · Alarm Out ' + (q.soBaoDong || 0), 'ok');
+      });
+    });
+  };
+  $('dkNdMat').onclick = function () { var i = $('dkAnh'); if (!i) { dkTT('Chụp ảnh trước.', 'loi'); return; } ndChay(i, $('dkPhu'), $('dkNd')); };
+  $('dkBienSo').onclick = function () { var i = $('dkAnh'); if (!i) { dkTT('Chụp ảnh trước.', 'loi'); return; } bsDoc(i, $('dkNd')); };
+}
+
+/* ---------- Nhận diện mặt 1:N trên ảnh camera ---------- */
+var ND_CHAC = 0.5, ND_NGHI = 0.58;
+function ndB64(f32) { var u = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+function ndTuB64(b) { var s = atob(b), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Float32Array(u.buffer); }
+/** Kho mẫu (đặc trưng ảnh chân dung) — nhớ 10 phút. */
+function ndNapMau(ep) {
+  if (!ep && _dk.nd && Date.now() - _dk.nd.luc < 600000) return Promise.resolve(_dk.nd);
+  return goiAPI('hsDsMat', hsP({}), 60000).then(function (d) {
+    _dk.nd = { luc: Date.now(), mau: d.mau.map(function (m) { return Object.assign({}, m, { f: ndTuB64(m.v) }); }), canLap: d.canLap, khongThayMat: d.khongThayMat };
+    return _dk.nd;
+  });
+}
+/** Lập đặc trưng cho ảnh chân dung chưa có (tải ảnh, đọc mặt trên máy này, gửi số đặc trưng — không gửi ảnh). */
+function ndLapChiMuc(ds, oTT) {
+  var xong = 0, khongMat = 0, lo = [], i = 0;
+  var gui = function (ep) {
+    if (!lo.length || (!ep && lo.length < 20)) return Promise.resolve();
+    var g = lo.splice(0); return hsPost('hsLuuMat', { ds: JSON.stringify(g) });
+  };
+  var mot = function () {
+    if (i >= ds.length) return gui(true);
+    var x = ds[i++];
+    oTT.innerHTML = 'Đang đọc ảnh chân dung ' + i + '/' + ds.length + (khongMat ? ' · ' + khongMat + ' ảnh không thấy rõ mặt' : '') + '…';
+    return goiAPI('hsAnh', hsP({ ma: x.maAnh }), 30000).then(function (a) {
+      return matAnh('data:' + (a.mime || 'image/jpeg') + ';base64,' + a.b64);
+    }).then(function (img) {
+      return faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 })).withFaceLandmarks().withFaceDescriptor();
+    }).then(function (r) {
+      if (!r) khongMat++;
+      lo.push({ maAnh: x.maAnh, v: r ? ndB64(r.descriptor) : '' }); xong++;
+    }, function () { /* ảnh lỗi tải: bỏ qua, lần sau lập tiếp */ }).then(function () { return gui(false); }).then(mot);
+  };
+  return matNapThuVien().then(mot).then(function () { return { xong: xong, khongMat: khongMat }; });
+}
+/** Tìm mọi khuôn mặt trong ảnh, so với kho mẫu, vẽ khung + danh sách 3 người giống nhất. */
+function ndChay(img, cv, oKq) {
+  oKq.innerHTML = '<div class="goi-y">Đang tải mô hình và kho khuôn mặt…</div>';
+  Promise.all([matNapThuVien(), ndNapMau()]).then(function (r) {
+    var kho = r[1];
+    if (kho.canLap.length && hsCo('anNinh', 'THEM')) {
+      oKq.innerHTML = '<div class="hs-ghichu"><span aria-hidden="true">ⓘ</span><div>Còn <b>' + kho.canLap.length + '</b> ảnh chân dung chưa đưa vào kho nhận diện (' + kho.mau.length + ' người đã có). ' +
+        'Lập một lần trên máy này, khoảng ' + Math.max(1, Math.round(kho.canLap.length / 60)) + ' phút; chỉ gửi số đặc trưng, không gửi ảnh.</div></div>' +
+        '<div class="hs-chan" style="justify-content:flex-start"><button class="btn chinh nho" type="button" id="ndLap">Lập kho nhận diện</button><button class="btn nho" type="button" id="ndBoQua">Nhận diện với ' + kho.mau.length + ' người đã có</button></div><div id="ndLapTT" class="hs-phu"></div>';
+      $('ndLap').onclick = function () {
+        this.disabled = true;
+        ndLapChiMuc(kho.canLap, $('ndLapTT')).then(function (k) { return ndNapMau(true).then(function () { $('ndLapTT').textContent = 'Xong: ' + k.xong + ' ảnh' + (k.khongMat ? ' (' + k.khongMat + ' ảnh không thấy rõ mặt — nên chụp lại)' : ''); ndChay(img, cv, oKq); }); })
+          .catch(function (e) { $('ndLapTT').innerHTML = '<span style="color:var(--clay)">' + thoat(e.message) + '</span>'; });
+      };
+      $('ndBoQua').onclick = function () { kho.canLap = []; ndChay(img, cv, oKq); };
+      return;
+    }
+    if (!kho.mau.length) { oKq.innerHTML = '<div class="bao-loi">Kho nhận diện còn trống — cần ảnh chân dung và người có quyền ghi an ninh lập kho.</div>'; return; }
+    oKq.innerHTML = '<div class="goi-y">Đang tìm khuôn mặt trong ảnh…</div>';
+    return faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.35 })).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
+      if (cv) {
+        cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+        var cx = cv.getContext('2d'); cx.clearRect(0, 0, cv.width, cv.height); cx.lineWidth = Math.max(2, cv.width / 400); cx.font = Math.max(14, cv.width / 60) + 'px sans-serif';
+      }
+      if (!ds.length) { oKq.innerHTML = '<div class="goi-y">Không thấy khuôn mặt nào đủ rõ. Mặt cần to (người đứng gần, 2–4 m), nhìn về phía camera, đủ sáng.</div>'; return; }
+      var hang = ds.map(function (f, i) {
+        var top = kho.mau.map(function (m) { return { m: m, kc: faceapi.euclideanDistance(m.f, f.descriptor) }; }).sort(function (a, b) { return a.kc - b.kc; }).slice(0, 3);
+        var b = f.detection.box, kc = top[0] ? top[0].kc : 9, muc = kc < ND_CHAC ? 'ok' : kc < ND_NGHI ? 'nghi' : 'la';
+        var diem = function (x) { return Math.round(Math.max(0, Math.min(1, (0.75 - x) / 0.45)) * 100); };
+        if (cv) {
+          var mau = muc === 'ok' ? '#2e7d32' : muc === 'nghi' ? '#c77700' : '#c62828', cx2 = cv.getContext('2d');
+          cx2.strokeStyle = mau; cx2.strokeRect(b.x, b.y, b.width, b.height);
+          cx2.fillStyle = mau; cx2.fillText((i + 1) + (muc === 'la' ? ' Người lạ' : ' ' + (top[0].m.maCn || top[0].m.ten)), b.x, Math.max(14, b.y - 4));
+        }
+        var cat = document.createElement('canvas'), pad = b.width * 0.25;
+        cat.width = 72; cat.height = 72;
+        cat.getContext('2d').drawImage(img, Math.max(0, b.x - pad), Math.max(0, b.y - pad), b.width + 2 * pad, b.height + 2 * pad, 0, 0, 72, 72);
+        var nhan = muc === 'ok' ? '<span class="vi ok">Chắc chắn</span>' : muc === 'nghi' ? '<span class="vi canh">Nghi ngờ — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong kho</span>';
+        return '<div class="an2-dong" style="align-items:flex-start"><img alt="Mặt ' + (i + 1) + '" src="' + cat.toDataURL('image/jpeg', 0.8) + '" style="width:64px;height:64px;border-radius:8px;object-fit:cover">' +
+          '<div style="flex:1"><b>Mặt ' + (i + 1) + '</b> ' + nhan + '<div class="hs-phu" style="margin-top:4px">' + top.map(function (x, j) {
+            return (j ? '' : '<b>') + thoat(x.m.ten) + (x.m.maCn ? ' · ' + thoat(x.m.maCn) : '') + (x.m.to ? ' · ' + thoat(x.m.to) : '') + ' — ' + diem(x.kc) + '%' + (j ? '' : '</b>');
+          }).join('<br>') + '</div></div></div>';
+      }).join('');
+      oKq.innerHTML = '<div class="nhan" style="margin-top:8px">Kết quả nhận diện · ' + ds.length + ' khuôn mặt · so với ' + kho.mau.length + ' người</div>' + hang +
+        '<div class="hs-phu" style="margin-top:6px">Bản thử: kết quả chỉ để bảo vệ tham khảo, chưa tự ghi vào sổ ra vào. Ngưỡng chắc chắn ≥ ' + Math.round((0.75 - ND_CHAC) / 0.45 * 100) + '%.</div>';
+    });
+  }).catch(function (e) { oKq.innerHTML = '<div class="bao-loi">' + thoat(e.message || e) + '</div>'; });
+}
+
+/* ---------- Đọc biển số từ ảnh (Tesseract, bản thử) ---------- */
+var _bs = { nap: null };
+function bsNap() {
+  if (_bs.nap) return _bs.nap;
+  _bs.nap = new Promise(function (ok, loi) {
+    if (window.Tesseract) return ok();
+    var sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload = ok; sc.onerror = function () { loi(new Error('Không tải được bộ đọc chữ (cần mạng lần đầu).')); };
+    document.head.appendChild(sc);
+  }).then(function () {
+    return Tesseract.createWorker('eng', 1).then(function (w) {
+      return w.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-. ', tessedit_pageseg_mode: '11' }).then(function () { return w; });
+    });
+  });
+  _bs.nap.catch(function () { _bs.nap = null; });
+  return _bs.nap;
+}
+/** Biển Campuchia: phần chữ Latin dạng 2A-1234 / 2AB-1234 (tên tỉnh chữ Khmer bỏ qua). */
+function bsTach(chu) {
+  var ra = {}, re = /(\d{1,2}[A-Z]{1,2})\s*[-.]?\s*(\d{4})/g, m, s = String(chu || '').toUpperCase().replace(/O(?=\d)/g, '0');
+  while ((m = re.exec(s))) ra[m[1] + '-' + m[2]] = 1;
+  return Object.keys(ra);
+}
+function bsDoc(img, oKq) {
+  oKq.innerHTML = '<div class="goi-y">Đang đọc chữ trên ảnh (lần đầu tải bộ đọc ~5 MB)…</div>';
+  bsNap().then(function (w) {
+    // Đọc cả ảnh + nửa dưới phóng to (biển số thường ở thấp) — gộp kết quả
+    var vung = [[0, 0, 1, 1, 1], [0, 0.4, 1, 0.6, 2]];
+    var kq = [];
+    return vung.reduce(function (p, v) {
+      return p.then(function () {
+        var c = document.createElement('canvas'), W = img.naturalWidth, H = img.naturalHeight;
+        c.width = Math.round(W * v[2] * v[4]); c.height = Math.round(H * v[3] * v[4]);
+        var cx = c.getContext('2d'); cx.filter = 'grayscale(1) contrast(1.6)';
+        cx.drawImage(img, W * v[0], H * v[1], W * v[2], H * v[3], 0, 0, c.width, c.height);
+        return w.recognize(c).then(function (r) { kq = kq.concat(bsTach(r.data.text)); });
+      });
+    }, Promise.resolve()).then(function () {
+      kq = kq.filter(function (x, i) { return kq.indexOf(x) === i; });
+      oKq.innerHTML = kq.length ? '<div class="nhan" style="margin-top:8px">Biển số đọc được</div><div style="font-size:22px;font-weight:700;letter-spacing:1px">' + kq.map(thoat).join(' · ') + '</div>' +
+        '<div class="hs-phu">Bản thử: đối chiếu bằng mắt trước khi ghi. Đọc chắc ngày đêm cần camera chuyên đọc biển (ANPR).</div>'
+        : '<div class="goi-y">Không đọc được biển số. Cần biển rõ, nhìn thẳng, xe dừng ở barie, biển rộng ≥ 1/6 ảnh.</div>';
+    });
+  }).catch(function (e) { oKq.innerHTML = '<div class="bao-loi">' + thoat(e.message || e) + '</div>'; });
+}
+
 /** Chuông: mỗi phút hỏi sự kiện camera mới (chỉ sự kiện có cảnh báo: xâm nhập, che camera, chuyển động ban đêm). */
 function camHoiChuong() {
   if (document.hidden || !S.vaiTro || !(coQuyen('anNinh', 'XEM') || coQuyen('anNinh', 'THEM'))) return;
@@ -18338,7 +18644,8 @@ function tcVe() {
       '<td><span class="vi ' + tt[0] + '">' + thoat(tt[1]) + '</span>' + (t.loi ? '<div class="hs-phu">' + thoat(t.loi) + '</div>' : '') + '</td>' +
       '<td>' + thoat(t.dauGhi || '—') + (t.phienBan ? '<div class="hs-phu">chương trình ' + thoat(t.phienBan) + '</div>' : '') + '</td>' +
       '<td>' + t.skHomNay + (t.hangCho ? '<div class="hs-phu">' + t.hangCho + ' chờ gửi</div>' : '') + '</td>' +
-      '<td style="text-align:right;white-space:nowrap">' + (coSua && t.hoat ? '<button class="btn nho" type="button" data-tc-cap="' + thoat(t.ma) + '">Cấp lại khoá</button> ' : '') +
+      '<td style="text-align:right;white-space:nowrap">' + (t.hoat && hsCo('anNinh', 'THEM') ? '<button class="btn nho chinh" type="button" data-tc-dk="' + thoat(t.ma) + '">🎮 Điều khiển</button> ' : '') +
+      (coSua && t.hoat ? '<button class="btn nho" type="button" data-tc-cap="' + thoat(t.ma) + '">Cấp lại khoá</button> ' : '') +
       (t.hoat && coXoa ? '<button class="btn nho" type="button" data-tc-thu="' + thoat(t.ma) + '">Thu hồi</button>' : '') +
       (!t.hoat && coSua ? '<button class="btn nho" type="button" data-tc-mo="' + thoat(t.ma) + '">Mở lại</button>' : '') + '</td></tr>';
   }).join('');
@@ -18348,6 +18655,9 @@ function tcVe() {
     '<div class="hs-chan">' + (coThem ? '<button class="btn chinh" type="button" id="tcThem">Thêm trạm</button>' : '') + '<button class="btn nho" type="button" id="tcLai">Tải lại</button><button class="btn nho" type="button" id="tcDong">Đóng</button></div>');
   $('tcDong').onclick = hsDongHop; $('tcLai').onclick = tcMo;
   if ($('tcThem')) $('tcThem').onclick = tcForm;
+  $('hsThan').querySelectorAll('[data-tc-dk]').forEach(function (b) {
+    b.onclick = function () { dkMo(d.ds.filter(function (x) { return x.ma === b.dataset.tcDk; })[0]); };
+  });
   $('hsThan').querySelectorAll('[data-tc-cap]').forEach(function (b) {
     b.onclick = function () {
       if (!b.dataset.xacNhan) { b.dataset.xacNhan = '1'; b.textContent = 'Khoá cũ sẽ ngừng — chắc chắn?'; return; }
