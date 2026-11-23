@@ -69,7 +69,11 @@ self.addEventListener('notificationclick', (ev) => {
   const dich = new URL((ev.notification.data && ev.notification.data.url) || './', self.registration.scope).href;
   ev.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ds) => {
     const co = ds.find((c) => c.url.indexOf(self.registration.scope) === 0);
-    if (co) return co.navigate(dich).then((c) => (c || co).focus()).catch(() => co.focus());
+    // App đang mở: báo trang tự mở (vd popup sự kiện camera) — không tải lại trang. Trang cũ không hiểu thì vẫn chuyển trang như trước.
+    if (co) {
+      if (/[?&]suKien=/.test(dich)) { co.postMessage({ loai: 'moUrl', url: dich }); return co.focus(); }
+      return co.navigate(dich).then((c) => (c || co).focus()).catch(() => co.focus());
+    }
     return self.clients.openWindow(dich);
   }));
 });

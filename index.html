@@ -3752,7 +3752,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 368;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 369;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -15219,6 +15219,7 @@ function tbMo(x) {
   var q = {}, s = String(x.url || '').split('?')[1] || '';
   s.split('&').forEach(function (c) { var kv = c.split('='); if (kv[0]) { try { q[decodeURIComponent(kv[0])] = decodeURIComponent((kv[1] || '').replace(/\+/g, ' ')); } catch (e) { /* bỏ */ } } });
   if (q.nhanh === 'chamCong') { moNhanh(moChamCongCaTo, $('nnChamCong')); return; }
+  if (q.suKien) { camMoSuKien(q.suKien); return; }   // thông báo camera: hiện popup sự kiện ngay trên trang đang mở
   // Chuyển tab TRƯỚC (mỗi tab tự khôi phục bộ lọc đã nhớ), rồi mới áp tổ / ngày của thông báo và tải lại
   if (q.tab && !tabAn(tabCu(q.tab)) && tabCu(q.tab) !== S.tab) chuyenTab(tabCu(q.tab));
   S.thamSoURL = q;
@@ -15228,7 +15229,10 @@ function tbMo(x) {
 $('nutChuong').onclick = moTrungTamThongBao;
 setInterval(function () { if (document.visibilityState === 'visible' && S.vaiTro) tbTaiDs(); }, 2 * 60 * 1000);
 document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && S.vaiTro) tbTaiDs(); });
-if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (ev) { if (ev.data && ev.data.loai === 'thongBao') tbTaiDs(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (ev) {
+  if (ev.data && ev.data.loai === 'thongBao') tbTaiDs();
+  if (ev.data && ev.data.loai === 'moUrl') tbMo({ url: ev.data.url });   // bấm thông báo khi app đang mở -> popup ngay
+});
 
 /** Nút "Bật nhắc chấm công": hiện cho tổ trưởng khi máy hỗ trợ mà chưa cho phép; đã cho phép thì âm thầm đăng ký lại. */
 function tbKiemDangKy() {
@@ -18295,7 +18299,7 @@ function camVe() {
   if (!rows.length) { $('bangCam').innerHTML = '<tr><td class="rong">Chưa có sự kiện nào. Admin tạo trạm ở nút “Trạm camera”, cài chương trình lên máy ở cổng là sự kiện sẽ về đây.</td></tr>'; return; }
   $('bangCam').innerHTML = '<thead><tr><th>Lúc</th><th>Cổng</th><th>Camera</th><th>Sự kiện</th><th>Mức</th><th>Ảnh</th></tr></thead><tbody>' + rows.map(function (r) {
     var m = CAM_MUC[r.muc] || CAM_MUC.info;
-    return '<tr><td style="white-space:nowrap">' + thoat(r.luc) + (r.tre ? '<div class="hs-phu">gửi bù</div>' : '') + '</td><td>' + thoat(r.cong) + '</td><td>' + thoat(r.thietBi) + '</td>' +
+    return '<tr data-cam-ma="' + thoat(r.ma) + '"><td style="white-space:nowrap">' + thoat(r.luc) + (r.tre ? '<div class="hs-phu">gửi bù</div>' : '') + '</td><td>' + thoat(r.cong) + '</td><td>' + thoat(r.thietBi) + '</td>' +
       '<td>' + thoat(r.ketQua || r.loai) + (r.doiTuong ? '<div><b>🚗 ' + thoat(bsDinhDang(r.doiTuong)) + '</b></div>' : '') + (r.canhBao ? '<div class="hs-phu">' + thoat(r.canhBao) + '</div>' : '') + '</td>' +
       '<td><span class="vi ' + m[0] + '">' + m[1] + '</span></td>' +
       '<td style="white-space:nowrap">' + (r.dsAnh && r.dsAnh.length ? '<button class="btn nho" type="button" data-cam-anh="' + thoat(r.dsAnh[0]) + '" data-cam-tieu="' + thoat(r.luc + ' · ' + r.thietBi) + '">Xem</button>' : '') +
@@ -18308,9 +18312,15 @@ $('bangCam').addEventListener('click', function (ev) {
   var tim = ev.target.closest('[data-cam-tim]');
   if (tim) { var rr = (_cam.d.rows || []).filter(function (x) { return x.ma === tim.dataset.camTim; })[0]; if (rr) timNguoiSuKien(rr); return; }
   var v = ev.target.closest('[data-cam-video]');
-  if (v) {
-    hsMo('Video camera · ' + v.dataset.camTieu, '<div class="rong">Đang tải video từ Drive…</div>');
-    hsPost('hsVideoCamera', { ma: v.dataset.camVideo }).then(function (a) {
+  if (v) { camXemVideo(v.dataset.camVideo, v.dataset.camTieu, v.dataset.camTram); return; }
+  var b = ev.target.closest('[data-cam-anh]'); if (!b) return;
+  camMoSuKien((b.closest('tr') && b.closest('tr').dataset.camMa) || '', b.dataset.camAnh, b.dataset.camTieu);
+});
+/** Xem video sự kiện (popup): khung mặt theo video, tìm người, tìm biển số. */
+function camXemVideo(maVideo, tieu, maTram) {
+  var v = { dataset: { camTram: maTram || '' } };
+  hsMo('Video camera · ' + tieu, '<div class="rong">Đang tải video từ Drive…</div>');
+  hsPost('hsVideoCamera', { ma: maVideo }).then(function (a) {
       var bin = atob(a.b64), u = new Uint8Array(bin.length);
       for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
       if (_cam.videoUrl) URL.revokeObjectURL(_cam.videoUrl);
@@ -18324,20 +18334,84 @@ $('bangCam').addEventListener('click', function (ev) {
         this.textContent = '⏹ Tắt khung mặt'; mtBat($('camVd'), $('camVdKq'));
       };
       $('camVdBien').onclick = function () { vdTimBien($('camVd'), _cam.videoUrl, $('camVdKq'), v.dataset.camTram); };
-    }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
-    return;
-  }
-  var b = ev.target.closest('[data-cam-anh]'); if (!b) return;
-  hsMo('Ảnh camera · ' + b.dataset.camTieu, '<div class="rong">Đang tải ảnh…</div>');
-  goiAPI('hsAnhCamera', hsP({ ma: b.dataset.camAnh }), 30000).then(function (a) {
-    $('hsThan').innerHTML = '<div style="position:relative"><img id="camXemAnh" alt="Ảnh camera" style="max-width:100%;border-radius:8px;display:block" src="data:' + thoat(a.mime || 'image/jpeg') + ';base64,' + a.b64 + '">' +
-      '<canvas id="camXemPhu" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas></div>' +
-      '<div class="hs-phu" style="margin-top:6px">' + thoat(a.tep || '') + ' · lưu trên Drive công ty</div>' +
-      '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho" type="button" id="camNdMat">🙂 Nhận diện mặt</button><button class="btn nho" type="button" id="camBienSo">🔢 Đọc biển số</button></div><div id="camNd"></div>';
-    $('camNdMat').onclick = function () { ndChay($('camXemAnh'), $('camXemPhu'), $('camNd')); };
-    $('camBienSo').onclick = function () { bsDoc($('camXemAnh'), $('camNd')); };
   }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
-});
+}
+/** POPUP CHI TIẾT 1 SỰ KIỆN (mở từ thông báo / chuông / nút Xem): ảnh + thông tin + các nút xem video, tìm người, nhận diện,
+    đọc biển số, điều khiển camera. Video thường lên Drive ~30 giây sau sự kiện — chưa có thì có nút tải lại. */
+function camMoSuKien(ma, maAnhSan, tieuSan) {
+  if (!ma && !maAnhSan) return;
+  hsMo('Sự kiện camera', '<div class="rong">Đang tải sự kiện…</div>');
+  var timRow = function () {
+    if (!ma) return Promise.resolve(null);
+    var co = _cam.d && (_cam.d.rows || []).filter(function (x) { return x.ma === ma; })[0];
+    if (co && (co.dsVideo || []).length) return Promise.resolve(co);
+    return goiAPI('hsSuKienCamera', hsP({ nguon: 'THAT' }), 30000).then(function (d) {
+      _cam.d = _cam.d || d;
+      return (d.rows || []).filter(function (x) { return x.ma === ma; })[0] || co || null;
+    });
+  };
+  timRow().then(function (r) {
+    if (!$('nenHs').classList.contains('hien')) return;
+    var maAnh = maAnhSan || (r && r.dsAnh && r.dsAnh[0]);
+    var maTram = r ? ((/^(T-[A-Z0-9]+)-/.exec(r.ma) || [])[1] || '') : '';
+    var tieu = r ? r.luc + ' · ' + r.thietBi : (tieuSan || '');
+    var muc = r ? (CAM_MUC[r.muc] || CAM_MUC.info) : null;
+    $('hsThan').innerHTML = (r ? '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
+        '<span class="vi ' + muc[0] + '">' + muc[1] + '</span><b>' + thoat(r.loai) + '</b><span class="hs-phu">' + thoat(r.cong + ' · ' + r.thietBi + ' · ' + r.luc) + '</span>' +
+        (r.doiTuong ? '<b>🚗 ' + thoat(bsDinhDang(r.doiTuong)) + '</b>' : '') + '</div>' +
+        (r.canhBao ? '<div class="hs-ghichu"><span aria-hidden="true">⚠</span><div>' + thoat(r.canhBao) + '</div></div>' : '') : '') +
+      '<div style="position:relative" id="skAnhO">' + (maAnh ? '<div class="rong">Đang tải ảnh…</div>' : '<div class="rong">Sự kiện không có ảnh.</div>') + '</div>' +
+      ((r && r.dsAnh && r.dsAnh.length > 1) ? '<div class="gat" id="skDsAnh" style="margin-top:6px">' + r.dsAnh.map(function (m, i) {
+        return '<button class="chip' + (m === maAnh ? ' on' : '') + '" type="button" data-sk-anh="' + thoat(m) + '">Ảnh ' + (i + 1) + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="hs-chan" style="justify-content:flex-start;flex-wrap:wrap">' +
+        (r && (r.dsVideo || []).length ? '<button class="btn nho chinh" type="button" id="skVideo">▶ Xem video</button>'
+          : (r ? '<button class="btn nho" type="button" id="skVideoLai" title="Video lên Drive khoảng 30 giây sau sự kiện">⏳ Video đang xử lý — tải lại</button>' : '')) +
+        (r ? '<button class="btn nho" type="button" id="skTim">🙂 Tìm người</button>' : '') +
+        (maAnh ? '<button class="btn nho" type="button" id="skNd">🙂 Nhận diện mặt</button><button class="btn nho" type="button" id="skBien">🔢 Đọc biển số</button>' : '') +
+        (maTram && hsCo('anNinh', 'THEM') ? '<button class="btn nho" type="button" id="skDk">🎮 Điều khiển camera</button>' : '') +
+      '</div><div id="skKq"></div>';
+    var napAnh = function (m) {
+      $('skAnhO').innerHTML = '<div class="rong">Đang tải ảnh…</div>';
+      return goiAPI('hsAnhCamera', hsP({ ma: m }), 30000).then(function (a) {
+        if (!$('skAnhO')) return;
+        $('skAnhO').innerHTML = '<img id="skAnh" alt="Ảnh sự kiện" style="max-width:100%;border-radius:8px;display:block" src="data:' + thoat(a.mime || 'image/jpeg') + ';base64,' + a.b64 + '">' +
+          '<canvas id="skPhu" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>';
+      }).catch(function (e) { if ($('skAnhO')) $('skAnhO').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+    };
+    if (maAnh) napAnh(maAnh);
+    if ($('skDsAnh')) $('skDsAnh').onclick = function (ev) {
+      var b = ev.target.closest('[data-sk-anh]'); if (!b) return;
+      this.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('skKq').innerHTML = ''; napAnh(b.dataset.skAnh);
+    };
+    if ($('skVideo')) $('skVideo').onclick = function () { camXemVideo(r.dsVideo[0], tieu, maTram); };
+    if ($('skVideoLai')) $('skVideoLai').onclick = function () { if (_cam.d) _cam.d = null; camMoSuKien(ma, maAnhSan, tieuSan); };
+    if ($('skTim')) $('skTim').onclick = function () { timNguoiSuKien(r); };
+    if ($('skNd')) $('skNd').onclick = function () { if ($('skAnh')) ndChay($('skAnh'), $('skPhu'), $('skKq')); };
+    if ($('skBien')) $('skBien').onclick = function () {
+      var i = $('skAnh'); if (!i) return;
+      if (!maTram) { bsDoc(i, $('skKq')); return; }
+      var c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; c.getContext('2d').drawImage(i, 0, 0);
+      $('skKq').innerHTML = '<div class="goi-y">Trạm đang đọc biển số…</div>';
+      dkLenh('docBienAnh', { anh: c.toDataURL('image/jpeg', 0.9) }, maTram, 1).then(function (k) { bsVeKq(k.kq, i, $('skPhu'), $('skKq')); })
+        .catch(function (e) { $('skKq').innerHTML = '<div class="goi-y">Bộ đọc ở trạm chưa dùng được (' + thoat(e.message) + ') — đọc tạm trên máy này…</div>'; setTimeout(function () { bsDoc(i, $('skKq')); }, 600); });
+    };
+    if ($('skDk')) $('skDk').onclick = function () {
+      goiAPI('hsDsTramCamera', hsP({}), 30000).then(function (d) {
+        _cam.tc = d;
+        var t = (d.ds || []).filter(function (x) { return x.ma === maTram; })[0];
+        if (t) dkMo(t); else baoLoi('skKq', 'Không tìm thấy trạm ' + maTram + '.');
+      }).catch(function (e) { baoLoi('skKq', e.message); });
+    };
+  }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
+}
+// Mở popup sự kiện từ đường dẫn thông báo (?suKien=…): chờ đăng nhập xong rồi mở, xoá tham số để tải lại trang không mở lại.
+(function () {
+  var m = /[?&]suKien=([^&#]+)/.exec(location.search); if (!m) return;
+  var ma = decodeURIComponent(m[1]), lan = 0;
+  try { history.replaceState(null, '', location.pathname + location.search.replace(/[?&]suKien=[^&#]+/, '').replace(/^&/, '?') + location.hash); } catch (e) {}
+  var cho = setInterval(function () { if (S.vaiTro && S.meta) { clearInterval(cho); camMoSuKien(ma); } else if (++lan > 60) clearInterval(cho); }, 1000);
+})();
 /* =====================================================================
    ĐIỀU KHIỂN CAMERA TỪ WEB + NHẬN DIỆN TỪ ẢNH (21/11/2026)
    ---------------------------------------------------------------------
@@ -19055,7 +19129,7 @@ function camHoiChuong() {
     if (lanDau) return;
     d.rows.slice().reverse().forEach(function (r) {
       if (!r.canhBao) return;
-      _tb.gl.unshift({ loai: 'CAMERA', muc: r.muc, tieuDe: r.canhBao + ' · ' + r.cong, noiDung: r.thietBi + ' · ' + r.luc + (r.soAnh ? ' · có ảnh' : ''), luc: r.lucGhi || r.luc, url: './?tab=anNinh' });
+      _tb.gl.unshift({ loai: 'CAMERA', muc: r.muc, tieuDe: r.canhBao + ' · ' + r.cong, noiDung: r.thietBi + ' · ' + r.luc + (r.soAnh ? ' · có ảnh' : ''), luc: r.lucGhi || r.luc, url: './?tab=anNinh2&suKien=' + encodeURIComponent(r.ma) });
     });
     if (_tb.gl.length > 100) _tb.gl.length = 100;
     tbVeSo();
