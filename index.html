@@ -3762,7 +3762,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 373;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 374;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18754,6 +18754,20 @@ function ndSoSanh(urlMat, m) {
 }
 // Khoảng cách đặc trưng face-api: càng nhỏ càng giống. "Khớp" chỉ khi đủ gần (≈ ≥ 75%) VÀ hơn hẳn người thứ 2 (cách ≥ 0,06);
 // 2–3 người sát điểm nhau = máy không phân biệt được -> "chưa chắc". (23/11: 0,50 cũ quá dễ — 56% đã báo chắc chắn, nhận nhầm người.)
+/** Dò mặt nhiều tầng (23/11/2026): Tiny 608 -> Tiny 320 (mặt to sát camera) -> SSD MobileNet (mặt ngẩng / nghiêng / chụp từ dưới,
+    nặng hơn ~5 MB, chỉ tải khi cần). Trả về mảng kết quả có đặc trưng. */
+var _ssd = null;
+function ndDoMat(el, nhanh) {
+  var thu = function (opt) { return faceapi.detectAllFaces(el, opt).withFaceLandmarks().withFaceDescriptors(); };
+  return thu(new faceapi.TinyFaceDetectorOptions({ inputSize: nhanh ? 416 : 608, scoreThreshold: 0.35 })).then(function (ds) {
+    if (ds.length || nhanh) return ds;
+    return thu(new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.3 })).then(function (d2) {
+      if (d2.length) return d2;
+      if (!_ssd) _ssd = faceapi.nets.ssdMobilenetv1.loadFromUri(MAT_CDN + 'model/').catch(function (e) { _ssd = null; throw e; });
+      return _ssd.then(function () { return thu(new faceapi.SsdMobilenetv1Options({ minConfidence: 0.35 })); });
+    });
+  });
+}
 var ND_CHAC = 0.41, ND_NGHI = 0.55, ND_CACH = 0.06;
 /** ds: [{ m, kc }] đã xếp tăng dần -> 'ok' | 'nghi' | 'la' */
 function ndMuc(ds) {
@@ -18786,7 +18800,7 @@ function ndLapChiMuc(ds, oTT) {
     return goiAPI('hsAnh', hsP({ ma: x.maAnh }), 30000).then(function (a) {
       return matAnh('data:' + (a.mime || 'image/jpeg') + ';base64,' + a.b64);
     }).then(function (img) {
-      return faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 })).withFaceLandmarks().withFaceDescriptor();
+      return ndDoMat(img).then(function (ds) { return ds.sort(function (a, b) { return b.detection.box.area - a.detection.box.area; })[0]; });
     }).then(function (r) {
       if (!r) khongMat++;
       lo.push({ maAnh: x.maAnh, v: r ? ndB64(r.descriptor) : '' }); xong++;
@@ -18813,7 +18827,7 @@ function ndChay(img, cv, oKq) {
     }
     if (!kho.mau.length) { oKq.innerHTML = '<div class="bao-loi">Kho nhận diện còn trống — cần ảnh chân dung và người có quyền ghi an ninh lập kho.</div>'; return; }
     oKq.innerHTML = '<div class="goi-y">Đang tìm khuôn mặt trong ảnh…</div>';
-    return faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.35 })).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
+    return ndDoMat(img).then(function (ds) {
       if (cv) {
         cv.width = img.naturalWidth; cv.height = img.naturalHeight;
         var cx = cv.getContext('2d'); cx.clearRect(0, 0, cv.width, cv.height); cx.lineWidth = Math.max(2, cv.width / 400); cx.font = Math.max(14, cv.width / 60) + 'px sans-serif';
@@ -18896,8 +18910,7 @@ function timNguoiSuKien(r, veSk) {
       if (i >= ds.length) return Promise.resolve();
       var n = ds[i++];
       tt('Đang tìm khuôn mặt ' + i + '/' + ds.length + ' (' + thoat(n.nhan) + ')…');
-      return faceapi.detectAllFaces(n.el, new faceapi.TinyFaceDetectorOptions({ inputSize: n.t < 0 ? 608 : 416, scoreThreshold: 0.4 }))
-        .withFaceLandmarks().withFaceDescriptors().then(function (f) {
+      return ndDoMat(n.el, n.t >= 0).then(function (f) {
           f.forEach(function (x) {
             var b = x.detection.box, c = document.createElement('canvas'), pad = b.width * 0.25;
             c.width = 72; c.height = 72;
