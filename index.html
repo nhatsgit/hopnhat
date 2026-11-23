@@ -3751,7 +3751,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 362;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 363;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18353,7 +18353,7 @@ function dkChonTram() {
     $('hsThan').querySelectorAll('[data-dk-i]').forEach(function (b) { b.onclick = function () { dkMo(ds[+b.dataset.dkI]); }; });
   }).catch(function (e) { $('hsThan').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
 }
-function dkDung() { if (_dk.tuLam) { clearTimeout(_dk.tuLam); _dk.tuLam = null; } }
+function dkDung() { if (_dk.tuLam) { clearTimeout(_dk.tuLam); _dk.tuLam = null; } if (typeof ttDung === 'function') ttDung(); }
 function dkTT(h, loai) { var o = $('dkTT'); if (o) { o.className = loai === 'loi' ? 'bao-loi' : loai === 'ok' ? 'vi ok' : 'goi-y'; o.innerHTML = h; } }
 /** Gửi 1 lệnh và chờ kết quả (≤ ~45 giây). */
 function dkLenh(lenh, ts) {
@@ -18388,7 +18388,10 @@ function dkMo(t) {
     }).join('') + '</div>' +
     (t.nhanLenh ? '' : '<div class="bao-loi">Trạm chưa sẵn sàng nhận lệnh: cần chạy chương trình trạm bản 1.2 trở lên ở cổng, có mạng. Các nút vẫn bấm được để thử.</div>') +
     '<div class="dk-luoi"><div class="dk-anh-o"><div class="dk-anh" id="dkAnhO"><div class="rong" id="dkAnhTrong">Bấm “📷 Chụp” để xem hình từ camera</div></div>' +
-      '<div class="hs-chan" style="justify-content:flex-start;margin-top:8px;flex-wrap:wrap">' + nut('dkChup', '📷 Chụp') + nut('dkTuLam', '▶ Xem liên tục', 'Chụp lại mỗi 2 giây (gần trực tiếp)') +
+      '<div class="hs-chan" style="justify-content:flex-start;margin-top:8px;flex-wrap:wrap">' +
+      (t.trucTiep ? nut('dkTT2', '📺 Trực tiếp', 'Video trực tiếp qua đường hầm của trạm (trễ dưới 1 giây)') +
+        '<label class="hs-phu" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="dkHd"> HD</label>' : '') +
+      nut('dkChup', '📷 Chụp') + nut('dkTuLam', '▶ Xem liên tục', 'Chụp ảnh nhỏ liên tục (khi chưa có xem trực tiếp)') +
       nut('dkLuu', '💾 Chụp & lưu Drive') + nut('dkNdMat', '🙂 Nhận diện mặt') + nut('dkBienSo', '🔢 Đọc biển số') + '</div><div id="dkNd"></div></div>' +
     '<div class="dk-ben">' +
       '<div class="dk-nhom" id="dkPtzO"' + (k0 && k0.ptz ? '' : ' data-tat="1"') + '><div class="nhan">Xoay camera</div>' + dpad +
@@ -18416,6 +18419,7 @@ function dkMo(t) {
   var hienAnh = function (url) {
     var o = $('dkAnhO'); if (!o) return;
     if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(String(url || ''))) { dkTT('Trạm trả ảnh không hợp lệ.', 'loi'); return; }
+    if ($('dkVideo')) return;   // đang xem trực tiếp: không đè ảnh tĩnh lên video
     o.innerHTML = '<img id="dkAnh" alt="Ảnh camera" src="' + url + '"><canvas id="dkPhu"></canvas>';
   };
   var chup = function (luu, phu) {
@@ -18500,8 +18504,75 @@ function dkMo(t) {
       });
     });
   };
-  $('dkNdMat').onclick = function () { var i = $('dkAnh'); if (!i) { dkTT('Chụp ảnh trước.', 'loi'); return; } ndChay(i, $('dkPhu'), $('dkNd')); };
-  $('dkBienSo').onclick = function () { var i = $('dkAnh'); if (!i) { dkTT('Chụp ảnh trước.', 'loi'); return; } bsDoc(i, $('dkNd')); };
+  // Đang xem trực tiếp: lấy khung hình hiện tại làm ảnh để nhận diện / đọc biển số
+  var layKhung = function () {
+    var v = $('dkVideo');
+    if (!v || !v.videoWidth) return Promise.resolve($('dkAnh'));
+    var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+    dkDung(); $('dkAnhO').innerHTML = ''; hienAnh(c.toDataURL('image/jpeg', 0.92));
+    return new Promise(function (ok) { var i = $('dkAnh'); if (i.complete) ok(i); else i.onload = function () { ok(i); }; });
+  };
+  if ($('dkTT2')) $('dkTT2').onclick = function () {
+    dkDung();
+    var b = this; b.disabled = true;
+    dkTT('Đang xin vé xem trực tiếp…');
+    hsPost('hsXemTrucTiep', { maTram: t.ma, kenh: _dk.kenh, hd: $('dkHd').checked ? 1 : 0 }).then(function (r) {
+      $('dkAnhO').innerHTML = '<video id="dkVideo" muted playsinline autoplay style="width:100%;display:block;background:#000"></video>';
+      ttPhat($('dkVideo'), r.ws, dkTT);
+    }).catch(function (e) { dkTT(thoat(e.message), 'loi'); }).then(function () { b.disabled = false; });
+  };
+  $('dkNdMat').onclick = function () { layKhung().then(function (i) { if (!i) { dkTT('Chụp ảnh hoặc mở trực tiếp trước.', 'loi'); return; } ndChay(i, $('dkPhu'), $('dkNd')); }); };
+  $('dkBienSo').onclick = function () { layKhung().then(function (i) { if (!i) { dkTT('Chụp ảnh hoặc mở trực tiếp trước.', 'loi'); return; } bsDoc(i, $('dkNd')); }); };
+}
+
+/* ---------- Xem trực tiếp (23/11/2026): trình duyệt <- WebSocket (đường hầm Cloudflare của trạm) <- go2rtc <- camera.
+   Giao thức MSE của go2rtc: gửi {"type":"mse","value":"<codec hỗ trợ>"}, nhận {"type":"mse","value":"video/mp4; codecs=…"} rồi các mẩu fMP4.
+   Tự viết trình phát (không nạp mã JS từ máy trạm). Luôn bám sát điểm mới nhất (trễ < 1 giây). ---------- */
+var _tt = { ws: null, ms: null, hen: null };
+function ttDung() {
+  if (_tt.hen) { clearInterval(_tt.hen); _tt.hen = null; }
+  if (_tt.ws) { try { _tt.ws.onclose = null; _tt.ws.close(); } catch (e) {} _tt.ws = null; }
+  _tt.ms = null;
+}
+function ttPhat(video, wsUrl, tt) {
+  ttDung();
+  var MS = window.ManagedMediaSource || window.MediaSource;
+  if (!MS) { tt('Trình duyệt này không phát được video trực tiếp (thiếu Media Source). Dùng Chrome / Edge, hoặc iPhone iOS 17 trở lên.', 'loi'); return; }
+  var ung = ['avc1.640029', 'avc1.64002A', 'avc1.640033', 'avc1.4D401F', 'avc1.42E01E', 'hvc1.1.6.L153.B0', 'mp4a.40.2', 'mp4a.40.5', 'opus']
+    .filter(function (c) { return MS.isTypeSupported('video/mp4; codecs="' + c + '"'); }).join(',');
+  var ms = new MS(), sb = null, hang = [], dem = 0;
+  _tt.ms = ms;
+  if (window.ManagedMediaSource) video.disableRemotePlayback = true;
+  video.src = URL.createObjectURL(ms);
+  ms.addEventListener('sourceopen', function () {
+    var ws = new WebSocket(wsUrl);
+    ws.binaryType = 'arraybuffer';
+    _tt.ws = ws;
+    ws.onopen = function () { ws.send(JSON.stringify({ type: 'mse', value: ung })); tt('Đã nối, đang chờ hình…'); };
+    ws.onmessage = function (ev) {
+      if (typeof ev.data === 'string') {
+        var j = {}; try { j = JSON.parse(ev.data); } catch (e) {}
+        if (j.type === 'mse' && !sb) {
+          try { sb = ms.addSourceBuffer(j.value); sb.mode = 'segments'; } catch (e) { tt('Không phát được định dạng ' + thoat(j.value), 'loi'); ws.close(); return; }
+          sb.addEventListener('updateend', function () { if (hang.length && !sb.updating) sb.appendBuffer(hang.shift()); });
+        } else if (j.type === 'error') tt('Trạm báo lỗi: ' + thoat(j.value || ''), 'loi');
+        return;
+      }
+      if (!sb) return;
+      if (sb.updating || hang.length) { hang.push(ev.data); if (hang.length > 60) hang.splice(0, 30); }
+      else { try { sb.appendBuffer(ev.data); } catch (e) { hang.push(ev.data); } }
+      if (++dem === 3) { video.play().catch(function () {}); tt('🔴 Trực tiếp', 'ok'); }
+    };
+    ws.onclose = function () { if (_tt.ws === ws) tt('Mất kết nối trực tiếp. Bấm "📺 Trực tiếp" để nối lại.', 'loi'); };
+  });
+  // Bám điểm mới nhất + dọn bộ đệm cũ
+  _tt.hen = setInterval(function () {
+    if (!video.isConnected) { ttDung(); return; }
+    if (!sb || !video.buffered.length) return;
+    var cuoi = video.buffered.end(video.buffered.length - 1);
+    if (cuoi - video.currentTime > 1.2) video.currentTime = cuoi - 0.3;
+    if (!sb.updating && video.currentTime - video.buffered.start(0) > 20) { try { sb.remove(0, video.currentTime - 10); } catch (e) {} }
+  }, 1000);
 }
 
 /* ---------- Nhận diện mặt 1:N trên ảnh camera ---------- */
