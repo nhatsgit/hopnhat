@@ -3764,7 +3764,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 379;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 380;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -19020,7 +19020,8 @@ function mtBat(video, oTT) {
             var gan = capNhat(ds.map(hop));
             ds.forEach(function (r, i) {
               var v = gan[i], a = null, b2 = null;
-              kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, r.descriptor); if (!a || kc < a.kc) { b2 = a; a = { m: m, kc: kc }; } else if (!b2 || kc < b2.kc) b2 = { m: m, kc: kc }; });
+              (_dk.nd || kho).mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, r.descriptor);   // kho có thể vừa tự lập thêm ảnh mới
+              if (!a || kc < a.kc) { b2 = a; a = { m: m, kc: kc }; } else if (!b2 || kc < b2.kc) b2 = { m: m, kc: kc }; });
               var muc = ndMuc([a, b2].filter(Boolean));
               v.phieu.push({ ma: muc === 'la' ? '' : a.m.maAnh, m: a && a.m, kc: a ? a.kc : 9, muc: muc });
               if (v.phieu.length > 5) v.phieu.shift();
