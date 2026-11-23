@@ -3762,7 +3762,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 374;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 375;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18522,7 +18522,7 @@ function dkMo(t) {
       '<div id="dkTT" class="goi-y dk-tt">' + (t.nhanLenh ? 'Trạm sẵn sàng.' : '') + '</div>' +
       '<div class="dk-thanh"><span class="dk-tnhan">Xem</span>' +
         (t.trucTiep ? nut('dkTT2', icn('tv') + 'Trực tiếp', 'Video trực tiếp qua đường hầm của trạm (trễ dưới 1 giây)') +
-          '<label class="hs-phu dk-hd" title="Luồng gốc 2560×1440 — rõ hơn, tốn mạng hơn ~5 lần"><input type="checkbox" id="dkHd"> HD</label>' : '') +
+          '<label class="hs-phu dk-hd" title="Luồng gốc 2560×1440 — rõ hơn, tốn mạng hơn ~5 lần"><input type="checkbox" id="dkHd"> HD</label>' + nut('dkTieng', icn('speaker') + 'Bật tiếng', 'Nghe micro của camera (chỉ khi đang xem trực tiếp)') : '') +
         nut('dkChup', icn('cam') + 'Ảnh', 'Chụp 1 ảnh') + nut('dkTuLam', icn('play') + 'Ảnh liên tục', 'Chụp ảnh nhỏ liên tục' + (t.trucTiep ? '' : ' (trạm chưa có xem trực tiếp)')) + '</div>' +
       '<div class="dk-thanh"><span class="dk-tnhan">Phân tích</span>' +
         (t.trucTiep ? nut('dkMt', icn('scan') + 'Khung mặt', 'Dò và ghi tên khuôn mặt chạy theo video trực tiếp') : '') +
@@ -18664,7 +18664,15 @@ function dkMo(t) {
     if (!$('dkVideo')) { dkTT('Bấm "' + icn('tv') + 'Trực tiếp" trước.', 'loi'); return; }
     this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('dkVideo'), $('dkNd'));
   };
+  if ($('dkTieng')) $('dkTieng').onclick = function () {
+    var v = $('dkVideo');
+    if (!v) { dkTT('Bấm "Trực tiếp" trước.', 'loi'); return; }
+    v.muted = !v.muted; if (!v.muted) v.play().catch(function () {});
+    this.innerHTML = icn('speaker') + (v.muted ? 'Bật tiếng' : 'Tắt tiếng');
+    if (!v.muted && !(v.mozHasAudio || (v.webkitAudioDecodedByteCount || 0) > 0 || (v.audioTracks && v.audioTracks.length))) dkTT('Nếu không nghe gì: camera đang để luồng "Chỉ video" — bật "Video & Audio" trong cài đặt camera.', 'loi');
+  };
   if ($('dkTT2')) $('dkTT2').onclick = function () {
+    if ($('dkTieng')) $('dkTieng').innerHTML = icn('speaker') + 'Bật tiếng';
     dkDung(); $('dkTuLam').innerHTML = icn('play') + 'Ảnh liên tục'; if ($('dkMt')) $('dkMt').innerHTML = icn('scan') + 'Khung mặt';
     var b = this; b.disabled = true;
     dkTT('Đang xin vé xem trực tiếp…');
@@ -18706,7 +18714,8 @@ function ttPhat(video, wsUrl, tt) {
   ttDung();
   var MS = window.ManagedMediaSource || window.MediaSource;
   if (!MS) { tt('Trình duyệt này không phát được video trực tiếp (thiếu Media Source). Dùng Chrome / Edge, hoặc iPhone iOS 17 trở lên.', 'loi'); return; }
-  var ung = ['avc1.640029', 'avc1.64002A', 'avc1.640033', 'avc1.4D401F', 'avc1.42E01E', 'hvc1.1.6.L153.B0', 'mp4a.40.2', 'mp4a.40.5', 'opus']
+  // flac: go2rtc đổi tiếng G.711 của camera sang FLAC để trình duyệt phát được
+  var ung = ['avc1.640029', 'avc1.64002A', 'avc1.640033', 'avc1.4D401F', 'avc1.42E01E', 'hvc1.1.6.L153.B0', 'mp4a.40.2', 'mp4a.40.5', 'flac', 'opus']
     .filter(function (c) { return MS.isTypeSupported('video/mp4; codecs="' + c + '"'); }).join(',');
   var ms = new MS(), sb = null, hang = [], dem = 0;
   _tt.ms = ms;
