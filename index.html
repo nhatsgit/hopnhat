@@ -598,6 +598,7 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 #dkKhung .dk-nhom{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px}
 #dkKhung .dk-nhom[data-tat] .dk-pad{opacity:.55}
 #dkKhung .dk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.nd-hs{display:block;width:72px;height:72px}.nd-hs>*{width:72px!important;height:72px!important;border-radius:8px;object-fit:cover;margin:0}
 #dkKhung .dk-k{min-height:44px;font-size:18px;padding:0;touch-action:none;user-select:none}
 @media (max-width:760px){#dkKhung .dk-luoi{grid-template-columns:1fr}}
 /* PA3 — Chấm nhanh (điện thoại): mỗi người 1 dòng, bấm ký hiệu; màu theo bộ màu của web */
@@ -3751,7 +3752,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 364;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 365;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18586,6 +18587,14 @@ function ttPhat(video, wsUrl, tt) {
 }
 
 /* ---------- Nhận diện mặt 1:N trên ảnh camera ---------- */
+/** Mặt cắt từ camera ↔ ảnh chân dung gốc trong hồ sơ của người giống nhất — để bảo vệ so bằng mắt. */
+function ndSoSanh(urlMat, m) {
+  return '<div style="display:flex;gap:6px;align-items:center;flex:none"><figure style="margin:0;text-align:center"><img alt="Mặt từ camera" src="' + urlMat +
+    '" style="width:72px;height:72px;border-radius:8px;object-fit:cover;display:block"><figcaption class="hs-phu">Camera</figcaption></figure>' +
+    (m && m.maAnh ? '<span aria-hidden="true" style="color:var(--line-2)">↔</span><figure style="margin:0;text-align:center"><span class="nd-hs">' +
+      hsAnhHtml(m.maAnh, m.ten, true) +
+      '</span><figcaption class="hs-phu">Hồ sơ</figcaption></figure>' : '') + '</div>';
+}
 var ND_CHAC = 0.5, ND_NGHI = 0.58;
 function ndB64(f32) { var u = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
 function ndTuB64(b) { var s = atob(b), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Float32Array(u.buffer); }
@@ -18657,13 +18666,14 @@ function ndChay(img, cv, oKq) {
         cat.width = 72; cat.height = 72;
         cat.getContext('2d').drawImage(img, Math.max(0, b.x - pad), Math.max(0, b.y - pad), b.width + 2 * pad, b.height + 2 * pad, 0, 0, 72, 72);
         var nhan = muc === 'ok' ? '<span class="vi ok">Chắc chắn</span>' : muc === 'nghi' ? '<span class="vi canh">Nghi ngờ — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong kho</span>';
-        return '<div class="an2-dong" style="align-items:flex-start"><img alt="Mặt ' + (i + 1) + '" src="' + cat.toDataURL('image/jpeg', 0.8) + '" style="width:64px;height:64px;border-radius:8px;object-fit:cover">' +
+        return '<div class="an2-dong" style="align-items:flex-start">' + ndSoSanh(cat.toDataURL('image/jpeg', 0.8), muc === 'la' ? null : top[0].m) +
           '<div style="flex:1"><b>Mặt ' + (i + 1) + '</b> ' + nhan + '<div class="hs-phu" style="margin-top:4px">' + top.map(function (x, j) {
             return (j ? '' : '<b>') + thoat(x.m.ten) + (x.m.maCn ? ' · ' + thoat(x.m.maCn) : '') + (x.m.to ? ' · ' + thoat(x.m.to) : '') + ' — ' + diem(x.kc) + '%' + (j ? '' : '</b>');
           }).join('<br>') + '</div></div></div>';
       }).join('');
       oKq.innerHTML = '<div class="nhan" style="margin-top:8px">Kết quả nhận diện · ' + ds.length + ' khuôn mặt · so với ' + kho.mau.length + ' người</div>' + hang +
         '<div class="hs-phu" style="margin-top:6px">Bản thử: kết quả chỉ để bảo vệ tham khảo, chưa tự ghi vào sổ ra vào. Ngưỡng chắc chắn ≥ ' + Math.round((0.75 - ND_CHAC) / 0.45 * 100) + '%.</div>';
+      hsNapAnh(oKq);
     });
   }).catch(function (e) { oKq.innerHTML = '<div class="bao-loi">' + thoat(e.message || e) + '</div>'; });
 }
@@ -18743,12 +18753,13 @@ function timNguoiSuKien(r) {
       var top = kho.mau.map(function (m) { return { m: m, kc: faceapi.euclideanDistance(m.f, g.dai.d) }; }).sort(function (a, b) { return a.kc - b.kc; }).slice(0, 3);
       var kc = top[0] ? top[0].kc : 9, muc = kc < ND_CHAC ? 'ok' : kc < ND_NGHI ? 'nghi' : 'la';
       var nhan = muc === 'ok' ? '<span class="vi ok">Chắc chắn</span>' : muc === 'nghi' ? '<span class="vi canh">Nghi ngờ — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong kho</span>';
-      return '<div class="an2-dong" style="align-items:flex-start"><img alt="Người ' + (i + 1) + '" src="' + g.dai.anh + '" style="width:64px;height:64px;border-radius:8px;object-fit:cover">' +
+      return '<div class="an2-dong" style="align-items:flex-start">' + ndSoSanh(g.dai.anh, muc === 'la' ? null : top[0].m) +
         '<div style="flex:1"><b>Người ' + (i + 1) + '</b> ' + nhan + '<div class="hs-phu" style="margin-top:4px">' + top.map(function (t2, j) {
           return (j ? '' : '<b>') + thoat(t2.m.ten) + (t2.m.maCn ? ' · ' + thoat(t2.m.maCn) : '') + (t2.m.to ? ' · ' + thoat(t2.m.to) : '') + ' — ' + diem(t2.kc) + '%' + (j ? '' : '</b>');
         }).join('<br>') + '</div><div class="hs-phu">Xuất hiện ' + g.ds.length + ' khung · khung rõ nhất: ' + thoat(g.dai.nhan) + ' (mặt rộng ' + g.dai.co + ' điểm ảnh' +
         (g.dai.co < 60 ? ', <span style="color:var(--clay)">nhỏ — kết quả kém tin cậy</span>' : '') + ')</div></div></div>';
     }).join('') + '<div class="hs-phu" style="margin-top:6px">Bản thử: chỉ để tham khảo, chưa tự ghi vào sổ ra vào.</div>';
+    hsNapAnh($('tnKq'));
   }).catch(function (e) { tt('<span style="color:var(--clay)">' + thoat(e.message || e) + '</span>'); });
 }
 
