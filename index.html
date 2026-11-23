@@ -3764,7 +3764,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 377;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 378;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18983,41 +18983,45 @@ function mtBat(video, oTT) {
     if (!kho.mau.length) throw new Error('Kho nhận diện còn trống — mở 1 ảnh camera, bấm "Nhận diện mặt" để lập kho trước.');
     tt('Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
     var optDo = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
-    // 1) Dò khung liên tục
-    (function doKhung() {
-      if (phien.dung || !video.isConnected) return;
-      if (!video.videoWidth || video.readyState < 2 || video.paused) { setTimeout(doKhung, 150); return; }
-      faceapi.detectAllFaces(video, optDo).then(function (ds) {
-        if (phien.dung) return;
-        var moi = ds.map(function (d) { var b = d.box; return { x: b.x, y: b.y, w: b.width, h: b.height }; });
-        vet.forEach(function (v) { v.thay = false; });
-        moi.forEach(function (b) {
-          var tot = null, iou = 0.25;
-          vet.forEach(function (v) { if (!v.thay) { var o = mtIou(v.dich, b); if (o > iou) { iou = o; tot = v; } } });
-          if (tot) { tot.dich = b; tot.thay = true; tot.mat = 0; }
-          else vet.push({ id: ++soVet, hien: Object.assign({}, b), dich: b, thay: true, mat: 0, phieu: [], nhanLuc: 0 });
-        });
-        vet = vet.filter(function (v) { if (!v.thay) v.mat++; return v.mat < 4; });   // mất dấu 4 lượt liền -> bỏ
-      }).catch(function () {}).then(function () { setTimeout(doKhung, 30); });
-    })();
-    // 3) Nhận diện riêng (~0,7 giây / lượt, chạy song song với dò khung): tính đặc trưng mọi mặt trong khung, gán cho người đang bám theo (trùng vùng)
     var optNhan = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 });
-    (function nhan() {
+    // Cập nhật người đang bám theo từ danh sách khung mới (trùng vùng IoU); trả về vết tương ứng từng khung
+    var capNhat = function (moi) {
+      vet.forEach(function (v) { v.thay = false; });
+      var gan = moi.map(function (b) {
+        var tot = null, iou = 0.2;
+        vet.forEach(function (v) { if (!v.thay) { var o = mtIou(v.dich, b); if (o > iou) { iou = o; tot = v; } } });
+        if (tot) { tot.dich = b; tot.thay = true; tot.mat = 0; }
+        else { tot = { id: ++soVet, hien: Object.assign({}, b), dich: b, thay: true, mat: 0, phieu: [] }; vet.push(tot); }
+        return tot;
+      });
+      vet = vet.filter(function (v) { if (!v.thay) v.mat++; return v.mat < 4; });   // mất dấu 4 lượt liền -> bỏ
+      return gan;
+    };
+    var hop = function (d) { var b = d.box || d.detection.box; return { x: b.x, y: b.y, w: b.width, h: b.height }; };
+    // MỘT vòng duy nhất (2 vòng song song trên WebGL có lúc treo cả hai): thường chỉ dò khung (nhanh),
+    // ~0,5 giây xen 1 lượt nhận diện cả khung (cũng cập nhật vị trí). Lượt nào quá 3 giây thì bỏ qua — vòng không bao giờ chết.
+    var lanNhan = 0, lanCuoi = -1;
+    (function vong() {
       if (phien.dung || !video.isConnected) return;
-      if (!vet.length || !video.videoWidth || video.readyState < 2 || (video.paused && video.currentTime === nhan.lanCuoi)) { setTimeout(nhan, 200); return; }
-      nhan.lanCuoi = video.currentTime;
-      faceapi.detectAllFaces(video, optNhan).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
-        ds.forEach(function (r) {
-          var bb = r.detection.box, hop = { x: bb.x, y: bb.y, w: bb.width, h: bb.height }, v = null, iou = 0.2;
-          vet.forEach(function (x) { var o = mtIou(x.dich, hop); if (o > iou) { iou = o; v = x; } });
-          if (!v) return;
-          var a = null, b2 = null;
-          kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, r.descriptor); if (!a || kc < a.kc) { b2 = a; a = { m: m, kc: kc }; } else if (!b2 || kc < b2.kc) b2 = { m: m, kc: kc }; });
-          var muc = ndMuc([a, b2].filter(Boolean));
-          v.phieu.push({ ma: muc === 'la' ? '' : a.m.maAnh, m: a && a.m, kc: a ? a.kc : 9, muc: muc });
-          if (v.phieu.length > 5) v.phieu.shift();
-        });
-      }).catch(function () {}).then(function () { setTimeout(nhan, 500); });
+      if (!video.videoWidth || video.readyState < 2 || (video.paused && video.currentTime === lanCuoi)) { setTimeout(vong, 150); return; }
+      lanCuoi = video.currentTime;
+      var nhanLuot = vet.length && Date.now() - lanNhan > 500;
+      var viec = nhanLuot
+        ? faceapi.detectAllFaces(video, optNhan).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
+            lanNhan = Date.now();
+            var gan = capNhat(ds.map(hop));
+            ds.forEach(function (r, i) {
+              var v = gan[i], a = null, b2 = null;
+              kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, r.descriptor); if (!a || kc < a.kc) { b2 = a; a = { m: m, kc: kc }; } else if (!b2 || kc < b2.kc) b2 = { m: m, kc: kc }; });
+              var muc = ndMuc([a, b2].filter(Boolean));
+              v.phieu.push({ ma: muc === 'la' ? '' : a.m.maAnh, m: a && a.m, kc: a ? a.kc : 9, muc: muc });
+              if (v.phieu.length > 5) v.phieu.shift();
+            });
+          })
+        : faceapi.detectAllFaces(video, optDo).then(function (ds) { capNhat(ds.map(hop)); });
+      var hen;
+      Promise.race([viec, new Promise(function (ok) { hen = setTimeout(ok, 3000); })]).catch(function () {})
+        .then(function () { clearTimeout(hen); if (nhanLuot) lanNhan = Date.now(); setTimeout(vong, 15); });
     })();
     // 2) Vẽ mượt: khung trượt dần tới vị trí dò được; nhãn = đa số phiếu
     (function ve() {
@@ -19041,7 +19045,8 @@ function mtBat(video, oTT) {
         cx.fillStyle = '#fff'; cx.fillText(chu, b.x + 5 - cx.lineWidth / 2, y - 2);
         cx.globalAlpha = 1;
       });
-      requestAnimationFrame(ve);
+      // khung hình kế tiếp ~60 hình/giây bằng hẹn giờ (rAF có thể bị trình duyệt tạm dừng khi cửa sổ bị che -> khung đứng)
+      setTimeout(ve, 16);
     })();
   }).catch(function (e) { tt('<span style="color:var(--clay)">' + thoat(e.message || e) + '</span>'); });
 }
