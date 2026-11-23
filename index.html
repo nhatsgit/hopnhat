@@ -599,6 +599,7 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 #dkKhung .dk-nhom[data-tat] .dk-pad{opacity:.55}
 #dkKhung .dk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .nd-hs{display:block;width:72px;height:72px}.nd-hs>*{width:72px!important;height:72px!important;border-radius:8px;object-fit:cover;margin:0}
+.icn{display:inline-flex;vertical-align:-3px;margin-right:5px;line-height:0}.icn svg{width:15px;height:15px}.dk-the .icn{margin-right:3px}.dk-the .icn svg{width:12px;height:12px}
 #dkKhung .dk-huy{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:8px;vertical-align:middle}
 #bangCam tr.cam-dong{cursor:pointer}
 #bangCam tr.cam-dong:hover td{background:var(--sky-soft)}
@@ -3760,7 +3761,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 371;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 372;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18300,6 +18301,30 @@ function camTai(ep) {
   goiAPI('hsSuKienCamera', hsP({ nguon: 'THAT' }), 30000).then(function (d) { _cam.d = d; if (!_cam.sau) _cam.sau = d.luc; camVe(); })
     .catch(function (e) { $('bangCam').innerHTML = '<tr><td><div class="bao-loi">' + thoat(e.message) + '</div></td></tr>'; });
 }
+/** Icon nét đơn sắc cho phần camera (cùng kiểu icon thanh bên: SVG nét 1.6, màu theo chữ) — thay emoji màu. */
+var ICON_CAM = {
+  tv: '<rect x="2.5" y="4" width="15" height="10" rx="1.5"/><path d="M7 17h6M10 14v3"/>',
+  cam: '<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h2l1.2-1.8h4.6L13.5 6h2A1.5 1.5 0 0 1 17 7.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z"/><circle cx="10" cy="11" r="2.8"/>',
+  play: '<path d="M6.5 4.5v11l9-5.5z"/>',
+  scan: '<path d="M3 7V4.5A1.5 1.5 0 0 1 4.5 3H7M13 3h2.5A1.5 1.5 0 0 1 17 4.5V7M17 13v2.5a1.5 1.5 0 0 1-1.5 1.5H13M7 17H4.5A1.5 1.5 0 0 1 3 15.5V13"/><circle cx="10" cy="8.5" r="2.2"/><path d="M6.5 14c.6-1.6 1.9-2.5 3.5-2.5s2.9.9 3.5 2.5"/>',
+  user: '<circle cx="8.5" cy="7" r="3"/><path d="M3 17c.6-3 2.8-4.5 5.5-4.5 1.2 0 2.3.3 3.2.9"/><path d="M12.5 15l1.7 1.7 3.3-3.4"/>',
+  timNguoi: '<circle cx="8" cy="7" r="3"/><path d="M3 17c.5-3 2.6-4.5 5-4.5"/><circle cx="14" cy="13.5" r="2.5"/><path d="M15.8 15.3 17.5 17"/>',
+  plate: '<rect x="2.5" y="6" width="15" height="8" rx="1.5"/><path d="M5.5 10h2M9.5 10h5"/>',
+  save: '<path d="M4 3.5h9.5l3 3V16a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M6.5 3.5v4h6v-4M6.5 16.5v-5h7v5"/>',
+  speaker: '<path d="M3.5 8v4h3l4 3.5v-11l-4 3.5z"/><path d="M13.5 7.5a3.5 3.5 0 0 1 0 5M15.5 5.5a6.3 6.3 0 0 1 0 9"/>',
+  bulb: '<path d="M7.5 14.5h5M8 17h4"/><path d="M10 3a5 5 0 0 0-3 9c.6.5 1 1.2 1 2h4c0-.8.4-1.5 1-2a5 5 0 0 0-3-9z"/>',
+  siren: '<path d="M5 15v-5a5 5 0 0 1 10 0v5"/><path d="M3 17.5h14M10 2v1.5M3.5 5l1 1M16.5 5l-1 1"/>',
+  control: '<circle cx="10" cy="5" r="2.3"/><path d="M10 7.3V12"/><rect x="3.5" y="12" width="13" height="4.5" rx="1.5"/>',
+  stop: '<rect x="5" y="5" width="10" height="10" rx="1.5"/>',
+  pause: '<path d="M7 4.5v11M13 4.5v11"/>',
+  clock: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/>',
+  car: '<path d="M4 13V10l1.6-4h8.8L16 10v3"/><path d="M3 13h14v2.5H3z"/><path d="M5.5 15.5v1.5M14.5 15.5v1.5"/>',
+  film: '<rect x="2.5" y="5" width="11" height="10" rx="1.5"/><path d="M13.5 9l4-2.5v7l-4-2.5"/>',
+  rotate: '<path d="M16 10a6 6 0 1 1-1.8-4.3"/><path d="M16 3.5v3h-3"/>',
+  live: '<circle cx="10" cy="10" r="1.8"/><path d="M6.5 6.5a5 5 0 0 0 0 7M13.5 6.5a5 5 0 0 1 0 7M4.2 4.2a8.3 8.3 0 0 0 0 11.6M15.8 4.2a8.3 8.3 0 0 1 0 11.6"/>',
+  warn: '<path d="M10 3 2.5 16.5h15z"/><path d="M10 8v4M10 14.5v.01"/>'
+};
+function icn(k) { return '<span class="icn" aria-hidden="true">' + _svgNet(ICON_CAM[k] || '') + '</span>'; }
 function camVe() {
   var d = _cam.d, rows = d.rows.slice(0, window.innerWidth < 768 ? 30 : 100), hn = hsHomNay();
   var soHn = d.rows.filter(function (r) { return r.luc.slice(0, 10) === hn; }).length;
@@ -18307,10 +18332,10 @@ function camVe() {
   if (!rows.length) { $('bangCam').innerHTML = '<tr><td class="rong">Chưa có sự kiện nào. Admin tạo trạm ở nút “Trạm camera”, cài chương trình lên máy ở cổng là sự kiện sẽ về đây.</td></tr>'; return; }
   $('bangCam').innerHTML = '<thead><tr><th>Lúc</th><th>Cổng</th><th>Camera</th><th>Sự kiện</th><th>Mức</th><th>Có</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
     var m = CAM_MUC[r.muc] || CAM_MUC.info;
-    var coGi = ((r.dsAnh || []).length ? '<span title="' + r.dsAnh.length + ' ảnh">📷' + (r.dsAnh.length > 1 ? r.dsAnh.length : '') + '</span>' : '') +
-      ((r.dsVideo || []).length ? ' <span title="Có video">🎥</span>' : '') + (r.doiTuong ? ' <span title="Có biển số">🚗</span>' : '');
+    var coGi = ((r.dsAnh || []).length ? '<span title="' + r.dsAnh.length + ' ảnh">' + icn('cam') + (r.dsAnh.length > 1 ? r.dsAnh.length : '') + '</span>' : '') +
+      ((r.dsVideo || []).length ? ' <span title="Có video">' + icn('film') + '</span>' : '') + (r.doiTuong ? ' <span title="Có biển số">' + icn('car') + '</span>' : '');
     return '<tr data-cam-ma="' + thoat(r.ma) + '" class="cam-dong"><td style="white-space:nowrap">' + thoat(r.luc) + (r.tre ? '<div class="hs-phu">gửi bù</div>' : '') + '</td><td>' + thoat(r.cong) + '</td><td>' + thoat(r.thietBi) + '</td>' +
-      '<td>' + thoat(r.ketQua || r.loai) + (r.doiTuong ? '<div><b>🚗 ' + thoat(bsDinhDang(r.doiTuong)) + '</b></div>' : '') + (r.canhBao ? '<div class="hs-phu">' + thoat(r.canhBao) + '</div>' : '') + '</td>' +
+      '<td>' + thoat(r.ketQua || r.loai) + (r.doiTuong ? '<div><b>' + icn('car') + thoat(bsDinhDang(r.doiTuong)) + '</b></div>' : '') + (r.canhBao ? '<div class="hs-phu">' + thoat(r.canhBao) + '</div>' : '') + '</td>' +
       '<td><span class="vi ' + m[0] + '">' + m[1] + '</span></td>' +
       '<td style="white-space:nowrap">' + (coGi || '<span class="hs-phu">—</span>') + '</td>' +
       '<td style="text-align:right"><button class="btn nho" type="button" data-cam-mo="' + thoat(r.ma) + '">Mở</button></td></tr>';
@@ -18339,11 +18364,11 @@ function camXemVideo(maVideo, tieu, maTram, maSk) {
       _cam.videoUrl = URL.createObjectURL(new Blob([u], { type: 'video/mp4' }));
       $('hsThan').innerHTML = '<div style="position:relative"><video id="camVd" controls autoplay playsinline muted style="width:100%;display:block;border-radius:8px;background:#000" src="' + _cam.videoUrl + '"></video></div>' +
         '<div class="hs-phu" style="margin-top:6px">' + thoat(a.tep || '') + ' · ' + Math.round((a.kichThuoc || 0) / 1024) + ' KB · lưu trên Drive công ty</div>' +
-        '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho chinh" type="button" id="camVdMt">🎯 Khung mặt theo video</button><button class="btn nho" type="button" id="camVdNguoi">🙂 Tìm người</button><button class="btn nho" type="button" id="camVdBien">🔢 Tìm biển số</button></div><div id="camVdKq"></div>';
+        '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho chinh" type="button" id="camVdMt">' + icn('scan') + 'Khung mặt theo video</button><button class="btn nho" type="button" id="camVdNguoi">' + icn('timNguoi') + 'Tìm người</button><button class="btn nho" type="button" id="camVdBien">' + icn('plate') + 'Tìm biển số</button></div><div id="camVdKq"></div>';
       $('camVdNguoi').onclick = function () { vdTimNguoi($('camVd'), _cam.videoUrl, $('camVdKq')); };
       $('camVdMt').onclick = function () {
-        if (_mt.chay) { mtDung(); this.textContent = '🎯 Khung mặt theo video'; $('camVdKq').innerHTML = ''; return; }
-        this.textContent = '⏹ Tắt khung mặt'; mtBat($('camVd'), $('camVdKq'));
+        if (_mt.chay) { mtDung(); this.innerHTML = icn('scan') + 'Khung mặt theo video'; $('camVdKq').innerHTML = ''; return; }
+        this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('camVd'), $('camVdKq'));
       };
       $('camVdBien').onclick = function () { vdTimBien($('camVd'), _cam.videoUrl, $('camVdKq'), v.dataset.camTram); };
       ve();
@@ -18371,17 +18396,17 @@ function camMoSuKien(ma, maAnhSan, tieuSan) {
     var muc = r ? (CAM_MUC[r.muc] || CAM_MUC.info) : null;
     $('hsThan').innerHTML = (r ? '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
         '<span class="vi ' + muc[0] + '">' + muc[1] + '</span><b>' + thoat(r.loai) + '</b><span class="hs-phu">' + thoat(r.cong + ' · ' + r.thietBi + ' · ' + r.luc) + '</span>' +
-        (r.doiTuong ? '<b>🚗 ' + thoat(bsDinhDang(r.doiTuong)) + '</b>' : '') + '</div>' +
-        (r.canhBao ? '<div class="hs-ghichu"><span aria-hidden="true">⚠</span><div>' + thoat(r.canhBao) + '</div></div>' : '') : '') +
+        (r.doiTuong ? '<b>' + icn('car') + thoat(bsDinhDang(r.doiTuong)) + '</b>' : '') + '</div>' +
+        (r.canhBao ? '<div class="hs-ghichu"><span aria-hidden="true">' + icn('warn') + '</span><div>' + thoat(r.canhBao) + '</div></div>' : '') : '') +
       '<div style="position:relative" id="skAnhO">' + (maAnh ? '<div class="rong">Đang tải ảnh…</div>' : '<div class="rong">Sự kiện không có ảnh.</div>') + '</div>' +
       ((r && r.dsAnh && r.dsAnh.length > 1) ? '<div class="gat" id="skDsAnh" style="margin-top:6px">' + r.dsAnh.map(function (m, i) {
         return '<button class="chip' + (m === maAnh ? ' on' : '') + '" type="button" data-sk-anh="' + thoat(m) + '">Ảnh ' + (i + 1) + '</button>'; }).join('') + '</div>' : '') +
       '<div class="hs-chan" style="justify-content:flex-start;flex-wrap:wrap">' +
-        (r && (r.dsVideo || []).length ? '<button class="btn nho chinh" type="button" id="skVideo">▶ Xem video</button>'
-          : (r ? '<button class="btn nho" type="button" id="skVideoLai" title="Video lên Drive khoảng 30 giây sau sự kiện">⏳ Video đang xử lý — tải lại</button>' : '')) +
-        (r ? '<button class="btn nho" type="button" id="skTim">🙂 Tìm người</button>' : '') +
-        (maAnh ? '<button class="btn nho" type="button" id="skNd">🙂 Nhận diện mặt</button><button class="btn nho" type="button" id="skBien">🔢 Đọc biển số</button>' : '') +
-        (maTram && hsCo('anNinh', 'THEM') ? '<button class="btn nho" type="button" id="skDk">🎮 Điều khiển camera</button>' : '') +
+        (r && (r.dsVideo || []).length ? '<button class="btn nho chinh" type="button" id="skVideo">' + icn('play') + 'Xem video</button>'
+          : (r ? '<button class="btn nho" type="button" id="skVideoLai" title="Video lên Drive khoảng 30 giây sau sự kiện">' + icn('clock') + 'Video đang xử lý — tải lại</button>' : '')) +
+        (r ? '<button class="btn nho" type="button" id="skTim">' + icn('timNguoi') + 'Tìm người</button>' : '') +
+        (maAnh ? '<button class="btn nho" type="button" id="skNd">' + icn('user') + 'Nhận diện mặt</button><button class="btn nho" type="button" id="skBien">' + icn('plate') + 'Đọc biển số</button>' : '') +
+        (maTram && hsCo('anNinh', 'THEM') ? '<button class="btn nho" type="button" id="skDk">' + icn('control') + 'Điều khiển camera</button>' : '') +
       '</div><div id="skKq"></div>';
     var napAnh = function (m) {
       $('skAnhO').innerHTML = '<div class="rong">Đang tải ảnh…</div>';
@@ -18436,12 +18461,12 @@ var _dk = { tram: null, kenh: 1, tuLam: null, ban: false, nd: null };
 /** Huy hiệu khả năng của trạm / camera (báo từ trạm). */
 function dkHuyHieu(t) {
   var c = t.camera || {}, ds = [];
-  if ((c.kenh || []).some(function (k) { return k.ptz; })) ds.push('⟳ xoay');
-  if (t.trucTiep) ds.push('📺 trực tiếp');
-  if (c.bienSo) ds.push('🔢 biển số');
-  if (c.coi) ds.push('🔊 còi');
-  if (c.den) ds.push('💡 đèn');
-  if (c.baoDong) ds.push('🚨 Alarm Out');
+  if ((c.kenh || []).some(function (k) { return k.ptz; })) ds.push(icn('rotate') + 'xoay');
+  if (t.trucTiep) ds.push(icn('tv') + 'trực tiếp');
+  if (c.bienSo) ds.push(icn('plate') + 'biển số');
+  if (c.coi) ds.push(icn('speaker') + 'còi');
+  if (c.den) ds.push(icn('bulb') + 'đèn');
+  if (c.baoDong) ds.push(icn('siren') + 'Alarm Out');
   return ds.map(function (x) { return '<span class="dk-the">' + x + '</span>'; }).join('');
 }
 function dkTramSan(d) { return (d.ds || []).filter(function (t) { return t.hoat; }); }
@@ -18487,21 +18512,21 @@ function dkMo(t) {
   var dpad = '<div class="dk-pad">' + [['↖', -1, 1], ['↑', 0, 1], ['↗', 1, 1], ['←', -1, 0], ['■', 0, 0], ['→', 1, 0], ['↙', -1, -1], ['↓', 0, -1], ['↘', 1, -1]].map(function (x) {
     return '<button type="button" class="btn dk-k" data-dk-p="' + x[1] + '" data-dk-t="' + x[2] + '" aria-label="Xoay ' + x[0] + '">' + x[0] + '</button>';
   }).join('') + '</div>';
-  hsMo('🎮 ' + t.ten + ' · ' + t.cong,
+  hsMo(t.ten + ' · ' + t.cong,
     '<div id="dkKhung"><div class="gat" id="dkKenh" style="margin-bottom:8px">' + cam.kenh.map(function (k) {
-      return '<button class="chip' + (k.id === _dk.kenh ? ' on' : '') + '" type="button" data-dk-kenh="' + k.id + '">' + thoat(k.ten || ('D' + k.id)) + (k.ptz ? ' ⟳' : '') + '</button>';
+      return '<button class="chip' + (k.id === _dk.kenh ? ' on' : '') + '" type="button" data-dk-kenh="' + k.id + '">' + thoat(k.ten || ('D' + k.id)) + (k.ptz ? ' ' + icn('rotate') : '') + '</button>';
     }).join('') + '<span class="dk-huy">' + dkHuyHieu(t) + '</span></div>' +
     (t.nhanLenh ? '' : '<div class="bao-loi">Trạm chưa sẵn sàng nhận lệnh: cần chạy chương trình trạm bản 1.2 trở lên ở cổng, có mạng. Các nút vẫn bấm được để thử.</div>') +
     '<div class="dk-luoi"><div class="dk-anh-o"><div class="dk-anh" id="dkAnhO"><div class="rong" id="dkAnhTrong">Đang mở hình từ camera…</div></div>' +
       '<div id="dkTT" class="goi-y dk-tt">' + (t.nhanLenh ? 'Trạm sẵn sàng.' : '') + '</div>' +
       '<div class="dk-thanh"><span class="dk-tnhan">Xem</span>' +
-        (t.trucTiep ? nut('dkTT2', '📺 Trực tiếp', 'Video trực tiếp qua đường hầm của trạm (trễ dưới 1 giây)') +
+        (t.trucTiep ? nut('dkTT2', icn('tv') + 'Trực tiếp', 'Video trực tiếp qua đường hầm của trạm (trễ dưới 1 giây)') +
           '<label class="hs-phu dk-hd" title="Luồng gốc 2560×1440 — rõ hơn, tốn mạng hơn ~5 lần"><input type="checkbox" id="dkHd"> HD</label>' : '') +
-        nut('dkChup', '📷 Ảnh', 'Chụp 1 ảnh') + nut('dkTuLam', '▶ Ảnh liên tục', 'Chụp ảnh nhỏ liên tục' + (t.trucTiep ? '' : ' (trạm chưa có xem trực tiếp)')) + '</div>' +
+        nut('dkChup', icn('cam') + 'Ảnh', 'Chụp 1 ảnh') + nut('dkTuLam', icn('play') + 'Ảnh liên tục', 'Chụp ảnh nhỏ liên tục' + (t.trucTiep ? '' : ' (trạm chưa có xem trực tiếp)')) + '</div>' +
       '<div class="dk-thanh"><span class="dk-tnhan">Phân tích</span>' +
-        (t.trucTiep ? nut('dkMt', '🎯 Khung mặt', 'Dò và ghi tên khuôn mặt chạy theo video trực tiếp') : '') +
-        nut('dkNdMat', '🙂 Nhận diện mặt', 'Chụp ảnh gốc rồi nhận diện') + nut('dkBienSo', '🔢 Đọc biển số', 'Chụp ảnh gốc rồi đọc biển số') +
-        nut('dkLuu', '💾 Lưu ảnh', 'Chụp ảnh gốc và lưu lên Drive (thành 1 sự kiện)') + '</div><div id="dkNd"></div></div>' +
+        (t.trucTiep ? nut('dkMt', icn('scan') + 'Khung mặt', 'Dò và ghi tên khuôn mặt chạy theo video trực tiếp') : '') +
+        nut('dkNdMat', icn('user') + 'Nhận diện mặt', 'Chụp ảnh gốc rồi nhận diện') + nut('dkBienSo', icn('plate') + 'Đọc biển số', 'Chụp ảnh gốc rồi đọc biển số') +
+        nut('dkLuu', icn('save') + 'Lưu ảnh', 'Chụp ảnh gốc và lưu lên Drive (thành 1 sự kiện)') + '</div><div id="dkNd"></div></div>' +
     '<div class="dk-ben">' +
       '<div class="dk-nhom" id="dkPtzO"' + (k0 && k0.ptz ? '' : ' data-tat="1"') + '><div class="nhan">Xoay camera</div>' + dpad +
         '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn nho" data-dk-z="1">＋ Zoom</button><button type="button" class="btn nho" data-dk-z="-1">－ Zoom</button></div>' +
@@ -18512,8 +18537,8 @@ function dkMo(t) {
         (k0 && k0.ptz ? '' : '<div class="hs-phu" style="margin-top:6px">Kênh này chưa báo xoay được (camera cố định, hoặc trạm chưa dò). Vẫn có thể bấm thử.</div>') + '</div>' +
       '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
         '<select class="o" id="dkAm" style="width:auto"><option value="1">Còi hú</option><option value="2">"Khu vực hạn chế"</option><option value="9">"Nguy hiểm, tránh xa"</option><option value="12">Tiếng bíp</option></select>' +
-        nut('dkCoi', '🔊 Phát', 'Phát âm cảnh báo trên loa camera') + nut('dkDen', '💡 Bật đèn 10 giây', 'Bật đèn chiếu sáng của camera 10 giây rồi tự về chế độ cũ') +
-        (cam.baoDong ? nut('dkBd', '🚨 Alarm Out 10 giây', 'Bật cổng báo động (còi ngoài / relay barie) 10 giây') : '') + '</div>' +
+        nut('dkCoi', icn('speaker') + 'Phát', 'Phát âm cảnh báo trên loa camera') + nut('dkDen', icn('bulb') + 'Bật đèn 10 giây', 'Bật đèn chiếu sáng của camera 10 giây rồi tự về chế độ cũ') +
+        (cam.baoDong ? nut('dkBd', icn('siren') + 'Alarm Out 10 giây', 'Bật cổng báo động (còi ngoài / relay barie) 10 giây') : '') + '</div>' +
         '<div class="hs-phu" style="margin-top:4px">Mọi lần bật đều ghi lịch sử (ai, lúc nào).</div></div>' +
       '<details class="dk-nhom"><summary class="nhan" style="cursor:pointer">Tìm đoạn ghi trong camera</summary><div class="hs-phu" style="margin:4px 0">Cần thẻ nhớ / ổ cứng trong camera. Video sự kiện đã lưu Drive thì xem ở danh sách sự kiện.</div>' +
         '<input class="o" type="date" id="dkNgay" value="' + homNayS + '"><div style="display:flex;gap:6px;margin-top:6px"><input class="o" type="time" id="dkTu" value="00:00"><input class="o" type="time" id="dkDen" value="23:59"></div>' +
@@ -18540,14 +18565,14 @@ function dkMo(t) {
   };
   $('dkDong').onclick = function () { dkDung(); hsDongHop(); };
   $('dkKenh').onclick = function (ev) { var b = ev.target.closest('[data-dk-kenh]'); if (!b) return; _dk.kenh = +b.dataset.dkKenh; dkMo(t); };
-  var boTrucTiep = function () { if ($('dkVideo')) { dkDung(); $('dkAnhO').innerHTML = ''; if ($('dkMt')) $('dkMt').textContent = '🎯 Khung mặt'; } };
+  var boTrucTiep = function () { if ($('dkVideo')) { dkDung(); $('dkAnhO').innerHTML = ''; if ($('dkMt')) $('dkMt').innerHTML = icn('scan') + 'Khung mặt'; } };
   $('dkChup').onclick = function () { boTrucTiep(); ban(this, function () { dkTT('Đang chụp…'); return chup(false); }); };
   $('dkLuu').onclick = function () { ban(this, function () { dkTT('Đang chụp và lưu…'); return chup(true); }); };
   $('dkTuLam').onclick = function () {
     var b = this;
-    if (_dk.tuLam) { dkDung(); b.textContent = '▶ Ảnh liên tục'; return; }
+    if (_dk.tuLam) { dkDung(); b.innerHTML = icn('play') + 'Ảnh liên tục'; return; }
     boTrucTiep();
-    b.textContent = '⏸ Dừng';
+    b.innerHTML = icn('pause') + 'Dừng';
     var vong = function () {
       if (!$('dkKhung') || !$('nenHs').classList.contains('hien')) { dkDung(); return; }
       if (_dk.ban) { _dk.tuLam = setTimeout(vong, 500); return; }
@@ -18634,12 +18659,12 @@ function dkMo(t) {
       });
   };
   if ($('dkMt')) $('dkMt').onclick = function () {
-    if (_mt.chay) { mtDung(); this.textContent = '🎯 Khung mặt'; return; }
-    if (!$('dkVideo')) { dkTT('Bấm "📺 Trực tiếp" trước.', 'loi'); return; }
-    this.textContent = '⏹ Tắt khung mặt'; mtBat($('dkVideo'), $('dkNd'));
+    if (_mt.chay) { mtDung(); this.innerHTML = icn('scan') + 'Khung mặt'; return; }
+    if (!$('dkVideo')) { dkTT('Bấm "' + icn('tv') + 'Trực tiếp" trước.', 'loi'); return; }
+    this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('dkVideo'), $('dkNd'));
   };
   if ($('dkTT2')) $('dkTT2').onclick = function () {
-    dkDung(); $('dkTuLam').textContent = '▶ Ảnh liên tục'; if ($('dkMt')) $('dkMt').textContent = '🎯 Khung mặt';
+    dkDung(); $('dkTuLam').innerHTML = icn('play') + 'Ảnh liên tục'; if ($('dkMt')) $('dkMt').innerHTML = icn('scan') + 'Khung mặt';
     var b = this; b.disabled = true;
     dkTT('Đang xin vé xem trực tiếp…');
     hsPost('hsXemTrucTiep', { maTram: t.ma, kenh: _dk.kenh, hd: $('dkHd').checked ? 1 : 0 }).then(function (r) {
@@ -18703,9 +18728,9 @@ function ttPhat(video, wsUrl, tt) {
       if (!sb) return;
       if (sb.updating || hang.length) { hang.push(ev.data); if (hang.length > 60) hang.splice(0, 30); }
       else { try { sb.appendBuffer(ev.data); } catch (e) { hang.push(ev.data); } }
-      if (++dem === 3) { video.play().catch(function () {}); tt('🔴 Trực tiếp', 'ok'); }
+      if (++dem === 3) { video.play().catch(function () {}); tt(icn('live') + 'Trực tiếp', 'ok'); }
     };
-    ws.onclose = function () { if (_tt.ws === ws) tt('Mất kết nối trực tiếp. Bấm "📺 Trực tiếp" để nối lại.', 'loi'); };
+    ws.onclose = function () { if (_tt.ws === ws) tt('Mất kết nối trực tiếp. Bấm "' + icn('tv') + 'Trực tiếp" để nối lại.', 'loi'); };
   });
   // Bám điểm mới nhất + dọn bộ đệm cũ
   _tt.hen = setInterval(function () {
@@ -18923,7 +18948,7 @@ function mtBat(video, oTT) {
   Promise.all([matNapThuVien(), ndNapMau()]).then(function (k) {
     var kho = k[1];
     if (!kho.mau.length) throw new Error('Kho nhận diện còn trống — mở 1 ảnh camera, bấm "Nhận diện mặt" để lập kho trước.');
-    tt('🎯 Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
+    tt(icn('scan') + 'Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
     var lanCuoi = -1, opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 });
     (function vong() {
       if (phien.dung || !video.isConnected) { var c0 = cv.getContext('2d'); c0.clearRect(0, 0, cv.width, cv.height); return; }
@@ -19210,7 +19235,7 @@ function tcVe() {
       '<td>' + thoat(t.dauGhi || '—') + (t.phienBan ? '<div class="hs-phu">chương trình ' + thoat(t.phienBan) + '</div>' : '') +
         (t.hoat ? '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">' + dkHuyHieu(t) + '</div>' : '') + '</td>' +
       '<td>' + t.skHomNay + (t.hangCho ? '<div class="hs-phu">' + t.hangCho + ' chờ gửi</div>' : '') + '</td>' +
-      '<td style="text-align:right;white-space:nowrap">' + (t.hoat && hsCo('anNinh', 'THEM') ? '<button class="btn nho chinh" type="button" data-tc-dk="' + thoat(t.ma) + '">🎮 Điều khiển</button> ' : '') +
+      '<td style="text-align:right;white-space:nowrap">' + (t.hoat && hsCo('anNinh', 'THEM') ? '<button class="btn nho chinh" type="button" data-tc-dk="' + thoat(t.ma) + '">' + icn('control') + 'Điều khiển</button> ' : '') +
       (coSua && t.hoat ? '<button class="btn nho" type="button" data-tc-cap="' + thoat(t.ma) + '">Cấp lại khoá</button> ' : '') +
       (t.hoat && coXoa ? '<button class="btn nho" type="button" data-tc-thu="' + thoat(t.ma) + '">Thu hồi</button>' : '') +
       (!t.hoat && coSua ? '<button class="btn nho" type="button" data-tc-mo="' + thoat(t.ma) + '">Mở lại</button>' : '') + '</td></tr>';
