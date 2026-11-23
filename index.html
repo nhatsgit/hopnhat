@@ -607,6 +607,9 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 #dkAnhO.dk-vuot:active{cursor:grabbing}
 .dk-muiten{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:56px;line-height:1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);opacity:0;transition:opacity .15s;pointer-events:none}
 .dk-muiten.hien{opacity:.85}
+.cam-loc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+.cam-loc select.o,.cam-loc input[type=date].o{width:auto;min-width:0}
+.cam-loc-chk{display:flex;gap:4px;align-items:center;font-size:13px;white-space:nowrap}
 .ve-sk{display:flex;justify-content:flex-start;margin:0 0 10px}
 .icn{display:inline-flex;vertical-align:-3px;margin-right:5px;line-height:0}.icn svg{width:15px;height:15px}.dk-the .icn{margin-right:3px}.dk-the .icn svg{width:12px;height:12px}
 #dkKhung .dk-huy{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:8px;vertical-align:middle}
@@ -2510,6 +2513,19 @@ tr[data-hs]:hover > td{background:var(--leaf-soft)}
       </div>
       <div class="the" id="anCamThe" style="margin-bottom:16px;display:none">
         <div class="hs-the-dau"><div><h3>Sự kiện camera</h3><div class="hs-phu">Từ trạm trung chuyển ở cổng (đầu ghi Hikvision) · tự cập nhật mỗi phút</div></div><span style="display:flex;gap:8px;align-items:center"><span class="vi tap" id="anCamTT"></span><button class="btn nho" id="anCamTram" type="button" onclick="tcMo()">Trạm camera</button><button class="btn nho" id="anCamTai" type="button">Tải lại</button></span></div>
+        <div class="cam-loc" id="camLoc">
+          <div class="gat" id="camLocKhoang"><button class="chip on" type="button" data-k="homNay">Hôm nay</button><button class="chip" type="button" data-k="7">7 ngày</button><button class="chip" type="button" data-k="30">30 ngày</button><button class="chip" type="button" data-k="tuy">Tuỳ chọn</button></div>
+          <span id="camLocNgay" style="display:none;gap:6px;align-items:center"><input class="o" type="date" id="camLocTu"> → <input class="o" type="date" id="camLocDen"></span>
+          <select class="o" id="camLocCong"><option value="">Mọi cổng</option></select>
+          <select class="o" id="camLocCam"><option value="">Mọi camera</option></select>
+          <select class="o" id="camLocLoai"><option value="">Mọi loại</option></select>
+          <select class="o" id="camLocMuc"><option value="">Mọi mức</option><option value="crit">Khẩn</option><option value="warn">Cần xem</option><option value="info">Ghi nhận</option></select>
+          <label class="cam-loc-chk"><input type="checkbox" id="camLocVideo"> Có video</label>
+          <label class="cam-loc-chk"><input type="checkbox" id="camLocBien"> Có biển số</label>
+          <label class="cam-loc-chk"><input type="checkbox" id="camLocDem"> Ban đêm (22h–5h)</label>
+          <input class="o" type="search" id="camLocTim" placeholder="Tìm biển số, camera, loại…" style="min-width:180px;flex:1">
+          <span class="hs-phu" id="camLocDem2"></span><button class="btn nho" type="button" id="camLocXoa">Xoá lọc</button>
+        </div>
         <div class="cuon cuon-doc" style="max-height:420px"><table id="bangCam"></table></div>
       </div>
       <div class="the" style="margin-bottom:16px">
@@ -3770,7 +3786,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 383;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 384;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18307,7 +18323,8 @@ function camTai(ep) {
   if (!coXem || (!ep && Date.now() - _cam.luc < 20000)) return;
   _cam.luc = Date.now();
   if (!_cam.d) $('bangCam').innerHTML = '<tr><td class="rong">Đang tải sự kiện camera…</td></tr>';
-  goiAPI('hsSuKienCamera', hsP({ nguon: 'THAT' }), 30000).then(function (d) { _cam.d = d; if (!_cam.sau) _cam.sau = d.luc; camVe(); })
+  var kh = camKhoang();
+  goiAPI('hsSuKienCamera', hsP({ nguon: 'THAT', tu: kh.tu, den: kh.den }), 30000).then(function (d) { _cam.d = d; if (!_cam.sau) _cam.sau = d.luc; camVe(); })
     .catch(function (e) { $('bangCam').innerHTML = '<tr><td><div class="bao-loi">' + thoat(e.message) + '</div></td></tr>'; });
 }
 /** Icon nét đơn sắc cho phần camera (cùng kiểu icon thanh bên: SVG nét 1.6, màu theo chữ) — thay emoji màu. */
@@ -18334,10 +18351,65 @@ var ICON_CAM = {
   warn: '<path d="M10 3 2.5 16.5h15z"/><path d="M10 8v4M10 14.5v.01"/>'
 };
 function icn(k) { return '<span class="icn" aria-hidden="true">' + _svgNet(ICON_CAM[k] || '') + '</span>'; }
+/* ---------- Bộ lọc sự kiện camera (23/11/2026): khoảng ngày lấy từ máy chủ; cổng / camera / loại / mức / có video / có biển / ban đêm / ô tìm lọc trên máy. Nhớ trên máy này. ---------- */
+var _camLoc = (function () { try { return JSON.parse(localStorage.getItem('crck2_cam_loc') || 'null') || {}; } catch (e) { return {}; } })();
+function camLuuLoc() { try { localStorage.setItem('crck2_cam_loc', JSON.stringify(_camLoc)); } catch (e) {} }
+function camKhoang() {
+  var hn = hsHomNay(), k = _camLoc.khoang || 'homNay', lui = function (n) { var d = new Date(hn + 'T12:00:00'); d.setDate(d.getDate() - n + 1); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); };
+  if (k === '7') return { tu: lui(7), den: hn };
+  if (k === '30') return { tu: lui(30), den: hn };
+  if (k === 'tuy') return { tu: _camLoc.tu || hn, den: _camLoc.den || hn };
+  return { tu: hn, den: hn };
+}
+function camLocRows(ds) {
+  var L = _camLoc, q = String(L.q || '').trim().toUpperCase().replace(/\s+/g, '');
+  return ds.filter(function (r) {
+    if (L.cong && r.cong !== L.cong) return false;
+    if (L.camera && r.thietBi !== L.camera) return false;
+    if (L.loai && r.loai !== L.loai) return false;
+    if (L.muc && r.muc !== L.muc) return false;
+    if (L.video && !(r.dsVideo || []).length) return false;
+    if (L.bien && !r.doiTuong) return false;
+    if (L.dem) { var h = +String(r.luc).slice(11, 13); if (!(h >= 22 || h < 5)) return false; }
+    if (q) { var chuoi = (String(r.doiTuong || '') + bsDinhDang(r.doiTuong || '') + r.thietBi + r.loai + r.cong + (r.canhBao || '')).toUpperCase().replace(/\s+/g, ''); if (chuoi.indexOf(q) < 0) return false; }
+    return true;
+  });
+}
+function camLocVeChon(ds) {
+  var dien = function (id, ten, nhan) {
+    var o = $(id); if (!o) return;
+    var cu = _camLoc[ten] || '', gt = {};
+    ds.forEach(function (r) { var v = r[ten === 'camera' ? 'thietBi' : ten]; if (v) gt[v] = 1; });
+    if (cu) gt[cu] = 1;
+    o.innerHTML = '<option value="">' + nhan + '</option>' + Object.keys(gt).sort().map(function (v) { return '<option' + (v === cu ? ' selected' : '') + '>' + thoat(v) + '</option>'; }).join('');
+  };
+  dien('camLocCong', 'cong', 'Mọi cổng'); dien('camLocCam', 'camera', 'Mọi camera'); dien('camLocLoai', 'loai', 'Mọi loại');
+  if ($('camLocMuc')) $('camLocMuc').value = _camLoc.muc || '';
+  ['Video', 'Bien', 'Dem'].forEach(function (k) { if ($('camLoc' + k)) $('camLoc' + k).checked = !!_camLoc[k.toLowerCase()]; });
+  if ($('camLocTim') && document.activeElement !== $('camLocTim')) $('camLocTim').value = _camLoc.q || '';
+  var kh = _camLoc.khoang || 'homNay';
+  $('camLocKhoang').querySelectorAll('[data-k]').forEach(function (b) { b.classList.toggle('on', b.dataset.k === kh); });
+  $('camLocNgay').style.display = kh === 'tuy' ? 'inline-flex' : 'none';
+  if (kh === 'tuy') { var k2 = camKhoang(); $('camLocTu').value = k2.tu; $('camLocDen').value = k2.den; }
+}
+(function () {
+  if (!$('camLoc')) return;
+  var doi = function (taiLai) { camLuuLoc(); if (taiLai) camTai(true); else if (_cam.d) camVe(); };
+  $('camLocKhoang').onclick = function (ev) { var b = ev.target.closest('[data-k]'); if (!b) return; _camLoc.khoang = b.dataset.k; doi(true); camLocVeChon(_cam.d ? _cam.d.rows : []); };
+  $('camLocTu').onchange = $('camLocDen').onchange = function () { _camLoc.tu = $('camLocTu').value; _camLoc.den = $('camLocDen').value; doi(true); };
+  [['camLocCong', 'cong'], ['camLocCam', 'camera'], ['camLocLoai', 'loai'], ['camLocMuc', 'muc']].forEach(function (x) { $(x[0]).onchange = function () { _camLoc[x[1]] = this.value; doi(false); }; });
+  ['Video', 'Bien', 'Dem'].forEach(function (k) { $('camLoc' + k).onchange = function () { _camLoc[k.toLowerCase()] = this.checked; doi(false); }; });
+  var hen = null;
+  $('camLocTim').oninput = function () { var v = this.value; clearTimeout(hen); hen = setTimeout(function () { _camLoc.q = v; doi(false); }, 250); };
+  $('camLocXoa').onclick = function () { var kh = _camLoc.khoang; _camLoc = { khoang: kh }; camLuuLoc(); camLocVeChon(_cam.d ? _cam.d.rows : []); if (_cam.d) camVe(); };
+})();
 function camVe() {
-  var d = _cam.d, rows = d.rows.slice(0, window.innerWidth < 768 ? 30 : 100), hn = hsHomNay();
+  var d = _cam.d, loc = camLocRows(d.rows), rows = loc.slice(0, window.innerWidth < 768 ? 50 : 300), hn = hsHomNay();
+  camLocVeChon(d.rows);
+  if ($('camLocDem2')) $('camLocDem2').textContent = 'Hiện ' + loc.length + ' / ' + d.rows.length + ' sự kiện' + (d.tong > d.rows.length ? ' (máy chủ có ' + d.tong + ', thu hẹp khoảng ngày để xem hết)' : '');
   var soHn = d.rows.filter(function (r) { return r.luc.slice(0, 10) === hn; }).length;
   $('anCamTT').textContent = soHn + ' sự kiện hôm nay';
+  if (!rows.length && d.rows.length) { $('bangCam').innerHTML = '<tr><td class="rong">Không có sự kiện nào khớp bộ lọc.</td></tr>'; return; }
   if (!rows.length) { $('bangCam').innerHTML = '<tr><td class="rong">Chưa có sự kiện nào. Admin tạo trạm ở nút “Trạm camera”, cài chương trình lên máy ở cổng là sự kiện sẽ về đây.</td></tr>'; return; }
   $('bangCam').innerHTML = '<thead><tr><th>Lúc</th><th>Cổng</th><th>Camera</th><th>Sự kiện</th><th>Mức</th><th>Có</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
     var m = CAM_MUC[r.muc] || CAM_MUC.info;
