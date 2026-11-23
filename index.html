@@ -610,6 +610,7 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 .cam-loc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
 .cam-loc select.o,.cam-loc input[type=date].o{width:auto;min-width:0}
 .cam-loc-chk{display:flex;gap:4px;align-items:center;font-size:13px;white-space:nowrap}
+.mt-bang .mt-dong{transition:opacity .3s}.mt-bang .mt-khuat{opacity:.45}
 .ve-sk{display:flex;justify-content:flex-start;margin:0 0 10px}
 .icn{display:inline-flex;vertical-align:-3px;margin-right:5px;line-height:0}.icn svg{width:15px;height:15px}.dk-the .icn{margin-right:3px}.dk-the .icn svg{width:12px;height:12px}
 #dkKhung .dk-huy{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:8px;vertical-align:middle}
@@ -3786,7 +3787,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 385;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 386;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -19248,6 +19249,37 @@ function mtBat(video, oTT) {
       Promise.race([viec, new Promise(function (ok) { hen = setTimeout(ok, 3000); })]).catch(function () {})
         .then(function () { clearTimeout(hen); if (nhanLuot) lanNhan = Date.now(); setTimeout(vong, 15); });
     })();
+    // 4) Bảng "Đang thấy trên camera": mỗi người trong khung 1 dòng — ảnh hồ sơ, tên, mã, tổ, độ giống, nút mở hồ sơ (cập nhật 0,7 giây / lần)
+    var bang = document.createElement('div'); bang.className = 'mt-bang';
+    if (oTT) { oTT.innerHTML = ''; oTT.appendChild(bang); }
+    var veBang = function () {
+      if (phien.dung || !bang.isConnected) return;
+      var dong = vet.map(function (v) {
+        var dem = {}, nhat = null;
+        v.phieu.forEach(function (p) { dem[p.ma] = (dem[p.ma] || 0) + 1; if (!nhat || dem[p.ma] > dem[nhat.ma] || (dem[p.ma] === dem[nhat.ma] && p.kc < nhat.kc)) nhat = p; });
+        var muc = !nhat ? 'cho' : (dem[nhat.ma] >= Math.ceil(v.phieu.length / 2) ? nhat.muc : 'nghi');
+        return { v: v, nhat: nhat, muc: muc, khoa: muc === 'la' || muc === 'cho' ? 'v' + v.id : nhat.ma };
+      });
+      var daCo = {};   // 1 người chỉ 1 dòng (2 vết cùng nhận ra 1 người -> giữ vết rõ hơn)
+      dong = dong.filter(function (d) { if (daCo[d.khoa]) return false; daCo[d.khoa] = 1; return true; });
+      var khoa = dong.map(function (d) { return d.khoa + ':' + d.muc + ':' + (d.nhat ? Math.round(d.nhat.kc * 100) : '') + ':' + (d.v.mat ? 1 : 0); }).join('|');
+      if (khoa !== bang.dataset.khoa) {
+        bang.dataset.khoa = khoa;
+        bang.innerHTML = '<div class="nhan" style="margin-top:8px">Đang thấy trên camera · ' + dong.length + ' người</div>' + (dong.length ? dong.map(function (d) {
+          var m = d.nhat && d.nhat.m, la = d.muc === 'la' || d.muc === 'cho' || !m;
+          var nhan = d.muc === 'ok' ? '<span class="vi ok">Khớp</span>' : d.muc === 'nghi' ? '<span class="vi canh">Chưa chắc</span>' : d.muc === 'la' ? '<span class="vi tap" style="color:var(--clay)">Người lạ</span>' : '<span class="vi tap">Đang nhận…</span>';
+          return '<div class="an2-dong mt-dong' + (d.v.mat ? ' mt-khuat' : '') + '">' +
+            (la ? '<span class="hs-anh" style="width:48px;height:48px">?</span>' : hsAnhHtml(m.maAnh, m.ten)) +
+            '<div style="flex:1;min-width:0"><b>' + (la ? (d.muc === 'la' ? 'Không có trong hồ sơ' : 'Đang nhận diện…') : thoat(m.ten)) + '</b> ' + nhan +
+            (la ? '' : '<div class="hs-phu">' + thoat([m.maCn, m.to, m.doi].filter(Boolean).join(' · ')) + ' · giống ' + diem(d.nhat.kc) + '%</div>') + '</div>' +
+            (!la && m.id && hsCo('hoSo', 'XEM') ? '<button class="btn nho" type="button" data-mt-hs="' + thoat(m.loai + '|' + m.id) + '">Hồ sơ</button>' : '') + '</div>';
+        }).join('') : '<div class="hs-phu">Chưa thấy khuôn mặt nào.</div>');
+        hsNapAnh(bang);
+      }
+      setTimeout(veBang, 700);
+    };
+    bang.onclick = function (ev) { var b = ev.target.closest('[data-mt-hs]'); if (b) { var x = b.dataset.mtHs.split('|'); moHoSo(x[0], x[1]); } };
+    veBang();
     // 2) Vẽ mượt: khung trượt dần tới vị trí dò được; nhãn = đa số phiếu
     (function ve() {
       if (phien.dung || !video.isConnected) { var c0 = cv.getContext('2d'); c0.clearRect(0, 0, cv.width, cv.height); return; }
