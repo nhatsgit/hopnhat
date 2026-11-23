@@ -3762,7 +3762,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 375;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 376;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18953,10 +18953,17 @@ function timNguoiSuKien(r, veSk) {
   }).catch(function (e) { tt('<span style="color:var(--clay)">' + thoat(e.message || e) + '</span>'); });
 }
 
-/* ---------- Khung mặt CHẠY THEO VIDEO (23/11/2026): video đang phát (đã lưu hoặc trực tiếp) liên tục được dò mặt, so với kho,
-   vẽ khung + nhãn đè lên hình: xanh = tên · %, cam = "?" tên · % (nghi ngờ), đỏ = Người lạ. Chạy trên trình duyệt. ---------- */
+/* ---------- Khung mặt CHẠY THEO VIDEO (23/11/2026, bản mượt): 3 việc tách nhau
+   1) Dò khung mặt nhanh liên tục (Tiny 320, không tính đặc trưng)  2) Bám từng người qua các khung (trùng vùng IoU),
+   khung vẽ 60 hình/giây TRƯỢT tới vị trí mới  3) Nhận diện riêng ~1 lần/giây/người trên vùng mặt cắt ra, nhãn lấy
+   ĐA SỐ 5 lần gần nhất -> không nhảy tên. Xanh = khớp · cam = chưa chắc · đỏ = người lạ. ---------- */
 var _mt = { chay: null };
 function mtDung() { if (_mt.chay) { _mt.chay.dung = true; _mt.chay = null; } }
+function mtIou(a, b) {
+  var x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y), x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+  var gi = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  return gi / (a.w * a.h + b.w * b.h - gi || 1);
+}
 function mtBat(video, oTT) {
   mtDung();
   var phien = { dung: false };
@@ -18966,36 +18973,73 @@ function mtBat(video, oTT) {
   var cv = hop.querySelector('canvas.mt-phu');
   if (!cv) { cv = document.createElement('canvas'); cv.className = 'mt-phu'; cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none'; hop.appendChild(cv); }
   var tt = function (h) { if (oTT) oTT.innerHTML = h; };
-  tt('Đang tải mô hình và kho khuôn mặt…');
   var diem = function (kc) { return Math.round(Math.max(0, Math.min(1, (0.75 - kc) / 0.45)) * 100); };
+  var vet = [], soVet = 0;
+  tt('Đang tải mô hình và kho khuôn mặt…');
   Promise.all([matNapThuVien(), ndNapMau()]).then(function (k) {
     var kho = k[1];
     if (!kho.mau.length) throw new Error('Kho nhận diện còn trống — mở 1 ảnh camera, bấm "Nhận diện mặt" để lập kho trước.');
-    tt(icn('scan') + 'Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
-    var lanCuoi = -1, opt = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 });
-    (function vong() {
-      if (phien.dung || !video.isConnected) { var c0 = cv.getContext('2d'); c0.clearRect(0, 0, cv.width, cv.height); return; }
-      if (!video.videoWidth || video.readyState < 2 || (video.paused && video.currentTime === lanCuoi)) { setTimeout(vong, 200); return; }
-      lanCuoi = video.currentTime;
-      faceapi.detectAllFaces(video, opt).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
+    tt('Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
+    var optDo = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+    // 1) Dò khung liên tục
+    (function doKhung() {
+      if (phien.dung || !video.isConnected) return;
+      if (!video.videoWidth || video.readyState < 2 || video.paused) { setTimeout(doKhung, 150); return; }
+      faceapi.detectAllFaces(video, optDo).then(function (ds) {
         if (phien.dung) return;
-        cv.width = video.videoWidth; cv.height = video.videoHeight;
-        var cx = cv.getContext('2d'), co = Math.max(14, cv.width / 45);
-        cx.lineWidth = Math.max(2, cv.width / 350); cx.font = 'bold ' + co + 'px sans-serif'; cx.textBaseline = 'bottom';
-        ds.forEach(function (f) {
-          var top = null, nhi = null;
-          kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, f.descriptor); if (!top || kc < top.kc) { nhi = top; top = { m: m, kc: kc }; } else if (!nhi || kc < nhi.kc) nhi = { m: m, kc: kc }; });
-          var muc = ndMuc([top, nhi].filter(Boolean));
-          var mau = muc === 'ok' ? '#2e7d32' : muc === 'nghi' ? '#c77700' : '#c62828';
-          var chu = muc === 'la' ? 'Người lạ' : (muc === 'nghi' ? '? ' : '') + (top.m.maCn || top.m.ten) + ' · ' + diem(top.kc) + '%';
-          var b = f.detection.box;
-          cx.strokeStyle = mau; cx.strokeRect(b.x, b.y, b.width, b.height);
-          var rong = cx.measureText(chu).width + 8, y = Math.max(co + 4, b.y);
-          cx.fillStyle = mau; cx.fillRect(b.x - cx.lineWidth / 2, y - co - 4, rong, co + 4);
-          cx.fillStyle = '#fff'; cx.fillText(chu, b.x + 4 - cx.lineWidth / 2, y - 1);
+        var moi = ds.map(function (d) { var b = d.box; return { x: b.x, y: b.y, w: b.width, h: b.height }; });
+        vet.forEach(function (v) { v.thay = false; });
+        moi.forEach(function (b) {
+          var tot = null, iou = 0.25;
+          vet.forEach(function (v) { if (!v.thay) { var o = mtIou(v.dich, b); if (o > iou) { iou = o; tot = v; } } });
+          if (tot) { tot.dich = b; tot.thay = true; tot.mat = 0; }
+          else vet.push({ id: ++soVet, hien: Object.assign({}, b), dich: b, thay: true, mat: 0, phieu: [], nhanLuc: 0 });
         });
-        if (!ds.length) cx.clearRect(0, 0, cv.width, cv.height);
-      }).catch(function () {}).then(function () { setTimeout(vong, 60); });
+        vet = vet.filter(function (v) { if (!v.thay) v.mat++; return v.mat < 4; });   // mất dấu 4 lượt liền -> bỏ
+      }).catch(function () {}).then(function () { setTimeout(doKhung, 30); });
+    })();
+    // 3) Nhận diện riêng (~0,7 giây / lượt, chạy song song với dò khung): tính đặc trưng mọi mặt trong khung, gán cho người đang bám theo (trùng vùng)
+    var optNhan = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 });
+    (function nhan() {
+      if (phien.dung || !video.isConnected) return;
+      if (!vet.length || !video.videoWidth || video.readyState < 2 || (video.paused && video.currentTime === nhan.lanCuoi)) { setTimeout(nhan, 200); return; }
+      nhan.lanCuoi = video.currentTime;
+      faceapi.detectAllFaces(video, optNhan).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
+        ds.forEach(function (r) {
+          var bb = r.detection.box, hop = { x: bb.x, y: bb.y, w: bb.width, h: bb.height }, v = null, iou = 0.2;
+          vet.forEach(function (x) { var o = mtIou(x.dich, hop); if (o > iou) { iou = o; v = x; } });
+          if (!v) return;
+          var a = null, b2 = null;
+          kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, r.descriptor); if (!a || kc < a.kc) { b2 = a; a = { m: m, kc: kc }; } else if (!b2 || kc < b2.kc) b2 = { m: m, kc: kc }; });
+          var muc = ndMuc([a, b2].filter(Boolean));
+          v.phieu.push({ ma: muc === 'la' ? '' : a.m.maAnh, m: a && a.m, kc: a ? a.kc : 9, muc: muc });
+          if (v.phieu.length > 5) v.phieu.shift();
+        });
+      }).catch(function () {}).then(function () { setTimeout(nhan, 500); });
+    })();
+    // 2) Vẽ mượt: khung trượt dần tới vị trí dò được; nhãn = đa số phiếu
+    (function ve() {
+      if (phien.dung || !video.isConnected) { var c0 = cv.getContext('2d'); c0.clearRect(0, 0, cv.width, cv.height); return; }
+      if (video.videoWidth && (cv.width !== video.videoWidth || cv.height !== video.videoHeight)) { cv.width = video.videoWidth; cv.height = video.videoHeight; }
+      var cx = cv.getContext('2d'), co = Math.max(13, cv.width / 48);
+      cx.clearRect(0, 0, cv.width, cv.height);
+      cx.lineWidth = Math.max(2, cv.width / 400); cx.font = '600 ' + co + 'px sans-serif'; cx.textBaseline = 'bottom';
+      vet.forEach(function (v) {
+        ['x', 'y', 'w', 'h'].forEach(function (k) { v.hien[k] += (v.dich[k] - v.hien[k]) * 0.35; });
+        var dem = {}, nhat = null;
+        v.phieu.forEach(function (p) { dem[p.ma] = (dem[p.ma] || 0) + 1; if (!nhat || dem[p.ma] > dem[nhat.ma] || (dem[p.ma] === dem[nhat.ma] && p.kc < nhat.kc)) nhat = p; });
+        var muc = !nhat ? 'cho' : (dem[nhat.ma] >= Math.ceil(v.phieu.length / 2) ? nhat.muc : 'nghi');
+        var mau = muc === 'ok' ? '#2e7d32' : muc === 'nghi' ? '#c77700' : muc === 'la' ? '#c62828' : '#607d8b';
+        var chu = muc === 'cho' ? 'Đang nhận…' : muc === 'la' ? 'Người lạ' : (muc === 'nghi' ? '? ' : '') + (nhat.m.maCn || nhat.m.ten) + ' · ' + diem(nhat.kc) + '%';
+        var b = v.hien;
+        cx.globalAlpha = v.mat ? 0.45 : 1;
+        cx.strokeStyle = mau; cx.strokeRect(b.x, b.y, b.w, b.h);
+        var rong = cx.measureText(chu).width + 10, y = Math.max(co + 6, b.y);
+        cx.fillStyle = mau; cx.fillRect(b.x - cx.lineWidth / 2, y - co - 6, rong, co + 6);
+        cx.fillStyle = '#fff'; cx.fillText(chu, b.x + 5 - cx.lineWidth / 2, y - 2);
+        cx.globalAlpha = 1;
+      });
+      requestAnimationFrame(ve);
     })();
   }).catch(function (e) { tt('<span style="color:var(--clay)">' + thoat(e.message || e) + '</span>'); });
 }
