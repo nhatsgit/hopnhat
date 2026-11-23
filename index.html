@@ -3751,7 +3751,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 359;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 360;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18381,7 +18381,8 @@ function dkMo(t) {
         '</div><button class="btn nho" type="button" id="dkLuuVt" style="margin-top:6px">Lưu hướng hiện tại vào…</button>' +
         (k0 && k0.ptz ? '' : '<div class="hs-phu" style="margin-top:6px">Kênh này chưa báo xoay được (camera cố định, hoặc trạm chưa dò). Vẫn có thể bấm thử.</div>') + '</div>' +
       '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
-        nut('dkCoi', '🔊 Còi / loa', 'Phát âm thanh cảnh báo cài trên camera') + nut('dkDen', '💡 Đèn nháy', 'Bật đèn cảnh báo cài trên camera') +
+        '<select class="o" id="dkAm" style="width:auto"><option value="1">Còi hú</option><option value="2">"Khu vực hạn chế"</option><option value="9">"Nguy hiểm, tránh xa"</option><option value="12">Tiếng bíp</option></select>' +
+        nut('dkCoi', '🔊 Phát', 'Phát âm cảnh báo trên loa camera') + nut('dkDen', '💡 Bật đèn 10 giây', 'Bật đèn chiếu sáng của camera 10 giây rồi tự về chế độ cũ') +
         (cam.baoDong ? nut('dkBd', '🚨 Alarm Out 10 giây', 'Bật cổng báo động (còi ngoài / relay barie) 10 giây') : '') + '</div>' +
         '<div class="hs-phu" style="margin-top:4px">Mọi lần bật đều ghi lịch sử (ai, lúc nào).</div></div>' +
       '<div class="dk-nhom"><div class="nhan">Tìm đoạn ghi (thẻ nhớ / ổ cứng)</div>' +
@@ -18445,8 +18446,8 @@ function dkMo(t) {
     if (!confirm('Bật ' + ten + ' tại ' + t.cong + '?')) return;
     ban(nutEl, function () { dkTT('Đang bật ' + ten + '…'); return dkLenh(lenh, ts).then(function (k) { dkTT('Đã bật ' + ten + '. ' + thoat((k.kq && k.kq.ghiChu) || ''), 'ok'); }); });
   };
-  $('dkCoi').onclick = function () { canhBao('coi', 'còi / loa', this, { bat: 1 }); };
-  $('dkDen').onclick = function () { canhBao('den', 'đèn cảnh báo', this, { bat: 1 }); };
+  $('dkCoi').onclick = function () { canhBao('coi', 'loa cảnh báo', this, { bat: 1, am: +$('dkAm').value }); };
+  $('dkDen').onclick = function () { canhBao('den', 'đèn 10 giây', this, { bat: 1, giay: 10 }); };
   if ($('dkBd')) $('dkBd').onclick = function () { canhBao('baoDong', 'cổng báo động 10 giây', this, { bat: 1, giay: 10 }); };
   $('dkTim').onclick = function () {
     var ng = $('dkNgay').value;
