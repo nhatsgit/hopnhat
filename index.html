@@ -3760,7 +3760,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 370;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 371;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18726,7 +18726,16 @@ function ndSoSanh(urlMat, m) {
       hsAnhHtml(m.maAnh, m.ten, true) +
       '</span><figcaption class="hs-phu">Hồ sơ</figcaption></figure>' : '') + '</div>';
 }
-var ND_CHAC = 0.5, ND_NGHI = 0.58;
+// Khoảng cách đặc trưng face-api: càng nhỏ càng giống. "Khớp" chỉ khi đủ gần (≈ ≥ 75%) VÀ hơn hẳn người thứ 2 (cách ≥ 0,06);
+// 2–3 người sát điểm nhau = máy không phân biệt được -> "chưa chắc". (23/11: 0,50 cũ quá dễ — 56% đã báo chắc chắn, nhận nhầm người.)
+var ND_CHAC = 0.41, ND_NGHI = 0.55, ND_CACH = 0.06;
+/** ds: [{ m, kc }] đã xếp tăng dần -> 'ok' | 'nghi' | 'la' */
+function ndMuc(ds) {
+  var a = ds[0], b = ds[1];
+  if (!a || a.kc >= ND_NGHI) return 'la';
+  if (a.kc < ND_CHAC && (!b || b.kc - a.kc >= ND_CACH)) return 'ok';
+  return 'nghi';
+}
 function ndB64(f32) { var u = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
 function ndTuB64(b) { var s = atob(b), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Float32Array(u.buffer); }
 /** Kho mẫu (đặc trưng ảnh chân dung) — nhớ 10 phút. */
@@ -18786,7 +18795,7 @@ function ndChay(img, cv, oKq) {
       if (!ds.length) { oKq.innerHTML = '<div class="goi-y">Không thấy khuôn mặt nào đủ rõ. Mặt cần to (người đứng gần, 2–4 m), nhìn về phía camera, đủ sáng.</div>'; return; }
       var hang = ds.map(function (f, i) {
         var top = kho.mau.map(function (m) { return { m: m, kc: faceapi.euclideanDistance(m.f, f.descriptor) }; }).sort(function (a, b) { return a.kc - b.kc; }).slice(0, 3);
-        var b = f.detection.box, kc = top[0] ? top[0].kc : 9, muc = kc < ND_CHAC ? 'ok' : kc < ND_NGHI ? 'nghi' : 'la';
+        var b = f.detection.box, muc = ndMuc(top);
         var diem = function (x) { return Math.round(Math.max(0, Math.min(1, (0.75 - x) / 0.45)) * 100); };
         if (cv) {
           var mau = muc === 'ok' ? '#2e7d32' : muc === 'nghi' ? '#c77700' : '#c62828', cx2 = cv.getContext('2d');
@@ -18796,14 +18805,14 @@ function ndChay(img, cv, oKq) {
         var cat = document.createElement('canvas'), pad = b.width * 0.25;
         cat.width = 72; cat.height = 72;
         cat.getContext('2d').drawImage(img, Math.max(0, b.x - pad), Math.max(0, b.y - pad), b.width + 2 * pad, b.height + 2 * pad, 0, 0, 72, 72);
-        var nhan = muc === 'ok' ? '<span class="vi ok">Chắc chắn</span>' : muc === 'nghi' ? '<span class="vi canh">Nghi ngờ — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong kho</span>';
+        var nhan = muc === 'ok' ? '<span class="vi ok">Khớp</span>' : muc === 'nghi' ? '<span class="vi canh">Chưa chắc — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Không khớp ai / người lạ</span>';
         return '<div class="an2-dong" style="align-items:flex-start">' + ndSoSanh(cat.toDataURL('image/jpeg', 0.8), muc === 'la' ? null : top[0].m) +
           '<div style="flex:1"><b>Mặt ' + (i + 1) + '</b> ' + nhan + '<div class="hs-phu" style="margin-top:4px">' + top.map(function (x, j) {
             return (j ? '' : '<b>') + thoat(x.m.ten) + (x.m.maCn ? ' · ' + thoat(x.m.maCn) : '') + (x.m.to ? ' · ' + thoat(x.m.to) : '') + ' — ' + diem(x.kc) + '%' + (j ? '' : '</b>');
           }).join('<br>') + '</div></div></div>';
       }).join('');
       oKq.innerHTML = '<div class="nhan" style="margin-top:8px">Kết quả nhận diện · ' + ds.length + ' khuôn mặt · so với ' + kho.mau.length + ' người</div>' + hang +
-        '<div class="hs-phu" style="margin-top:6px">Bản thử: kết quả chỉ để bảo vệ tham khảo, chưa tự ghi vào sổ ra vào. Ngưỡng chắc chắn ≥ ' + Math.round((0.75 - ND_CHAC) / 0.45 * 100) + '%.</div>';
+        '<div class="hs-phu" style="margin-top:6px">Bản thử: kết quả chỉ để bảo vệ tham khảo, chưa tự ghi vào sổ ra vào. Khớp khi giống ≥ ' + Math.round((0.75 - ND_CHAC) / 0.45 * 100) + '% và hơn hẳn người thứ 2; mặt nghiêng / nhỏ dễ ra "chưa chắc" — nhờ người nhìn thẳng camera.%.</div>';
       hsNapAnh(oKq);
     });
   }).catch(function (e) { oKq.innerHTML = '<div class="bao-loi">' + thoat(e.message || e) + '</div>'; });
@@ -18884,8 +18893,8 @@ function timNguoiSuKien(r, veSk) {
     var diem = function (kc) { return Math.round(Math.max(0, Math.min(1, (0.75 - kc) / 0.45)) * 100); };
     $('tnKq').innerHTML = nhom.map(function (g, i) {
       var top = kho.mau.map(function (m) { return { m: m, kc: faceapi.euclideanDistance(m.f, g.dai.d) }; }).sort(function (a, b) { return a.kc - b.kc; }).slice(0, 3);
-      var kc = top[0] ? top[0].kc : 9, muc = kc < ND_CHAC ? 'ok' : kc < ND_NGHI ? 'nghi' : 'la';
-      var nhan = muc === 'ok' ? '<span class="vi ok">Chắc chắn</span>' : muc === 'nghi' ? '<span class="vi canh">Nghi ngờ — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong kho</span>';
+      var muc = ndMuc(top);
+      var nhan = muc === 'ok' ? '<span class="vi ok">Khớp</span>' : muc === 'nghi' ? '<span class="vi canh">Chưa chắc — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Không khớp ai / người lạ</span>';
       return '<div class="an2-dong" style="align-items:flex-start">' + ndSoSanh(g.dai.anh, muc === 'la' ? null : top[0].m) +
         '<div style="flex:1"><b>Người ' + (i + 1) + '</b> ' + nhan + '<div class="hs-phu" style="margin-top:4px">' + top.map(function (t2, j) {
           return (j ? '' : '<b>') + thoat(t2.m.ten) + (t2.m.maCn ? ' · ' + thoat(t2.m.maCn) : '') + (t2.m.to ? ' · ' + thoat(t2.m.to) : '') + ' — ' + diem(t2.kc) + '%' + (j ? '' : '</b>');
@@ -18926,9 +18935,9 @@ function mtBat(video, oTT) {
         var cx = cv.getContext('2d'), co = Math.max(14, cv.width / 45);
         cx.lineWidth = Math.max(2, cv.width / 350); cx.font = 'bold ' + co + 'px sans-serif'; cx.textBaseline = 'bottom';
         ds.forEach(function (f) {
-          var top = null;
-          kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, f.descriptor); if (!top || kc < top.kc) top = { m: m, kc: kc }; });
-          var muc = !top ? 'la' : top.kc < ND_CHAC ? 'ok' : top.kc < ND_NGHI ? 'nghi' : 'la';
+          var top = null, nhi = null;
+          kho.mau.forEach(function (m) { var kc = faceapi.euclideanDistance(m.f, f.descriptor); if (!top || kc < top.kc) { nhi = top; top = { m: m, kc: kc }; } else if (!nhi || kc < nhi.kc) nhi = { m: m, kc: kc }; });
+          var muc = ndMuc([top, nhi].filter(Boolean));
           var mau = muc === 'ok' ? '#2e7d32' : muc === 'nghi' ? '#c77700' : '#c62828';
           var chu = muc === 'la' ? 'Người lạ' : (muc === 'nghi' ? '? ' : '') + (top.m.maCn || top.m.ten) + ' · ' + diem(top.kc) + '%';
           var b = f.detection.box;
@@ -19007,11 +19016,11 @@ function vdTimNguoi(video, url, o) {
     if (!nhom.length) { o.innerHTML = '<div class="goi-y">Đã quét ' + x.ds.length + ' khung — không thấy khuôn mặt nào đủ rõ (mặt quá nhỏ, quay lưng, thiếu sáng).</div>'; return; }
     var diem = function (kc) { return Math.round(Math.max(0, Math.min(1, (0.75 - kc) / 0.45)) * 100); };
     o.innerHTML = '<div class="nhan" style="margin-top:8px">' + nhom.length + ' người trong video · bấm mốc giờ để xem đoạn đó</div>' + nhom.map(function (g, i) {
-      var top = kho.mau.map(function (m) { return { m: m, kc: faceapi.euclideanDistance(m.f, g.dai.d) }; }).sort(function (a, b) { return a.kc - b.kc; })[0];
-      var muc = !top ? 'la' : top.kc < ND_CHAC ? 'ok' : top.kc < ND_NGHI ? 'nghi' : 'la';
+      var top2 = kho.mau.map(function (m) { return { m: m, kc: faceapi.euclideanDistance(m.f, g.dai.d) }; }).sort(function (a, b) { return a.kc - b.kc; }).slice(0, 2);
+      var top = top2[0], muc = ndMuc(top2);
       var moc = g.ds.map(function (m) { return m.t; }).sort(function (a, b) { return a - b; });
       var nhan = muc === 'ok' ? '<span class="vi ok">' + thoat(top.m.ten) + (top.m.maCn ? ' · ' + thoat(top.m.maCn) : '') + ' · ' + diem(top.kc) + '%</span>'
-        : muc === 'nghi' ? '<span class="vi canh">Có thể là ' + thoat(top.m.ten) + ' · ' + diem(top.kc) + '% — đối chiếu bằng mắt</span>'
+        : muc === 'nghi' ? '<span class="vi canh">Chưa chắc — gần nhất ' + thoat(top.m.ten) + ' · ' + diem(top.kc) + '%</span>'
         : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong kho</span>';
       return '<div class="an2-dong" style="align-items:flex-start">' + ndSoSanh(g.dai.anh, muc === 'la' ? null : top.m) +
         '<div style="flex:1"><b>Người ' + (i + 1) + '</b> ' + nhan + (g.dai.co < 60 ? '<div class="hs-phu" style="color:var(--clay)">Mặt nhỏ (' + g.dai.co + ' điểm ảnh) — kết quả kém tin cậy</div>' : '') +
