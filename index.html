@@ -3786,7 +3786,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 384;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 385;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18568,7 +18568,37 @@ function dkChonTram() {
 function dkDung() { if (_dk.tuLam) { clearTimeout(_dk.tuLam); _dk.tuLam = null; } if (typeof ttDung === 'function') ttDung(); if (typeof mtDung === 'function') mtDung(); }
 function dkTT(h, loai) { var o = $('dkTT'); if (o) { o.className = loai === 'loi' ? 'bao-loi' : loai === 'ok' ? 'vi ok' : 'goi-y'; o.innerHTML = h; } }
 /** Gửi 1 lệnh và chờ kết quả (≤ ~45 giây). */
+/* Lệnh ĐI THẲNG qua đường hầm trạm (23/11/2026): xoay / dừng / về vị trí / ảnh nhanh — trình duyệt -> đường hầm -> trạm, không vòng
+   qua máy chủ ở Mỹ (trễ ~0,2–0,3 giây). Vé 10 phút xin máy chủ (hsVeDieuKhien, kiểm quyền). Đường hầm lỗi -> tự quay về đường máy chủ. */
+var DK_TRUC = { xoay: 1, dung: 1, viTri: 1, chup: 1 };
+function dkVeTruc(maTram) {
+  var v = _dk.ve;
+  if (v && v.tram === maTram && v.het - Date.now() > 60000) return Promise.resolve(v);
+  if (_dk.veCho) return _dk.veCho;
+  _dk.veCho = hsPost('hsVeDieuKhien', { maTram: maTram }).then(function (r) { _dk.veCho = null; _dk.ve = Object.assign({ tram: maTram }, r); return _dk.ve; },
+    function (e) { _dk.veCho = null; _dk.ve = { tram: maTram, loi: 1, het: Date.now() + 60000 }; throw e; });
+  return _dk.veCho;
+}
 function dkLenh(lenh, ts, maTram, kenh) {
+  var mt = maTram || _dk.tram.ma, t = _dk.tram;
+  var duocTruc = DK_TRUC[lenh] && !(ts && ts.luu) && t && t.ma === mt && t.trucTiep && !(_dk.ve && _dk.ve.loi && _dk.ve.tram === mt && _dk.ve.het > Date.now());
+  if (duocTruc) {
+    var loiTram = null;
+    return dkVeTruc(mt).then(function (v) {
+      return fetch(v.url + '?tk=' + encodeURIComponent(v.tk), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ lenh: lenh, kenh: kenh || _dk.kenh, ts: ts || {} }) })
+        .then(function (r) { if (r.status === 403) { _dk.ve = null; throw new Error('vé'); } return r.json(); });
+    }).then(function (k) {
+      if (!k.ok) { loiTram = new Error(k.loi || 'Trạm báo lỗi.'); throw loiTram; }   // lỗi thật của camera: không gửi lại
+      _dk.duongTruc = true; return k;
+    }).catch(function (e) {
+      if (loiTram) throw loiTram;
+      _dk.duongTruc = false;   // đường hầm / vé lỗi -> đi đường máy chủ
+      return dkLenhMayChu(lenh, ts, mt, kenh);
+    });
+  }
+  return dkLenhMayChu(lenh, ts, mt, kenh);
+}
+function dkLenhMayChu(lenh, ts, maTram, kenh) {
   return hsPost('hsLenhCamera', { maTram: maTram || _dk.tram.ma, kenh: kenh || _dk.kenh, lenh: lenh, thamSo: JSON.stringify(ts || {}) }).then(function (r) {
     var lan = 0;
     var cho = function () {
@@ -18625,7 +18655,7 @@ function dkMo(t) {
         '<input class="o" type="date" id="dkNgay" value="' + homNayS + '"><div style="display:flex;gap:6px;margin-top:6px"><input class="o" type="time" id="dkTu" value="00:00"><input class="o" type="time" id="dkDen" value="23:59"></div>' +
         '<button class="btn nho" type="button" id="dkTim" style="margin-top:6px">Tìm</button><div id="dkGhi" class="hs-phu" style="margin-top:6px"></div></details>' +
     '</div></div></div>' +
-    '<div class="hs-chan"><button class="btn nho" type="button" id="dkThongTin" title="Trạm dò lại camera: kênh, xoay, còi, đèn">Dò lại thiết bị</button><button class="btn nho" type="button" id="dkDong">Đóng</button></div>');
+    '<div class="hs-chan"><span class="hs-phu" id="dkDuong" style="margin-right:auto"></span><button class="btn nho" type="button" id="dkThongTin" title="Trạm dò lại camera: kênh, xoay, còi, đèn">Dò lại thiết bị</button><button class="btn nho" type="button" id="dkDong">Đóng</button></div>');
   var ban = function (nutEl, viec) {   // 1 lệnh 1 lúc (trừ xoay)
     if (_dk.ban) return;
     _dk.ban = true; if (nutEl) nutEl.disabled = true;
@@ -18832,6 +18862,7 @@ function dkMo(t) {
       ttPhat($('dkVideo'), r.ws, dkTT);
     }).catch(function (e) { dkTT(thoat(e.message), 'loi'); }).then(function () { b.disabled = false; });
   };
+  if (t.trucTiep) dkVeTruc(t.ma).then(function () { if ($('dkDuong')) $('dkDuong').textContent = '⚡ Điều khiển đi thẳng qua trạm'; }, function () { if ($('dkDuong')) $('dkDuong').textContent = 'Điều khiển qua máy chủ'; });
   // Mở bảng là có hình ngay: có xem trực tiếp thì phát luôn, không thì chụp 1 ảnh
   setTimeout(function () {
     if (!$('dkKhung') || _dk.tram !== t) return;
