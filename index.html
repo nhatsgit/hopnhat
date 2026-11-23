@@ -602,6 +602,8 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 /* Luồng phụ camera 704×576 là khung 16:9 bị bóp ngang -> hiển thị kéo về 16:9 (khung mặt vẽ đè kéo theo nên vẫn khớp) */
 #dkAnhO img,#dkAnhO video,#camVd{aspect-ratio:16/9;object-fit:fill;height:auto}
 #dkAnhO.dk-vuot{touch-action:none;cursor:grab;user-select:none}
+#dkAnhO>img,#dkAnhO>video,#dkAnhO>canvas{transform:scale(var(--z,1)) translate(var(--tx,0),var(--ty,0));transform-origin:50% 50%;transition:transform .12s ease-out}
+#dkAnhO.dk-zoom{cursor:move}
 #dkAnhO.dk-vuot:active{cursor:grabbing}
 .dk-muiten{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:56px;line-height:1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);opacity:0;transition:opacity .15s;pointer-events:none}
 .dk-muiten.hien{opacity:.85}
@@ -3768,7 +3770,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 382;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 383;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18536,8 +18538,8 @@ function dkMo(t) {
         nut('dkLuu', icn('save') + 'Lưu ảnh', 'Chụp ảnh gốc và lưu lên Drive (thành 1 sự kiện)') + '</div><div id="dkNd"></div></div>' +
     '<div class="dk-ben">' +
       '<div class="dk-nhom" id="dkPtzO"' + (k0 && k0.ptz ? '' : ' data-tat="1"') + '><div class="nhan">Xoay camera</div>' + dpad +
-        '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn nho" data-dk-z="1">＋ Zoom</button><button type="button" class="btn nho" data-dk-z="-1">－ Zoom</button></div>' +
-        '<div class="hs-phu" style="margin-top:4px">Giữ nút để quay, thả ra để dừng. Hoặc <b>vuốt trên hình</b> để xoay, lăn chuột để zoom.</div>' +
+        '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn nho" data-dk-z="1">＋ Zoom</button><button type="button" class="btn nho" data-dk-z="-1">－ Zoom</button><span class="hs-phu" style="align-self:center">Zoom số <b id="dkZoomChu">1.0x</b></span></div>' +
+        '<div class="hs-phu" style="margin-top:4px">Giữ nút để quay, thả ra để dừng. Hoặc <b>vuốt trên hình</b> để xoay. Lăn chuột / ＋－ = zoom số (camera không có zoom quang); đang phóng thì kéo để dời, bấm đúp về 1x.</div>' +
         '<label class="nhan" style="margin-top:8px">Tốc độ <span id="dkTocChu">50</span></label><input type="range" id="dkToc" min="10" max="100" value="50" style="width:100%">' +
         '<div class="nhan" style="margin-top:8px">Vị trí đặt sẵn</div><div class="gat">' + [1, 2, 3, 4].map(function (n) { return '<button class="chip" type="button" data-dk-vt="' + n + '">' + n + '</button>'; }).join('') +
         '</div><button class="btn nho" type="button" id="dkLuuVt" style="margin-top:6px">Lưu hướng hiện tại vào…</button>' +
@@ -18604,46 +18606,79 @@ function dkMo(t) {
     cho.then(function () { return dkLenh('dung', { chup: _dk.tuLam ? 0 : 1 }); }).then(function (k) { hienKq(k); dkTT('Đã dừng.', 'ok'); })
       .catch(function (e) { dkTT(thoat(e.message), 'loi'); });
   };
-  // VUỐT trên hình để xoay (kéo theo hướng nào camera quay hướng đó, kéo xa = nhanh, thả = dừng); lăn chuột = zoom
-  if (k0 && k0.ptz) {
-    var oHinh = $('dkAnhO'), vuot = null, henZoom = null;
-    oHinh.classList.add('dk-vuot');
-    var muiTen = function (p, t) {   // hình trong ô bị thay (ảnh / video) nên tạo lại mũi tên khi cần
-      var m = $('dkMuiTen');
-      if (!m) { oHinh.insertAdjacentHTML('beforeend', '<div class="dk-muiten" id="dkMuiTen" aria-hidden="true"></div>'); m = $('dkMuiTen'); } var g = { '1,0': '→', '-1,0': '←', '0,1': '↑', '0,-1': '↓', '1,1': '↗', '-1,1': '↖', '1,-1': '↘', '-1,-1': '↙' }[p + ',' + t] || ''; m.textContent = g; m.classList.toggle('hien', !!g); };
-    oHinh.addEventListener('pointerdown', function (ev) {
-      if (ev.button > 0 || ev.target.closest('button,a,input')) return;
-      vuot = { x: ev.clientX, y: ev.clientY, huong: '', toc: 0 };
-      try { this.setPointerCapture(ev.pointerId); } catch (e) {}
-    });
-    oHinh.addEventListener('pointermove', function (ev) {
-      if (!vuot) return;
-      var dx = ev.clientX - vuot.x, dy = ev.clientY - vuot.y, d = Math.hypot(dx, dy);
-      if (d < 24) return;
-      ev.preventDefault();
-      var p = Math.abs(dx) > d * 0.38 ? Math.sign(dx) : 0, t = Math.abs(dy) > d * 0.38 ? -Math.sign(dy) : 0;
-      var toc = Math.min(100, Math.max(25, Math.round(d / 2.5 / 10) * 10)), h = p + ',' + t + ',' + toc;
-      if (h === vuot.huong) return;
-      vuot.huong = h;
-      muiTen(p, t);
-      xoayGiu(p, t, 0, toc);
-    });
-    var thaVuot = function () {
-      if (!vuot) return;
-      var daXoay = !!vuot.huong; vuot = null; muiTen(0, 0);
-      if (daXoay) xoayDung();
-    };
-    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (t) { oHinh.addEventListener(t, thaVuot); });
-    oHinh.addEventListener('wheel', function (ev) {
-      ev.preventDefault();
-      if (henZoom) clearTimeout(henZoom); else xoayGiu(0, 0, ev.deltaY < 0 ? 1 : -1, 60);
-      henZoom = setTimeout(function () { henZoom = null; xoayDung(); }, 450);
-    }, { passive: false });
-  }
+  // ZOOM SỐ (camera PT không có zoom quang): phóng hình ngay trên trình duyệt 1x–4x. Đang phóng: kéo = dời khung nhìn, bấm đúp = về 1x.
+  // Xem trực tiếp mà phóng ≥ 1,5x thì tự chuyển luồng gốc 2560×1440 cho nét, về 1x thì trả luồng nhẹ.
+  // VUỐT trên hình (khi 1x) để xoay camera: kéo theo hướng nào quay hướng đó, kéo xa = nhanh, thả = dừng.
+  var oHinh = $('dkAnhO'), vuot = null;
+  var zm = _dk.zoom = { k: 1, cx: 0.5, cy: 0.5, tuHd: false };
+  var apZoom = function () {
+    var k = zm.k, gh = 0.5 / k;
+    zm.cx = Math.min(1 - gh, Math.max(gh, zm.cx)); zm.cy = Math.min(1 - gh, Math.max(gh, zm.cy));
+    oHinh.style.setProperty('--z', k);
+    oHinh.style.setProperty('--tx', ((0.5 - zm.cx) * 100).toFixed(2) + '%');
+    oHinh.style.setProperty('--ty', ((0.5 - zm.cy) * 100).toFixed(2) + '%');
+    oHinh.classList.toggle('dk-zoom', k > 1.001);
+    if ($('dkZoomChu')) $('dkZoomChu').textContent = k.toFixed(1) + 'x';
+    // tự đổi luồng khi đang xem trực tiếp
+    var v = $('dkVideo');
+    if (v && $('dkHd') && $('dkTT2')) {
+      if (k >= 1.5 && !$('dkHd').checked) { $('dkHd').checked = true; zm.tuHd = true; $('dkTT2').click(); }
+      else if (k < 1.001 && zm.tuHd && $('dkHd').checked) { $('dkHd').checked = false; zm.tuHd = false; $('dkTT2').click(); }
+    }
+  };
+  var phong = function (heSo, px, py) {   // px, py: điểm giữ nguyên (0..1 trên khung hiển thị), mặc định giữa
+    px = px === undefined ? 0.5 : px; py = py === undefined ? 0.5 : py;
+    var diemX = zm.cx + (px - 0.5) / zm.k, diemY = zm.cy + (py - 0.5) / zm.k;
+    zm.k = Math.min(4, Math.max(1, zm.k * heSo));
+    zm.cx = diemX - (px - 0.5) / zm.k; zm.cy = diemY - (py - 0.5) / zm.k;
+    apZoom();
+  };
+  var viTriTrenKhung = function (ev) { var r = oHinh.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height]; };
+  var muiTen = function (p, t) {   // hình trong ô bị thay (ảnh / video) nên tạo lại mũi tên khi cần
+    var m = $('dkMuiTen');
+    if (!m) { oHinh.insertAdjacentHTML('beforeend', '<div class="dk-muiten" id="dkMuiTen" aria-hidden="true"></div>'); m = $('dkMuiTen'); }
+    var g = { '1,0': '→', '-1,0': '←', '0,1': '↑', '0,-1': '↓', '1,1': '↗', '-1,1': '↖', '1,-1': '↘', '-1,-1': '↙' }[p + ',' + t] || '';
+    m.textContent = g; m.classList.toggle('hien', !!g);
+  };
+  oHinh.classList.add('dk-vuot');
+  oHinh.addEventListener('pointerdown', function (ev) {
+    if (ev.button > 0 || ev.target.closest('button,a,input')) return;
+    vuot = { x: ev.clientX, y: ev.clientY, huong: '', cx: zm.cx, cy: zm.cy, doi: zm.k > 1.001 };
+    try { this.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  oHinh.addEventListener('pointermove', function (ev) {
+    if (!vuot) return;
+    var dx = ev.clientX - vuot.x, dy = ev.clientY - vuot.y, d = Math.hypot(dx, dy);
+    if (vuot.doi) {   // đang phóng: dời khung nhìn theo tay
+      var r = oHinh.getBoundingClientRect();
+      zm.cx = vuot.cx - dx / r.width / zm.k; zm.cy = vuot.cy - dy / r.height / zm.k; apZoom();
+      ev.preventDefault(); return;
+    }
+    if (!(k0 && k0.ptz) || d < 24) return;
+    ev.preventDefault();
+    var p = Math.abs(dx) > d * 0.38 ? Math.sign(dx) : 0, t = Math.abs(dy) > d * 0.38 ? -Math.sign(dy) : 0;
+    var toc = Math.min(100, Math.max(25, Math.round(d / 2.5 / 10) * 10)), h = p + ',' + t + ',' + toc;
+    if (h === vuot.huong) return;
+    vuot.huong = h;
+    muiTen(p, t);
+    xoayGiu(p, t, 0, toc);
+  });
+  var thaVuot = function () {
+    if (!vuot) return;
+    var daXoay = !!vuot.huong; vuot = null; muiTen(0, 0);
+    if (daXoay) xoayDung();
+  };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (t) { oHinh.addEventListener(t, thaVuot); });
+  oHinh.addEventListener('wheel', function (ev) {
+    ev.preventDefault();
+    var p = viTriTrenKhung(ev);
+    phong(ev.deltaY < 0 ? 1.25 : 1 / 1.25, p[0], p[1]);
+  }, { passive: false });
+  oHinh.addEventListener('dblclick', function () { zm.k = 1; zm.cx = zm.cy = 0.5; apZoom(); });
   $('dkPtzO').addEventListener('pointerdown', function (ev) {
     var b = ev.target.closest('button'); if (!b || b.disabled) return;
     if (b.dataset.dkP !== undefined && !(b.dataset.dkP === '0' && b.dataset.dkT === '0')) { ev.preventDefault(); xoayGiu(+b.dataset.dkP, +b.dataset.dkT, 0); }
-    else if (b.dataset.dkZ) { ev.preventDefault(); xoayGiu(0, 0, +b.dataset.dkZ); }
+    else if (b.dataset.dkZ) { ev.preventDefault(); phong(+b.dataset.dkZ > 0 ? 1.5 : 1 / 1.5); }
   });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (t) { $('dkPtzO').addEventListener(t, xoayDung); });
   $('dkPtzO').onclick = function (ev) {
