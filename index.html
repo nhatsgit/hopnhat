@@ -599,6 +599,7 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 #dkKhung .dk-nhom[data-tat] .dk-pad{opacity:.55}
 #dkKhung .dk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .nd-hs{display:block;width:72px;height:72px}.nd-hs>*{width:72px!important;height:72px!important;border-radius:8px;object-fit:cover;margin:0}
+.ve-sk{display:flex;justify-content:flex-start;margin:0 0 10px}
 .icn{display:inline-flex;vertical-align:-3px;margin-right:5px;line-height:0}.icn svg{width:15px;height:15px}.dk-the .icn{margin-right:3px}.dk-the .icn svg{width:12px;height:12px}
 #dkKhung .dk-huy{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:8px;vertical-align:middle}
 #bangCam tr.cam-dong{cursor:pointer}
@@ -3761,7 +3762,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 372;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 373;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18356,7 +18357,7 @@ $('bangCam').addEventListener('click', function (ev) {
 function camXemVideo(maVideo, tieu, maTram, maSk) {
   var v = { dataset: { camTram: maTram || '' } };
   hsMo('Video camera · ' + tieu, '<div class="rong">Đang tải video từ Drive…</div>');
-  var ve = function () { if (maSk && $('hsThan')) $('hsThan').insertAdjacentHTML('beforeend', '<div class="hs-chan"><button class="btn nho" type="button" id="camVeSk">← Về sự kiện</button></div>'); if ($('camVeSk')) $('camVeSk').onclick = function () { mtDung(); camMoSuKien(maSk); }; };
+  var ve = function () { if (maSk && $('hsThan')) $('hsThan').insertAdjacentHTML('afterbegin', '<div class="ve-sk"><button class="btn nho" type="button" id="camVeSk">← Về sự kiện</button></div>'); if ($('camVeSk')) $('camVeSk').onclick = function () { mtDung(); camMoSuKien(maSk); }; };
   hsPost('hsVideoCamera', { ma: maVideo }).then(function (a) {
       var bin = atob(a.b64), u = new Uint8Array(bin.length);
       for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
@@ -18878,8 +18879,8 @@ function tnNguon(r, tt) {
   });
 }
 function timNguoiSuKien(r, veSk) {
-  hsMo('Tìm người · ' + r.loai + ' · ' + r.luc, '<div id="tnTT" class="goi-y">Đang chuẩn bị…</div><div id="tnKq"></div>' +
-    (veSk ? '<div class="hs-chan"><button class="btn nho" type="button" id="tnVe">← Về sự kiện</button></div>' : ''));
+  hsMo('Tìm người · ' + r.loai + ' · ' + r.luc, (veSk ? '<div class="ve-sk"><button class="btn nho" type="button" id="tnVe">← Về sự kiện</button></div>' : '') +
+    '<div id="tnTT" class="goi-y">Đang chuẩn bị…</div><div id="tnKq"></div>');
   if ($('tnVe')) $('tnVe').onclick = function () { camMoSuKien(r.ma); };
   var tt = function (h) { var o = $('tnTT'); if (o) o.innerHTML = h; };
   var kho;
