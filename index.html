@@ -3787,7 +3787,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 387;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 388;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18448,7 +18448,14 @@ function camXemVideo(maVideo, tieu, maTram, maSk) {
       $('hsThan').innerHTML = '<div style="position:relative"><video id="camVd" controls autoplay playsinline muted style="width:100%;display:block;border-radius:8px;background:#000" src="' + _cam.videoUrl + '"></video></div>' +
         '<div class="hs-phu" style="margin-top:6px">' + thoat(a.tep || '') + ' · ' + Math.round((a.kichThuoc || 0) / 1024) + ' KB · lưu trên Drive công ty</div>' +
         '<div class="hs-chan" style="justify-content:flex-start"><button class="btn nho chinh" type="button" id="camVdMt">' + icn('scan') + 'Khung mặt theo video</button><button class="btn nho" type="button" id="camVdNguoi">' + icn('timNguoi') + 'Tìm người</button><button class="btn nho" type="button" id="camVdBien">' + icn('plate') + 'Tìm biển số</button></div><div id="camVdKq"></div>';
-      $('camVdNguoi').onclick = function () { vdTimNguoi($('camVd'), _cam.videoUrl, $('camVdKq')); };
+      $('camVdNguoi').onclick = function () {
+        var o = $('camVdKq'), vd = $('camVd');
+        if (!v.dataset.camTram) { vdTimNguoi(vd, _cam.videoUrl, o); return; }
+        o.innerHTML = '<div class="goi-y">Đang lấy khung video…</div>';
+        vdKhung(_cam.videoUrl, 1, function (h) { o.innerHTML = '<div class="goi-y">' + h + '</div>'; }).then(function (ds) {
+          return timNguoiTram(ds.map(function (n) { return { el: n.c, t: n.t, nhan: 'giây ' + n.t.toFixed(1) }; }), v.dataset.camTram, o, vd);
+        }).catch(function (e) { o.innerHTML = '<div class="goi-y">Trạm chưa nhận diện được (' + thoat(e.message) + ') — tìm tạm trên máy này…</div>'; setTimeout(function () { vdTimNguoi(vd, _cam.videoUrl, o); }, 600); });
+      };
       $('camVdMt').onclick = function () {
         if (_mt.chay) { mtDung(); this.innerHTML = icn('scan') + 'Khung mặt theo video'; $('camVdKq').innerHTML = ''; return; }
         this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('camVd'), $('camVdKq'));
@@ -18585,7 +18592,7 @@ function dkTT(h, loai) { var o = $('dkTT'); if (o) { o.className = loai === 'loi
 /** Gửi 1 lệnh và chờ kết quả (≤ ~45 giây). */
 /* Lệnh ĐI THẲNG qua đường hầm trạm (23/11/2026): xoay / dừng / về vị trí / ảnh nhanh — trình duyệt -> đường hầm -> trạm, không vòng
    qua máy chủ ở Mỹ (trễ ~0,2–0,3 giây). Vé 10 phút xin máy chủ (hsVeDieuKhien, kiểm quyền). Đường hầm lỗi -> tự quay về đường máy chủ. */
-var DK_TRUC = { xoay: 1, dung: 1, viTri: 1, chup: 1, nhanMat: 1 };
+var DK_TRUC = { xoay: 1, dung: 1, viTri: 1, chup: 1, nhanMat: 1, nhanMatAnh: 1, docBienAnh: 1 };
 function dkVeTruc(maTram) {
   var v = _dk.ve;
   if (v && v.tram === maTram && v.het - Date.now() > 60000) return Promise.resolve(v);
@@ -19181,6 +19188,20 @@ function tnNguon(r, tt) {
   });
 }
 function timNguoiSuKien(r, veSk) {
+  var maTramTn = (/^(T-[A-Z0-9]+)-/.exec(r.ma || '') || [])[1];
+  if (maTramTn) return timNguoiSuKienTram(r, veSk, maTramTn);
+  return timNguoiSuKienMay(r, veSk);
+}
+function timNguoiSuKienTram(r, veSk, maTram) {
+  hsMo('Tìm người · ' + r.loai + ' · ' + r.luc, (veSk ? '<div class="ve-sk"><button class="btn nho" type="button" id="tnVe">← Về sự kiện</button></div>' : '') + '<div id="tnKq"><div class="goi-y">Đang tải ảnh sự kiện…</div></div>');
+  if ($('tnVe')) $('tnVe').onclick = function () { camMoSuKien(r.ma); };
+  tnNguon(r, function (h) { if ($('tnKq')) $('tnKq').innerHTML = '<div class="goi-y">' + h + '</div>'; }).then(function (ds) {
+    // ảnh gốc sự kiện + khung video thưa (1 khung / giây) cho đỡ tải
+    var chon = ds.filter(function (n, i) { return n.t < 0 || Math.round(n.t * 2) % 2 === 0; });
+    return timNguoiTram(chon, maTram, $('tnKq'), null);
+  }).catch(function (e) { if ($('tnKq')) { $('tnKq').innerHTML = '<div class="goi-y">Trạm chưa nhận diện được (' + thoat(e.message) + ') — tìm tạm trên máy này…</div>'; setTimeout(function () { timNguoiSuKienMay(r, veSk); }, 800); } });
+}
+function timNguoiSuKienMay(r, veSk) {
   hsMo('Tìm người · ' + r.loai + ' · ' + r.luc, (veSk ? '<div class="ve-sk"><button class="btn nho" type="button" id="tnVe">← Về sự kiện</button></div>' : '') +
     '<div id="tnTT" class="goi-y">Đang chuẩn bị…</div><div id="tnKq"></div>');
   if ($('tnVe')) $('tnVe').onclick = function () { camMoSuKien(r.ma); };
@@ -19361,6 +19382,51 @@ function mtBat(video, oTT) {
   }).catch(function (e) { tt('<span style="color:var(--clay)">' + thoat(e.message || e) + '</span>'); });
 }
 
+/* ---------- TÌM NGƯỜI BẰNG TRẠM (InsightFace, 23/11/2026): gửi ảnh gốc sự kiện + khung video (1 khung/giây) cho trạm nhận diện,
+   gom theo người (người lạ gom chung), mỗi người: mặt rõ nhất ↔ ảnh hồ sơ, độ giống cao nhất, các mốc thời gian (bấm để nhảy video). ---------- */
+function timNguoiTram(nguon, maTram, oKq, video) {
+  var tt = function (h) { oKq.innerHTML = '<div class="goi-y">' + h + '</div>'; };
+  var nhom = {}, i = 0, soMat = 0;
+  var mot = function () {
+    if (i >= nguon.length) return Promise.resolve();
+    var n = nguon[i++];
+    tt('Trạm đang nhận diện ' + i + '/' + nguon.length + ' (' + thoat(n.nhan) + ')…');
+    var c = n.el.tagName === 'CANVAS' ? n.el : (function () { var x = document.createElement('canvas'); x.width = n.el.naturalWidth; x.height = n.el.naturalHeight; x.getContext('2d').drawImage(n.el, 0, 0); return x; })();
+    return dkLenh('nhanMatAnh', { anh: c.toDataURL('image/jpeg', 0.9) }, maTram, 1).then(function (k) {
+      ((k.kq && k.kq.mat) || []).forEach(function (m) {
+        soMat++;
+        var t0 = m.top[0], khoa = m.muc === 'la' || !t0 ? 'la' : t0.maAnh, g = nhom[khoa] || (nhom[khoa] = { m: m, t0: t0, moc: [], so: 0 });
+        g.so++;
+        if (n.t >= 0 && g.moc.indexOf(n.t) < 0) g.moc.push(n.t);
+        var tot = m.muc === 'ok' && g.m.muc !== 'ok' || m.diem > g.m.diem || (khoa === 'la' && m.rong > g.m.rong);
+        if (tot || !g.anh) {
+          g.m = m; g.t0 = t0;
+          var k2 = m.khung, w = k2[2] - k2[0], h = k2[3] - k2[1], pad = w * 0.25, cc = document.createElement('canvas');
+          cc.width = 72; cc.height = 72; cc.getContext('2d').drawImage(c, Math.max(0, k2[0] - pad), Math.max(0, k2[1] - pad), w + 2 * pad, h + 2 * pad, 0, 0, 72, 72);
+          g.anh = cc.toDataURL('image/jpeg', 0.85); g.nhan = n.nhan;
+        }
+      });
+    }).then(mot);
+  };
+  return mot().then(function () {
+    var ds = Object.keys(nhom).map(function (k) { return nhom[k]; }).sort(function (a, b) { return (a.m.muc === 'la') - (b.m.muc === 'la') || b.m.diem - a.m.diem; });
+    if (!ds.length) { oKq.innerHTML = '<div class="goi-y">Trạm đã xem ' + nguon.length + ' ảnh / khung — không thấy khuôn mặt nào.</div>'; return; }
+    oKq.innerHTML = '<div class="nhan" style="margin-top:8px">Trạm nhận diện (InsightFace) · ' + ds.length + ' người · ' + soMat + ' lần thấy mặt' + (video ? ' · bấm mốc giờ để xem đoạn đó' : '') + '</div>' + ds.map(function (g) {
+      var la = g.m.muc === 'la' || !g.t0;
+      var nhan = g.m.muc === 'ok' ? '<span class="vi ok">Khớp</span>' : g.m.muc === 'nghi' ? '<span class="vi canh">Chưa chắc — đối chiếu bằng mắt</span>' : '<span class="vi tap" style="color:var(--clay)">Người lạ / không có trong hồ sơ</span>';
+      return '<div class="an2-dong" style="align-items:flex-start">' + ndSoSanh(g.anh, la ? null : g.t0) +
+        '<div style="flex:1;min-width:0"><b>' + (la ? 'Người lạ' : thoat(g.t0.ten)) + '</b> ' + nhan +
+        (la ? '' : '<div class="hs-phu">' + thoat([g.t0.maCn, g.t0.to, g.t0.doi].filter(Boolean).join(' · ')) + ' · giống ' + g.m.diem + '%</div>') +
+        '<div class="hs-phu">Mặt rõ nhất: ' + thoat(g.nhan) + ' · rộng ' + g.m.rong + ' điểm ảnh · thấy ' + g.so + ' lần</div>' +
+        (g.moc.length && video ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">' + vdChipMoc(g.moc.sort(function (a, b) { return a - b; })) + '</div>' : '') + '</div>' +
+        (!la && g.t0.id && hsCo('hoSo', 'XEM') ? '<button class="btn nho" type="button" data-mt-hs="' + thoat(g.t0.loai + '|' + g.t0.id) + '">Hồ sơ</button>' : '') + '</div>';
+    }).join('');
+    hsNapAnh(oKq);
+    if (video) vdGanMoc(oKq, video);
+    var cu = oKq.onclick;
+    oKq.onclick = function (ev) { var b = ev.target.closest('[data-mt-hs]'); if (b) { var x = b.dataset.mtHs.split('|'); moHoSo(x[0], x[1]); return; } if (cu) cu.call(this, ev); };
+  });
+}
 /* ---------- Tìm người / biển số NGAY TRONG VIDEO (23/11/2026): quét các khung, kết quả kèm mốc thời gian — bấm mốc là video nhảy tới. ---------- */
 function vdMoc(t) { return Math.floor(t / 60) + ':' + ('0' + (t % 60).toFixed(1)).slice(-4); }
 /** Lấy khung hình mỗi `buoc` giây từ video (dùng 1 thẻ video ẩn, không đụng video đang xem). */
