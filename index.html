@@ -3764,7 +3764,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 380;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 381;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18767,13 +18767,48 @@ function ndSoSanh(urlMat, m) {
 // 2–3 người sát điểm nhau = máy không phân biệt được -> "chưa chắc". (23/11: 0,50 cũ quá dễ — 56% đã báo chắc chắn, nhận nhầm người.)
 /** Dò mặt nhiều tầng (23/11/2026): Tiny 608 -> Tiny 320 (mặt to sát camera) -> SSD MobileNet (mặt ngẩng / nghiêng / chụp từ dưới,
     nặng hơn ~5 MB, chỉ tải khi cần). Trả về mảng kết quả có đặc trưng. */
-var _ssd = null;
+var _ssd = null, _oManh = [];
+/** Dò theo Ô VUÔNG chồng mép (khung rộng 16:9 chia 2–3 ô cao bằng khung): mặt nhỏ ở xa không bị thu quá bé khi đưa vào bộ dò.
+    Trả về dạng giống face-api: [{ detection: { box: {x,y,width,height,area}, score }, descriptor? }] (đã gộp trùng ở mép ô). */
+function ndDoManh(el, opt, dacTrung) {
+  var W = el.videoWidth || el.naturalWidth || el.width, H = el.videoHeight || el.naturalHeight || el.height;
+  if (!W || !H) return Promise.resolve([]);
+  var n = W / H < 1.25 ? 1 : Math.ceil(W / H), buoc = n > 1 ? (W - H) / (n - 1) : 0, canh = n > 1 ? H : 0, ds = [];
+  var mot = function (i) {
+    if (i >= n) return Promise.resolve();
+    var nguon = el, sx = 0;
+    if (n > 1) {
+      sx = Math.round(i * buoc);
+      var c = _oManh[i] || (_oManh[i] = document.createElement('canvas'));
+      if (c.width !== canh) { c.width = canh; c.height = canh; }
+      c.getContext('2d').drawImage(el, sx, 0, canh, canh, 0, 0, canh, canh);
+      nguon = c;
+    }
+    var p = dacTrung ? faceapi.detectAllFaces(nguon, opt).withFaceLandmarks().withFaceDescriptors() : faceapi.detectAllFaces(nguon, opt);
+    return p.then(function (kq) {
+      kq.forEach(function (r) {
+        var d = r.detection || r, b = d.box;
+        ds.push({ detection: { box: { x: b.x + sx, y: b.y, width: b.width, height: b.height, area: b.width * b.height }, score: d.score }, descriptor: r.descriptor });
+      });
+    }).then(function () { return mot(i + 1); });
+  };
+  return mot(0).then(function () {
+    var iou = function (a, b) { return mtIou({ x: a.x, y: a.y, w: a.width, h: a.height }, { x: b.x, y: b.y, w: b.width, h: b.height }); };
+    ds.sort(function (a, b) { return b.detection.score - a.detection.score; });
+    var giu = [];
+    ds.forEach(function (d) { if (!giu.some(function (g) { return iou(g.detection.box, d.detection.box) > 0.3; })) giu.push(d); });
+    return giu;
+  });
+}
 function ndDoMat(el, nhanh) {
   var thu = function (opt) { return faceapi.detectAllFaces(el, opt).withFaceLandmarks().withFaceDescriptors(); };
   return thu(new faceapi.TinyFaceDetectorOptions({ inputSize: nhanh ? 416 : 608, scoreThreshold: 0.35 })).then(function (ds) {
     if (ds.length || nhanh) return ds;
     return thu(new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.3 })).then(function (d2) {
       if (d2.length) return d2;
+      return ndDoManh(el, new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.35 }), true);   // mặt nhỏ ở xa trên ảnh rộng
+    }).then(function (d3) {
+      if (d3.length) return d3;
       if (!_ssd) _ssd = faceapi.nets.ssdMobilenetv1.loadFromUri(MAT_CDN + 'model/').catch(function (e) { _ssd = null; throw e; });
       return _ssd.then(function () { return thu(new faceapi.SsdMobilenetv1Options({ minConfidence: 0.35 })); });
     });
@@ -18990,8 +19025,9 @@ function mtBat(video, oTT) {
     var kho = k[1];
     if (!kho.mau.length) throw new Error('Kho nhận diện còn trống — mở 1 ảnh camera, bấm "Nhận diện mặt" để lập kho trước.');
     tt('Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
-    var optDo = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
-    var optNhan = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 });
+    // Dò theo ô vuông (video 16:9 chia 2 ô) để mặt ở xa 3–5 m vẫn đủ to cho bộ dò
+    var optDo = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 });
+    var optNhan = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.35 });
     // Cập nhật người đang bám theo từ danh sách khung mới (trùng vùng IoU); trả về vết tương ứng từng khung
     var capNhat = function (moi) {
       vet.forEach(function (v) { v.thay = false; });
@@ -19015,7 +19051,7 @@ function mtBat(video, oTT) {
       lanCuoi = video.currentTime;
       var nhanLuot = vet.length && Date.now() - lanNhan > 500;
       var viec = nhanLuot
-        ? faceapi.detectAllFaces(video, optNhan).withFaceLandmarks().withFaceDescriptors().then(function (ds) {
+        ? ndDoManh(video, optNhan, true).then(function (ds) {
             lanNhan = Date.now();
             var gan = capNhat(ds.map(hop));
             ds.forEach(function (r, i) {
@@ -19027,7 +19063,7 @@ function mtBat(video, oTT) {
               if (v.phieu.length > 5) v.phieu.shift();
             });
           })
-        : faceapi.detectAllFaces(video, optDo).then(function (ds) { capNhat(ds.map(hop)); });
+        : ndDoManh(video, optDo, false).then(function (ds) { capNhat(ds.map(hop)); });
       var hen;
       Promise.race([viec, new Promise(function (ok) { hen = setTimeout(ok, 3000); })]).catch(function () {})
         .then(function () { clearTimeout(hen); if (nhanLuot) lanNhan = Date.now(); setTimeout(vong, 15); });
