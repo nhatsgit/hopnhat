@@ -3764,7 +3764,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 378;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 379;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16927,7 +16927,7 @@ $('hsFile').onchange = function () {
   img.onerror = function () { URL.revokeObjectURL(url); if ($('hsCtLoi')) $('hsCtLoi').innerHTML = '<div class="bao-loi">Không đọc được ảnh này.</div>'; };
   img.src = url;
 };
-function hsGuiAnh(ts) { return hsPost('hsTaiAnh', ts); }
+function hsGuiAnh(ts) { return hsPost('hsTaiAnh', ts).then(function (r) { if (ts && ts.loaiAnh === 'CHAN_DUNG' && typeof ndBoNho === 'function') ndBoNho(); return r; }); }
 /** Lệnh ghi có thân lớn (ảnh, file nhập): POST text/plain tới /api/hoSo (GET JSONP không chở nổi). */
 function hsPost(action, ts) {
   var than = hsP(ts);
@@ -17833,7 +17833,7 @@ function an2AnhChanDung() {
     bam: function (b, r, d) {
       khChonAnh(b.dataset.c === '1', function (url) {
         b.disabled = true; b.textContent = 'Đang lưu…';
-        hsPost('hsTaiAnh', { loai: r.loai, id: r.id, loaiAnh: 'CHAN_DUNG', mime: 'image/jpeg', b64: url }).then(function () { d.remove(); nsBaoOkChung('Đã lưu ảnh của ' + r.ten + '.'); an2TaiTomTat(); hsLamMoiTrang(); })
+        hsPost('hsTaiAnh', { loai: r.loai, id: r.id, loaiAnh: 'CHAN_DUNG', mime: 'image/jpeg', b64: url }).then(function () { ndBoNho(); d.remove(); nsBaoOkChung('Đã lưu ảnh của ' + r.ten + '.'); an2TaiTomTat(); hsLamMoiTrang(); })
           .catch(function (e) { b.disabled = false; b.textContent = 'Thử lại'; $('an2DsLoi').innerHTML = '<div class="bao-loi">' + thoat(e.message) + '</div>'; });
       });
     } };
@@ -18794,9 +18794,17 @@ function ndNapMau(ep) {
   if (!ep && _dk.nd && Date.now() - _dk.nd.luc < 600000) return Promise.resolve(_dk.nd);
   return goiAPI('hsDsMat', hsP({}), 60000).then(function (d) {
     _dk.nd = { luc: Date.now(), mau: d.mau.map(function (m) { return Object.assign({}, m, { f: ndTuB64(m.v) }); }), canLap: d.canLap, khongThayMat: d.khongThayMat };
+    // Ảnh chân dung mới / vừa đổi (ít): tự lập ngầm rồi nạp lại — khung mặt theo video, tìm người dùng được ngay, không cần bấm "Lập kho"
+    if (d.canLap.length && d.canLap.length <= 30 && hsCo('anNinh', 'THEM') && !_dk.dangLapNgam) {
+      _dk.dangLapNgam = true;
+      var o = document.createElement('div');
+      ndLapChiMuc(d.canLap, o).then(function () { _dk.nd = null; return ndNapMau(true); }).catch(function () {}).then(function () { _dk.dangLapNgam = false; });
+    }
     return _dk.nd;
   });
 }
+/** Gọi sau khi lưu ảnh chân dung mới: bỏ kho đang nhớ -> lần nhận diện sau tự lập ảnh mới. */
+function ndBoNho() { _dk.nd = null; }
 /** Lập đặc trưng cho ảnh chân dung chưa có (tải ảnh, đọc mặt trên máy này, gửi số đặc trưng — không gửi ảnh). */
 function ndLapChiMuc(ds, oTT) {
   var xong = 0, khongMat = 0, lo = [], i = 0;
