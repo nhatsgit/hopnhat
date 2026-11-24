@@ -3798,7 +3798,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 397;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 398;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18682,7 +18682,6 @@ function dkMo(t) {
     '<div class="dk-ben">' +
       '<div class="dk-nhom" id="dkPtzO"' + (k0 && k0.ptz ? '' : ' data-tat="1"') + '><div class="nhan">Xoay camera</div>' + dpad +
         '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn nho" data-dk-z="1">＋ Zoom</button><button type="button" class="btn nho" data-dk-z="-1">－ Zoom</button><span class="hs-phu" style="align-self:center">Zoom số <b id="dkZoomChu">1.0x</b></span></div>' +
-        '<div class="hs-phu" style="margin-top:4px">Giữ nút để quay, thả ra để dừng. Hoặc <b>vuốt trên hình</b> để xoay. Lăn chuột / ＋－ = zoom số (camera không có zoom quang); đang phóng thì kéo để dời, bấm đúp về 1x.</div>' +
         '<label class="nhan" style="margin-top:8px">Tốc độ <span id="dkTocChu">50</span></label><input type="range" id="dkToc" min="10" max="100" value="50" style="width:100%">' +
         '<div class="nhan" style="margin-top:8px">Vị trí đặt sẵn</div><div class="gat">' + [1, 2, 3, 4].map(function (n) { return '<button class="chip" type="button" data-dk-vt="' + n + '">' + n + '</button>'; }).join('') +
         '</div><button class="btn nho" type="button" id="dkLuuVt" style="margin-top:6px">Lưu hướng hiện tại vào…</button>' +
