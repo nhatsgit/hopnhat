@@ -3787,7 +3787,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 393;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 394;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -19353,8 +19353,8 @@ function mtBat(video, oTT, maTram, trucTiep) {   // trucTiep: đang xem trực t
         else { tot = { id: ++soVet, hien: Object.assign({}, b), dich: b, thay: true, mat: 0, phieu: [], luc: Date.now(), xa: !!hd }; vet.push(tot); }
         return tot;
       });
-      // mất dấu 4 lượt liền -> bỏ; lượt ảnh nét không làm mất dấu ai; mặt chỉ ảnh nét thấy (đứng xa) giữ 2,8 giây chờ lượt nét kế
-      vet = vet.filter(function (v) { if (!v.thay && !hd) v.mat++; return v.mat < 4 || (v.xa && Date.now() - v.luc < 2800); });
+      // mất dấu 4 lượt liền -> bỏ; lượt ảnh nét không làm mất dấu ai; mặt chỉ ảnh nét thấy (đứng xa) giữ 3,5 giây chờ lượt nét kế
+      vet = vet.filter(function (v) { if (!v.thay && !hd) v.mat++; return v.mat < 4 || (v.xa && Date.now() - v.luc < 3500); });
       return gan;
     };
     var hop = function (d) { var b = d.box || d.detection.box; return { x: b.x, y: b.y, w: b.width, h: b.height }; };
@@ -19371,8 +19371,8 @@ function mtBat(video, oTT, maTram, trucTiep) {   // trucTiep: đang xem trực t
         cTram.width = Math.round(video.videoWidth * he); cTram.height = Math.round(video.videoHeight * he);
         cTram.getContext('2d').drawImage(video, 0, 0, cTram.width, cTram.height);
         var hen;
-        // 24/11/2026: ~2,5 giây xen 1 lượt ẢNH NÉT luồng chính (2560×1440, trạm dò theo 4 ô) -> người đứng xa 4–6 m vẫn đủ điểm ảnh để nhận
-        var hd = trucTiep && Date.now() - lanHd > 2500;
+        // 24/11/2026: ~3 giây xen 1 lượt ẢNH NÉT luồng chính (2560×1440, trạm dò theo 4 ô) -> người đứng xa 4–6 m vẫn đủ điểm ảnh để nhận
+        var hd = trucTiep && Date.now() - lanHd > 3000;
         if (hd) lanHd = Date.now();
         var goi = hd ? dkLenh('nhanMat', { xa: 1, boAnh: 1 }, maTram, 1) : dkLenh('nhanMatAnh', { anh: cTram.toDataURL('image/jpeg', 0.82) }, maTram, 1);
         Promise.race([goi.then(function (kq) {
