@@ -618,11 +618,22 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 #bangCam tr.cam-dong:hover td{background:var(--sky-soft)}
 .dk-the{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--sky-soft);color:var(--ink);white-space:nowrap}
 #dkKhung .dk-tt{margin:6px 0 4px;padding:6px 10px}
-#dkKhung .dk-thanh{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+#dkKhung .dk-thanh{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:6px;margin-top:10px}
+#dkKhung .dk-thanh>.btn,#dkKhung .dk-cb>.btn{display:flex;justify-content:center;align-items:center;width:100%;margin:0;white-space:nowrap}
+#dkKhung .dk-tdau{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
+#dkKhung .dk-cb{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#dkKhung .dk-cb>select{grid-column:1/-1;width:100%}
+#dkKhung .dk-cb>.btn:nth-child(even):last-child{grid-column:1/-1}
+#dkKhung .dk-noi{display:grid;gap:4px;margin-bottom:10px}
+#dkKhung .dk-noi>.btn{width:100%;justify-content:center;display:flex;align-items:center}
+#dkKhung .dk-noi>.btn.on{background:var(--leaf);color:#fff;border-color:var(--leaf)}
 #dkKhung .dk-tnhan{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);opacity:.6;min-width:62px}
 #dkKhung .dk-hd{display:flex;gap:4px;align-items:center}
 #dkKhung .dk-k{min-height:44px;font-size:18px;padding:0;touch-action:none;user-select:none}
-@media (max-width:760px){#dkKhung .dk-luoi{grid-template-columns:1fr}}
+@media (max-width:760px){#dkKhung .dk-luoi{grid-template-columns:1fr}
+  #dkKhung .dk-thanh{grid-template-columns:1fr 1fr}
+  #dkKhung .dk-huy{display:flex;margin:6px 0 0;width:100%}
+  #dkKhung .dk-the{font-size:10.5px;padding:1px 6px}}
 /* PA3 — Chấm nhanh (điện thoại): mỗi người 1 dòng, bấm ký hiệu; màu theo bộ màu của web */
 #cnKhung .cn-dau{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 #cnKhung .cn-hang-nut{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px}
@@ -3787,7 +3798,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 395;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 396;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18660,11 +18671,11 @@ function dkMo(t) {
     (t.nhanLenh ? '' : '<div class="bao-loi">Trạm chưa sẵn sàng nhận lệnh: cần chạy chương trình trạm bản 1.2 trở lên ở cổng, có mạng. Các nút vẫn bấm được để thử.</div>') +
     '<div class="dk-luoi"><div class="dk-anh-o"><div class="dk-anh" id="dkAnhO"><div class="rong" id="dkAnhTrong">Đang mở hình từ camera…</div></div>' +
       '<div id="dkTT" class="goi-y dk-tt">' + (t.nhanLenh ? 'Trạm sẵn sàng.' : '') + '</div>' +
-      '<div class="dk-thanh"><span class="dk-tnhan">Xem</span>' +
-        (t.trucTiep ? nut('dkTT2', icn('tv') + 'Trực tiếp', 'Video trực tiếp qua đường hầm của trạm (trễ dưới 1 giây)') +
-          '<label class="hs-phu dk-hd" title="Luồng gốc 2560×1440 — rõ hơn, tốn mạng hơn ~5 lần"><input type="checkbox" id="dkHd"> HD</label>' + nut('dkTieng', icn('speaker') + 'Bật tiếng', 'Nghe micro của camera (chỉ khi đang xem trực tiếp)') : '') +
+      '<div class="dk-thanh"><div class="dk-tdau"><span class="dk-tnhan">Xem</span>' +
+        (t.trucTiep ? '<label class="hs-phu dk-hd" title="Luồng gốc 2560×1440 — rõ hơn, tốn mạng hơn ~5 lần"><input type="checkbox" id="dkHd"> HD</label>' : '') + '</div>' +
+        (t.trucTiep ? nut('dkTT2', icn('tv') + 'Trực tiếp', 'Video trực tiếp qua đường hầm của trạm (trễ dưới 1 giây)') + nut('dkTieng', icn('speaker') + 'Bật tiếng', 'Nghe micro của camera (chỉ khi đang xem trực tiếp)') : '') +
         nut('dkChup', icn('cam') + 'Ảnh', 'Chụp 1 ảnh') + nut('dkTuLam', icn('play') + 'Ảnh liên tục', 'Chụp ảnh nhỏ liên tục' + (t.trucTiep ? '' : ' (trạm chưa có xem trực tiếp)')) + '</div>' +
-      '<div class="dk-thanh"><span class="dk-tnhan">Phân tích</span>' +
+      '<div class="dk-thanh"><div class="dk-tdau"><span class="dk-tnhan">Phân tích</span></div>' +
         (t.trucTiep ? nut('dkMt', icn('scan') + 'Khung mặt', 'Dò và ghi tên khuôn mặt chạy theo video trực tiếp') : '') +
         nut('dkNdMat', icn('user') + 'Nhận diện mặt', 'Chụp ảnh gốc rồi nhận diện') + nut('dkBienSo', icn('plate') + 'Đọc biển số', 'Chụp ảnh gốc rồi đọc biển số') +
         nut('dkLuu', icn('save') + 'Lưu ảnh', 'Chụp ảnh gốc và lưu lên Drive (thành 1 sự kiện)') + '</div><div id="dkNd"></div></div>' +
@@ -18677,9 +18688,9 @@ function dkMo(t) {
         '</div><button class="btn nho" type="button" id="dkLuuVt" style="margin-top:6px">Lưu hướng hiện tại vào…</button>' +
         (k0 && k0.ptz ? '' : '<div class="hs-phu" style="margin-top:6px">Kênh này chưa báo xoay được (camera cố định, hoặc trạm chưa dò). Vẫn có thể bấm thử.</div>') + '</div>' +
       '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div>' +
-        (t.trucTiep ? '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><button class="btn" type="button" id="dkNoi" style="touch-action:none;user-select:none" title="Bấm giữ để nói ra loa camera, thả ra để dừng">' + icn('mic') + 'Giữ để nói</button>' +
+        (t.trucTiep ? '<div class="dk-noi"><button class="btn" type="button" id="dkNoi" style="touch-action:none;user-select:none" title="Bấm giữ để nói ra loa camera, thả ra để dừng">' + icn('mic') + 'Giữ để nói</button>' +
           '<span class="hs-phu" id="dkNoiTT">Nói qua loa ở cổng (trễ ~1 giây)</span></div>' : '') +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<div class="dk-cb">' +
         '<select class="o" id="dkAm" style="width:auto"><option value="1">Còi hú</option><option value="2">"Khu vực hạn chế"</option><option value="9">"Nguy hiểm, tránh xa"</option><option value="12">Tiếng bíp</option></select>' +
         nut('dkCoi', icn('speaker') + 'Phát', 'Phát âm cảnh báo trên loa camera') + nut('dkDen', icn('bulb') + 'Bật đèn 10 giây', 'Bật đèn chiếu sáng của camera 10 giây rồi tự về chế độ cũ') +
         (cam.baoDong ? nut('dkBd', icn('siren') + 'Alarm Out 10 giây', 'Bật cổng báo động (còi ngoài / relay barie) 10 giây') : '') + '</div>' +
