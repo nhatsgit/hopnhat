@@ -624,7 +624,7 @@ a.td-nguon:hover{background:var(--leaf-soft)}
 #dkKhung .dk-cb{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 #dkKhung .dk-cb>select{grid-column:1/-1;width:100%}
 #dkKhung .dk-cb>.btn:nth-child(even):last-child{grid-column:1/-1}
-#dkKhung .dk-noi{display:grid;gap:4px;margin-bottom:10px}
+#dkKhung .dk-noi{display:grid;gap:4px;margin-bottom:10px}#dkKhung #dkNoiTT:empty{display:none}
 #dkKhung .dk-noi>.btn{width:100%;justify-content:center;display:flex;align-items:center}
 #dkKhung .dk-noi>.btn.on{background:var(--leaf);color:#fff;border-color:var(--leaf)}
 #dkKhung .dk-tnhan{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);opacity:.6;min-width:62px}
@@ -3798,7 +3798,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 398;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 399;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18688,7 +18688,7 @@ function dkMo(t) {
         (k0 && k0.ptz ? '' : '<div class="hs-phu" style="margin-top:6px">Kênh này chưa báo xoay được (camera cố định, hoặc trạm chưa dò). Vẫn có thể bấm thử.</div>') + '</div>' +
       '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div>' +
         (t.trucTiep ? '<div class="dk-noi"><button class="btn" type="button" id="dkNoi" style="touch-action:none;user-select:none" title="Bấm giữ để nói ra loa camera, thả ra để dừng">' + icn('mic') + 'Giữ để nói</button>' +
-          '<span class="hs-phu" id="dkNoiTT">Nói qua loa ở cổng (trễ ~1 giây)</span></div>' : '') +
+          '<span class="hs-phu" id="dkNoiTT"></span></div>' : '') +
         '<div class="dk-cb">' +
         '<select class="o" id="dkAm" style="width:auto"><option value="1">Còi hú</option><option value="2">"Khu vực hạn chế"</option><option value="9">"Nguy hiểm, tránh xa"</option><option value="12">Tiếng bíp</option></select>' +
         nut('dkCoi', icn('speaker') + 'Phát', 'Phát âm cảnh báo trên loa camera') + nut('dkDen', icn('bulb') + 'Bật đèn 10 giây', 'Bật đèn chiếu sáng của camera 10 giây rồi tự về chế độ cũ') +
@@ -18696,7 +18696,7 @@ function dkMo(t) {
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px"><span class="hs-phu">' + icn('bulb') + 'Đèn:</span><div class="gat" id="dkDenCd">' +
           [['off', 'Tắt'], ['on', 'Bật'], ['auto', 'Tự động']].map(function (x) { return '<button class="chip' + (cam.denCheDo === x[0] ? ' on' : '') + '" type="button" data-cd="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
         '</div></div>' +
-        '<div class="hs-phu" style="margin-top:4px">"Bật đèn 10 giây" xong sẽ về chế độ đang chọn (Tắt / Bật / Tự động). Tự động = camera tự bật khi trời tối. Mọi lần bật đều ghi lịch sử.</div></div>' +
+        '</div>' +
       '<details class="dk-nhom"><summary class="nhan" style="cursor:pointer">Tìm đoạn ghi trong camera</summary>' +
         (cam.luuTru === 0 ? '<div class="bao-loi" style="margin:6px 0">Camera chưa có thẻ nhớ / ổ cứng — không có đoạn ghi trong camera. Lắp thẻ microSD rồi bật ghi trong cài đặt camera (Storage). Video sự kiện đã lưu Drive thì xem ở danh sách sự kiện.</div>'
           : '<div class="hs-phu" style="margin:4px 0">Cần thẻ nhớ / ổ cứng trong camera. Video sự kiện đã lưu Drive thì xem ở danh sách sự kiện.</div>') +
