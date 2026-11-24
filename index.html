@@ -3787,7 +3787,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 394;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 395;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18345,6 +18345,7 @@ var ICON_CAM = {
   timNguoi: '<circle cx="8" cy="7" r="3"/><path d="M3 17c.5-3 2.6-4.5 5-4.5"/><circle cx="14" cy="13.5" r="2.5"/><path d="M15.8 15.3 17.5 17"/>',
   plate: '<rect x="2.5" y="6" width="15" height="8" rx="1.5"/><path d="M5.5 10h2M9.5 10h5"/>',
   save: '<path d="M4 3.5h9.5l3 3V16a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M6.5 3.5v4h6v-4M6.5 16.5v-5h7v5"/>',
+  mic: '<rect x="7.5" y="2.5" width="5" height="9" rx="2.5"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5M7 17.5h6"/>',
   speaker: '<path d="M3.5 8v4h3l4 3.5v-11l-4 3.5z"/><path d="M13.5 7.5a3.5 3.5 0 0 1 0 5M15.5 5.5a6.3 6.3 0 0 1 0 9"/>',
   bulb: '<path d="M7.5 14.5h5M8 17h4"/><path d="M10 3a5 5 0 0 0-3 9c.6.5 1 1.2 1 2h4c0-.8.4-1.5 1-2a5 5 0 0 0-3-9z"/>',
   siren: '<path d="M5 15v-5a5 5 0 0 1 10 0v5"/><path d="M3 17.5h14M10 2v1.5M3.5 5l1 1M16.5 5l-1 1"/>',
@@ -18675,7 +18676,10 @@ function dkMo(t) {
         '<div class="nhan" style="margin-top:8px">Vị trí đặt sẵn</div><div class="gat">' + [1, 2, 3, 4].map(function (n) { return '<button class="chip" type="button" data-dk-vt="' + n + '">' + n + '</button>'; }).join('') +
         '</div><button class="btn nho" type="button" id="dkLuuVt" style="margin-top:6px">Lưu hướng hiện tại vào…</button>' +
         (k0 && k0.ptz ? '' : '<div class="hs-phu" style="margin-top:6px">Kênh này chưa báo xoay được (camera cố định, hoặc trạm chưa dò). Vẫn có thể bấm thử.</div>') + '</div>' +
-      '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      '<div class="dk-nhom"><div class="nhan">Cảnh báo tại chỗ</div>' +
+        (t.trucTiep ? '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><button class="btn" type="button" id="dkNoi" style="touch-action:none;user-select:none" title="Bấm giữ để nói ra loa camera, thả ra để dừng">' + icn('mic') + 'Giữ để nói</button>' +
+          '<span class="hs-phu" id="dkNoiTT">Nói qua loa ở cổng (trễ ~1 giây)</span></div>' : '') +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
         '<select class="o" id="dkAm" style="width:auto"><option value="1">Còi hú</option><option value="2">"Khu vực hạn chế"</option><option value="9">"Nguy hiểm, tránh xa"</option><option value="12">Tiếng bíp</option></select>' +
         nut('dkCoi', icn('speaker') + 'Phát', 'Phát âm cảnh báo trên loa camera') + nut('dkDen', icn('bulb') + 'Bật đèn 10 giây', 'Bật đèn chiếu sáng của camera 10 giây rồi tự về chế độ cũ') +
         (cam.baoDong ? nut('dkBd', icn('siren') + 'Alarm Out 10 giây', 'Bật cổng báo động (còi ngoài / relay barie) 10 giây') : '') + '</div>' +
@@ -18832,6 +18836,12 @@ function dkMo(t) {
     if (!confirm('Bật ' + ten + ' tại ' + t.cong + '?')) return;
     ban(nutEl, function () { dkTT('Đang bật ' + ten + '…'); return dkLenh(lenh, ts).then(function (k) { dkTT('Đã bật ' + ten + '. ' + thoat((k.kq && k.kq.ghiChu) || ''), 'ok'); }); });
   };
+  if ($('dkNoi')) {
+    var bn = $('dkNoi'), tha = function (ev) { if (ev) ev.preventDefault(); noiTha(); };
+    bn.addEventListener('pointerdown', function (ev) { ev.preventDefault(); try { bn.setPointerCapture(ev.pointerId); } catch (e) {} noiBat(bn, $('dkNoiTT')); });
+    bn.addEventListener('pointerup', tha); bn.addEventListener('pointercancel', tha); bn.addEventListener('lostpointercapture', tha);
+    bn.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  }
   $('dkCoi').onclick = function () { canhBao('coi', 'loa cảnh báo', this, { bat: 1, am: +$('dkAm').value }); };
   $('dkDen').onclick = function () { canhBao('den', 'đèn 10 giây', this, { bat: 1, giay: 10 }); };
   $('dkDenCd').onclick = function (ev) {
@@ -18989,6 +18999,66 @@ function ttPhat(video, wsUrl, tt) {
   }, 1000);
 }
 
+/* ---------- NÓI QUA LOA CAMERA (24/11/2026): bấm giữ -> mic máy này (khử vọng, lọc ồn) -> PCM 16 kHz, gửi từng đoạn ~200 ms
+   thẳng tới trạm qua đường hầm (POST /noi) -> trạm phát ra loa camera. Thả nút -> gửi đoạn cuối (het=1), trạm đóng phiên. ---------- */
+var _noi = { chay: null };
+function noiBat(nut, oTT) {
+  var t = _dk.tram;
+  if (!t || !t.trucTiep || _noi.chay) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { oTT.textContent = 'Trình duyệt này không cho dùng mic.'; return; }
+  var ch = { dung: false, phien: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), hang: [], soMau: 0, dangGui: false, loi: '', kenh: _dk.kenh || 1, nut: nut, oTT: oTT, tram: t.ma };
+  _noi.chay = ch;
+  nut.classList.add('on'); nut.innerHTML = icn('mic') + 'Đang nói…'; oTT.textContent = 'Đang mở mic…';
+  Promise.all([dkVeTruc(t.ma), navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } })]).then(function (k) {
+    ch.ve = k[0]; ch.luong = k[1];
+    if (ch.dung) { noiTatMic(ch); return; }
+    if (!ch.ve || !ch.ve.url) throw new Error('Chưa có đường điều khiển trực tiếp tới trạm.');
+    var ac = ch.ac = new (window.AudioContext || window.webkitAudioContext)();
+    var nguon = ac.createMediaStreamSource(ch.luong), xl = ch.xl = ac.createScriptProcessor(2048, 1, 1), buoc = ac.sampleRate / 16000, vt = 0;
+    xl.onaudioprocess = function (e) {
+      if (ch.dung) return;
+      var x = e.inputBuffer.getChannelData(0), o = new Int16Array(Math.ceil(x.length / buoc) + 1), n = 0, dinh = 0;
+      for (; vt < x.length; vt += buoc) { var v = Math.max(-1, Math.min(1, x[Math.floor(vt)])); o[n++] = v * 32767; if (v > dinh) dinh = v; else if (-v > dinh) dinh = -v; }
+      vt -= x.length;
+      ch.hang.push(o.subarray(0, n)); ch.soMau += n;
+      if (dinh > 0.02) ch.coTieng = Date.now();
+      noiGui(ch, false);
+    };
+    nguon.connect(xl); xl.connect(ac.destination);   // ScriptProcessor phải nối ra đích mới chạy (đầu ra để im)
+    oTT.textContent = 'Đang phát ra loa camera — nói đi, thả nút để dừng';
+  }).catch(function (e) {
+    ch.loi = e.name === 'NotAllowedError' ? 'Chưa cho phép dùng mic — bấm biểu tượng ổ khoá trên thanh địa chỉ để cho phép.' : (e.message || String(e));
+    oTT.textContent = ch.loi; noiTha(true);
+  });
+}
+function noiGui(ch, het) {
+  if (ch.dangGui || !ch.ve || (!ch.hang.length && !het)) return;
+  var tong = 0; ch.hang.forEach(function (a) { tong += a.length; });
+  if (!het && tong < 3200) return;   // gom ~200 ms rồi mới gửi
+  var buf = new Int16Array(tong), i = 0; ch.hang.forEach(function (a) { buf.set(a, i); i += a.length; }); ch.hang = [];
+  ch.dangGui = true;
+  var url = ch.ve.url.replace(/\/dk$/, '/noi') + '?tk=' + encodeURIComponent(ch.ve.tk) + '&p=' + ch.phien + '&k=' + ch.kenh + (het ? '&het=1' : '');
+  // text/plain: không cần hỏi trước (preflight) -> bớt 1 vòng qua đường hầm
+  fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: buf.buffer }).then(function (r) { return r.json(); }).then(function (k) {
+    if (!k.ok) { ch.loi = k.loi || 'Trạm báo lỗi'; if (ch.oTT) ch.oTT.textContent = 'Không phát được: ' + ch.loi; noiTha(true); }
+  }).catch(function (e) { ch.loi = e.message; if (ch.oTT) ch.oTT.textContent = 'Mất kết nối tới trạm: ' + e.message; noiTha(true); })
+    .then(function () { ch.dangGui = false; if (!ch.dung) noiGui(ch, false); else if (!ch.daGuiCuoi) { ch.daGuiCuoi = true; noiGui(ch, true); } });
+}
+function noiTatMic(ch) {
+  try { if (ch.xl) ch.xl.disconnect(); } catch (e) {}
+  try { if (ch.ac) ch.ac.close(); } catch (e) {}
+  if (ch.luong) ch.luong.getTracks().forEach(function (tr) { tr.stop(); });
+}
+function noiTha(loi) {
+  var ch = _noi.chay; if (!ch) return;
+  _noi.chay = null; ch.dung = true;
+  noiTatMic(ch);
+  if (ch.nut) { ch.nut.classList.remove('on'); ch.nut.innerHTML = icn('mic') + 'Giữ để nói'; }
+  if (!loi && ch.ve) {
+    if (!ch.dangGui) { ch.daGuiCuoi = true; noiGui(ch, true); }
+    if (ch.oTT) ch.oTT.textContent = ch.soMau > 8000 ? 'Đã phát ' + (ch.soMau / 16000).toFixed(1) + ' giây ra loa' + (ch.coTieng ? '' : ' (mic gần như im — kiểm tra mic máy này)') : 'Giữ lâu hơn một chút khi nói';
+  }
+}
 /* ---------- "Đúng người này" (24/11/2026): lưu mặt camera làm MẪU THÊM của người đó (tối đa 10 / người) — trạm lập lại kho ngay,
    lần sau nhận ra cả khi đeo kính, đội mũ, nghiêng mặt, đứng xa. ---------- */
 function matCoThemMau() { return hsCo('anNinh', 'THEM'); }
