@@ -3787,7 +3787,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 390;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 391;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -18458,7 +18458,7 @@ function camXemVideo(maVideo, tieu, maTram, maSk) {
       };
       $('camVdMt').onclick = function () {
         if (_mt.chay) { mtDung(); this.innerHTML = icn('scan') + 'Khung mặt theo video'; $('camVdKq').innerHTML = ''; return; }
-        this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('camVd'), $('camVdKq'));
+        this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('camVd'), $('camVdKq'), v.dataset.camTram || '');
       };
       $('camVdBien').onclick = function () { vdTimBien($('camVd'), _cam.videoUrl, $('camVdKq'), v.dataset.camTram); };
       ve();
@@ -18882,7 +18882,7 @@ function dkMo(t) {
   if ($('dkMt')) $('dkMt').onclick = function () {
     if (_mt.chay) { mtDung(); this.innerHTML = icn('scan') + 'Khung mặt'; return; }
     if (!$('dkVideo')) { dkTT('Bấm "' + icn('tv') + 'Trực tiếp" trước.', 'loi'); return; }
-    this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('dkVideo'), $('dkNd'));
+    this.innerHTML = icn('stop') + 'Tắt khung mặt'; mtBat($('dkVideo'), $('dkNd'), t.camera && t.camera.mat ? t.ma : '');
   };
   if ($('dkTieng')) $('dkTieng').onclick = function () {
     var v = $('dkVideo');
@@ -19281,7 +19281,7 @@ function mtIou(a, b) {
   var gi = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
   return gi / (a.w * a.h + b.w * b.h - gi || 1);
 }
-function mtBat(video, oTT) {
+function mtBat(video, oTT, maTram) {   // maTram: nhận diện bằng InsightFace ở trạm (chính xác, chịu ngược sáng), không thì face-api trên trình duyệt
   mtDung();
   var phien = { dung: false };
   _mt.chay = phien;
@@ -19293,13 +19293,13 @@ function mtBat(video, oTT) {
   var diem = function (kc) { return Math.round(Math.max(0, Math.min(1, (0.75 - kc) / 0.45)) * 100); };
   var vet = [], soVet = 0;
   tt('Đang tải mô hình và kho khuôn mặt…');
-  Promise.all([matNapThuVien(), ndNapMau()]).then(function (k) {
+  Promise.all(maTram ? [Promise.resolve(), Promise.resolve({ mau: [0] })] : [matNapThuVien(), ndNapMau()]).then(function (k) {
     var kho = k[1];
     if (!kho.mau.length) throw new Error('Kho nhận diện còn trống — mở 1 ảnh camera, bấm "Nhận diện mặt" để lập kho trước.');
-    tt('Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
+    tt(maTram ? 'Đang nhận diện tại trạm (InsightFace)…' : 'Đang dò khuôn mặt theo video · so với ' + kho.mau.length + ' người');
     // Dò theo ô vuông (video 16:9 chia 2 ô) để mặt ở xa 3–5 m vẫn đủ to cho bộ dò
-    var optDo = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 });
-    var optNhan = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.35 });
+    var optDo = maTram ? null : new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 });
+    var optNhan = maTram ? null : new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.35 });
     // Cập nhật người đang bám theo từ danh sách khung mới (trùng vùng IoU); trả về vết tương ứng từng khung
     var capNhat = function (moi) {
       vet.forEach(function (v) { v.thay = false; });
@@ -19317,7 +19317,30 @@ function mtBat(video, oTT) {
     // MỘT vòng duy nhất (2 vòng song song trên WebGL có lúc treo cả hai): thường chỉ dò khung (nhanh),
     // ~0,5 giây xen 1 lượt nhận diện cả khung (cũng cập nhật vị trí). Lượt nào quá 3 giây thì bỏ qua — vòng không bao giờ chết.
     var lanNhan = 0, lanCuoi = -1;
+    if (maTram) {   // TRẠM: gửi khung hình (≤ 1280) cho InsightFace ~2–3 lần / giây; trạm trả khung + người -> cập nhật vết + phiếu
+      var cTram = document.createElement('canvas');
+      (function vongTram() {
+        if (phien.dung || !video.isConnected) return;
+        if (!video.videoWidth || video.readyState < 2 || (video.paused && video.currentTime === lanCuoi)) { setTimeout(vongTram, 150); return; }
+        lanCuoi = video.currentTime;
+        var he = Math.min(1, 1280 / video.videoWidth);
+        cTram.width = Math.round(video.videoWidth * he); cTram.height = Math.round(video.videoHeight * he);
+        cTram.getContext('2d').drawImage(video, 0, 0, cTram.width, cTram.height);
+        var hen;
+        Promise.race([dkLenh('nhanMatAnh', { anh: cTram.toDataURL('image/jpeg', 0.82) }, maTram, 1).then(function (kq) {
+          var ds = (kq.kq && kq.kq.mat) || [];
+          var gan = capNhat(ds.map(function (m) { var b = m.khung; return { x: b[0] / he, y: b[1] / he, w: (b[2] - b[0]) / he, h: (b[3] - b[1]) / he }; }));
+          ds.forEach(function (m, i) {
+            var v = gan[i], t0 = m.top[0];
+            v.phieu.push({ ma: m.muc === 'la' || !t0 ? '' : t0.maAnh, m: t0, kc: 1 - m.diem / 100, diem: m.diem, muc: t0 ? m.muc : 'la' });
+            if (v.phieu.length > 5) v.phieu.shift();
+          });
+        }), new Promise(function (ok) { hen = setTimeout(ok, 4000); })]).catch(function () {})
+          .then(function () { clearTimeout(hen); setTimeout(vongTram, 60); });
+      })();
+    }
     (function vong() {
+      if (maTram) return;
       if (phien.dung || !video.isConnected) return;
       if (!video.videoWidth || video.readyState < 2 || (video.paused && video.currentTime === lanCuoi)) { setTimeout(vong, 150); return; }
       lanCuoi = video.currentTime;
@@ -19362,7 +19385,7 @@ function mtBat(video, oTT) {
           return '<div class="an2-dong mt-dong' + (d.v.mat ? ' mt-khuat' : '') + '">' +
             (la ? '<span class="hs-anh" style="width:48px;height:48px">?</span>' : hsAnhHtml(m.maAnh, m.ten)) +
             '<div style="flex:1;min-width:0"><b>' + (la ? (d.muc === 'la' ? 'Không có trong hồ sơ' : 'Đang nhận diện…') : thoat(m.ten)) + '</b> ' + nhan +
-            (la ? '' : '<div class="hs-phu">' + thoat([m.maCn, m.to, m.doi].filter(Boolean).join(' · ')) + ' · giống ' + diem(d.nhat.kc) + '%</div>') + '</div>' +
+            (la ? '' : '<div class="hs-phu">' + thoat([m.maCn, m.to, m.doi].filter(Boolean).join(' · ')) + ' · giống ' + (d.nhat.diem != null ? d.nhat.diem : diem(d.nhat.kc)) + '%</div>') + '</div>' +
             (!la && m.id && hsCo('hoSo', 'XEM') ? '<button class="btn nho" type="button" data-mt-hs="' + thoat(m.loai + '|' + m.id) + '">Hồ sơ</button>' : '') + '</div>';
         }).join('') : '<div class="hs-phu">Chưa thấy khuôn mặt nào.</div>');
         hsNapAnh(bang);
@@ -19384,7 +19407,7 @@ function mtBat(video, oTT) {
         v.phieu.forEach(function (p) { dem[p.ma] = (dem[p.ma] || 0) + 1; if (!nhat || dem[p.ma] > dem[nhat.ma] || (dem[p.ma] === dem[nhat.ma] && p.kc < nhat.kc)) nhat = p; });
         var muc = !nhat ? 'cho' : (dem[nhat.ma] >= Math.ceil(v.phieu.length / 2) ? nhat.muc : 'nghi');
         var mau = muc === 'ok' ? '#2e7d32' : muc === 'nghi' ? '#c77700' : muc === 'la' ? '#c62828' : '#607d8b';
-        var chu = muc === 'cho' ? 'Đang nhận…' : muc === 'la' ? 'Người lạ' : (muc === 'nghi' ? '? ' : '') + (nhat.m.maCn || nhat.m.ten) + ' · ' + diem(nhat.kc) + '%';
+        var chu = muc === 'cho' ? 'Đang nhận…' : muc === 'la' ? 'Người lạ' : (muc === 'nghi' ? '? ' : '') + (nhat.m.maCn || nhat.m.ten) + ' · ' + (nhat.diem != null ? nhat.diem : diem(nhat.kc)) + '%';
         var b = v.hien;
         cx.globalAlpha = v.mat ? 0.45 : 1;
         cx.strokeStyle = mau; cx.strokeRect(b.x, b.y, b.w, b.h);
