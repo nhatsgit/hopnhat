@@ -3798,7 +3798,7 @@ function taiPhienBan() {
 
 /** Phiên bản hiện ở chân thanh bên (chỉ Admin thấy): v<FE>.<BE>.<AS>. FE = số commit repo giao diện (crck2-dashboard) SAU commit này,
  *  BE = số commit repo backend (crck2-api), AS = số bản triển khai Apps Script (@N của clasp deploy). Tăng khi commit / triển khai tương ứng. */
-var PHIEN_BAN_FE = 400;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
+var PHIEN_BAN_FE = 401;   // hook pre-commit của repo tự ghi lại số này mỗi lần commit
 var CO_SO_NHAT = false;
 /* Ô NHẬP số nhát (thêm 1 người, cả tổ, sửa dòng, file Excel mẫu) mở lại từ 12/10/2026, độc lập với CO_SO_NHAT (chỉ số NSBQ kg/nhát, cột / thẻ thống kê).
    Các ô nhập dùng class "nhap-nhat" (không bị .an-nhat ẩn). Đặt false để ẩn lại các ô nhập (file Excel mẫu vẫn giữ cột). */
@@ -16574,8 +16574,16 @@ $('kpisHs').onclick = function (ev) {
 };
 $('hsTomTat').onclick = function (ev) { if (ev.target.id === 'hsBoPhong') { _hs.locPhong = ''; taiHoSo(); } };
 $('hsTrang').onclick = function (ev) {
-  if (ev.target.id === 'hsTruoc') { _hs.trang--; taiHoSo(true); }
-  if (ev.target.id === 'hsSau') { _hs.trang++; taiHoSo(true); }
+  var doi = ev.target.id === 'hsTruoc' ? -1 : (ev.target.id === 'hsSau' ? 1 : 0);
+  if (!doi) return;
+  _hs.trang += doi; taiHoSo(true);
+  // Nhảy trang: cuộn khung chứa danh sách (popup hoặc trang) về đầu danh sách
+  var bang = $('bangHs');
+  for (var el = bang.parentElement; el && el !== document.body; el = el.parentElement) {
+    var st = getComputedStyle(el).overflowY;
+    if ((st === 'auto' || st === 'scroll') && el.scrollHeight > el.clientHeight) { el.scrollTop = 0; break; }
+  }
+  if (bang.getBoundingClientRect().top < 0) bang.scrollIntoView({ block: 'start' });
 };
 $('bangHs').onclick = function (ev) { var tr = ev.target.closest('[data-hs]'); if (tr) { var k = tr.dataset.hs.split('|'); moHoSo(k[0], k[1]); } };
 $('hsThemGt').onclick = function () { hsFormGiaThuoc(null, null); };
